@@ -1,0 +1,104 @@
+# Cursor Rules for backend-py
+
+## Code Structure Rules
+
+### File & Directory Organization
+1. **Layer Separation**
+   - Domain entities must be in `src/domain/entity/`
+   - Services must be in `src/domain/service/`
+   - Use cases must be in `src/usecase/`
+   - Controllers must be in `src/controller/`
+   - Gateway interfaces must be in `src/domain/gateway/`
+   - Gateway implementations must be in `src/gateway/`
+
+2. **Naming Conventions**
+   - Entity files must be named in snake_case
+   - Class names must be in PascalCase
+   - Method and function names must be in snake_case
+   - Constants must be in UPPER_SNAKE_CASE
+
+### Architecture Enforcement
+1. **Dependency Direction**
+   - Domain layer cannot import from outer layers
+   - Use cases can only import from domain layer
+   - Controllers can only import from use cases and domain layer
+   - Dependency flow must always point inward (toward domain)
+
+2. **Interface Segregation**
+   - Gateway interfaces must be defined in domain layer
+   - Implementation details must be isolated in infrastructure layer
+
+## Coding Standards
+
+### Type Safety
+1. **Type Annotations**
+   - All function parameters must have type annotations
+   - All return values must have type annotations
+   - No usage of `Any` type except when absolutely necessary
+   - Generic types must be properly parameterized
+
+2. **Model Usage**
+   - All domain entities must be Pydantic models
+   - All HTTP request/response DTOs must be Pydantic models
+   - No direct usage of dictionaries for structured data
+
+### Clean Code Practices
+1. **Function Design**
+   - Maximum function complexity (McCabe) is 3
+   - Maximum function length is 50 lines
+   - Each function should do only one thing
+
+2. **Error Handling**
+   - Domain exceptions must be defined in domain layer
+   - HTTP exceptions should only be used in controllers
+   - All external calls must have proper error handling
+
+### Documentation
+1. **Docstrings**
+   - All public methods must have Google-style docstrings
+   - Parameters, return types, and exceptions must be documented
+   - Complex algorithms must include explanatory comments
+
+## Asynchronous Programming
+
+1. **Async Patterns**
+   - All I/O operations must be async
+   - Proper usage of `async`/`await` throughout the codebase
+   - No blocking calls in async functions
+
+2. **Transaction Management**
+   - Database operations must be wrapped in transactions
+   - Use `async with prisma.tx() as transaction` pattern
+   - Rollback must be handled appropriately
+
+## Code Quality Enforcement
+
+1. **Static Analysis**
+   - MyPy with strict mode enabled
+   - Ruff linting with rules defined in pyproject.toml
+   - Black formatting with 88 character line length
+
+2. **CI Integration**
+   - All PRs must pass static analysis checks
+   - All PRs must pass automated tests
+   - No direct commits to main branch
+
+## Debugging
+
+1. **Debug Implementation**
+   - Each class implementation file must include a debug main function
+   - Files should be runnable individually to facilitate isolated testing
+   - Example:
+     ```python
+     # At the bottom of your class implementation file
+     if __name__ == "__main__":
+         # Debug code for this specific class
+         async def main():
+             # Test instance and methods
+             instance = YourClass()
+             result = await instance.your_method()
+             print(f"Debug result: {result}")
+
+         import asyncio
+         asyncio.run(main())
+     ```

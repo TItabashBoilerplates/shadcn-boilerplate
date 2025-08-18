@@ -1,0 +1,6 @@
+{
+  "buildCommand": "yarn web:prod",
+  "outputDirectory": "apps/next/.next",
+  "installCommand": "yarn install",
+  "framework": "nextjs"
+}

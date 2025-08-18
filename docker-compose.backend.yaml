@@ -1,0 +1,113 @@
+version: "3.8"
+services:
+  backend_app_py:
+    container_name: backend_app_py
+    build:
+      context: .
+      dockerfile: ./backend-py/docker/Dockerfile
+    ports:
+      - 4040:8000
+    volumes:
+      - ./backend-py/app:/service/app
+      - ./prisma:/service/prisma
+      - ~/.cursor/extensions:/root/.cursor-server/extensions
+      # - ~/.vscode/extensions:/root/.vscode-server/extensions
+      - ~/.aws:/root/.aws
+      - ~/.config/gcloud:/root/.config/gcloud
+    tty: true
+    hostname: backend-py
+    working_dir: /service/app
+    stdin_open: true
+    networks:
+      - supabase_network
+    env_file:
+      - ./env/backend/${ENV:-local}.env
+      - ./env/secrets.env
+    command: >
+      /bin/bash -c "
+        uv sync --group dev &&
+        . .venv/bin/activate &&
+        prisma generate --schema=../prisma/schema.prisma --generator backendPyClient &&
+        uvicorn app:app --proxy-headers --reload --host 0.0.0.0
+      "
+  # backend_app_py_release:
+  #   container_name: backend_app_py_release
+  #   build:
+  #     context: .
+  #     dockerfile: ./backend-py/docker/Dockerfile.release
+  #   ports:
+  #     - 4041:8000
+  #   tty: true
+  #   hostname: backend-py-release
+  #   stdin_open: true
+  #   networks:
+  #     - supabase_network
+  #   env_file:
+  #     - ./env/backend/${ENV:-local}.env
+  #     - ./env/secrets.env
+  # inngest:
+  #   image: inngest/inngest:latest
+  #   command: "inngest dev -u http://backend-py:8000/api/inngest --no-discovery"
+  #   hostname: inngest
+  #   ports:
+  #     - "8288:8288"
+  #   networks:
+  #     - supabase_network
+
+  # livekit.yamlが存在しない場合はコメントアウトを外す。livekitコンテナのdepends_onも忘れずにコメントアウトを外す。
+  # livekit_setup:
+  #   image: livekit/generate
+  #   volumes:
+  #     - ./backend-py/app:/output
+  #   command: --local
+
+  # livekit:
+  #   image: livekit/livekit-server
+  #   ports:
+  #     - "7880:7880"
+  #     - "7881:7881"
+  #     - "7882:7882/udp"
+  #   hostname: livekit-server
+  #   volumes:
+  #     - ./backend-py/app/livekit.yaml:/livekit.yaml
+  #   command:
+  #     - --config
+  #     - /livekit.yaml
+  #     - --node-ip
+  #     - 127.0.0.1
+  #   networks:
+  #     - supabase_network
+  # depends_on:
+  #   - livekit_setup
+
+  # rabbitmq:
+  #   image: rabbitmq:4-management
+  #   container_name: rabbit_local
+  #   ports:
+  #     - 5672:5672
+  #     - 15672:15672
+  #   networks:
+  #     - supabase_network
+  #   environment:
+  #     - RABBITMQ_DEFAULT_USER=root
+  #     - RABBITMQ_DEFAULT_PASS=password
+  # ngrok:
+  #   image: ngrok/ngrok:latest
+  #   restart: unless-stopped
+  #   command:
+  #     - "start"
+  #     - "--all"
+  #     - "--config"
+  #     - "/etc/ngrok.yml"
+  #   ports:
+  #     - 4050:4040
+  #   env_file:
+  #     - ./env/secrets.env
+  #   volumes:
+  #     - ./ngrok/ngrok.yml:/etc/ngrok.yml
+  #   networks:
+  #     - supabase_network
+networks:
+  supabase_network:
+    name: supabase_network_${PROJECT_NAME}
+    external: true

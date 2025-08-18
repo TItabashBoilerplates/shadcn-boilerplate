@@ -1,0 +1,147 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator frontendClient {
+  provider        = "prisma-client-js"
+  output          = "../frontend/packages/domain/entity/generated"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+generator backendClient {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+  output          = "../app/src/infra/prisma/generated/"
+}
+
+generator backendPyClient {
+  provider             = "prisma-client-py"
+  interface            = "asyncio"
+  recursive_type_depth = 5
+  previewFeatures      = ["postgresqlExtensions"]
+}
+
+generator functionsClient {
+  provider        = "prisma-client-js"
+  previewFeatures = ["deno", "postgresqlExtensions"]
+  output          = "../supabase/functions/domain/entity/generated"
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector", schema: "public"), uuidOssp(map: "uuid-ossp")]
+}
+
+// 組織マスタ
+model Organization {
+  id        Int             @id @default(autoincrement()) // 組織ID: 自動インクリメントされる一意の識別子
+  name      String // 組織名
+  users     CorporateUser[] // この組織に所属するユーザのリスト。1対多の関係を表す
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @default(now()) @updatedAt @map("updated_at")
+
+  @@map("organizations") // データベースでのテーブル名を指定
+}
+
+// ユーザマスタ
+model CorporateUser {
+  id             Int          @id @default(autoincrement()) // ユーザID: 自動インクリメントされる一意の識別子
+  uuid           String       @unique @db.Uuid // ユーザ識別子: ユニークな識別子
+  name           String       @default("") // ユーザ名
+  organizationId Int          @map("organization_id") // 所属組織ID: Organizationテーブルのidを参照する外部キー
+  organization   Organization @relation(fields: [organizationId], references: [id]) // 組織との関係を定義
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @default(now()) @updatedAt @map("updated_at")
+
+  @@map("corporate_users") // データベースでのテーブル名を指定
+}
+
+// 一般ユーザマスタ
+model GeneralUser {
+  id          Int      @id @unique @default(autoincrement()) // ユーザID: 自動インクリメントされる一意の識別子
+  uuid        String   @unique @db.Uuid // 認証用のユーザ識別子: ユニークな識別子
+  displayName String   @default("") @map("display_name") // 表示するユーザ名
+  accountName String   @unique @map("account_name") // アカウント名: ユニークな識別子で検索に使用する。更新可能
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  profile  GeneralUserProfile?
+  Message  Message[]
+  UserChat UserChat[]
+
+  @@map("general_users") // データベースでのテーブル名を指定
+}
+
+// プライバシーデータ
+model GeneralUserProfile {
+  id          Int      @id @unique @default(autoincrement()) // プライバシーデータのID: 自動インクリメントされる一意の識別子
+  firstName   String   @default("") @map("first_name") // ファーストネーム
+  lastName    String   @default("") @map("last_name") // ラストネーム
+  userId      Int      @unique @map("user_id") // ユーザID: 一意でGeneralUserと対応
+  email       String   @unique // メールアドレス: ユニークな識別子
+  phoneNumber String?  @map("phone_number") // 電話番号: オプショナル
+  address     Address? // 住所: オプショナル
+
+  // GeneralUserとの1対1の関係を定義
+  generalUser GeneralUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("general_user_profiles") // データベースでのテーブル名を指定
+}
+
+model Address {
+  id                 Int                 @id @unique @default(autoincrement())
+  street             String
+  city               String
+  state              String
+  postalCode         String              @map("postal_code")
+  country            String
+  generalUserProfile GeneralUserProfile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  profileId          Int?                @unique @map("profile_id")
+
+  @@map("addresses") // データベースでのテーブル名を指定
+}
+
+// チャットメッセージ
+model Message {
+  id         Int      @id @unique @default(autoincrement())
+  chatRoomId Int      @map("chat_room_id") // チャットルームのID
+  senderId   Int      @map("sender_id") // メッセージを送信したユーザのID
+  content    String // メッセージの内容
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  chat   ChatRoom    @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+  sender GeneralUser @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@map("messages") // データベースでのテーブル名を指定
+}
+
+// チャットの種類を定義するenum
+enum ChatType {
+  PRIVATE
+  GROUP
+}
+
+// チャットルーム
+model ChatRoom {
+  id        Int      @id @unique @default(autoincrement())
+  type      ChatType // チャットの種類（一対一: "private", グループ: "group")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  messages  Message[]
+  userChats UserChat[]
+
+  @@map("chat_rooms") // データベースでのテーブル名を指定
+}
+
+// ユーザとチャットルームの関係
+model UserChat {
+  id         Int @id @unique @default(autoincrement())
+  userId     Int @map("user_id")
+  chatRoomId Int @map("chat_room_id")
+
+  user     GeneralUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chatRoom ChatRoom    @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, chatRoomId]) // 一意のユーザチャット関係を確保
+  @@map("user_chats") // データベースでのテーブル名を指定
+}

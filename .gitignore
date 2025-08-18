@@ -1,0 +1,58 @@
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
+node_modules/
+
+# logs
+*.log
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Native
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# ai
+ai/ollama/**
+ai/ollama-webui/**
+
+# blockchain
+blockchain/chainlink/postgres/data/**
+blockchain/chainlink/data/**
+blockchain/src/scripts/.wallets/**
+ipfs/data/**
+ipfs/contents/**
+!.gitkeep
+
+# supabase
+supabase/.branches/**
+supabase/.temp/**
+supabase/migrations/**
+supabase/config.toml
+
+env/secrets.env

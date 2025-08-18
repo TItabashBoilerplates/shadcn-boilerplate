@@ -1,0 +1,396 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Cursor Rules for backend-py
+
+## Code Structure Rules
+
+### Application Entry Point
+1. **Main Application File**
+   - The main entry point must be `app.py` in the root directory
+   - FastAPI instance must be configured with appropriate middleware
+   - Router inclusion must be organized in this file
+   - Server startup configuration must be in the `if __name__ == "__main__":` block
+   - Environment variable loading for configuration must be done at the top level
+   - Example:
+     ```python
+     """Main application entry point with FastAPI configuration."""
+
+     import logging
+     import os
+     import time
+
+     import uvicorn
+     from controller import router
+     from fastapi import FastAPI
+     from fastapi.middleware.cors import CORSMiddleware
+     from starlette.middleware.base import BaseHTTPMiddleware
+     from utils.logger_config import logger
+
+     os.environ["TZ"] = "UTC"
+     time.tzset()
+
+     app = FastAPI()
+
+     app.add_middleware(
+         CORSMiddleware,
+         allow_origins=["*"],  # Development only, specify actual origins in production
+         allow_credentials=True,
+         allow_methods=["*"],
+         allow_headers=["*"],
+     )
+
+     app.include_router(router)
+
+     if __name__ == "__main__":
+         port = int(os.environ.get("PORT", 8000))
+         logger.info(f"Starting server on port {port}")
+         uvicorn.run(app, host="0.0.0.0", port=port)
+     ```
+
+2. **Router Organization**
+   - Each domain area must have its own controller module and router
+   - All routers must be aggregated in `controller/__init__.py`
+   - Router prefixes must follow consistent naming conventions
+   - API tags must be defined for each router for Swagger documentation
+   - Example:
+     ```python
+     # controller/__init__.py
+     from fastapi import APIRouter
+
+     from controller.base_controller import router as base_router
+     from controller.llm_controller import router as llm_router
+     from controller.virtual_user_chat_controller import router as virtual_chat_router
+     from controller.general_user_chat_controller import router as general_user_chat_router
+     from controller.content_purchase_controller import router as content_purchase_router
+
+     router = APIRouter()
+
+     router.include_router(base_router, tags=["base"])
+     router.include_router(llm_router, prefix="/llm", tags=["llm"])
+     router.include_router(
+         virtual_chat_router,
+         prefix="/virtual_chat",
+         tags=["virtual_chat"],
+     )
+     router.include_router(
+         general_user_chat_router,
+         prefix="/general_chat",
+         tags=["general_chat"],
+     )
+     router.include_router(
+         content_purchase_router,
+         prefix="/content_purchase",
+         tags=["content_purchase"],
+     )
+     ```
+
+### File & Directory Organization
+1. **Layer Separation**
+   - Domain entities must be in `src/domain/entity/`
+   - Services must be in `src/domain/service/`
+   - Use cases must be in `src/usecase/`
+   - Controllers must be in `src/controller/`
+   - Gateway interfaces must be in `src/domain/gateway/`
+   - Gateway implementations must be in `src/gateway/`
+   - Infrastructure components must be in `src/infra/`
+
+2. **Naming Conventions**
+   - Entity files must be named in snake_case
+   - Class names must be in PascalCase
+   - Method and function names must be in snake_case
+   - Constants must be in UPPER_SNAKE_CASE
+
+### Architecture Enforcement
+1. **Dependency Direction**
+   - Domain layer cannot import from outer layers
+   - Use cases can only import from domain layer
+   - Controllers can only import from use cases and domain layer
+   - Dependency flow must always point inward (toward domain)
+
+2. **Interface Segregation**
+   - Gateway interfaces must be defined in domain layer
+   - Implementation details must be isolated in infrastructure layer
+
+## Coding Standards
+
+### Type Safety
+1. **Type Annotations**
+   - All function parameters must have type annotations
+   - All return values must have type annotations
+   - No usage of `Any` type except when absolutely necessary
+   - Generic types must be properly parameterized
+
+2. **Model Usage**
+   - All domain entities must be Pydantic models
+   - All HTTP request/response DTOs must be Pydantic models
+   - No direct usage of dictionaries for structured data
+
+### Clean Code Practices
+1. **Function Design**
+   - Maximum function complexity (McCabe) is 3
+   - Maximum function length is 50 lines
+   - Each function should do only one thing
+
+2. **Error Handling**
+   - Domain exceptions must be defined in domain layer
+   - HTTP exceptions should only be used in controllers
+   - All external calls must have proper error handling
+
+### Documentation
+1. **Docstrings**
+   - All public methods must have Google-style docstrings
+   - Parameters, return types, and exceptions must be documented
+   - Complex algorithms must include explanatory comments
+
+## Asynchronous Programming 
+
+1. **Async Patterns**
+   - All I/O operations must be async
+   - Proper usage of `async`/`await` throughout the codebase
+   - No blocking calls in async functions
+
+2. **Transaction Management**
+   - Database operations must be wrapped in transactions
+   - Use `async with prisma.tx() as transaction` pattern
+   - Rollback must be handled appropriately
+
+## Infrastructure Layer
+
+### Client Initialization
+1. **Client Wrapper Classes**
+   - Infrastructure clients (DB, API, etc.) must be implemented in `src/infra/`
+   - Each client must have a dedicated wrapper class (e.g., `PrismaClient`, `SupabaseClient`)
+   - Database clients must implement async context managers using `__aenter__` and `__aexit__`
+   - Connection/disconnection logic must be properly handled in these methods
+
+2. **API Client Configuration**
+   - API clients must handle authentication/credentials in their constructors
+   - Environment variables for credentials must be retrieved in the client classes
+   - Error handling for missing credentials must be implemented
+   - User authentication state should be managed within API clients when applicable
+
+3. **Factory Pattern Implementation**
+   - Factory classes for service selection must be in `src/infra/`
+   - Factory methods must use static methods with clear parameter typing
+   - Each factory method must return a properly typed interface or base class
+   - Service selection logic must include comprehensive error handling
+
+4. **Gateway Implementation**
+   - Gateway implementations in `src/gateway/` must use client wrappers from `src/infra/`
+   - No direct initialization of external clients in gateway classes
+   - All gateway classes must receive client instances via dependency injection
+   - Example:
+     ```python
+     class UserRepositoryImpl(UserRepository):
+         def __init__(self, prisma_client: PrismaClient):
+             self.prisma_client = prisma_client
+             
+         async def find_by_id(self, user_id: str) -> User:
+             async with self.prisma_client as client:
+                 user_data = await client.user.find_unique(where={"id": user_id})
+                 return User.model_validate(user_data)
+     ```
+
+5. **Environment Configuration**
+   - Environment variable access must be centralized in infrastructure layer
+   - Default values and validation for environment variables must be implemented
+   - Configuration classes should provide type-safe access to environment settings
+
+6. **Error Handling**
+   - Infrastructure-specific exceptions must be caught and translated to domain exceptions
+   - Connection errors must be properly handled and logged
+   - Retry mechanisms should be implemented for transient failures when appropriate
+   - Authentication failures must be properly handled with domain-specific exceptions
+
+## Controller Layer Implementation
+
+1. **Controller Structure**
+   - Each controller module must have its own router defined with `APIRouter()`
+   - Controllers must be organized by domain/feature area
+   - Controllers must only handle HTTP request/response concerns
+   - Business logic must be delegated to use cases, not implemented in controllers
+   - Example:
+     ```python
+     # controller/virtual_user_controller.py
+     from fastapi import APIRouter, Depends, HTTPException, status
+     from gotrue.types import User
+     
+     from domain.entity.virtual_user import VirtualUser
+     from middleware.auth_middleware import verify_token
+     from usecase.virtual_user_usecase import VirtualUserUseCase
+     
+     router = APIRouter()
+     
+     @router.get("/{virtual_user_id}")
+     async def get_virtual_user(
+         virtual_user_id: str,
+         current_user: User = Depends(verify_token),
+         virtual_user_usecase: VirtualUserUseCase = Depends(),
+     ) -> VirtualUser:
+         """Get virtual user by ID."""
+         result = await virtual_user_usecase.get_virtual_user(
+             virtual_user_id=virtual_user_id, 
+             user_id=current_user.id
+         )
+         return result
+     ```
+
+2. **Endpoint Definition**
+   - Endpoint paths must use kebab-case
+   - HTTP method decorators must match RESTful conventions
+   - All endpoints must have return type annotations
+   - Response models must be explicitly defined
+   - Example:
+     ```python
+     # controller/general_user_chat_controller.py
+     from fastapi import APIRouter, Depends, status
+     from gotrue.types import User
+     
+     from domain.entity.chat_message import ChatMessage
+     from domain.dto.chat_request import ChatRequest
+     from middleware.auth_middleware import verify_token
+     from usecase.general_chat_usecase import GeneralChatUseCase
+     
+     router = APIRouter()
+     
+     @router.post(
+         "/{chat_id}/messages",
+         status_code=status.HTTP_201_CREATED,
+         response_model=ChatMessage,
+     )
+     async def create_message(
+         chat_id: str,
+         request: ChatRequest,
+         current_user: User = Depends(verify_token),
+         chat_usecase: GeneralChatUseCase = Depends(),
+     ) -> ChatMessage:
+         """Create a new chat message."""
+         return await chat_usecase.create_message(
+             chat_id=chat_id,
+             user_id=current_user.id,
+             content=request.content,
+         )
+     ```
+
+3. **Authentication & Authorization**
+   - Auth dependencies must be applied at endpoint level using `Depends()`
+   - Auth middleware must be defined in `middleware/` directory
+   - Unauthenticated endpoints must be clearly marked and limited
+   - User context must be properly typed (e.g., `User` type from auth provider)
+   - Example:
+     ```python
+     # middleware/auth_middleware.py
+     from fastapi import Depends, Header, HTTPException, status
+     from gotrue.types import User
+     
+     from infra.supabase_client import SupabaseClient
+     
+     async def verify_token(
+         authorization: str = Header(..., description="Bearer token")
+     ) -> User:
+         """Verify JWT token and return the authenticated user."""
+         if not authorization.startswith("Bearer "):
+             raise HTTPException(
+                 status_code=status.HTTP_401_UNAUTHORIZED,
+                 detail="Invalid authentication credentials",
+             )
+         
+         token = authorization.replace("Bearer ", "")
+         
+         try:
+             supabase = SupabaseClient(access_token=token)
+             user = supabase.get_user()
+             
+             if not user:
+                 raise HTTPException(
+                     status_code=status.HTTP_401_UNAUTHORIZED,
+                     detail="Invalid authentication credentials",
+                 )
+                 
+             return user
+         except Exception as e:
+             raise HTTPException(
+                 status_code=status.HTTP_401_UNAUTHORIZED,
+                 detail=str(e),
+             )
+     ```
+
+4. **Request Validation**
+   - Request DTOs must be used for all non-trivial endpoints
+   - Path parameters must be properly validated
+   - Query parameters must have appropriate default values when optional
+   - Request body validation must use Pydantic models
+   - Example:
+     ```python
+     # domain/dto/chat_request.py
+     from pydantic import BaseModel, Field
+     
+     class ChatRequest(BaseModel):
+         """Chat message request data transfer object."""
+         content: str = Field(..., min_length=1, max_length=4000, description="Message content")
+         metadata: dict = Field(default_factory=dict, description="Optional metadata")
+     ```
+
+5. **Error Handling**
+   - Controllers must return appropriate HTTP status codes
+   - Error responses must follow a consistent structure
+   - Exception handling must translate domain exceptions to HTTP responses
+   - Validation errors must be properly formatted in responses
+   - Example:
+     ```python
+     # controller/base_controller.py
+     from fastapi import APIRouter, HTTPException
+     
+     from domain.exception.not_found_exception import NotFoundException
+     from domain.exception.permission_exception import PermissionException
+     
+     router = APIRouter()
+     
+     @router.get("/resource/{resource_id}")
+     async def get_resource(resource_id: str) -> dict:
+         """Get a resource by ID with proper error handling."""
+         try:
+             # Call to usecase
+             return {"id": resource_id, "data": "resource data"}
+         except NotFoundException:
+             raise HTTPException(status_code=404, detail="Resource not found")
+         except PermissionException:
+             raise HTTPException(status_code=403, detail="Permission denied")
+         except Exception as e:
+             raise HTTPException(status_code=500, detail=str(e))
+     ```
+
+## Code Quality Enforcement
+
+1. **Static Analysis**
+   - MyPy with strict mode enabled
+   - Ruff linting with rules defined in pyproject.toml
+   - Black formatting with 88 character line length
+
+2. **CI Integration**
+   - All PRs must pass static analysis checks
+   - All PRs must pass automated tests
+   - No direct commits to main branch
+
+## Debugging
+
+1. **Debug Implementation**
+   - Each class implementation file must include a debug main function
+   - Files should be runnable individually to facilitate isolated testing
+   - Example:
+     ```python
+     # At the bottom of your class implementation file
+     if __name__ == "__main__":
+         # Debug code for this specific class
+         async def main():
+             # Test instance and methods
+             instance = YourClass()
+             result = await instance.your_method()
+             print(f"Debug result: {result}")
+         
+         import asyncio
+         asyncio.run(main())
+     ```

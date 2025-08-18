@@ -1,0 +1,55 @@
+{
+  "name": "backend_app_py",
+  "dockerComposeFile": [
+    "../../docker-compose.backend.yaml"
+    // "../../docker-compose.ai.yaml"
+  ],
+  "service": "backend_app_py",
+  "workspaceFolder": "/service/app",
+  "shutdownAction": "none",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "modular-mojotools.vscode-mojo",
+        "charliermarsh.ruff",
+        "bungcip.better-toml",
+        "ms-python.mypy-type-checker",
+        "njpwerner.autodocstring"
+      ],
+      "settings": {
+        "extensions.verifySignature": false,
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "[python]": {
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.fixAll": "explicit",
+            "source.organizeImports": "explicit"
+          }
+        },
+
+        "ruff.lint.args": ["--config=/service/app/pyproject.toml"],
+        "ruff.organizeImports": true,
+        "ruff.fixAll": true,
+        "editor.formatOnSave": true,
+
+        "workbench.colorCustomizations": {
+          "editorIndentGuide.background1": "#b22222",
+          "editorIndentGuide.background2": "#ff4500",
+          "editorIndentGuide.background3": "#ffd700",
+          "editorIndentGuide.background4": "#228b22",
+          "editorIndentGuide.background5": "#000080",
+          "editorIndentGuide.background6": "#8b008b",
+          "editorIndentGuide.activeBackground1": "#fff",
+          "editorIndentGuide.activeBackground2": "#fff",
+          "editorIndentGuide.activeBackground3": "#fff",
+          "editorIndentGuide.activeBackground4": "#fff",
+          "editorIndentGuide.activeBackground5": "#fff",
+          "editorIndentGuide.activeBackground6": "#fff"
+        }
+      }
+    }
+  },
+  "initializeCommand": "supabase start",
+  "postStartCommand": "prisma generate --schema=../prisma/schema.prisma --generator backendPyClient"
+}

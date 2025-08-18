@@ -1,0 +1,12 @@
+{
+  "recommendations": [
+    "IronGeek.vscode-env",
+    "mhutchie.git-graph",
+    "VisualStudioExptTeam.vscodeintellicode",
+    "GitHub.copilot",
+    "GitHub.copilot-chat",
+    "eamodio.gitlens",
+    "esbenp.prettier-vscode",
+    "msjsdiag.vscode-react-native"
+  ]
+}
