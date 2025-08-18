@@ -23,11 +23,6 @@ RUN apt-get update && apt-get install -y \
 # Set timezone
 RUN ln -sf /usr/share/zoneinfo/Asia/Tokyo /etc/localtime
 
-# Install Mojo
-RUN curl -s https://get.modular.com | sh - && \
-    modular install mojo && \
-    apt-get -y install modular
-
 # Copy only necessary files
 COPY ./backend-py/app/pyproject.toml /service/pyproject.toml
 COPY ./prisma /service/prisma

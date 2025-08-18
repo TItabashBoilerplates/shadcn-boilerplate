@@ -11,16 +11,4 @@ RUN n stable
 RUN apt purge -y nodejs npm
 RUN apt autoremove -y
 
-RUN curl -s https://get.modular.com | sh -
-
-RUN modular install mojo
-
 SHELL ["/bin/bash", "-l", "-c"]
-
-RUN MOJO_PATH=$(modular config mojo.path) \
-    && BASHRC=$( [ -f "$HOME/.bash_profile" ] && echo "$HOME/.bash_profile" || echo "$HOME/.bashrc" ) \
-    && echo 'export MODULAR_HOME="'$HOME'/.modular"' >> "$BASHRC" \
-    && echo 'export PATH="'$MOJO_PATH'/bin:$PATH"' >> "$BASHRC" \
-    && source "$BASHRC"
-
-RUN apt -y install modular
