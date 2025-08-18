@@ -8,9 +8,6 @@
       "path": "frontend"
     },
     {
-      "path": "blockchain"
-    },
-    {
       "name": "edge function",
       "path": "supabase/functions"
     },
