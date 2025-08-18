@@ -1,8 +1,12 @@
-# Application-boilerplate
+# shadcn-boilerplate
 
 ## Description
 
-This is a boilerplate application for Flutter and Supabase, with a Prisma backend and a Docker setup.
+This is a full-stack application boilerplate with a multi-platform frontend and backend services:
+- **Frontend**: Monorepo structure with Next.js (web) and Expo/React Native (mobile)
+- **Backend**: FastAPI (Python) with Supabase Edge Functions
+- **Database**: PostgreSQL with Prisma ORM and pgvector extension
+- **UI**: Tamagui for unified cross-platform components with Material Design 3
 
 ## Development Environment
 
@@ -13,6 +17,25 @@ For this project, we recommend the following development setup:
 
 By adopting these environments, we can ensure efficient development and maintain consistency across the team.
 
+## Architecture
+
+### Frontend Architecture
+- **Application**: Next.js 15 with App Router and Turbopack for development
+- **Architecture**: Feature-Sliced Design (FSD) methodology with strict layer organization
+- **UI Framework**: shadcn/ui components built on Radix UI with TailwindCSS 4
+- **Tech Stack**: React 19, TypeScript, Bun package manager, Zustand for state management
+
+### Backend Architecture
+- **Python Backend**: FastAPI application in `backend-py/` using clean architecture patterns
+- **Edge Functions**: Supabase Edge Functions using Hono framework for serverless APIs
+- **Database**: PostgreSQL with Prisma ORM, includes pgvector extension for embeddings
+- **Infrastructure**: Supabase for auth/database, Docker containerization
+
+### Key Features
+- Multi-client architecture with corporate users, general users, and virtual users
+- Chat system with rooms, messages, and user relationships
+- Vector embeddings for AI/ML features
+- Clean separation between user types and permissions
 
 ## Requirements
 
@@ -20,7 +43,10 @@ Ensure the following are installed:
 
 - [Docker](https://www.docker.com/)
 - [asdf](https://asdf-vm.com/)
-- [Supabase](https://supabase.com/)
+- [Supabase CLI](https://supabase.com/)
+- [Bun](https://bun.sh/) (for frontend package management)
+- [Node.js](https://nodejs.org/) (managed via asdf)
+- [Python 3.12+](https://python.org/) (for backend development)
 - Make
 
 ## Setup
@@ -36,12 +62,11 @@ To set up the project environment, follow these steps:
 
    This command will:
    - Check for necessary tools
-   - Install asdf
-   - Install yarn globally
+   - Install asdf dependencies
    - Log in to Supabase and initialize it
    - Start Supabase
    - Set up environment variables
-   - Install project dependencies
+   - Install frontend dependencies with Bun
    - Perform initial database migration
    - Build necessary models
 
@@ -67,74 +92,118 @@ To set up the project environment, follow these steps:
 
 After successfully completing the setup, you can start the application using one of the following commands:
 
-- For local development (starts Supabase and Docker services):
+### Backend Services
+- Start backend services with Docker:
   ```bash
-  make local
+  make run
   ```
 
-- For frontend development (TypeScript):
+- Stop all services:
   ```bash
-  make local-frontend-ts
+  make stop
   ```
 
-- For iOS development:
+### Frontend Development
+- Start web frontend (Next.js):
   ```bash
-  make local-ios-ts
+  make frontend
   ```
 
-- For Android development:
+- Or directly inside `frontend/` directory:
   ```bash
-  make local-android-ts
+  cd frontend
+  bun run dev    # Next.js development server with Turbopack
+  bun run build  # Build production application
+  bun run start  # Start production server
+  bun run lint   # Run ESLint
   ```
-
-- For Flutter development:
-  ```bash
-  make local-frontend-flutter
-  ```
-
-To stop the local environment:
-```bash
-make local-stop
-```
 
 ## Additional Commands
 
-- To check Docker Compose configuration:
+### Development Tools
+- Check services status:
   ```bash
   make check
   ```
 
-- To build Prisma models:
+- Build frontend:
   ```bash
-  make build-model-prisma
+  make build-frontend
   ```
 
-- To build Supabase models:
+- Lint frontend code:
+  ```bash
+  make lint-frontend
+  ```
+
+### Database Operations
+- Run database migrations:
+  ```bash
+  make migration
+  ```
+
+- Seed database with initial data:
+  ```bash
+  make seed
+  ```
+
+- Rollback last migration:
+  ```bash
+  make rollback
+  ```
+
+### Model Generation
+- Build Supabase types for frontend:
   ```bash
   make build-model-frontend-supabase
   ```
 
-- To build all models:
+- Build types for Edge Functions:
+  ```bash
+  make build-model-functions
+  ```
+
+- Build all models:
   ```bash
   make build-model
   ```
 
-# Tips
+### Edge Functions
+- Deploy Edge Functions:
+  ```bash
+  make deploy-functions
+  ```
+
+# Development Guidelines
+
+## Code Quality
+- **Frontend**: ESLint with Next.js configuration, TypeScript strict mode, Prettier for formatting
+- **Backend**: Ruff for linting (line length: 88), MyPy for type checking
+- **UI Design**: shadcn/ui components with TailwindCSS 4 and CSS variables
+
+## Architecture Patterns
+- **Frontend**: Feature-Sliced Design (FSD) with strict layer hierarchy (app → pages → widgets → features → entities → shared)
+- **Backend**: Clean architecture with Controllers, Use Cases, Gateways, and Infrastructure
+- **Database**: Multi-client architecture with proper separation of concerns
+
+## Integrated Tools
+
+The project includes integrations for:
+
+- **[Next.js 15](https://nextjs.org/)**: React framework with App Router and Turbopack
+- **[shadcn/ui](https://ui.shadcn.com/)**: UI component library built on Radix UI
+- **[TailwindCSS 4](https://tailwindcss.com/)**: Utility-first CSS framework
+- **[Supabase](https://supabase.com/)**: Authentication, database, and Edge Functions
+- **[Prisma](https://prisma.io/)**: Database ORM with multi-client support
+- **[FastAPI](https://fastapi.tiangolo.com/)**: Python backend framework
+- **[Bun](https://bun.sh/)**: Fast package manager and JavaScript runtime
+- **[Docker](https://docker.com/)**: Containerization for consistent development environments
+
+## Future Considerations
 
 The following tools are being considered for implementation:
 
-## [Resend](https://resend.com/)
-
-- Email delivery tool
-
-## [Sentry](https://sentry.io/welcome/)
-
-- Application Monitoring software
-
-## [Stripe](https://stripe.com/jp)
-
-- Online payment platform
-
-## [RevenueCat](https://www.revenuecat.com/)
-
-- Application subscription payment platform
+- **[Resend](https://resend.com/)**: Email delivery service
+- **[Sentry](https://sentry.io/)**: Application monitoring and error tracking
+- **[Stripe](https://stripe.com/)**: Payment processing platform
+- **[RevenueCat](https://www.revenuecat.com/)**: Subscription management for mobile apps
