@@ -28,7 +28,7 @@ init:
 	npm install -g prisma;
 	npm install -g @prisma/client;
 	# フロントエンドとバックエンドの依存関係もインストール
-	cd frontend && yarn install
+	cd frontend && bun install
 	# データベースのマイグレーションとモデルのビルドを実行
 	make init-migration
 	make build-model
@@ -54,7 +54,7 @@ run:
 # ローカル環境でのフロントエンド起動コマンド
 .PHONY: frontend
 frontend:
-	cd frontend && npx dotenvx run -f ../env/frontend/${ENV}.env -- yarn run web
+	cd frontend && npx dotenvx run -f ../env/frontend/${ENV}.env -- bun run dev
 
 # ローカル環境での停止コマンド
 .PHONY: stop
@@ -65,15 +65,15 @@ stop:
 	docker-compose -f ./docker-compose.backend.yaml down
 	supabase stop
 
-# iOS用のローカル起動コマンド
-.PHONY: local-ios-ts
-local-ios-ts:
-	cd frontend && npx dotenvx run -f ../env/frontend/${ENV}.env -- yarn run ios
+# フロントエンドビルドコマンド
+.PHONY: build-frontend
+build-frontend:
+	cd frontend && bun run build
 
-# Android用のローカル起動コマンド
-.PHONY: local-android-ts
-local-android-ts:
-	cd frontend && npx dotenvx run -f ../env/frontend/${ENV}.env -- yarn run android
+# フロントエンドlintコマンド
+.PHONY: lint-frontend
+lint-frontend:
+	cd frontend && bun run lint
 
 .PHONY: deploy-functions
 deploy-functions:
@@ -90,15 +90,13 @@ check:
 	export PROJECT_NAME=$$(basename $$(pwd))
 	# Supabaseを起動
 	supabase start
-	# Docker Composeの設定を変換
-	docker-compose -f ./docker-compose.blockchain.yaml convert
+	# バックエンドサービスの状態確認
+	docker-compose -f ./docker-compose.backend.yaml ps
 
-# Prismaのモデルをビルド
+# Prismaのモデルをビルド（削除予定 - 現在使用されていない）
 .PHONY: build-model-frontend-prisma
 build-model-frontend-prisma:
-	npx prisma generate --schema=./prisma/schema.prisma --generator frontendClient
-	npx prisma generate --schema=./prisma/schema.prisma --generator frontendFlutterClient
-	cd frontend-flutter && flutter pub run build_runner build --delete-conflicting-outputs
+	@echo "Note: Frontend Prisma client generation is currently not used in this Next.js setup"
 
 # 共通の.git設定のファイルをコピー
 # プリコミットなども
@@ -112,13 +110,13 @@ build-model-frontend-supabase:
 	# Supabaseを起動
 	supabase start
 	# モデルの型を生成
-	$(eval DIR_PATH := "./frontend-tamagui/packages/app/shared/type/supabase/__generated__")
-	mkdir -p $(DIR_PATH) && supabase gen types typescript --local > $(DIR_PATH)/schema.types.ts
+	$(eval DIR_PATH := "./frontend/lib/types")
+	mkdir -p $(DIR_PATH) && supabase gen types typescript --local > $(DIR_PATH)/supabase.ts
 
 .PHONY: build-model-prisma
 build-model-prisma:
-	# フロントエンドのモデルをビルド
-	make build-model-frontend-prisma
+	# バックエンド用Prismaクライアントのみ生成（フロントエンドではSupabaseクライアントを使用）
+	@echo "Prisma client generation for backend only"
 
 # Edge functionsのモデルをビルド
 .PHONY: build-model-functions
@@ -128,15 +126,13 @@ build-model-functions:
 	# モデルの型を生成
 	mkdir -p ./supabase/functions/domain/entity/__generated__ && supabase gen types typescript --local > ./supabase/functions/domain/entity/__generated__/schema.ts
 
-# フロントエンドのモデルをビルド
-.PHONY: build-model-frontend-graphql
-build-model-frontend-graphql:
+# フロントエンドのSupabase型生成
+.PHONY: build-model-frontend-supabase-types
+build-model-frontend-supabase-types:
 	# Supabaseを起動
 	supabase start
-	# マイグレーションを実行
-	make migration
-	# コードを生成
-	cd frontend && yarn codegen:supabase
+	# TypeScript型を生成
+	make build-model-frontend-supabase
 
 # モデルをビルド
 .PHONY: build-model
@@ -186,7 +182,7 @@ migration:
 	supabase start
 	if [ "${ENV}" == "local" ]; then \
 		cd prisma && npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma migrate dev --skip-generate --skip-seed; \
-		cd .. && make build-model-frontend-prisma; \
+		cd .. && make build-model-frontend-supabase; \
 		cd prisma; \
 		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/base.sql --schema schema.prisma; \
 		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/extension.sql --schema schema.prisma; \
