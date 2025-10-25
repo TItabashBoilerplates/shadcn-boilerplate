@@ -8,20 +8,7 @@ generator seedClient {
 
 generator frontendClient {
   provider = "prisma-client-js"
-  output   = "../frontend-tamagui/packages/app/shared/prisma"
-}
-
-generator backendPyClient {
-  provider             = "prisma-client-py"
-  interface            = "asyncio"
-  recursive_type_depth = 5
-  // previewFeatures      = ["postgresqlExtensions"] // TODO: supabaseでmigrationする時、有効だとmigrationできないため、コメントアウトする
-}
-
-generator functionsClient {
-  provider = "prisma-client"
-  output   = "../supabase/functions/domain/entity/generated"
-  runtime  = "deno"
+  output   = "../frontend/src/shared/prisma"
 }
 
 datasource db {
