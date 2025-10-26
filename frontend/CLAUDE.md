@@ -128,22 +128,32 @@ bunx shadcn@latest add form
 8. **Public API**: Create index.ts files for each slice to expose public interfaces
 9. **Segments**: Organize code within slices using segments (ui, api, model, lib)
 
-### Rendering Strategy Guidelines
+### Rendering Strategy Guidelines (Next.js Official Best Practices)
 
-**IMPORTANT**: Always use the appropriate rendering strategy based on the page requirements:
+**IMPORTANT**: Always follow Next.js official best practices for rendering strategies:
 
-1. **Public Pages (No Authentication Required)**: **SSG/SSR (Server Components)**
+1. **Public Pages (No Authentication Required)**: **SSG/SSR (Server Components) - MANDATORY**
    - DO NOT use `'use client'` directive
    - Implement as `async` functions
    - Use `getTranslations` from `next-intl/server` (NOT `useTranslations`)
    - Benefits: Best performance, SEO optimization, works without JavaScript
    - Example: Home page, About page, Blog posts
 
-2. **Authenticated Pages**: **SSR (Server Components)**
-   - DO NOT use `'use client'` directive
-   - Fetch user-specific data on the server
-   - Implement as `async` functions
-   - Benefits: Latest data, SEO support, secure data access
+2. **Authenticated Pages (Login Required)**: **Hybrid (SSR + CSR) - STANDARD**
+
+   **Standard Implementation: Hybrid (SSR + CSR) - Next.js Official Recommendation**
+   - Page wrapper: Server Component (`async` function, NO `'use client'`)
+   - Server-side authentication check with `await auth()` or `await verifySession()`
+   - Interactive parts: Client Components (with `'use client'`)
+   - Benefits: Fast initial load, server-side auth check, SEO support, security
+   - Hydration management: Proper patterns prevent hydration errors (see docs/rendering-strategy.md)
+   - Use for: Dashboards, settings pages, profiles, admin panels (almost all authenticated pages)
+
+   **Special Case Only: Full CSR - NOT RECOMMENDED**
+   - ⚠️ Use ONLY for real-time chat, collaborative editors requiring persistent WebSocket/SSE
+   - Entire page: Client Component (with `'use client'`)
+   - Trade-offs: Slower initial load, client-side auth only (security risk), no SEO, against Next.js design philosophy
+   - ❌ DO NOT use simply because "it's easier to implement"
 
 3. **Interactive Components**: **CSR (Client Components)**
    - USE `'use client'` directive
@@ -151,10 +161,11 @@ bunx shadcn@latest add form
    - Handle user interactions
    - Example: Forms, real-time updates, animations
 
-4. **Hybrid Approach** (Recommended):
-   - Server Component for main page logic
+4. **Hybrid Pattern** (Standard best practice):
+   - Server Component for main page logic, authentication, and data fetching
    - Extract interactive parts into separate Client Components
-   - Example: HomePage (Server) + LanguageSwitcher (Client)
+   - Example: DashboardPage (Server) + UserSettings (Client)
+   - This is the default approach for Next.js applications
 
 **Build Output Indicators:**
 - `●  (SSG)`: Static Site Generation - Optimal for public pages
@@ -162,6 +173,232 @@ bunx shadcn@latest add form
 - `○  (Static)`: Static content
 
 For detailed guidelines, see `docs/rendering-strategy.md`
+
+### Supabase Integration Guidelines
+
+This project uses Supabase for backend services with strict adherence to both Next.js and Supabase official best practices.
+
+#### Client Types
+
+| Client Type | Usage | Import | When to Use |
+|------------|-------|--------|-------------|
+| **Server Client** | Server Components, Server Actions, Route Handlers | `@/shared/lib/supabase/server` | Authentication checks, protected data fetching |
+| **Browser Client** | Client Components | `@/shared/lib/supabase/client` | Real-time subscriptions, client interactions |
+
+#### Authentication Best Practices
+
+**🔒 CRITICAL SECURITY REQUIREMENT:**
+
+Always use `supabase.auth.getUser()` to protect pages. **NEVER** trust `supabase.auth.getSession()` in server code.
+
+**Reason:**
+- `getSession()`: Cookie-based (can be spoofed) ❌
+- `getUser()`: Validated against Supabase Auth server (secure) ✅
+
+#### Implementation Patterns
+
+**Public Pages (No Authentication):**
+```tsx
+// Server Component
+import { createClient } from '@/shared/lib/supabase/server'
+
+export default async function BlogPage() {
+  const supabase = createClient()
+  const { data } = await supabase.from('posts').select()
+  return <BlogList posts={data} />
+}
+```
+
+**Authenticated Pages (Standard Pattern):**
+```tsx
+// Server Component - Page wrapper
+import { createClient } from '@/shared/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
+
+export default async function DashboardPage() {
+  await cookies() // Disable cache for user-specific data
+
+  const supabase = createClient()
+  const { data: { user }, error } = await supabase.auth.getUser()
+
+  if (error || !user) redirect('/login')
+
+  const { data } = await supabase.from('user_data').select()
+
+  return <Dashboard data={data} user={user} />
+}
+```
+
+**Client Components with Supabase + Zustand:**
+```tsx
+// Client Component
+'use client'
+
+import { createBrowserClient } from '@/shared/lib/supabase/client'
+import { useUserStore } from '@/entities/user/model/store'
+
+export function UserSettings({ initialData }) {
+  const supabase = createBrowserClient()
+  const updateUser = useUserStore(state => state.updateUser)
+
+  const handleUpdate = async () => {
+    const { data } = await supabase.from('profiles').update(...)
+    if (data) updateUser(data) // Update Zustand store
+  }
+
+  return <button onClick={handleUpdate}>Save</button>
+}
+```
+
+**Real-time Subscriptions (Client Component Only):**
+```tsx
+'use client'
+
+import { createBrowserClient } from '@/shared/lib/supabase/client'
+
+export function RealtimeUpdates({ userId }) {
+  const supabase = createBrowserClient()
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`user:${userId}`)
+      .on('postgres_changes', { ... }, handler)
+      .subscribe()
+
+    return () => channel.unsubscribe()
+  }, [userId])
+}
+```
+
+#### Usage Matrix
+
+| Feature | Component Type | Supabase Client | State Management |
+|---------|---------------|-----------------|------------------|
+| Auth check | Server Component | Server Client + `getUser()` | N/A |
+| Initial data fetch | Server Component | Server Client | Props |
+| Real-time subscriptions | Client Component | Browser Client | useState/Zustand |
+| User interactions | Client Component | Browser Client | Zustand |
+| Form submissions | Server Action | Server Client | N/A |
+
+#### Security Requirements
+
+1. **Authentication**: Always use Server Component with `getUser()`
+2. **Cache Control**: Call `cookies()` before Supabase operations in authenticated pages
+3. **Data Minimization**: Pass only necessary data to Client Components
+4. **Environment Variables**: Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+#### Hydration Error Prevention (CRITICAL)
+
+**⚠️ MUST AVOID HYDRATION ERRORS AT ALL COSTS**
+
+Follow these rules strictly when using Supabase with Next.js:
+
+**Rule 1: Server Component = Static Data Only**
+- Only render data that is confirmed on the server
+- NO conditional rendering based on auth state in Server Components
+- Use `redirect()` for unauthenticated users instead of conditional UI
+
+```tsx
+// ✅ GOOD
+export default async function Page() {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login') // Redirect, not conditional UI
+  return <div>Welcome {user.email}</div>
+}
+
+// ❌ BAD - Hydration risk
+export default async function Page() {
+  const { data: { user } } = await supabase.auth.getUser()
+  return <div>{user ? 'Logged in' : 'Not logged in'}</div>
+}
+```
+
+**Rule 2: Client Component = Use `mounted` Flag**
+- Always use `mounted` state for browser-dependent logic
+- Render `null` or loading state until mounted
+- This prevents server/client HTML mismatch
+
+```tsx
+// ✅ GOOD
+'use client'
+export function Component() {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) return null
+  // Safe to use browser APIs here
+}
+```
+
+**Rule 3: Real-time Data = Client Component Only**
+- NEVER use Supabase Realtime in Server Components
+- Pass initial data from Server Component to Client Component
+- Subscribe to real-time updates in Client Component only
+
+```tsx
+// ✅ GOOD Pattern
+// Server Component
+export default async function Page() {
+  const { data: initial } = await supabase.from('posts').select()
+  return <PostsList initialData={initial} />
+}
+
+// Client Component
+'use client'
+export function PostsList({ initialData }) {
+  const [posts, setPosts] = useState(initialData)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    const channel = supabase.channel('posts').on(...)
+    return () => channel.unsubscribe()
+  }, [])
+
+  if (!mounted) return null
+  return <>{posts.map(...)}</>
+}
+```
+
+**Rule 4: Time/Random Values = Client Component Only**
+- Date formatting (timeAgo, relative time, etc.)
+- Random values
+- All must be in Client Component with `mounted` guard
+
+**Rule 5: Props Flow = Server → Client**
+- Server Component fetches initial data
+- Pass data to Client Component via props
+- Client Component manages dynamic updates
+
+For complete hydration prevention patterns, see `docs/rendering-strategy.md` - "Hydrationエラーの完全回避ガイド" section.
+
+#### Common Patterns
+
+**Pattern 1: Server Component + Client Component Hybrid**
+```tsx
+// ✅ Recommended
+// Server Component handles auth + initial data
+// Client Component handles interactivity + Zustand
+```
+
+**Pattern 2: Real-time Features**
+```tsx
+// ✅ Always in Client Component
+// Supabase Realtime only works in Browser Client
+```
+
+**Pattern 3: Zustand Integration**
+```tsx
+// ✅ Client Component only
+// Server Component passes initial data via props
+// Client Component updates Zustand store
+```
+
+For complete examples and detailed patterns, see `docs/rendering-strategy.md` - "Next.js + Supabase ベストプラクティス" section.
 
 ### Example: FSD-Compliant Implementation with SSR/CSR
 
@@ -203,6 +440,98 @@ export function LanguageSwitcher() {
       <Link href="/" locale="ja">日本語</Link>
     </div>
   )
+}
+
+// ✅ Good example: Authenticated page (Supabase + Next.js Best Practice)
+// views/dashboard/ui/DashboardPage.tsx
+import { createClient } from '@/shared/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
+import { UserSettings } from './UserSettings'
+
+/**
+ * ダッシュボードページ（Server Component - Supabase + Next.js公式推奨パターン）
+ * サーバーでSupabase認証チェックとデータ取得、インタラクティブ部分のみClient Component
+ */
+export default async function DashboardPage() {
+  await cookies() // Disable cache for user-specific data
+
+  const supabase = createClient() // Supabase Server Client
+
+  // 🔒 Supabase authentication check (MUST use getUser(), not getSession())
+  const { data: { user }, error } = await supabase.auth.getUser()
+
+  if (error || !user) redirect('/login')
+
+  // Server-side data fetching with Supabase
+  const { data: userData } = await supabase
+    .from('user_profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single()
+
+  return (
+    <div>
+      {/* Static content rendered on server */}
+      <h1>Welcome, {user.email}</h1>
+      <p>User ID: {user.id}</p>
+
+      {/* Interactive parts as Client Components */}
+      <UserSettings initialData={userData} userId={user.id} />
+    </div>
+  )
+}
+
+// views/dashboard/ui/UserSettings.tsx (Client Component with Supabase + Zustand)
+'use client'
+
+import { useState } from 'react'
+import { createBrowserClient } from '@/shared/lib/supabase/client'
+import { useUserStore } from '@/entities/user/model/store'
+
+export function UserSettings({ initialData, userId }) {
+  const [settings, setSettings] = useState(initialData)
+  const updateUser = useUserStore(state => state.updateUser) // Zustand
+  const supabase = createBrowserClient() // Supabase Browser Client
+
+  const handleUpdate = async () => {
+    // Supabase Browser Client for client-side operations
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .update(settings)
+      .eq('id', userId)
+      .select()
+      .single()
+
+    if (!error && data) {
+      setSettings(data)
+      updateUser(data) // Update Zustand store
+    }
+  }
+
+  return (
+    <div>
+      <button onClick={handleUpdate}>Update Settings</button>
+    </div>
+  )
+}
+
+// ⚠️ Special case ONLY: Full CSR (NOT RECOMMENDED)
+// Use ONLY for real-time chat, collaborative editors, etc.
+// views/chat/ui/ChatPage.tsx
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useWebSocket } from '@/shared/lib/websocket'
+
+/**
+ * チャットページ（Full CSR - 特殊ケース）
+ * ⚠️ WebSocket常時接続が必須のため、例外的にFull CSRを使用
+ */
+export default function ChatPage() {
+  const { messages, sendMessage } = useWebSocket()
+  // Real-time bidirectional communication logic
+  return <div>{/* Chat UI */}</div>
 }
 
 // ✅ Good example: FSD structure with shadcn/ui
