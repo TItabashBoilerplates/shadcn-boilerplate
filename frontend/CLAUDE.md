@@ -9,29 +9,41 @@ This is a Next.js frontend application following Feature-Sliced Design (FSD) met
 ### Feature-Sliced Design Architecture
 
 - **Methodology**: Feature-Sliced Design (FSD) with strict layer-based organization
-- **Application**: Next.js 15 application with App Router
+- **Application**: Next.js 16 application with App Router
 - **UI Framework**: shadcn/ui components with TailwindCSS 4 for styling
-- **Tech Stack**: React 19, TypeScript, Next.js 15, shadcn/ui, Lucide React icons
+- **Tech Stack**: React 19, TypeScript, Next.js 16, shadcn/ui, Lucide React icons
 - **Package Manager**: Bun for fast package management and script execution
-- **Build System**: Next.js built-in build system with Turbopack for development
+- **Build System**: Next.js built-in build system with Turbopack (default in Next.js 16)
+- **Internationalization**: next-intl for multi-language support (English & Japanese)
 - **State Management**: Zustand for client-side state
 - **Integration**: Supabase client for backend services
 
 ### FSD Layer Structure
 
 ```
-frontend/src/
-├── app/           # Application layer - entry points, providers, global styles
-├── pages/         # Pages layer - full pages and routing logic
-├── widgets/       # Widgets layer - large composite UI blocks
-├── features/      # Features layer - business features and user scenarios
-├── entities/      # Entities layer - business entities and domain models
-└── shared/        # Shared layer - reusable infrastructure code
+frontend/
+├── app/              # Next.js App Router (at project root, outside src/)
+│   ├── [locale]/     # Locale-based routes
+│   ├── layout.tsx    # Root layout
+│   └── page.tsx      # Root page
+└── src/              # FSD layers (inside src/)
+    ├── app/          # FSD Application layer - providers, global styles
+    ├── views/        # FSD Views layer - full page components
+    ├── widgets/      # Widgets layer - large composite UI blocks
+    ├── features/     # Features layer - business features and user scenarios
+    ├── entities/     # Entities layer - business entities and domain models
+    └── shared/       # Shared layer - reusable infrastructure code
 ```
+
+**Important**: FSD architecture notes for Next.js:
+- Next.js App Router is at project root (`app/`)
+- FSD layers are in `src/` directory
+- FSD Views layer (`views/`) renamed from `pages/` to avoid conflict with Next.js
+- Use `@/views/*` import alias for FSD views layer
 
 ### Layer Import Rules
 
-- **Layers can only import from lower layers**: `app` > `pages` > `widgets` > `features` > `entities` > `shared`
+- **Layers can only import from lower layers**: `app` > `views` > `widgets` > `features` > `entities` > `shared`
 - **Same layer imports**: Prohibited (use cross-imports with `@x` notation if absolutely necessary)
 - **Upward imports**: Strictly forbidden
 
@@ -101,7 +113,7 @@ bunx shadcn@latest add form
   - `@/entities` - Business entities and domain models
   - `@/features` - Business features and user scenarios
   - `@/widgets` - Composite UI blocks
-  - `@/pages` - Full page components
+  - `@/views` - Full page components
   - `@/app` - Application-level code
 
 ### FSD Implementation Guidelines
@@ -147,7 +159,7 @@ export function UserCard({ user }) {
 }
 
 // ❌ Bad example: Wrong layer placement and custom styling
-// pages/home/ui/HomePage.tsx - Page importing from non-shared layer
+// views/home/ui/HomePage.tsx - View importing from non-shared layer
 import { UserCard } from "@/entities/user" // ✅ This is correct
 import { LoginForm } from "@/features/auth" // ✅ This is correct
 
@@ -165,12 +177,12 @@ frontend/
 │   │   ├── providers/    # Global providers (Redux, React Query, etc.)
 │   │   ├── styles/       # Global styles and CSS variables
 │   │   └── index.tsx     # Application entry point
-│   ├── pages/            # Pages layer
-│   │   ├── home/         # Home page slice
-│   │   │   ├── ui/       # Page UI components
-│   │   │   ├── api/      # Page-specific API calls
+│   ├── views/            # Views layer
+│   │   ├── home/         # Home view slice
+│   │   │   ├── ui/       # View UI components
+│   │   │   ├── api/      # View-specific API calls
 │   │   │   └── index.ts  # Public API
-│   │   └── auth/         # Auth pages slice
+│   │   └── auth/         # Auth views slice
 │   ├── widgets/          # Widgets layer
 │   │   ├── header/       # Header widget
 │   │   ├── sidebar/      # Sidebar widget
@@ -203,10 +215,13 @@ frontend/
 │       └── config/       # Configuration and constants
 │           ├── env.ts    # Environment variables
 │           └── routes.ts # Route constants
-├── app/                  # Next.js App Router (imports from src/app)
-│   ├── globals.css      # Global styles with CSS variables
-│   ├── layout.tsx       # Root layout (imports from src/app/providers)
-│   └── page.tsx         # Home route (imports from src/pages/home)
+├── app/                  # Next.js App Router (at project root)
+│   ├── [locale]/        # Locale-based routes
+│   │   ├── layout.tsx   # Locale layout (with i18n provider)
+│   │   └── page.tsx     # Locale page (imports from src/views/home)
+│   ├── layout.tsx       # Minimal root layout
+│   ├── page.tsx         # Root page (triggers 404)
+│   └── not-found.tsx    # 404 page
 ├── components.json       # shadcn/ui configuration (points to src/shared/ui)
 ├── next.config.ts        # Next.js configuration
 ├── package.json          # Dependencies and scripts
@@ -222,14 +237,14 @@ frontend/
 
 - **Purpose**: Application initialization, global providers, and configuration
 - **Contains**: Providers, global styles, app entry points, routing configuration
-- **Examples**: `app/providers/index.tsx`, `app/styles/globals.css`
+- **Examples**: `src/app/providers/index.tsx`, `src/app/styles/globals.css`
 
-### Pages Layer
+### Views Layer
 
-- **Purpose**: Complete page components that compose widgets, features, and entities
-- **Contains**: Full page implementations, page-specific logic
-- **Segments**: `ui` (page components), `api` (page loaders/actions)
-- **Examples**: `pages/home/ui/HomePage.tsx`, `pages/auth/ui/LoginPage.tsx`
+- **Purpose**: Complete view components that compose widgets, features, and entities
+- **Contains**: Full page implementations, view-specific logic
+- **Segments**: `ui` (view components), `api` (view loaders/actions)
+- **Examples**: `views/home/ui/HomePage.tsx`, `views/auth/ui/LoginPage.tsx`
 
 ### Widgets Layer
 
