@@ -128,9 +128,83 @@ bunx shadcn@latest add form
 8. **Public API**: Create index.ts files for each slice to expose public interfaces
 9. **Segments**: Organize code within slices using segments (ui, api, model, lib)
 
-### Example: FSD-Compliant Implementation
+### Rendering Strategy Guidelines
+
+**IMPORTANT**: Always use the appropriate rendering strategy based on the page requirements:
+
+1. **Public Pages (No Authentication Required)**: **SSG/SSR (Server Components)**
+   - DO NOT use `'use client'` directive
+   - Implement as `async` functions
+   - Use `getTranslations` from `next-intl/server` (NOT `useTranslations`)
+   - Benefits: Best performance, SEO optimization, works without JavaScript
+   - Example: Home page, About page, Blog posts
+
+2. **Authenticated Pages**: **SSR (Server Components)**
+   - DO NOT use `'use client'` directive
+   - Fetch user-specific data on the server
+   - Implement as `async` functions
+   - Benefits: Latest data, SEO support, secure data access
+
+3. **Interactive Components**: **CSR (Client Components)**
+   - USE `'use client'` directive
+   - Use React Hooks (useState, useEffect, etc.)
+   - Handle user interactions
+   - Example: Forms, real-time updates, animations
+
+4. **Hybrid Approach** (Recommended):
+   - Server Component for main page logic
+   - Extract interactive parts into separate Client Components
+   - Example: HomePage (Server) + LanguageSwitcher (Client)
+
+**Build Output Indicators:**
+- `●  (SSG)`: Static Site Generation - Optimal for public pages
+- `ƒ  (Dynamic)`: Server-Side Rendering - For authenticated pages
+- `○  (Static)`: Static content
+
+For detailed guidelines, see `docs/rendering-strategy.md`
+
+### Example: FSD-Compliant Implementation with SSR/CSR
 
 ```typescript
+// ✅ Good example: Public page with SSR (Server Component)
+// views/home/ui/HomePage.tsx
+import { getTranslations } from 'next-intl/server'
+import { LanguageSwitcher } from './LanguageSwitcher'
+
+/**
+ * ホームページ（Server Component - SSG）
+ * ログイン不要のパブリックページのため、SSRで実装
+ */
+export default async function HomePage() {
+  const t = await getTranslations('HomePage')
+
+  return (
+    <div>
+      <h1>{t('title')}</h1>
+      <LanguageSwitcher /> {/* Interactive part as Client Component */}
+    </div>
+  )
+}
+
+// ✅ Good example: Interactive component (Client Component)
+// views/home/ui/LanguageSwitcher.tsx
+'use client'
+
+import { Link } from '@/shared/lib/i18n'
+
+/**
+ * 言語切り替えコンポーネント（Client Component）
+ * ユーザーインタラクションを処理するため、CSRで実装
+ */
+export function LanguageSwitcher() {
+  return (
+    <div>
+      <Link href="/" locale="en">English</Link>
+      <Link href="/" locale="ja">日本語</Link>
+    </div>
+  )
+}
+
 // ✅ Good example: FSD structure with shadcn/ui
 // shared/ui/card/index.ts - Reusable UI component
 export { Button } from "@/shared/ui/button"

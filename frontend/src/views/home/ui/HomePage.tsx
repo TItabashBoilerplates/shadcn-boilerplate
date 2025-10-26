@@ -1,11 +1,20 @@
-'use client'
-
 import Image from 'next/image'
-import { useTranslations } from 'next-intl'
-import { Link } from '@/shared/lib/i18n'
+import { getTranslations } from 'next-intl/server'
+import { LanguageSwitcher } from './LanguageSwitcher'
 
-export default function HomePage() {
-  const t = useTranslations('HomePage')
+/**
+ * ホームページ（Server Component）
+ *
+ * ログインを必要としないパブリックページのため、SSR（Server-Side Rendering）で実装
+ *
+ * メリット:
+ * - 初回ロードのパフォーマンス向上
+ * - SEO対策の改善
+ * - JavaScriptが無効でもコンテンツが表示される
+ */
+export default async function HomePage() {
+  const t = await getTranslations('HomePage')
+
   return (
     <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
       <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
@@ -20,22 +29,7 @@ export default function HomePage() {
         <h1 className="text-4xl font-bold">{t('title')}</h1>
         <p className="text-lg">{t('description')}</p>
 
-        <div className="flex gap-4">
-          <Link
-            href="/"
-            locale="en"
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            English
-          </Link>
-          <Link
-            href="/"
-            locale="ja"
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-          >
-            日本語
-          </Link>
-        </div>
+        <LanguageSwitcher />
 
         <div className="flex gap-4 items-center flex-col sm:flex-row">
           <a
