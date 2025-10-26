@@ -6,11 +6,11 @@ services:
   #   ports:
   #     - 3000:3000
   #   volumes:
-  #     - ./frontend-tamagui:/app
+  #     - ./frontend:/app
   #     - exception-node-modules:/app/node_modules
   #     - exception-node-modules-next:/app/apps/next/node_modules
   #   tty: true
-  #   hostname: frontend-tamagui
+  #   hostname: frontend
   #   working_dir: /app
   #   networks:
   #     - supabase_network
@@ -21,12 +21,12 @@ services:
   storybook:
     container_name: storybook
     build:
-      context: ./frontend-tamagui/docker
+      context: ./frontend/docker
       dockerfile: Dockerfile
     ports:
       - 6006:6006
     volumes:
-      - ./frontend-tamagui:/app
+      - ./frontend:/app
       - exception-node-modules:/app/node_modules
       - exception-node-modules-next:/app/apps/next/node_modules
       # - ~/.cursor/extensions:/root/.cursor-server/extensions

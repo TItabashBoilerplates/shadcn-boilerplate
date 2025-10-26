@@ -3,10 +3,9 @@
 ## Description
 
 This is a full-stack application boilerplate with a multi-platform frontend and backend services:
-- **Frontend**: Monorepo structure with Next.js (web) and Expo/React Native (mobile)
+- **Frontend**: Next.js, shadcn/ui, TailwindCSS
 - **Backend**: FastAPI (Python) with Supabase Edge Functions
 - **Database**: PostgreSQL with Prisma ORM and pgvector extension
-- **UI**: Tamagui for unified cross-platform components with Material Design 3
 
 ## Development Environment
 

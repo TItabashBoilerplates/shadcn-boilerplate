@@ -7,9 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is a full-stack application boilerplate with a multi-platform frontend and backend services:
 
 ### Frontend Architecture
-- **Monorepo Structure**: Uses Yarn workspaces with apps in `frontend/apps/` and shared packages in `frontend/packages/`
-- **Cross-Platform**: Supports web (Next.js), mobile (Expo/React Native), with Tamagui for unified UI components
-- **Tech Stack**: React 19, TypeScript, Tamagui UI library, Turbo for build orchestration
+- **Framework**: Next.js, shadcn/ui, TailwindCSS
+- **Tech Stack**: React 19, TypeScript, shadcn/ui library, Turbo for build orchestration
 - **Build System**: Ultra-runner for concurrent operations, Turbo for dependency management
 
 ### Backend Architecture
@@ -162,7 +161,7 @@ Environment files are in `env/` directory:
 ### Multi-Client Prisma Generation
 The schema generates clients for multiple targets:
 - Frontend TypeScript client
-- Backend Python client  
+- Backend Python client
 - Edge functions (Deno) client
 - Flutter/Dart client
 
@@ -200,11 +199,11 @@ When implementing frontend UI, always follow these steps:
 3. **Available Components**
    ```typescript
    // Material Design 3 Typography Components
-   import { 
+   import {
      DisplayLarge, HeadlineLarge, TitleLarge, BodyLarge, LabelLarge,
-     H1, H2, H3, H4, H5, H6, Body1, Body2, Caption 
+     H1, H2, H3, H4, H5, H6, Body1, Body2, Caption
    } from '@my/config'
-   
+
    // Theme Usage
    import { Theme } from '@my/ui'
    <Theme name="material_light">

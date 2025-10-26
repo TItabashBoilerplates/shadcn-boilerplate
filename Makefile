@@ -110,7 +110,7 @@ build-model-frontend-supabase:
 	# Supabaseを起動
 	supabase start
 	# モデルの型を生成
-	$(eval DIR_PATH := "./frontend/lib/types")
+	$(eval DIR_PATH := "./frontend/src/shared/types")
 	mkdir -p $(DIR_PATH) && supabase gen types typescript --local > $(DIR_PATH)/supabase.ts
 
 .PHONY: build-model-prisma
@@ -124,7 +124,7 @@ build-model-functions:
 	# Supabaseを起動
 	supabase start
 	# モデルの型を生成
-	mkdir -p ./supabase/functions/domain/entity/__generated__ && supabase gen types typescript --local > ./supabase/functions/domain/entity/__generated__/schema.ts
+	mkdir -p ./supabase/functions/shared/types && supabase gen types typescript --local > ./supabase/functions/shared/types/schema.ts
 
 # フロントエンドのSupabase型生成
 .PHONY: build-model-frontend-supabase-types
@@ -175,7 +175,7 @@ init-migration:
 		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/realtime.sql --schema schema.prisma; \
 		cd ..; \
 	fi
-	make seed
+	make build-model-functions;
 
 .PHONY: migration
 migration:
@@ -187,7 +187,7 @@ migration:
 		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/base.sql --schema schema.prisma; \
 		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/extension.sql --schema schema.prisma; \
 		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/function.sql --schema schema.prisma; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/${ENV}/hooks.sql --schema schema.prisma; \
+		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/hooks.sql --schema schema.prisma; \
 		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/realtime.sql --schema schema.prisma; \
 		cd ..; \
 		make build-model-frontend-supabase; \
@@ -197,11 +197,10 @@ migration:
 		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/base.sql --schema schema.prisma; \
 		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/extension.sql --schema schema.prisma; \
 		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/function.sql --schema schema.prisma; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/${ENV}/hooks.sql --schema schema.prisma; \
+		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/hooks.sql --schema schema.prisma; \
 		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/realtime.sql --schema schema.prisma; \
 		cd ..; \
-	fi
-	make seed;
+	fi;
 	make build-model-functions;
 
 
