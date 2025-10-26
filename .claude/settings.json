@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch",
+      "mcp__context7",
+      "mcp__playwright",
+      "mcp__magicuidesign",
+      "Bash(bun list:*)",
+      "Bash(bunx shadcn@latest add:*)",
+      "Bash(bun run build:*)",
+      "Bash(bun add:*)",
+      "Bash(bun run lint:*)",
+      "Bash(bun run format:*)",
+      "Bash(bun run format-check:*)",
+      "Bash(cat:*)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "context7",
+    "magicuidesign",
+    "shadcn",
+    "playwright",
+    "supabase"
+  ]
+}
