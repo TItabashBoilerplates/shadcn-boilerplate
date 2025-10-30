@@ -93,6 +93,275 @@ Edge Functions use Hono framework for serverless API development:
 - TypeScript strict mode
 - Import type enforced for type-only imports
 
+### Date and Time Handling (Supabase + Prisma Best Practices)
+
+日時処理に関する重要な原則とベストプラクティス:
+
+#### データベース設定
+
+1. **Prisma Schema**:
+   - 全ての `DateTime` フィールドに `@db.Timestamptz(3)` を必須で付与
+   - PostgreSQL の `TIMESTAMP WITH TIME ZONE` 型にマップされる
+   - ミリ秒精度(3)はJavaScriptの `Date` オブジェクトと完全互換
+
+2. **Supabase/PostgreSQL**:
+   - データベースのタイムゾーンは UTC を維持（Supabaseデフォルト）
+   - タイムゾーン付きで挿入されたデータも内部的には UTC で保存
+   - 一貫性のため、全ての日時データを UTC として扱う
+
+#### クライアント実装の原則
+
+1. **クライアントコンポーネントで処理**:
+   - 日時の表示・フォーマットは必ずクライアントコンポーネント（`'use client'`）で行う
+   - Next.js のサーバーコンポーネントで日時をフォーマットしない
+   - SSR とクライアントのタイムゾーン不一致によるハイドレーションエラーを防ぐ
+
+2. **データベース保存時**:
+   - JavaScript の `Date` オブジェクトを `toISOString()` で ISO 8601 形式に変換
+   - Prisma Client は自動的に UTC として保存
+   - `Date.now()` は使用しない（Unix タイムスタンプはエラーになる）
+
+3. **クライアント表示時**:
+   - 必ずクライアントのタイムゾーンに変換して表示
+   - `Intl.DateTimeFormat` を使用（ブラウザのタイムゾーン設定を尊重）
+   - date-fns や dayjs などのライブラリも活用可能
+
+#### Next.js SSR/CSR ハイドレーション対策
+
+Next.js公式ドキュメントでは、`Date()` コンストラクタなど時間依存のAPIを使用するとハイドレーションエラーが発生すると明記されています。以下の方法で対処します:
+
+**重要な前提知識**:
+1. **Client Componentでも初期レンダリング（SSR）はサーバー側で実行される**
+   - `'use client'` を付けても、最初のレンダリングはサーバーで行われる
+   - クライアント側でハイドレーション（再レンダリング）が行われる
+   - サーバーとクライアントで異なる結果を返すとハイドレーションエラーが発生
+
+2. **ブラウザAPIを使う処理は必ず`useEffect`内で実行**
+   - `Intl.DateTimeFormat().resolvedOptions().timeZone` などのブラウザAPIは`useEffect`内で使用
+   - `useEffect`はクライアント側でのみ実行されるため、SSRとの不一致が起きない
+
+3. **Server→Client Componentへのpropsは必ずシリアライズ可能な値のみ**
+   - `Date` オブジェクトはシリアライズ不可能なため、ISO文字列（`string`）で渡す
+   - `toISOString()` で変換してから渡す
+
+4. **タイムゾーン変換は必ずクライアント側で行う**
+   - サーバー（UTC）とクライアント（ローカルタイムゾーン）で結果が異なるため
+   - `useEffect`内でタイムゾーン変換を実行
+
+1. **推奨パターン: `useEffect` を使用**（最も信頼性が高い）:
+   - セマンティックな `<time>` 要素を使用
+   - 初回レンダリングでは空文字またはプレースホルダーを表示
+   - `useEffect` でクライアント側タイムゾーンに変換して状態を更新
+   - サーバーとクライアントで異なるコンテンツをレンダリングする場合のみ `suppressHydrationWarning` を追加
+
+2. **代替パターン1: Dynamic Import with SSR無効化**:
+   ```typescript
+   import dynamic from 'next/dynamic'
+
+   const DateDisplay = dynamic(() => import('./DateDisplay'), {
+     ssr: false,
+     loading: () => <time>読み込み中...</time>
+   })
+   ```
+
+3. **代替パターン2: next-intl を使用**（国際化対応が必要な場合）:
+   - `useNow()` / `getNow()` で安定した時刻取得
+   - サーバーとクライアント間で一貫性のある時刻処理
+
+4. **Cookie ベースの最適化**（オプション）:
+   - Cookie にタイムゾーンを保存して2回目以降の訪問で使用
+   - 初回訪問時はデフォルトタイムゾーン（UTC または地域デフォルト）を使用
+
+**重要な注意点**:
+- `suppressHydrationWarning` は App Router で再レンダリングを防ぐ場合があるため、主に静的な datetime 属性に使用
+- 動的にコンテンツが変わる場合は `useEffect` パターンを優先
+- Next.js 公式ドキュメント: https://nextjs.org/docs/messages/react-hydration-error
+
+#### 実装例
+
+```typescript
+// ✅ Good: 推奨パターン - useEffect を使用したクライアントコンポーネント
+'use client'
+
+import { useEffect, useState } from 'react'
+
+interface DateDisplayProps {
+  utcDate: string  // 必ずISO文字列で受け取る（Dateオブジェクトはシリアライズ不可）
+  className?: string
+}
+
+export function DateDisplay({ utcDate, className }: DateDisplayProps) {
+  const [formattedDate, setFormattedDate] = useState<string>('')
+  const [isoDate, setIsoDate] = useState<string>('')
+
+  useEffect(() => {
+    // すべての日時処理をuseEffect内で実行（ブラウザAPIを使用するため）
+    const date = new Date(utcDate)
+
+    // ISO形式（datetime属性用）
+    setIsoDate(date.toISOString())
+
+    // ユーザーのタイムゾーンでフォーマット（ブラウザAPI使用）
+    const formatted = new Intl.DateTimeFormat('ja-JP', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    }).format(date)
+    setFormattedDate(formatted)
+  }, [utcDate])
+
+  // ハイドレーションエラーを防ぐため、初回は空を表示
+  // SSRでは空文字、クライアントでuseEffectが実行されて値が設定される
+  if (!formattedDate) {
+    return <time className={className}>読み込み中...</time>
+  }
+
+  return (
+    <time dateTime={isoDate} className={className}>
+      {formattedDate}
+    </time>
+  )
+}
+
+// Server Componentから使用する場合
+// app/page.tsx
+import { DateDisplay } from '@/components/DateDisplay'
+
+export default async function Page() {
+  // DBから取得したDateオブジェクトをISO文字列に変換
+  const eventDate = new Date('2025-01-15T10:30:00Z')
+
+  return (
+    <div>
+      {/* 必ずISO文字列で渡す */}
+      <DateDisplay utcDate={eventDate.toISOString()} />
+    </div>
+  )
+}
+
+// ✅ Good: Dynamic Import でSSRを無効化（代替パターン）
+// app/page.tsx
+import dynamic from 'next/dynamic'
+
+const DateDisplay = dynamic(() => import('@/components/DateDisplay'), {
+  ssr: false,
+  loading: () => <time>読み込み中...</time>
+})
+
+export default function Page() {
+  return <DateDisplay utcDate="2025-01-15T10:30:00Z" />
+}
+
+// ✅ Good: next-intl を使用（国際化対応アプリの場合）
+'use client'
+
+import { useFormatter, useNow } from 'next-intl'
+
+export function InternationalizedDateDisplay({ utcDate }: { utcDate: string }) {
+  const format = useFormatter()
+  const now = useNow() // サーバーとクライアントで一貫した時刻
+  const date = new Date(utcDate) // ISO文字列からDateオブジェクトに変換
+
+  return (
+    <time dateTime={utcDate}>
+      {format.dateTime(date, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })}
+    </time>
+  )
+}
+
+// ✅ Good: Supabase/Prisma へのデータ保存
+const saveEvent = async (eventDate: Date) => {
+  await supabase.from('events').insert({
+    event_date: eventDate.toISOString() // ISO 8601 形式でUTCとして保存
+  })
+}
+
+// または Prisma の場合
+const saveEventWithPrisma = async (eventDate: Date) => {
+  await prisma.event.create({
+    data: {
+      eventDate: eventDate // Prisma が自動的に UTC として処理
+    }
+  })
+}
+
+// ✅ Good: ユーザー入力からの日時保存
+const saveEventFromUserInput = async (year: number, month: number, day: number) => {
+  // ユーザーのローカルタイムゾーンで Date オブジェクトを作成
+  const userDate = new Date(year, month - 1, day)
+
+  // toISOString() で UTC に変換して保存
+  await supabase.from('events').insert({
+    event_date: userDate.toISOString()
+  })
+}
+
+// ❌ Bad: Dateオブジェクトをpropsで渡す（シリアライズ不可）
+export default function BadPage() {
+  const eventDate = new Date('2025-01-15T10:30:00Z')
+  // Dateオブジェクトはシリアライズできないため、エラーになる
+  return <DateDisplay utcDate={eventDate} />
+}
+
+// ❌ Bad: サーバーコンポーネントでタイムゾーン変換
+export function ServerDateDisplay({ utcDate }: { utcDate: string }) {
+  // サーバー側でローカライズすると、クライアントとタイムゾーンが異なる
+  // ハイドレーションエラーが発生する
+  const formatted = new Date(utcDate).toLocaleString('ja-JP')
+  return <time>{formatted}</time>
+}
+
+// ❌ Bad: useEffect外でブラウザAPIを使用
+'use client'
+export function BadClientDateDisplay({ utcDate }: { utcDate: string }) {
+  // Intl.DateTimeFormat().resolvedOptions() はブラウザAPIなので
+  // SSR時にはundefinedになる可能性がある
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+  const formatted = new Date(utcDate).toLocaleString('ja-JP', { timeZone: timezone })
+  return <time>{formatted}</time>
+}
+
+// ❌ Bad: Date.now() の使用
+const badSave = async () => {
+  await supabase.from('events').insert({
+    event_date: Date.now() // エラー: Unix タイムスタンプは受け付けられない
+  })
+}
+```
+
+#### Prisma Schema の例
+
+```prisma
+model Event {
+  id        String   @id @default(cuid())
+  title     String
+  eventDate DateTime @map("event_date") @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("events")
+}
+```
+
+#### 重要なポイント
+
+- **一貫性**: DB は常に UTC、表示時のみユーザータイムゾーン
+- **精度**: `@db.Timestamptz(3)` でミリ秒精度を確保
+- **ハイドレーション**: クライアントコンポーネントで日時処理
+- **ISO 8601**: `toISOString()` で標準形式に変換
+- **型安全性**: Supabase CLI や Prisma で型を自動生成
+
+この実装により、タイムゾーン関連のバグとハイドレーションエラーを防ぎ、グローバルなアプリケーションでも一貫した日時処理が可能になります。
+
 ### UI Design System
 - **Design Language**: Unified design system based on Material Design 3 principles
 - **Theme System**: Use Material Design 3 compliant themes defined in `frontend/packages/config/src/material-theme.ts`

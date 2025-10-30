@@ -22,8 +22,8 @@ model Organization {
   id        Int             @id @default(autoincrement()) // 組織ID: 自動インクリメントされる一意の識別子
   name      String // 組織名
   users     CorporateUser[] // この組織に所属するユーザのリスト。1対多の関係を表す
-  createdAt DateTime        @default(now()) @map("created_at")
-  updatedAt DateTime        @default(now()) @updatedAt @map("updated_at")
+  createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime        @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@map("organizations") // データベースでのテーブル名を指定
 }
@@ -34,8 +34,8 @@ model CorporateUser {
   name           String       @default("") // ユーザ名
   organizationId Int          @map("organization_id") // 所属組織ID: Organizationテーブルのidを参照する外部キー
   organization   Organization @relation(fields: [organizationId], references: [id]) // 組織との関係を定義
-  createdAt      DateTime     @default(now()) @map("created_at")
-  updatedAt      DateTime     @default(now()) @updatedAt @map("updated_at")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime     @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@map("corporate_users") // データベースでのテーブル名を指定
 }
@@ -45,8 +45,8 @@ model GeneralUser {
   id          String   @id @unique @db.Uuid // 認証用のユーザ識別子: ユニークな識別子
   displayName String   @default("") @map("display_name") // 表示するユーザ名
   accountName String   @unique @map("account_name") // アカウント名: ユニークな識別子で検索に使用する。更新可能
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   profile     GeneralUserProfile?
   Message     Message[]
@@ -92,7 +92,7 @@ model Message {
   senderId        String?  @map("sender_id") @db.Uuid // メッセージを送信したユーザのID
   virtualSenderId String?  @map("virtual_user_id") @db.Uuid // 仮想ユーザのID
   content         String // メッセージの内容
-  createdAt       DateTime @default(now()) @map("created_at")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   chat          ChatRoom     @relation(fields: [chatRoomId], references: [id], onDelete: Cascade)
   sender        GeneralUser? @relation(fields: [senderId], references: [id], onDelete: Cascade)
@@ -111,7 +111,7 @@ enum ChatType {
 model ChatRoom {
   id        Int      @id @unique @default(autoincrement())
   type      ChatType // チャットの種類（一対一: "private", グループ: "group")
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   messages     Message[]
   userChats    UserChat[]
@@ -140,8 +140,8 @@ model VirtualUser {
   ownerId String @map("owner_id") @db.Uuid
 
   owner     GeneralUser @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  createdAt DateTime    @default(now()) @map("created_at")
-  updatedAt DateTime    @default(now()) @updatedAt @map("updated_at")
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   virtualChats       VirtualUserChat[]
   messages           Message[]
@@ -176,8 +176,8 @@ model VirtualUserProfile {
 
   virtualUserId String      @map("virtual_user_id") @db.Uuid
   virtualUser   VirtualUser @relation(fields: [virtualUserId], references: [id], onDelete: Cascade)
-  createdAt     DateTime    @default(now()) @map("created_at")
-  updatedAt     DateTime    @default(now()) @updatedAt @map("updated_at")
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@map("virtual_user_profiles") // データベースでのテーブル名を指定
 }
@@ -187,8 +187,8 @@ model Embedding {
   embedding Unsupported("vector") @map("embedding")
   content   String                @map("content")
   metadata  Json                  @map("metadata")
-  createdAt DateTime              @default(now()) @map("created_at")
-  updatedAt DateTime              @default(now()) @updatedAt @map("updated_at")
+  createdAt DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@map("embeddings") // データベースでのテーブル名を指定
 }
