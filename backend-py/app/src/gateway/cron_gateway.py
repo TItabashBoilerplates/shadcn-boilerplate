@@ -1,13 +1,14 @@
 from typing import Any
 
-from prisma import Prisma
+from sqlalchemy import text
+from sqlmodel import Session
 
 
 class PgCronGateway:
-    def __init__(self, prisma: Prisma):
-        self.prisma = prisma
+    def __init__(self, session: Session):
+        self.session = session
 
-    async def create_job(
+    def create_job(
         self,
         schedule: str,
         function_url: str,
@@ -22,8 +23,9 @@ class PgCronGateway:
             request_body,
             timeout_ms,
         )
-        result = await self.prisma.query_raw(query)
-        return result[0] if result else None
+        result = self.session.exec(text(query))
+        row = result.first()
+        return dict(row._mapping) if row else None
 
     def _build_create_job_query(
         self,
@@ -67,21 +69,24 @@ class PgCronGateway:
             return str(value).lower()
         return f"'{value!s}'"
 
-    async def delete_job(self, job_name: str) -> dict[str, Any] | None:
+    def delete_job(self, job_name: str) -> dict[str, Any] | None:
         query = f"SELECT cron.unschedule('{job_name}');"
-        result = await self.prisma.query_raw(query)
-        return result[0] if result else None
+        result = self.session.exec(text(query))
+        row = result.first()
+        return dict(row._mapping) if row else None
 
-    async def get_all_jobs(self) -> list[dict[str, Any]]:
+    def get_all_jobs(self) -> list[dict[str, Any]]:
         query = "SELECT * FROM cron.job;"
-        return await self.prisma.query_raw(query)
+        result = self.session.exec(text(query))
+        return [dict(row._mapping) for row in result.all()]
 
-    async def get_job_by_name(self, job_name: str) -> dict[str, Any] | None:
+    def get_job_by_name(self, job_name: str) -> dict[str, Any] | None:
         query = f"SELECT * FROM cron.job WHERE jobname = '{job_name}';"
-        result = await self.prisma.query_raw(query)
-        return result[0] if result else None
+        result = self.session.exec(text(query))
+        row = result.first()
+        return dict(row._mapping) if row else None
 
-    async def update_job(
+    def update_job(
         self,
         job_name: str,
         schedule: str | None = None,
@@ -101,5 +106,6 @@ class PgCronGateway:
 
         update_str = ", ".join(updates)
         query = f"UPDATE cron.job SET {update_str} WHERE jobname = '{job_name}' RETURNING *;"
-        result = await self.prisma.query_raw(query)
-        return result[0] if result else None
+        result = self.session.exec(text(query))
+        row = result.first()
+        return dict(row._mapping) if row else None

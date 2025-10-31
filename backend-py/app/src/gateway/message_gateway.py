@@ -1,64 +1,69 @@
-from prisma import Prisma
-from prisma.models import Message
-from prisma.types import (
-    MessageCreateInput,
-    MessageUpdateInput,
-    MessageWhereInput,
-    MessageWhereUniqueInput,
-)
+from sqlmodel import Session, select
+
+from src.domain.entity.models import Message
 
 
 class MessageGateway:
-    async def create(
+    def create(
         self,
         chat_room_id: int,
         virtual_sender_id: str,
         content: str,
-        prisma: Prisma,
+        session: Session,
     ) -> Message:
-        create_input = MessageCreateInput(
-            chatRoomId=chat_room_id,
-            virtualSenderId=virtual_sender_id,
+        message = Message(
+            chat_room_id=chat_room_id,
+            virtual_user_id=virtual_sender_id,
             content=content,
         )
-        return await prisma.message.create(data=create_input)
+        session.add(message)
+        session.commit()
+        session.refresh(message)
+        return message
 
-    async def get_by_id(
+    def get_by_id(
         self,
         message_id: int,
-        prisma: Prisma,
+        session: Session,
     ) -> Message | None:
-        where_input = MessageWhereUniqueInput(id=message_id)
-        return await prisma.message.find_unique(where=where_input)
+        statement = select(Message).where(Message.id == message_id)
+        return session.exec(statement).first()
 
-    async def get_all_by_chat_room_id(
+    def get_all_by_chat_room_id(
         self,
         chat_room_id: int,
-        prisma: Prisma,
+        session: Session,
     ) -> list[Message]:
-        where_input = MessageWhereInput(chatRoomId=chat_room_id)
-        return await prisma.message.find_many(where=where_input)
+        statement = select(Message).where(Message.chat_room_id == chat_room_id)
+        return list(session.exec(statement).all())
 
-    async def update(
+    def update(
         self,
         message_id: int,
         content: str,
-        prisma: Prisma,
+        session: Session,
     ) -> Message:
-        where_input = MessageWhereUniqueInput(id=message_id)
-        update_input = MessageUpdateInput(content=content)
-        result = await prisma.message.update(where=where_input, data=update_input)
-        if result is None:
+        statement = select(Message).where(Message.id == message_id)
+        message = session.exec(statement).first()
+        if message is None:
             raise ValueError("Message not found")
-        return result
 
-    async def delete(
+        message.content = content
+        session.add(message)
+        session.commit()
+        session.refresh(message)
+        return message
+
+    def delete(
         self,
         message_id: int,
-        prisma: Prisma,
+        session: Session,
     ) -> Message:
-        where_input = MessageWhereUniqueInput(id=message_id)
-        result = await prisma.message.delete(where=where_input)
-        if result is None:
+        statement = select(Message).where(Message.id == message_id)
+        message = session.exec(statement).first()
+        if message is None:
             raise ValueError("Message not found")
-        return result
+
+        session.delete(message)
+        session.commit()
+        return message

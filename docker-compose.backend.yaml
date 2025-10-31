@@ -27,7 +27,7 @@ services:
       /bin/bash -c "
         uv sync --group dev &&
         . .venv/bin/activate &&
-        prisma generate --schema=../prisma/schema.prisma --generator backendPyClient &&
+        sqlacodegen --generator sqlmodels $DIRECT_URL > src/domain/entity/models.py &&
         uvicorn app:app --proxy-headers --reload --host 0.0.0.0
       "
   # backend_app_py_release:

@@ -1,78 +1,78 @@
 import uuid
 from datetime import datetime
 
-from prisma import Prisma
-from prisma.models import VirtualUser
-from prisma.types import (
-    VirtualUserCreateInput,
-    VirtualUserUpdateInput,
-    VirtualUserWhereInput,
-    VirtualUserWhereUniqueInput,
-)
+from sqlmodel import Session, select
+
+from src.domain.entity.models import VirtualUser
 
 
 class VirtualUserGateway:
-    async def create(
+    def create(
         self,
         name: str,
         owner_id: str,
-        prisma: Prisma,
+        session: Session,
     ) -> VirtualUser:
-        create_input = VirtualUserCreateInput(
+        virtual_user = VirtualUser(
             id=str(uuid.uuid4()),
             name=name,
-            ownerId=owner_id,
-            createdAt=datetime.now(),
-            updatedAt=datetime.now(),
+            owner_id=owner_id,
+            created_at=datetime.now(),
+            updated_at=datetime.now(),
         )
-        result: VirtualUser = await prisma.virtualuser.create(data=create_input)
-        return result
+        session.add(virtual_user)
+        session.commit()
+        session.refresh(virtual_user)
+        return virtual_user
 
-    async def get_by_id(
+    def get_by_id(
         self,
         virtual_user_id: str,
-        prisma: Prisma,
+        session: Session,
     ) -> VirtualUser | None:
-        where_input = VirtualUserWhereUniqueInput(id=virtual_user_id)
-        result = await prisma.virtualuser.find_unique(where=where_input)
-        return result if isinstance(result, VirtualUser) else None
+        statement = select(VirtualUser).where(VirtualUser.id == virtual_user_id)
+        return session.exec(statement).first()
 
-    async def get_all(self, prisma: Prisma) -> list[VirtualUser]:
-        results = await prisma.virtualuser.find_many()
-        return [result for result in results if isinstance(result, VirtualUser)]
+    def get_all(self, session: Session) -> list[VirtualUser]:
+        statement = select(VirtualUser)
+        return list(session.exec(statement).all())
 
-    async def get_by_owner_id(
+    def get_by_owner_id(
         self,
         owner_id: str,
-        prisma: Prisma,
+        session: Session,
     ) -> list[VirtualUser]:
-        where_input = VirtualUserWhereInput(ownerId=owner_id)
-        results = await prisma.virtualuser.find_many(where=where_input)
-        return [result for result in results if isinstance(result, VirtualUser)]
+        statement = select(VirtualUser).where(VirtualUser.owner_id == owner_id)
+        return list(session.exec(statement).all())
 
-    async def update(
+    def update(
         self,
         virtual_user_id: str,
         name: str,
-        prisma: Prisma,
+        session: Session,
     ) -> VirtualUser:
-        where_input = VirtualUserWhereUniqueInput(id=virtual_user_id)
-        update_input = VirtualUserUpdateInput(name=name, updatedAt=datetime.now())
-        result: VirtualUser | None = await prisma.virtualuser.update(
-            where=where_input,
-            data=update_input,
-        )
-        if result is None:
+        statement = select(VirtualUser).where(VirtualUser.id == virtual_user_id)
+        virtual_user = session.exec(statement).first()
+        if virtual_user is None:
             raise ValueError("VirtualUser not found")
-        return result
 
-    async def delete(
+        virtual_user.name = name
+        virtual_user.updated_at = datetime.now()
+        session.add(virtual_user)
+        session.commit()
+        session.refresh(virtual_user)
+        return virtual_user
+
+    def delete(
         self,
         virtual_user_id: str,
-        prisma: Prisma,
+        session: Session,
     ) -> VirtualUser:
-        where_input = VirtualUserWhereUniqueInput(id=virtual_user_id)
-        result: VirtualUser | None = await prisma.virtualuser.delete(where=where_input)
-        if result is None:
+        statement = select(VirtualUser).where(VirtualUser.id == virtual_user_id)
+        virtual_user = session.exec(statement).first()
+        if virtual_user is None:
             raise ValueError("VirtualUser not found")
-        return result
+
+        session.delete(virtual_user)
+        session.commit()
+        return virtual_user

@@ -2,14 +2,16 @@ from logging import getLogger
 
 from fastapi import APIRouter, Depends, HTTPException
 from gotrue.types import User
+from sqlmodel import Session
 
-from domain.entity.supabase_webhook_payload import SupabaseWebhookPayload
-from domain.entity.virtual_chat import (
+from src.domain.entity.supabase_webhook_payload import SupabaseWebhookPayload
+from src.domain.entity.virtual_chat import (
     ChatRequest,
     ChatResponse,
 )
-from middleware.auth_middleware import verify_token
-from usecase.virtual_user_chat_usecase import VirtualUserChatUsecase
+from src.infra.db_client import get_session
+from src.middleware.auth_middleware import verify_token
+from src.usecase.virtual_user_chat_usecase import VirtualUserChatUsecase
 
 router = APIRouter()
 
@@ -19,6 +21,7 @@ logger = getLogger("uvicorn")
 @router.post("/webhook/virtual_user_chat", response_model=ChatResponse)
 async def handle_virtual_user_chat_webhook(
     payload: SupabaseWebhookPayload,
+    session: Session = Depends(get_session),
 ) -> ChatResponse:
     usecase = VirtualUserChatUsecase()
     try:
@@ -39,6 +42,7 @@ async def handle_virtual_user_chat_webhook(
                 int(chat_room_id),
                 str(virtual_user_id),
                 chat_request,
+                session,
             )
             return response
         # 他のテーブルやイベントタイプは無視する
@@ -52,6 +56,7 @@ async def handle_virtual_user_chat_webhook(
 async def chat_with_virtual_user_initially(
     virtual_user_id: str,
     chat_request: ChatRequest,
+    session: Session = Depends(get_session),
     current_user: User = Depends(verify_token),
 ) -> ChatResponse:
     usecase = VirtualUserChatUsecase()
@@ -59,6 +64,7 @@ async def chat_with_virtual_user_initially(
         response = await usecase.initiate_virtual_user_chat(
             virtual_user_id,
             chat_request,
+            session,
         )
         return response
     except ValueError as e:
@@ -73,6 +79,7 @@ async def chat_with_virtual_user(
     chat_room_id: int,
     virtual_user_id: str,
     chat_request: ChatRequest,
+    session: Session = Depends(get_session),
     current_user: User = Depends(verify_token),
 ) -> ChatResponse:
     usecase = VirtualUserChatUsecase()
@@ -81,6 +88,7 @@ async def chat_with_virtual_user(
             chat_room_id,
             virtual_user_id,
             chat_request,
+            session,
         )
         return response
     except ValueError as e:

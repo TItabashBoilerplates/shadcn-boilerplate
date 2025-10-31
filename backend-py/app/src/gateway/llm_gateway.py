@@ -32,7 +32,7 @@ class LLMGateway:
         self.chat = LLMFactory.get_chat(mode, model)
         self.llm = LLMFactory.get_llm(mode, model)
 
-    def generate_text(
+    async def generate_text(
         self,
         prompt: str,
         system_message: str = DEFAULT_SYSTEM_MESSAGE,
@@ -56,14 +56,14 @@ class LLMGateway:
             history_messages_key="history",
         )
 
-        response: str = runnable_with_history.invoke(
+        response: str = await runnable_with_history.ainvoke(
             {"query": prompt},
             session_id=session_id,
         )
         logger.info(f"Generated text: {response}")
         return response
 
-    def generate_model(
+    async def generate_model(
         self,
         prompt: str,
         pydantic_model: type[BaseModel],
@@ -88,10 +88,10 @@ class LLMGateway:
             | message_prompt
             | self.chat.with_structured_output(pydantic_model)
         )
-        result: BaseModel = chain.invoke(prompt)
+        result: BaseModel = await chain.ainvoke(prompt)
         return result
 
-    def generate_text_from_rag(self, prompt: str, retriever: BaseRetriever) -> str:
+    async def generate_text_from_rag(self, prompt: str, retriever: BaseRetriever) -> str:
         """Generates a response from the LLM model using RAG."""
         rag_prompt = ChatPromptTemplate(
             messages=[
@@ -107,10 +107,10 @@ class LLMGateway:
             | self.chat
             | StrOutputParser()
         )
-        result: str = rag_chain.invoke(prompt)
+        result: str = await rag_chain.ainvoke(prompt)
         return result
 
-    def generate_model_from_rag(
+    async def generate_model_from_rag(
         self,
         prompt: str,
         pydantic_model: type[BaseModel],
@@ -138,7 +138,7 @@ class LLMGateway:
             | rag_prompt
             | self.chat.with_structured_output(pydantic_model)
         )
-        result: BaseModel = rag_chain.invoke(prompt)
+        result: BaseModel = await rag_chain.ainvoke(prompt)
         return result
 
     def _format_docs(self, docs: list[Document]) -> str:

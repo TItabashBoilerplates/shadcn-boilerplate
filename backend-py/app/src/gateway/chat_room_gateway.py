@@ -1,70 +1,74 @@
-from prisma import Prisma
-from prisma.enums import ChatType
-from prisma.models import ChatRoom
-from prisma.types import (
-    ChatRoomCreateInput,
-    ChatRoomUpdateInput,
-    ChatRoomWhereInput,
-    ChatRoomWhereUniqueInput,
-    UserChatCreateManyNestedWithoutRelationsInput,
-)
+from sqlmodel import Session, select
+
+from src.domain.entity.models import ChatRoom, ChatType, UserChat
 
 
 class ChatRoomGateway:
-    async def create(
+    def create(
         self,
         user_id: str,
-        prisma: Prisma,
+        session: Session,
     ) -> ChatRoom:
-        create_input = ChatRoomCreateInput(
-            type=ChatType.PRIVATE,
-            userChats=UserChatCreateManyNestedWithoutRelationsInput(
-                create=[{"userId": user_id}],
-            ),
-        )
-        return await prisma.chatroom.create(data=create_input)
+        # チャットルームを作成
+        chat_room = ChatRoom(type=ChatType.PRIVATE)
+        session.add(chat_room)
+        session.commit()
+        session.refresh(chat_room)
 
-    async def get_by_id(
+        # ユーザチャットの関連を作成
+        user_chat = UserChat(user_id=user_id, chat_room_id=chat_room.id)
+        session.add(user_chat)
+        session.commit()
+
+        return chat_room
+
+    def get_by_id(
         self,
         chat_room_id: int,
-        prisma: Prisma,
+        session: Session,
     ) -> ChatRoom | None:
-        where_input = ChatRoomWhereUniqueInput(id=chat_room_id)
-        return await prisma.chatroom.find_unique(
-            where=where_input,
-            include={
-                "userChats": True,
-                "virtualChats": True,
-            },
-        )
+        statement = select(ChatRoom).where(ChatRoom.id == chat_room_id)
+        return session.exec(statement).first()
 
-    async def get_all_by_user_id(
+    def get_all_by_user_id(
         self,
         user_id: str,
-        prisma: Prisma,
+        session: Session,
     ) -> list[ChatRoom]:
-        where_input = ChatRoomWhereInput(userChats={"some": {"userId": user_id}})
-        return await prisma.chatroom.find_many(where=where_input)
+        # UserChatを経由してChatRoomを取得
+        statement = (
+            select(ChatRoom)
+            .join(UserChat)
+            .where(UserChat.user_id == user_id)
+        )
+        return list(session.exec(statement).all())
 
-    async def update(
+    def update(
         self,
         chat_room_id: int,
-        prisma: Prisma,
+        session: Session,
     ) -> ChatRoom:
-        where_input = ChatRoomWhereUniqueInput(id=chat_room_id)
-        update_input = ChatRoomUpdateInput()
-        result = await prisma.chatroom.update(where=where_input, data=update_input)
-        if result is None:
+        statement = select(ChatRoom).where(ChatRoom.id == chat_room_id)
+        chat_room = session.exec(statement).first()
+        if chat_room is None:
             raise ValueError("ChatRoom not found")
-        return result
 
-    async def delete(
+        # 必要に応じて属性を更新
+        session.add(chat_room)
+        session.commit()
+        session.refresh(chat_room)
+        return chat_room
+
+    def delete(
         self,
         chat_room_id: int,
-        prisma: Prisma,
+        session: Session,
     ) -> ChatRoom:
-        where_input = ChatRoomWhereUniqueInput(id=chat_room_id)
-        result = await prisma.chatroom.delete(where=where_input)
-        if result is None:
+        statement = select(ChatRoom).where(ChatRoom.id == chat_room_id)
+        chat_room = session.exec(statement).first()
+        if chat_room is None:
             raise ValueError("ChatRoom not found")
-        return result
+
+        session.delete(chat_room)
+        session.commit()
+        return chat_room

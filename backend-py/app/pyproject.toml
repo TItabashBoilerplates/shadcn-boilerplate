@@ -72,8 +72,10 @@ dependencies = [
     "scipy",
     "httpx",
 
-    # Prisma
-    "prisma",
+    # SQLModel & Database
+    "sqlmodel",
+    "sqlacodegen",
+    "psycopg2-binary",
 
     # Autogen
     "pyautogen",
