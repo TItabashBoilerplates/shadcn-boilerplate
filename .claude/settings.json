@@ -13,7 +13,10 @@
       "Bash(bun run lint:*)",
       "Bash(bun run format:*)",
       "Bash(bun run format-check:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "mcp__supabase",
+      "mcp__shadcn",
+      "Bash(tree:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
@@ -23,5 +26,56 @@
     "shadcn",
     "playwright",
     "supabase"
-  ]
+  ],
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'file=$(cat | jq -r .file_path); [[ \"$file\" =~ ^frontend/ ]] && (cd frontend && bun run format \"$file\") || true'",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'file=$(cat | jq -r .file_path); [[ \"$file\" =~ ^frontend/.*\\.tsx?$ ]] && (cd frontend && bunx tsc --noEmit) || true'",
+            "timeout": 60
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'file=$(cat | jq -r .file_path); [[ \"$file\" =~ ^supabase/functions/ ]] && deno check \"$file\" || true'",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'file=$(cat | jq -r .file_path); [[ \"$file\" =~ ^backend-py/ ]] && docker exec backend_app_py bash -c \"cd /service/app && uv run ruff format .\" || true'",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'file=$(cat | jq -r .file_path); [[ \"$file\" =~ ^backend-py/.*\\.py$ ]] && docker exec backend_app_py bash -c \"cd /service/app && uv run ruff check .\" || true'",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'file=$(cat | jq -r .file_path); [[ \"$file\" =~ ^backend-py/.*\\.py$ ]] && docker exec backend_app_py bash -c \"cd /service/app && uv run mypy .\" || true'",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd frontend && bun run build",
+            "timeout": 120
+          }
+        ]
+      }
+    ]
+  }
 }
