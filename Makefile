@@ -10,11 +10,11 @@ init:
 	# asdfをインストール
 	asdf install
 	# Supabaseにログイン
-	supabase login
+	npx dotenvx run -f env/backend/${ENV}.env -- supabase login
 	# Supabaseを初期化
-	yes 'N' | supabase init --force
-	# Supabaseを起動
-	supabase start
+	yes 'N' | npx dotenvx run -f env/backend/${ENV}.env -- supabase init --force
+	# Supabaseを起動（dotenvxで環境変数を読み込む）
+	npx dotenvx run -f env/backend/${ENV}.env -- supabase start
 	# シークレットの設定がなければコピー
 	if [ ! -f "env/secrets.env" ]; then \
 		cp env/secrets.env.example env/secrets.env; \
@@ -41,8 +41,10 @@ run:
 	export PROJECT_NAME=$$(basename $$(pwd))
 	# # 共通の.git設定のファイルをコピー
 	# make copy-git-config
-	# Supabaseを起動
-	supabase start
+	# Supabaseを起動（ENV=localの場合のみ）
+	if [ "${ENV}" = "local" ]; then \
+		npx dotenvx run -f env/backend/${ENV}.env -- supabase start; \
+	fi
 	# Docker Composeでサービスを起動
 	if [ "${ENV}" != "local" ]; then \
 		export ENV=${ENV}; \
@@ -63,7 +65,10 @@ stop:
 		export ENV=${ENV}; \
 	fi
 	docker-compose -f ./docker-compose.backend.yaml down
-	supabase stop
+	# Supabaseを停止（ENV=localの場合のみ）
+	if [ "${ENV}" = "local" ]; then \
+		npx dotenvx run -f env/backend/${ENV}.env -- supabase stop; \
+	fi
 
 # フロントエンドビルドコマンド
 .PHONY: build-frontend
@@ -77,19 +82,25 @@ lint-frontend:
 
 .PHONY: deploy-functions
 deploy-functions:
-	# 必要な関数を追加
-	supabase functions deploy watermark --no-verify-jwt
-	supabase functions deploy stripe-checkout --no-verify-jwt
-	supabase functions deploy stripe-products --no-verify-jwt
-	supabase functions deploy stripe-webhooks --no-verify-jwt
+	# ENV=localの場合はスキップ、それ以外はproject-refを指定してデプロイ
+	if [ "${ENV}" != "local" ]; then \
+		npx dotenvx run -f env/backend/${ENV}.env -- bash -c 'supabase functions deploy watermark --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
+		npx dotenvx run -f env/backend/${ENV}.env -- bash -c 'supabase functions deploy stripe-checkout --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
+		npx dotenvx run -f env/backend/${ENV}.env -- bash -c 'supabase functions deploy stripe-products --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
+		npx dotenvx run -f env/backend/${ENV}.env -- bash -c 'supabase functions deploy stripe-webhooks --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
+	else \
+		echo "Skipping deploy-functions for local environment"; \
+	fi
 
 # チェックコマンド
 .PHONY: check
 check:
 	# プロジェクト名を設定
 	export PROJECT_NAME=$$(basename $$(pwd))
-	# Supabaseを起動
-	supabase start
+	# Supabaseを起動（ENV=localの場合のみ）
+	if [ "${ENV}" = "local" ]; then \
+		npx dotenvx run -f env/backend/${ENV}.env -- supabase start; \
+	fi
 	# バックエンドサービスの状態確認
 	docker-compose -f ./docker-compose.backend.yaml ps
 
@@ -107,11 +118,12 @@ copy-git-config:
 # Supabaseのモデルをビルド
 .PHONY: build-model-frontend-supabase
 build-model-frontend-supabase:
-	# Supabaseを起動
-	supabase start
-	# モデルの型を生成
-	$(eval DIR_PATH := "./frontend/src/shared/types")
-	mkdir -p $(DIR_PATH) && supabase gen types typescript --local > $(DIR_PATH)/supabase.ts
+	# ENV=localの場合のみ実行
+	if [ "${ENV}" = "local" ]; then \
+		npx dotenvx run -f env/backend/${ENV}.env -- supabase start; \
+		$(eval DIR_PATH := "./frontend/src/shared/types"); \
+		mkdir -p $(DIR_PATH) && npx dotenvx run -f env/backend/${ENV}.env -- supabase gen types typescript --local > $(DIR_PATH)/supabase.ts; \
+	fi
 
 .PHONY: build-model-prisma
 build-model-prisma:
@@ -121,16 +133,19 @@ build-model-prisma:
 # Edge functionsのモデルをビルド
 .PHONY: build-model-functions
 build-model-functions:
-	# Supabaseを起動
-	supabase start
-	# モデルの型を生成
-	mkdir -p ./supabase/functions/shared/types && supabase gen types typescript --local > ./supabase/functions/shared/types/schema.ts
+	# ENV=localの場合のみ実行
+	if [ "${ENV}" = "local" ]; then \
+		npx dotenvx run -f env/backend/${ENV}.env -- supabase start; \
+		mkdir -p ./supabase/functions/shared/types && npx dotenvx run -f env/backend/${ENV}.env -- supabase gen types typescript --local > ./supabase/functions/shared/types/schema.ts; \
+	fi
 
 # フロントエンドのSupabase型生成
 .PHONY: build-model-frontend-supabase-types
 build-model-frontend-supabase-types:
-	# Supabaseを起動
-	supabase start
+	# ENV=localの場合のみ実行
+	if [ "${ENV}" = "local" ]; then \
+		npx dotenvx run -f env/backend/${ENV}.env -- supabase start; \
+	fi
 	# TypeScript型を生成
 	make build-model-frontend-supabase
 
@@ -150,8 +165,10 @@ seed:
 # 初期マイグレーションコマンド
 .PHONY: init-migration
 init-migration:
-	# Supabaseを起動
-	supabase start
+	# Supabaseを起動（ENV=localの場合のみ）
+	if [ "${ENV}" = "local" ]; then \
+		npx dotenvx run -f env/backend/${ENV}.env -- supabase start; \
+	fi
 
 	# 環境に応じてマイグレーションを実行
 	if [ "${ENV}" == "local" ]; then \
@@ -179,7 +196,10 @@ init-migration:
 
 .PHONY: migration
 migration:
-	supabase start
+	# Supabaseを起動（ENV=localの場合のみ）
+	if [ "${ENV}" = "local" ]; then \
+		npx dotenvx run -f env/backend/${ENV}.env -- supabase start; \
+	fi
 	if [ "${ENV}" == "local" ]; then \
 		cd prisma && npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma migrate dev --skip-generate --skip-seed; \
 		cd .. && make build-model-frontend-supabase; \

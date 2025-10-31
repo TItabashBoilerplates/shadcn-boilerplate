@@ -53,6 +53,5 @@ ipfs/contents/**
 supabase/.branches/**
 supabase/.temp/**
 supabase/migrations/**
-supabase/config.toml
 
 env/secrets.env
