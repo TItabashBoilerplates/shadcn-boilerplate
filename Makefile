@@ -170,6 +170,11 @@ migrate-dev:
 	fi
 	@echo "🚀 Running migrate-dev (generate + apply + build-model)..."
 	@echo ""
+	# Atlas Dev DBを起動
+	@echo "🐘 Starting Atlas dev database..."
+	export PROJECT_NAME=$$(basename $$(pwd)) && \
+	docker-compose -f docker-compose.backend.yaml up -d atlas_dev_db
+	@sleep 2
 	# Supabaseを起動
 	npx dotenvx run -f env/backend/local.env -- supabase start
 	# マイグレーションを生成

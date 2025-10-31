@@ -10,8 +10,8 @@ env "local" {
   url = getenv("DATABASE_URL")
 
   # 開発用データベースURL（マイグレーション生成に使用）
-  # ローカル環境では url と同じSupabase Local DBを使用
-  dev = getenv("DATABASE_URL")
+  # docker-compose.backend.yaml で起動する専用PostgreSQL（ポート5433）
+  dev = "postgres://postgres:postgres@localhost:5433/atlas_dev?sslmode=disable&search_path=public"
 
   # マイグレーションディレクトリ
   migration {

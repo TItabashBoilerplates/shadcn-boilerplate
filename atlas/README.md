@@ -79,10 +79,13 @@ make migration
 ```
 
 このコマンドは以下を自動実行します：
-1. Supabase起動
-2. マイグレーション生成（`atlas migrate diff`）
-3. ローカルDBに適用（`atlas migrate apply`）
-4. 型定義を再生成（`make build-model`）
+1. **Atlas dev database 起動**（PostgreSQL @ localhost:5433）
+2. **Supabase起動**（Supabase Local @ localhost:54322）
+3. **マイグレーション生成**（`atlas migrate diff`）
+   - dev database に既存マイグレーションを再生
+   - HCLスキーマと比較して差分SQLを生成
+4. **ローカルDBに適用**（`atlas migrate apply` → Supabase Local）
+5. **型定義を再生成**（`make build-model`）
 
 ### 本番用マイグレーション適用（Prismaの migrate deploy）
 
@@ -155,9 +158,14 @@ ENV=production make migrate-deploy
 - ⚠️ **`make migrate-dev` はローカル環境専用**（ENV指定でエラー）
 - **`make migrate-deploy` は全環境で使用可能**（既存ファイルの適用のみ）
 - マイグレーションファイルは必ずGitで管理
-- **ローカル環境では `dev` と `url` が同じDB（Supabase Local）を使用**
-  - 追加のDockerコンテナ不要でシンプル
-  - HCLスキーマと現在のDB状態を比較してマイグレーション生成
+- **dev database の役割**（Atlasの推奨に準拠）
+  - `dev`: マイグレーション生成用の一時DB（PostgreSQL @ localhost:5433）
+    - docker-compose.backend.yaml で自動起動
+    - 既存マイグレーションを再生して「現在の状態」を再現
+    - HCLスキーマと比較して差分SQLを生成
+  - `url`: 実際のデータベース（Supabase Local @ localhost:54322）
+    - 生成されたマイグレーションを適用
+    - 実データが保存される
 - `atlas.hcl` の `dev` パラメータは local 環境にのみ定義されており、リモート環境での誤操作を防止
 
 ## 注意事項

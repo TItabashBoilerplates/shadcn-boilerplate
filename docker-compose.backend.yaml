@@ -107,7 +107,36 @@ services:
   #     - ./ngrok/ngrok.yml:/etc/ngrok.yml
   #   networks:
   #     - supabase_network
+
+  # Atlas Dev Database (マイグレーション生成用の一時DB)
+  atlas_dev_db:
+    image: postgres:15-alpine
+    container_name: atlas_dev_db_${PROJECT_NAME}
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: atlas_dev
+    ports:
+      - "5433:5432"
+    networks:
+      - supabase_network
+    volumes:
+      - atlas_dev_data:/var/lib/postgresql/data
+    # 開発専用なので軽量設定（パフォーマンス優先）
+    command:
+      - "postgres"
+      - "-c"
+      - "fsync=off"
+      - "-c"
+      - "synchronous_commit=off"
+      - "-c"
+      - "full_page_writes=off"
+
 networks:
   supabase_network:
     name: supabase_network_${PROJECT_NAME}
     external: true
+
+volumes:
+  atlas_dev_data:
+    name: atlas_dev_data_${PROJECT_NAME}

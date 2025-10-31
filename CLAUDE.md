@@ -115,7 +115,13 @@ atlas/
 └── migrations/    # 生成されたマイグレーションファイル
 ```
 
-**重要**: ローカル環境では `dev` と `url` が同じSupabase Local DBを使用します。これにより追加のDockerコンテナが不要でシンプルな開発環境を実現しています。
+**重要**: Atlas は2つのデータベースを使用します（Atlasの推奨設計）：
+- **dev database** (localhost:5433): マイグレーション生成用の一時DB
+  - docker-compose で自動起動される専用PostgreSQL
+  - 既存マイグレーションを再生して差分SQLを生成
+- **url database** (localhost:54322): 実際のSupabase Local DB
+  - 生成されたマイグレーションを適用
+  - 開発データが保存される
 
 #### スキーマ変更ワークフロー（Prisma風）
 
