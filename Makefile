@@ -158,6 +158,8 @@ build-model:
 # ローカル環境専用: マイグレーション生成 → 適用 → 型生成を一括実行
 .PHONY: migrate-dev
 migrate-dev:
+	@make atlas-validate;
+	@make atlas-lint;
 	@# ENVが指定されていて、かつlocal以外の場合は警告
 	@if [ -n "${ENV}" ] && [ "${ENV}" != "local" ]; then \
 		echo "⚠️  ERROR: migrate-dev is for local development only!"; \
@@ -192,6 +194,8 @@ migrate-dev:
 migrate-deploy:
 	@echo "🚀 Deploying migrations to ${ENV} environment..."
 	@echo ""
+	@make atlas-validate;
+	@make atlas-lint;
 	# Supabaseを起動（ENV=localの場合のみ）
 	if [ "${ENV}" = "local" ] || [ -z "${ENV}" ]; then \
 		npx dotenvx run -f env/backend/local.env -- supabase start; \
@@ -214,14 +218,6 @@ migrate-deploy:
 	fi
 	@echo ""
 	@echo "✅ Migration deployment complete!"
-
-# エイリアス: Prismaとの互換性のため
-.PHONY: migration migrate-diff
-migration: migrate-dev
-migrate-diff:
-	@echo "⚠️  Use 'make migrate-dev' for local development instead."
-	@echo "This will generate + apply migrations and regenerate types."
-	@exit 1
 
 # スキーマ検証（Atlasベース）
 .PHONY: atlas-validate
