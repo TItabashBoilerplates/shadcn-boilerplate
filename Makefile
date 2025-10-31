@@ -23,14 +23,14 @@ init:
 	echo "PROJECT_NAME=$$(basename $$(pwd))" > .env
 	# envディレクトリ内のテキストファイルで"dapps-boilerplate"を置換
 	find env -type f -name "*.env" -exec sed -i '' 's/dapps-boilerplate/$$(basename $$(pwd))/g' {} +
-	# dotenvxとprismaをインストール
+	# dotenvxとatlasをインストール
 	npm install -g @dotenvx/dotenvx;
-	npm install -g prisma;
-	npm install -g @prisma/client;
+	# Atlasのインストール（macOS / Linux）
+	curl -sSf https://atlasgo.sh | sh
 	# フロントエンドとバックエンドの依存関係もインストール
 	cd frontend && bun install
 	# データベースのマイグレーションとモデルのビルドを実行
-	make init-migration
+	make atlas-init-migration
 	make build-model
 	@echo "Woo-hoo! Everything's ready to roll!"
 
@@ -104,11 +104,6 @@ check:
 	# バックエンドサービスの状態確認
 	docker-compose -f ./docker-compose.backend.yaml ps
 
-# Prismaのモデルをビルド（削除予定 - 現在使用されていない）
-.PHONY: build-model-frontend-prisma
-build-model-frontend-prisma:
-	@echo "Note: Frontend Prisma client generation is currently not used in this Next.js setup"
-
 # 共通の.git設定のファイルをコピー
 # プリコミットなども
 .PHONY: copy-git-config
@@ -157,79 +152,97 @@ build-model:
 	# Edge functionsのモデルをビルド
 	make build-model-functions
 
+# ===== Atlas マイグレーションコマンド（Prisma風） =====
+
+# 開発用マイグレーション（Prismaの migrate dev に相当）
+# ローカル環境専用: マイグレーション生成 → 適用 → 型生成を一括実行
+.PHONY: migrate-dev
+migrate-dev:
+	@# ENVが指定されていて、かつlocal以外の場合は警告
+	@if [ -n "${ENV}" ] && [ "${ENV}" != "local" ]; then \
+		echo "⚠️  ERROR: migrate-dev is for local development only!"; \
+		echo "Specified ENV: ${ENV}"; \
+		echo ""; \
+		echo "Use 'ENV=${ENV} make migrate-deploy' for remote environments."; \
+		exit 1; \
+	fi
+	@echo "🚀 Running migrate-dev (generate + apply + build-model)..."
+	@echo ""
+	# Supabaseを起動
+	npx dotenvx run -f env/backend/local.env -- supabase start
+	# マイグレーションを生成
+	@echo "📝 Generating migration..."
+	npx dotenvx run -f env/migration/local.env -- atlas migrate diff \
+		--config file://atlas/atlas.hcl \
+		--env local
+	# マイグレーションを適用
+	@echo "✅ Applying migration to local database..."
+	npx dotenvx run -f env/migration/local.env -- atlas migrate apply \
+		--config file://atlas/atlas.hcl \
+		--env local
+	# モデル生成
+	@echo "🔧 Generating database types..."
+	make build-model
+	@echo ""
+	@echo "✨ Done! Don't forget to commit migration files to Git."
+
+# 本番用マイグレーション適用（Prismaの migrate deploy に相当）
+# 全環境で使用可能: 既存のマイグレーションファイルを適用するだけ
+.PHONY: migrate-deploy
+migrate-deploy:
+	@echo "🚀 Deploying migrations to ${ENV} environment..."
+	@echo ""
+	# Supabaseを起動（ENV=localの場合のみ）
+	if [ "${ENV}" = "local" ] || [ -z "${ENV}" ]; then \
+		npx dotenvx run -f env/backend/local.env -- supabase start; \
+	fi
+	# マイグレーションを適用
+	@if [ -z "${ENV}" ] || [ "${ENV}" = "local" ]; then \
+		echo "📍 Deploying to: local"; \
+		npx dotenvx run -f env/migration/local.env -- atlas migrate apply \
+			--config file://atlas/atlas.hcl \
+			--env local; \
+	else \
+		echo "📍 Deploying to: ${ENV}"; \
+		npx dotenvx run -f env/migration/${ENV}.env -- atlas migrate apply \
+			--config file://atlas/atlas.hcl \
+			--env ${ENV}; \
+	fi
+	# モデル生成（ローカルのみ）
+	@if [ -z "${ENV}" ] || [ "${ENV}" = "local" ]; then \
+		make build-model; \
+	fi
+	@echo ""
+	@echo "✅ Migration deployment complete!"
+
+# エイリアス: Prismaとの互換性のため
+.PHONY: migration migrate-diff
+migration: migrate-dev
+migrate-diff:
+	@echo "⚠️  Use 'make migrate-dev' for local development instead."
+	@echo "This will generate + apply migrations and regenerate types."
+	@exit 1
+
+# スキーマ検証（Atlasベース）
+.PHONY: atlas-validate
+atlas-validate:
+	atlas schema validate --config file://atlas/atlas.hcl --env ${ENV}
+
+# マイグレーションLintチェック（Atlasベース）
+.PHONY: atlas-lint
+atlas-lint:
+	atlas migrate lint --config file://atlas/atlas.hcl --env ${ENV}
+
+# ===== その他のコマンド =====
+
 .PHONY: seed
 seed:
-	cd prisma && npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma generate --schema=./schema.prisma --generator seedClient
-	cd prisma && npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db seed
+	@echo "Warning: Seed functionality is currently disabled"
+	@echo "Please implement seed logic with Atlas if needed"
 
-# 初期マイグレーションコマンド
-.PHONY: init-migration
-init-migration:
-	# Supabaseを起動（ENV=localの場合のみ）
-	if [ "${ENV}" = "local" ]; then \
-		npx dotenvx run -f env/backend/${ENV}.env -- supabase start; \
-	fi
-
-	# 環境に応じてマイグレーションを実行
-	if [ "${ENV}" == "local" ]; then \
-		cd prisma; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma migrate dev --name initial-migration --skip-generate --skip-seed; \
-		cd .. && make build-model-frontend-supabase; \
-		cd prisma; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/base.sql --schema schema.prisma; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/extension.sql --schema schema.prisma; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/function.sql --schema schema.prisma; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/hooks.sql --schema schema.prisma; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/realtime.sql --schema schema.prisma; \
-		cd ..; \
-	else \
-		cd prisma; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma migrate deploy --create-only; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/base.sql --schema schema.prisma; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/extension.sql --schema schema.prisma; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/function.sql --schema schema.prisma; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/hooks.sql --schema schema.prisma; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/realtime.sql --schema schema.prisma; \
-		cd ..; \
-	fi
-	make build-model-functions;
-
-.PHONY: migration
-migration:
-	# Supabaseを起動（ENV=localの場合のみ）
-	if [ "${ENV}" = "local" ]; then \
-		npx dotenvx run -f env/backend/${ENV}.env -- supabase start; \
-	fi
-	if [ "${ENV}" == "local" ]; then \
-		cd prisma && npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma migrate dev --skip-generate --skip-seed; \
-		cd .. && make build-model-frontend-supabase; \
-		cd prisma; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/base.sql --schema schema.prisma; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/extension.sql --schema schema.prisma; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/function.sql --schema schema.prisma; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/hooks.sql --schema schema.prisma; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/realtime.sql --schema schema.prisma; \
-		cd ..; \
-		make build-model-frontend-supabase; \
-	else \
-		cd prisma; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma migrate deploy; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/base.sql --schema schema.prisma; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/extension.sql --schema schema.prisma; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/function.sql --schema schema.prisma; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/hooks.sql --schema schema.prisma; \
-		npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma db execute --file ./config/realtime.sql --schema schema.prisma; \
-		cd ..; \
-	fi;
-	make build-model-functions;
-
-
+# ロールバックコマンド
 .PHONY: rollback
 rollback:
-	@echo "Rolling back the last migration..."
-	if [ "${ENV}" == "local" ]; then \
-		cd prisma && npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma migrate reset --force --skip-generate --skip-seed; \
-	else \
-		cd prisma && npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma migrate resolve --rolled-back $(shell cd prisma && npx dotenvx run -f ../env/migration/${ENV}.env -- npx prisma migrate list | grep -A 1 "Current migration" | tail -n 1 | awk '{print $$1}'); \
-	fi
-	@echo "Rollback completed."
+	@echo "⚠️  Atlas does not have built-in rollback command."
+	@echo "For rollback, manually remove the last migration file and run 'make migration-apply'."
+	@exit 1

@@ -14,7 +14,8 @@ This is a full-stack application boilerplate with a multi-platform frontend and 
 ### Backend Architecture
 - **Python Backend**: FastAPI application in `backend-py/` using clean architecture patterns
 - **Edge Functions**: Supabase Edge Functions using Hono framework for serverless APIs
-- **Database**: PostgreSQL with Prisma ORM, includes pgvector extension for embeddings
+- **Database**: PostgreSQL with **Atlas** for schema management, includes pgvector extension for embeddings
+- **Schema Management**: Atlas HCL for declarative schema definitions and migrations
 - **Infrastructure**: Supabase for auth/database, Docker containerization
 - **AI Integration**: LangChain, OpenAI, multi-modal AI capabilities, vector search
 
@@ -40,19 +41,30 @@ make local-android-ts       # Start Android development
 make stop                   # Stop all services
 ```
 
-### Database Operations
+### Database Operations (Atlas-based, Prisma-style)
 ```bash
-make migration              # Run database migrations
-make build-model            # Generate Prisma clients for all platforms
-make seed                   # Seed database with initial data
-make rollback              # Rollback last migration
+# 開発用マイグレーション（Prismaの migrate dev に相当）
+make migrate-dev           # マイグレーション生成 + 適用 + 型生成（ローカル専用）
+make migration             # migrate-dev のエイリアス
+
+# 本番用マイグレーション適用（Prismaの migrate deploy に相当）
+make migrate-deploy        # マイグレーションファイルを適用（全環境）
+ENV=staging make migrate-deploy    # ステージング環境
+ENV=production make migrate-deploy # 本番環境
+
+# スキーマ検証・Lint
+make atlas-validate        # スキーマ検証
+make atlas-lint            # マイグレーションLintチェック
+
+# 型生成（通常は migrate-dev に含まれる）
+make build-model           # Supabase型とSQLModelを生成
 ```
 
 ### Model Generation
 ```bash
 make build-model-frontend-supabase  # Generate Supabase types for frontend
 make build-model-functions          # Generate types for edge functions
-make build-model-prisma            # Generate Prisma clients
+# Note: Prismaクライアント生成は廃止（Atlasに移行済み）
 ```
 
 ### Frontend Development
@@ -85,6 +97,122 @@ Edge Functions use Hono framework for serverless API development:
 - Import map configuration for dependency management
 - Type-safe integration with Supabase client and database schema
 
+### Atlas Schema Management
+
+**IMPORTANT**: このプロジェクトは **Atlas** でデータベーススキーマを管理しています（Prismaから移行済み）。
+
+#### スキーマ構成
+
+スキーマは `atlas/` ディレクトリに HCL 形式で定義されています：
+
+```
+atlas/
+├── atlas.hcl      # Atlas設定ファイル（環境定義、Lintルール）
+├── schema/
+│   ├── schema.hcl     # メインスキーマ（テーブル、RLS、check制約を一元管理）
+│   ├── functions.hcl  # データベース関数とトリガー
+│   └── base.hcl       # 権限設定（GRANT文）
+└── migrations/    # 生成されたマイグレーションファイル
+```
+
+**重要**: ローカル環境では `dev` と `url` が同じSupabase Local DBを使用します。これにより追加のDockerコンテナが不要でシンプルな開発環境を実現しています。
+
+#### スキーマ変更ワークフロー（Prisma風）
+
+**ローカル開発**:
+```bash
+# 1. スキーマ編集
+vi atlas/schema/schema.hcl
+
+# 2. マイグレーション生成 + 適用 + 型生成（Prismaの migrate dev）
+make migrate-dev
+# または短縮形
+make migration
+
+# 3. 生成されたマイグレーションファイルを確認
+cat atlas/migrations/20250131123456_*.sql
+
+# 4. Gitにコミット
+git add atlas/migrations/
+git commit -m "Add new feature schema"
+git push
+```
+
+**リモート環境（CI/CD or 手動）**:
+```bash
+# 1. マイグレーションファイルを取得
+git pull
+
+# 2. マイグレーション適用（Prismaの migrate deploy）
+ENV=staging make migrate-deploy
+# または本番環境
+ENV=production make migrate-deploy
+```
+
+**Prismaとの比較**:
+| 操作 | Prisma | Atlas (このプロジェクト) |
+|------|--------|--------------------------|
+| ローカル開発 | `prisma migrate dev` | `make migrate-dev` |
+| 本番デプロイ | `prisma migrate deploy` | `ENV=production make migrate-deploy` |
+| スキーマ定義 | `schema.prisma` | `atlas/schema/*.hcl` |
+| マイグレーションファイル | `prisma/migrations/` | `atlas/migrations/` |
+
+#### RLS（Row Level Security）の宣言的管理
+
+**重要**: RLSは完全にAtlas HCLの宣言的構文で管理され、**テーブル定義と同じファイル**（`schema.hcl`）に配置されています。
+
+**テーブル定義とRLSポリシーを一緒に管理**:
+```hcl
+# テーブル定義
+table "general_users" {
+  column "id" { type = uuid, null = false }
+  column "account_name" { type = text, null = false }
+  # ... 他のカラム ...
+
+  # RLS有効化
+  row_security {
+    enabled = true
+  }
+}
+
+# 直後にそのテーブルのRLSポリシーを定義
+policy "select_own_user" {
+  on    = table.general_users
+  for   = SELECT
+  to    = ["anon", "authenticated"]
+  using = "true"
+}
+
+policy "edit_policy_general_users" {
+  on         = table.general_users
+  for        = ALL
+  to         = ["authenticated"]
+  using      = "(SELECT auth.uid()) = id"
+  with_check = "(SELECT auth.uid()) = id"
+}
+```
+
+**ポリシーパラメータ**:
+- **on**: 対象テーブル
+- **for**: 操作タイプ（SELECT, INSERT, UPDATE, DELETE, ALL）
+- **to**: 適用対象ロール
+- **using**: 閲覧・編集可能な行の条件
+- **with_check**: 挿入・更新時の検証条件
+
+**メリット**:
+- テーブルとそのRLSポリシーを同じ画面で確認可能
+- 認知負荷が低い（ファイル間を移動する必要がない）
+- 変更時にテーブルとポリシーを一緒に編集できる
+
+#### マイグレーション管理
+
+- Atlas は自動的にマイグレーションSQLを生成
+- 破壊的変更は `atlas lint` で事前検出
+- マイグレーション履歴は `atlas/migrations/` に保存
+- ロールバックは手動でマイグレーションファイルを削除して再適用
+
+詳細は `atlas/README.md` を参照してください。
+
 ## Code Style and Quality
 
 ### Frontend
@@ -93,14 +221,14 @@ Edge Functions use Hono framework for serverless API development:
 - TypeScript strict mode
 - Import type enforced for type-only imports
 
-### Date and Time Handling (Supabase + Prisma Best Practices)
+### Date and Time Handling (Supabase + Database Best Practices)
 
 日時処理に関する重要な原則とベストプラクティス:
 
 #### データベース設定
 
-1. **Prisma Schema**:
-   - 全ての `DateTime` フィールドに `@db.Timestamptz(3)` を必須で付与
+1. **Atlas Schema**:
+   - 全ての日時カラムに `timestamptz(3)` 型を使用
    - PostgreSQL の `TIMESTAMP WITH TIME ZONE` 型にマップされる
    - ミリ秒精度(3)はJavaScriptの `Date` オブジェクトと完全互換
 
@@ -118,7 +246,7 @@ Edge Functions use Hono framework for serverless API development:
 
 2. **データベース保存時**:
    - JavaScript の `Date` オブジェクトを `toISOString()` で ISO 8601 形式に変換
-   - Prisma Client は自動的に UTC として保存
+   - データベースは自動的に UTC として保存
    - `Date.now()` は使用しない（Unix タイムスタンプはエラーになる）
 
 3. **クライアント表示時**:
@@ -278,19 +406,10 @@ export function InternationalizedDateDisplay({ utcDate }: { utcDate: string }) {
   )
 }
 
-// ✅ Good: Supabase/Prisma へのデータ保存
+// ✅ Good: Supabase へのデータ保存
 const saveEvent = async (eventDate: Date) => {
   await supabase.from('events').insert({
     event_date: eventDate.toISOString() // ISO 8601 形式でUTCとして保存
-  })
-}
-
-// または Prisma の場合
-const saveEventWithPrisma = async (eventDate: Date) => {
-  await prisma.event.create({
-    data: {
-      eventDate: eventDate // Prisma が自動的に UTC として処理
-    }
   })
 }
 
@@ -338,27 +457,53 @@ const badSave = async () => {
 }
 ```
 
-#### Prisma Schema の例
+#### Atlas Schema の例
 
-```prisma
-model Event {
-  id        String   @id @default(cuid())
-  title     String
-  eventDate DateTime @map("event_date") @db.Timestamptz(3)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+```hcl
+table "events" {
+  schema = schema.public
 
-  @@map("events")
+  column "id" {
+    type = text
+    null = false
+  }
+
+  column "title" {
+    type = text
+    null = false
+  }
+
+  column "event_date" {
+    type    = timestamptz(3)
+    null    = false
+    comment = "イベント日時（UTC、ミリ秒精度）"
+  }
+
+  column "created_at" {
+    type    = timestamptz(3)
+    null    = false
+    default = sql("CURRENT_TIMESTAMP")
+  }
+
+  column "updated_at" {
+    type    = timestamptz(3)
+    null    = false
+    default = sql("CURRENT_TIMESTAMP")
+  }
+
+  primary_key {
+    columns = [column.id]
+  }
 }
 ```
 
 #### 重要なポイント
 
 - **一貫性**: DB は常に UTC、表示時のみユーザータイムゾーン
-- **精度**: `@db.Timestamptz(3)` でミリ秒精度を確保
+- **精度**: `timestamptz(3)` でミリ秒精度を確保
 - **ハイドレーション**: クライアントコンポーネントで日時処理
 - **ISO 8601**: `toISOString()` で標準形式に変換
-- **型安全性**: Supabase CLI や Prisma で型を自動生成
+- **型安全性**: Supabase CLI で型を自動生成
 
 この実装により、タイムゾーン関連のバグとハイドレーションエラーを防ぎ、グローバルなアプリケーションでも一貫した日時処理が可能になります。
 
@@ -427,12 +572,13 @@ Environment files are in `env/` directory:
 
 ## Special Notes
 
-### Multi-Client Prisma Generation
-The schema generates clients for multiple targets:
-- Frontend TypeScript client
-- Backend Python client
-- Edge functions (Deno) client
-- Flutter/Dart client
+### Type Generation
+Atlas スキーマから各プラットフォーム向けに型を生成：
+- **Frontend**: Supabase TypeScript 型生成（`make build-model-frontend-supabase`）
+- **Backend Python**: SQLModel（sqlacodegen でデータベースから直接生成）
+- **Edge Functions**: Supabase TypeScript 型生成（`make build-model-functions`）
+
+注意: Prismaクライアント生成は廃止されました（Atlas移行済み）
 
 ### AI/ML Features
 - Vector embeddings with pgvector

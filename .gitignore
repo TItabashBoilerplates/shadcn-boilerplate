@@ -54,4 +54,7 @@ supabase/.branches/**
 supabase/.temp/**
 supabase/migrations/**
 
+# Prisma backup (migrated to Atlas)
+prisma.backup/**
+
 env/secrets.env
