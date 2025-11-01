@@ -1,17 +1,99 @@
 # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 
-# dependencies
+# =============================================================================
+# Dependencies
+# =============================================================================
 node_modules/
+.pnpm-store/
 
-# logs
-*.log
+# Python virtual environments
+.venv/
+venv/
+env/
+
+# =============================================================================
+# Build Outputs
+# =============================================================================
+# Frontend builds
+dist/
+build/
+.next/**
+.vercel/
+frontend/.vercel/
 
 # Expo
 .expo/
-dist/
 web-build/
 
-# Native
+# Python builds
+*.egg-info/
+
+# =============================================================================
+# Caches & Temporary Files
+# =============================================================================
+# Build tool caches
+.turbo/**
+*.tsbuildinfo
+
+# Linter & Formatter caches
+.eslintcache
+.prettier-cache
+
+# Python tool caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Test coverage
+.coverage
+.coverage.*
+htmlcov/
+
+# Metro
+.metro-health-check*
+
+# =============================================================================
+# Logs
+# =============================================================================
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+pnpm-debug.log*
+lerna-debug.log*
+
+# =============================================================================
+# IDE & Editor
+# =============================================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# =============================================================================
+# OS Files
+# =============================================================================
+# macOS
+.DS_Store
+*.pem
+
+# Windows
+Thumbs.db
+
+# =============================================================================
+# Environment & Secrets
+# =============================================================================
+# Local environment files
+.env*.local
+env/secrets.env
+
+# =============================================================================
+# Native App Certificates & Keys
+# =============================================================================
 *.orig.*
 *.jks
 *.p8
@@ -19,29 +101,14 @@ web-build/
 *.key
 *.mobileprovision
 
-# Metro
-.metro-health-check*
-
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-
-# macOS
-.DS_Store
-*.pem
-
-# local env files
-.env*.local
-
-# typescript
-*.tsbuildinfo
-
-# ai
+# =============================================================================
+# Project Specific
+# =============================================================================
+# AI services
 ai/ollama/**
 ai/ollama-webui/**
 
-# blockchain
+# Blockchain
 blockchain/chainlink/postgres/data/**
 blockchain/chainlink/data/**
 blockchain/src/scripts/.wallets/**
@@ -49,7 +116,7 @@ ipfs/data/**
 ipfs/contents/**
 !.gitkeep
 
-# supabase
+# Supabase
 supabase/.branches/**
 supabase/.temp/**
 supabase/migrations/**
@@ -57,9 +124,5 @@ supabase/migrations/**
 # Prisma backup (migrated to Atlas)
 prisma.backup/**
 
-env/secrets.env
-
+# Playwright MCP
 .playwright-mcp/**
-
-.turbo/**
-.next/**
