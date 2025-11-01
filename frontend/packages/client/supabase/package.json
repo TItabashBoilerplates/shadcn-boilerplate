@@ -1,0 +1,28 @@
+{
+  "name": "@workspace/client-supabase",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./client": "./client.ts",
+    "./server": "./server.ts",
+    "./middleware": "./middleware.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.7.0",
+    "@supabase/supabase-js": "^2.78.0",
+    "@workspace/types": "workspace:*"
+  },
+  "devDependencies": {
+    "next": "^16.0.0",
+    "typescript": "^5.8.0"
+  },
+  "peerDependencies": {
+    "next": "^16.0.0"
+  }
+}

@@ -60,3 +60,5 @@ prisma.backup/**
 env/secrets.env
 
 .playwright-mcp/**
+
+.turbo/**
