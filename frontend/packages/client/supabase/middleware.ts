@@ -9,22 +9,29 @@ import type { Database } from '@workspace/types/schema'
  * 更新されたトークンをServer Componentsとブラウザの両方に渡します。
  *
  * @param request - Next.jsのリクエストオブジェクト
+ * @param response - Next.jsのレスポンスオブジェクト（next-intl等の他のmiddlewareから渡される）
  * @returns 更新されたCookieを含むレスポンス
  *
  * @example
  * ```typescript
- * // middleware.ts (プロジェクトルート)
+ * // proxy.ts (Next.js 16+)
+ * import createMiddleware from 'next-intl/middleware'
  * import { type NextRequest } from 'next/server'
+ * import { routing } from './src/shared/config/i18n'
  * import { updateSession } from '@workspace/client-supabase/middleware'
  *
- * export async function middleware(request: NextRequest) {
- *   return await updateSession(request)
+ * const handleI18nRouting = createMiddleware(routing)
+ *
+ * export default async function middleware(request: NextRequest) {
+ *   // Step 1: next-intlのルーティング処理
+ *   const response = handleI18nRouting(request)
+ *
+ *   // Step 2: Supabaseセッション更新（レスポンスを渡す）
+ *   return await updateSession(request, response)
  * }
  *
  * export const config = {
- *   matcher: [
- *     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
- *   ],
+ *   matcher: ['/((?!api|_next|_vercel|.*\\..*).*)'],
  * }
  * ```
  *
@@ -34,11 +41,10 @@ import type { Database } from '@workspace/types/schema'
  * 2. リフレッシュされたトークンを `request.cookies.set` でServer Componentsに渡す
  * 3. リフレッシュされたトークンを `response.cookies.set` でブラウザに渡す
  */
-export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  })
-
+export async function updateSession(
+  request: NextRequest,
+  response: NextResponse
+) {
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -52,7 +58,7 @@ export async function updateSession(request: NextRequest) {
             // リクエストにCookieを設定（Server Componentsで利用可能に）
             request.cookies.set(name, value)
             // レスポンスにCookieを設定（ブラウザへ送信）
-            supabaseResponse.cookies.set(name, value, options)
+            response.cookies.set(name, value, options)
           })
         },
       },
@@ -63,5 +69,5 @@ export async function updateSession(request: NextRequest) {
   // getUser()を使用してトークンの真正性を検証
   await supabase.auth.getUser()
 
-  return supabaseResponse
+  return response
 }
