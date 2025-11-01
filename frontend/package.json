@@ -1,14 +1,23 @@
 {
-  "name": "frontend",
+  "name": "@repo/frontend-monorepo",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "tooling/*"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint .",
-    "format": "prettier --write .",
-    "format-check": "prettier --check ."
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "start": "turbo start",
+    "lint": "turbo lint",
+    "format": "turbo format",
+    "format-check": "turbo format-check",
+    "type-check": "turbo type-check",
+    "clean": "turbo clean && rm -rf node_modules",
+    "ui:add": "cd packages/ui && npx shadcn@canary add",
+    "generate:types": "bun run scripts/generate-types.ts"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",
@@ -26,6 +35,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@turbo/gen": "^2.6.0",
     "@types/node": "^24.9.1",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
@@ -33,7 +43,13 @@
     "eslint-config-next": "^16.0.0",
     "prettier": "3.6.2",
     "tailwindcss": "^4",
+    "turbo": "^2.6.0",
     "tw-animate-css": "^1.3.7",
     "typescript": "^5"
-  }
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "bun": ">=1.2.0"
+  },
+  "packageManager": "bun@1.2.8"
 }

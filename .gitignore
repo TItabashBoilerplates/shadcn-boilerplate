@@ -58,3 +58,5 @@ supabase/migrations/**
 prisma.backup/**
 
 env/secrets.env
+
+.playwright-mcp/**

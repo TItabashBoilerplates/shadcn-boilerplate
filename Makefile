@@ -106,14 +106,14 @@ check:
 copy-git-config:
 	\cp -f .git-dev/info/exclude .git/info/exclude
 
-# Supabaseのモデルをビルド
+# Supabaseのモデルをビルド（モノレポ対応）
 .PHONY: build-model-frontend-supabase
 build-model-frontend-supabase:
 	# ENV=localの場合のみ実行
 	if [ "${ENV}" = "local" ]; then \
 		npx dotenvx run -f env/backend/${ENV}.env -- supabase start; \
-		$(eval DIR_PATH := "./frontend/src/shared/types"); \
-		mkdir -p $(DIR_PATH) && npx dotenvx run -f env/backend/${ENV}.env -- supabase gen types typescript --local > $(DIR_PATH)/supabase.ts; \
+		$(eval DIR_PATH := "./frontend/packages/types"); \
+		mkdir -p $(DIR_PATH) && npx dotenvx run -f env/backend/${ENV}.env -- supabase gen types typescript --local > $(DIR_PATH)/schema.ts; \
 	fi
 
 .PHONY: build-model-prisma

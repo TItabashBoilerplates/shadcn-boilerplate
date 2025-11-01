@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 3, "column": 0}, "map": {"version":3,"sources":["turbopack:///[project]/apps/web/src/shared/config/i18n/messages/en.json"],"sourcesContent":["{\"common\":{\"welcome\":\"Welcome\",\"hello\":\"Hello\",\"goodbye\":\"Goodbye\",\"yes\":\"Yes\",\"no\":\"No\",\"save\":\"Save\",\"cancel\":\"Cancel\",\"delete\":\"Delete\",\"edit\":\"Edit\",\"create\":\"Create\",\"update\":\"Update\",\"close\":\"Close\",\"open\":\"Open\",\"loading\":\"Loading...\",\"error\":\"Error\",\"success\":\"Success\"},\"navigation\":{\"home\":\"Home\",\"about\":\"About\",\"contact\":\"Contact\",\"settings\":\"Settings\"},\"HomePage\":{\"title\":\"Welcome to Next.js!\",\"description\":\"Get started by editing the page.\",\"learn\":\"Learn Next.js\"}}"],"names":[],"mappings":"AAAA"}},
+    {"offset": {"line": 3, "column": 508}, "map": {"version":3,"sources":[],"names":[],"mappings":"A"}}]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "@workspace/eslint-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "base.js",
+  "dependencies": {
+    "@eslint/eslintrc": "^3",
+    "eslint-config-next": "^16.0.0"
+  }
+}

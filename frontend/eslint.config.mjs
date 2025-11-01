@@ -1,4 +1,4 @@
-import nextConfig from 'eslint-config-next'
+import baseConfig from '@workspace/eslint-config/base.js'
 
 const eslintConfig = [
   {
@@ -8,9 +8,11 @@ const eslintConfig = [
       'build/**',
       'next-env.d.ts',
       'node_modules/**',
+      '.turbo/**',
+      'dist/**',
     ],
   },
-  ...nextConfig,
+  ...baseConfig,
 ]
 
 export default eslintConfig
