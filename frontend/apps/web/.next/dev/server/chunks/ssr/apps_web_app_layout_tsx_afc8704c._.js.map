@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///Users/tknr/Development/shadcn-boilerplate/frontend/apps/web/app/layout.tsx"],"sourcesContent":["/**\n * ルートレイアウト\n * next-intl を使用する場合、このファイルは最小限にする\n * 実際のレイアウトは [locale]/layout.tsx に配置\n */\nexport default function RootLayout({\n  children,\n}: {\n  children: React.ReactNode\n}) {\n  return children\n}\n"],"names":[],"mappings":"AAAA;;;;CAIC;;;;AACc,SAAS,WAAW,EACjC,QAAQ,EAGT;IACC,OAAO;AACT","debugId":null}}]
-}

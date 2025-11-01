@@ -1,1 +1,0 @@
-{"version":3,"sources":["turbopack:///[project]/apps/web/app/layout.tsx"],"sourcesContent":["/**\n * ルートレイアウト\n * next-intl を使用する場合、このファイルは最小限にする\n * 実際のレイアウトは [locale]/layout.tsx に配置\n */\nexport default function RootLayout({\n  children,\n}: {\n  children: React.ReactNode\n}) {\n  return children\n}\n"],"names":[],"mappings":"uCAKe,SAAS,EAAW,UACjC,CAAQ,CAGT,EACC,OAAO,CACT"}
