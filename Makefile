@@ -9,6 +9,8 @@ init:
 	sh ./bin/check_install.sh
 	# asdfをインストール
 	asdf install
+	# dotenvxとatlasをインストール
+	npm install -g @dotenvx/dotenvx;
 	# Supabaseにログイン
 	npx dotenvx run -f env/backend/${ENV}.env -- supabase login
 	# Supabaseを初期化
@@ -19,12 +21,6 @@ init:
 	if [ ! -f "env/secrets.env" ]; then \
 		cp env/secrets.env.example env/secrets.env; \
 	fi
-	# プロジェクト名を.envに書き込む
-	echo "PROJECT_NAME=$$(basename $$(pwd))" > .env
-	# envディレクトリ内のテキストファイルで"dapps-boilerplate"を置換
-	find env -type f -name "*.env" -exec sed -i '' 's/dapps-boilerplate/$$(basename $$(pwd))/g' {} +
-	# dotenvxとatlasをインストール
-	npm install -g @dotenvx/dotenvx;
 	# Atlasのインストール（macOS / Linux）
 	curl -sSf https://atlasgo.sh | sh
 	# フロントエンドとバックエンドの依存関係もインストール
