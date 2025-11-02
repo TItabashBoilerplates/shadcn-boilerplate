@@ -27,7 +27,7 @@ By adopting these environments, we can ensure efficient development and maintain
 
 ### Backend Architecture
 - **Python Backend**: FastAPI application in `backend-py/` using clean architecture patterns
-- **Edge Functions**: Supabase Edge Functions using Hono framework for serverless APIs
+- **Edge Functions**: Supabase Edge Functions using Deno's native `Deno.serve` API for lightweight serverless functions
 - **Database**: PostgreSQL with **Atlas** for schema management (HCL-based), includes pgvector extension for embeddings
 - **Infrastructure**: Supabase for auth/database, Docker containerization
 
@@ -220,6 +220,7 @@ make atlas-lint
 ## Code Quality
 - **Frontend**: Biome for linting and formatting (all-in-one toolchain, replaces ESLint + Prettier), TypeScript strict mode
 - **Backend**: Ruff for linting (line length: 88), MyPy for type checking
+- **Edge Functions**: Deno native tools, `npm:` prefix for dependencies (not JSR or HTTP imports)
 - **UI Design**: shadcn/ui components (Radix UI) with TailwindCSS 4 and CSS variables
 - **Package Manager**: Bun for fast dependency management
 - **Build System**: Turbo for efficient monorepo builds

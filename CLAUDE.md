@@ -15,7 +15,7 @@ This is a full-stack application boilerplate with a multi-platform frontend and 
 
 ### Backend Architecture
 - **Python Backend**: FastAPI application in `backend-py/` using clean architecture patterns
-- **Edge Functions**: Supabase Edge Functions using Hono framework for serverless APIs
+- **Edge Functions**: Supabase Edge Functions using Deno's native `Deno.serve` API for serverless functions
 - **Database**: PostgreSQL with **Atlas** for schema management, includes pgvector extension for embeddings
 - **Schema Management**: Atlas HCL for declarative schema definitions and migrations
 - **Infrastructure**: Supabase for auth/database, Docker containerization
@@ -95,7 +95,7 @@ make build-model-functions          # Generate types for edge functions
 cd frontend
 bun run dev                 # Next.js web development (Turbo)
 bun run build              # Build all packages
-bun run lint               # Run ESLint
+bun run lint               # Run Biome lint (auto-fix)
 bun run format             # Format code with Biome
 bun run type-check         # TypeScript type checking
 ```
@@ -113,12 +113,15 @@ Code quality tools:
 - Maximum function complexity: 3 (McCabe)
 
 ### Edge Functions Development
-Edge Functions use Hono framework for serverless API development:
+Edge Functions use Deno's native `Deno.serve` API for serverless API development:
 - Built with Deno runtime for TypeScript support
-- Hono provides Express-like API with better performance
-- Each function should have a `deno.json` with Hono imports
-- Import map configuration for dependency management
+- Native `Deno.serve` API for lightweight, efficient serverless functions
+- Each function should have a `deno.json` with import map configuration
+- **IMPORTANT**: 原則として `npm:` プレフィックスを使用してnpmパッケージをインポート
+  - JSR (`jsr:`) は特別な理由がない限り使用しない
+  - 例: `"@supabase/supabase-js": "npm:@supabase/supabase-js@^2"`
 - Type-safe integration with Supabase client and database schema
+- Proper error handling with TypeScript type guards (`error instanceof Error`)
 
 ### Atlas Schema Management
 
@@ -594,10 +597,15 @@ table "events" {
 - Clean architecture dependency rules enforced
 
 ### Edge Functions
-- Hono framework for routing and middleware
+- Native `Deno.serve` API for lightweight serverless functions
 - TypeScript strict mode with proper type annotations
+- Proper error handling with type guards (`error instanceof Error`)
 - Deno formatting and linting standards
-- Import maps for clean dependency management
+- **Import Management**:
+  - 原則として `npm:` プレフィックスを使用（例: `npm:@supabase/supabase-js@^2`）
+  - JSR (`jsr:`) は特別な理由がない限り使用しない
+  - `deno.json` の `imports` フィールドで依存関係を管理
+  - HTTPインポート（`https://deno.land/x/...`）は使用しない
 
 ## Environment Configuration
 
