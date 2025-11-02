@@ -224,12 +224,12 @@ policy "edit_policy_general_users" {
 ## Code Style and Quality
 
 ### Frontend
-- **Linting & Formatting**: Biome (Next.js 16標準)
+- **Linting & Formatting**: Biome (高速なオールインワンツールチェーン)
 - **UI Components**: shadcn/ui (Radix UI primitives)
 - **Styling**: TailwindCSS 4 with CSS variables
-- **Indentation**: 2-space, 100-character line width
+- **Code Style**: 2-space indentation, 100-character line width, single quotes, semicolons as needed
 - **TypeScript**: Strict mode enabled
-- **Import Style**: Type-only imports enforced
+- **Import Organization**: Auto-organize imports with type-only import enforcement
 
 ### Date and Time Handling (Supabase + Database Best Practices)
 

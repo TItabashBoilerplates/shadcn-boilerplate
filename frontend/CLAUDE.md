@@ -56,7 +56,11 @@ bun install                 # Install dependencies
 bun run dev                 # Next.js development server with Turbopack
 bun run build               # Build production application
 bun run start               # Start production server
-bun run lint                # Run ESLint
+bun run lint                # Run Biome linting and formatting (auto-fix)
+bun run lint:ci             # Run Biome in CI mode (no auto-fix)
+bun run format              # Format code with Biome
+bun run format-check        # Check code formatting with Biome
+bun run type-check          # TypeScript type checking
 
 # Package management with Bun
 bun add <package-name>      # Add runtime dependency
@@ -91,10 +95,13 @@ bunx shadcn@latest add form
 
 ### Frontend
 
-- ESLint with Next.js recommended configuration
-- TypeScript strict mode enabled
-- TailwindCSS 4 for styling with CSS variables
-- shadcn/ui component library with "New York" style
+- **Linting & Formatting**: Biome (all-in-one toolchain, replaces ESLint + Prettier)
+- **Configuration**: `biome.json` at root with Next.js-optimized rules
+- **Code Style**: 2-space indentation, 100-character line width, single quotes, semicolons as needed
+- **TypeScript**: Strict mode enabled with type-only import enforcement
+- **Styling**: TailwindCSS 4 with CSS variables
+- **UI Components**: shadcn/ui component library with "New York" style
+- **Import Organization**: Auto-organize imports on save/format
 
 ### FSD-Compliant UI Design System
 

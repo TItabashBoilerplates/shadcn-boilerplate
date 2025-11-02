@@ -194,7 +194,7 @@ make atlas-lint
 # Development Guidelines
 
 ## Code Quality
-- **Frontend**: Biome for linting and formatting (Next.js 16 standard), TypeScript strict mode
+- **Frontend**: Biome for linting and formatting (all-in-one toolchain, replaces ESLint + Prettier), TypeScript strict mode
 - **Backend**: Ruff for linting (line length: 88), MyPy for type checking
 - **UI Design**: shadcn/ui components (Radix UI) with TailwindCSS 4 and CSS variables
 - **Package Manager**: Bun for fast dependency management
