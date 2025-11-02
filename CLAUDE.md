@@ -96,7 +96,7 @@ make build-model-functions          # Generate types + copy Drizzle schema for E
 
 **Edge Functions 用に生成されるもの**:
 
-- `supabase/functions/shared/types/schema.ts` - Supabase TypeScript 型
+- `supabase/functions/shared/types/supabase/schema.ts` - Supabase TypeScript 型
 - `supabase/functions/shared/drizzle/` - Drizzle スキーマ（TypeScript）
 
 ### Frontend Development

@@ -1,15 +1,16 @@
-from typing import Dict, Any, Optional, List, Annotated
+from typing import Annotated, Any, Dict, List, Optional
+
 from autogen import ConversableAgent, GroupChat, GroupChatManager, UserProxyAgent
 from pydantic import BaseModel, Field
+
 from infra.agent import config_list
-from pydantic import BaseModel, Field
 
 
 class AgentGateway:
-    def __init__(self, default_config: Optional[List[Dict[str, Any]]] = None) -> None:
+    def __init__(self, default_config: list[dict[str, Any]] | None = None) -> None:
         self.config_list = default_config or config_list
 
-    def set_config(self, new_config: List[Dict[str, Any]]) -> None:
+    def set_config(self, new_config: list[dict[str, Any]]) -> None:
         """設定リストを更新します"""
         self.config_list = new_config
 
@@ -53,7 +54,10 @@ class AgentGateway:
         return UserProxyAgent(**user_proxy_config)
 
     def create_group_chat(
-        self, agents: list[ConversableAgent], max_round: int = 10, **kwargs: Any
+        self,
+        agents: list[ConversableAgent],
+        max_round: int = 10,
+        **kwargs: Any,
     ) -> GroupChat:
         """GroupChatを作成します"""
         return GroupChat(agents=agents, messages=[], max_round=max_round, **kwargs)
@@ -61,7 +65,7 @@ class AgentGateway:
     def create_group_chat_manager(
         self,
         groupchat: GroupChat,
-        llm_config: Optional[Dict[str, Any]] = None,
+        llm_config: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> GroupChatManager:
         """GroupChatManagerを作成します"""

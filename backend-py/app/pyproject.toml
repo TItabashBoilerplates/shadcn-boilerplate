@@ -1,7 +1,10 @@
 
 [tool.mypy]
 python_version = "3.12"
-exclude = ['.venv/']
+exclude = [
+    '^\.venv/',
+    '^src/domain/entity/models\.py$',
+]
 strict = true
 ignore_missing_imports = true
 install_types = true
@@ -14,20 +17,22 @@ line-length = 88
 # Assume Python 3.11.
 target-version = "py312"
 
+# Exclude auto-generated files
+exclude = [
+    "src/domain/entity/models.py",
+]
+
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
     "ANN1",   # missing type self and cls
-    "E999",   # syntax error
-    "UP027",  # unpacked list comprehension
-    "PT004",  # pytest missing fixture name underscore
-    "PT005",  # pytest incorrect fixture name underscore
     "D1",     # undocumented
     "TD001",  # invalid todo tag
     "TD002",  # missing todo author
     "TD003",  # missing todo link
     "PD011",  # pandas use of dot values
     "B008",
+    "COM812", # conflicts with formatter
 ]
 unfixable = [
     "F401",   # unused import
@@ -37,13 +42,13 @@ unfixable = [
 
 logger-objects = ["src.library.logger.LOGGER"]
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 combine-as-imports = true
 known-first-party = ["musubi_restapi"]
 section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
 split-on-trailing-comma = true
 
-[tool.ruff.pydocstyle]
+[tool.ruff.lint.pydocstyle]
 convention = "google"
 
 [tool.ruff.format]
@@ -140,6 +145,10 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    # Linting & Formatting & Type Checking
+    "ruff",
+    "mypy",
+
     # 画像生成AI
     "diffusers",
     "transformers",

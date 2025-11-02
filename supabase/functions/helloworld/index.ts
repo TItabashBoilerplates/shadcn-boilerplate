@@ -1,4 +1,4 @@
-import type { Database } from "../shared/types/schema.ts";
+import type { Database } from "../shared/types/supabase/schema.ts";
 import { createClient } from "@supabase/supabase-js";
 // Drizzle型の使用例
 import type { InferSelectModel } from "npm:drizzle-orm";
@@ -11,7 +11,7 @@ console.log("Hello from Deno Functions!");
 
 const supabaseClient = createClient<Database>(
   Deno.env.get("SUPABASE_URL") ?? "",
-  Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+  Deno.env.get("SUPABASE_ANON_KEY") ?? ""
 );
 
 Deno.serve(async (req: Request) => {
@@ -45,17 +45,17 @@ Deno.serve(async (req: Request) => {
           message: `Hello ${typedUser?.displayName ?? "World"}!`,
           user: typedUser
             ? {
-              id: typedUser.id,
-              displayName: typedUser.displayName,
-              accountName: typedUser.accountName,
-            }
+                id: typedUser.id,
+                displayName: typedUser.displayName,
+                accountName: typedUser.accountName,
+              }
             : null,
           info: "This response uses Drizzle types for type safety!",
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 200,
-        },
+        }
       );
     }
 
@@ -70,7 +70,7 @@ Deno.serve(async (req: Request) => {
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 200,
-        },
+        }
       );
     }
 
@@ -79,9 +79,8 @@ Deno.serve(async (req: Request) => {
       status: 405,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error
-      ? error.message
-      : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     return new Response(JSON.stringify({ error: errorMessage }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,

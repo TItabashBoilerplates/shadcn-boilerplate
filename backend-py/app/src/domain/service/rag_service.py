@@ -16,7 +16,8 @@ class RAGService:
     def generate_text_from_rag(self, prompt: str) -> str:
         """LLMモデルを使用してRAGからレスポンスを生成します。"""
         response: str = self.llm_gateway.generate_text_from_rag(
-            prompt, self.vector_store_gateway.as_retriever()
+            prompt,
+            self.vector_store_gateway.as_retriever(),
         )
         return response
 

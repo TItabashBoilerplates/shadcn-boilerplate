@@ -1,6 +1,7 @@
+from enum import Enum
+
 import strawberry
 from pydantic import BaseModel, Field
-from enum import Enum
 
 
 @strawberry.enum

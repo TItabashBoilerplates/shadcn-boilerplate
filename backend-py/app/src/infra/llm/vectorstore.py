@@ -1,6 +1,7 @@
-from infra.supabase_client import SupabaseClient
 from langchain_community.vectorstores.supabase import SupabaseVectorStore
 from langchain_core.embeddings import Embeddings
+
+from infra.supabase_client import SupabaseClient
 
 
 class VectorStoreFactory:

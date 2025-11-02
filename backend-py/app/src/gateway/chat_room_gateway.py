@@ -36,11 +36,7 @@ class ChatRoomGateway:
         session: Session,
     ) -> list[ChatRoom]:
         # UserChatを経由してChatRoomを取得
-        statement = (
-            select(ChatRoom)
-            .join(UserChat)
-            .where(UserChat.user_id == user_id)
-        )
+        statement = select(ChatRoom).join(UserChat).where(UserChat.user_id == user_id)
         return list(session.exec(statement).all())
 
     def update(

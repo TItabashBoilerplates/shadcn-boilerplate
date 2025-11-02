@@ -174,14 +174,42 @@ format-drizzle:
 format-drizzle-check:
 	cd drizzle && bun run format-check
 
+# ===== Backend Python lint/format コマンド =====
+
+# Ruff lint（自動修正）
+.PHONY: lint-backend-py
+lint-backend-py:
+	docker exec backend_app_py bash -c "cd /service/app && uv run ruff check --fix src/"
+
+# Ruff lint（CI用、修正なし）
+.PHONY: lint-backend-py-ci
+lint-backend-py-ci:
+	docker exec backend_app_py bash -c "cd /service/app && uv run ruff check src/"
+
+# Ruff format（自動修正）
+.PHONY: format-backend-py
+format-backend-py:
+	docker exec backend_app_py bash -c "cd /service/app && uv run ruff format src/"
+
+# Ruff formatチェック（チェックのみ）
+.PHONY: format-backend-py-check
+format-backend-py-check:
+	docker exec backend_app_py bash -c "cd /service/app && uv run ruff format --check src/"
+
+# MyPy型チェック
+.PHONY: type-check-backend-py
+type-check-backend-py:
+	docker exec backend_app_py bash -c "cd /service/app && uv run mypy src/"
+
 # ===== 統合 lint/format コマンド =====
 
-# 全体のlint（フロントエンド + Drizzle + Edge Functions）
+# 全体のlint（フロントエンド + Drizzle + Backend Python + Edge Functions）
 .PHONY: lint
 lint:
 	@echo "🔍 Running lint for all projects..."
 	@make lint-frontend
 	@make lint-drizzle
+	@make lint-backend-py
 	@make lint-functions
 
 # 全体のformat（自動修正）
@@ -190,6 +218,7 @@ format:
 	@echo "✨ Formatting all projects..."
 	@make format-frontend
 	@make format-drizzle
+	@make format-backend-py
 	@make format-functions
 
 # 全体のformatチェック（CI用）
@@ -198,6 +227,7 @@ format-check:
 	@echo "🔍 Checking format for all projects..."
 	@make format-frontend-check
 	@make format-drizzle-check
+	@make format-backend-py-check
 	@make format-functions-check
 
 # 全体の型チェック
@@ -205,6 +235,7 @@ format-check:
 type-check:
 	@echo "🔍 Type checking all projects..."
 	@make type-check-frontend
+	@make type-check-backend-py
 	@make check-functions
 
 # CI用の全チェック（lint + format + type-check）
@@ -215,6 +246,9 @@ ci-check:
 	@make lint-frontend-ci
 	@echo "📝 Drizzle: Biome CI (lint + format)..."
 	@make lint-drizzle-ci
+	@echo "📝 Backend Python: Ruff CI (lint + format)..."
+	@make lint-backend-py-ci
+	@make format-backend-py-check
 	@echo "📝 Edge Functions: Deno lint + format check..."
 	@make lint-functions
 	@make format-functions-check

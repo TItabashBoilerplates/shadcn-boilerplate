@@ -91,7 +91,9 @@ class LLMGateway:
         result: BaseModel = await chain.ainvoke(prompt)
         return result
 
-    async def generate_text_from_rag(self, prompt: str, retriever: BaseRetriever) -> str:
+    async def generate_text_from_rag(
+        self, prompt: str, retriever: BaseRetriever
+    ) -> str:
         """Generates a response from the LLM model using RAG."""
         rag_prompt = ChatPromptTemplate(
             messages=[

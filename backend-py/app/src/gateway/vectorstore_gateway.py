@@ -36,8 +36,8 @@ class VectorStoreGateway:
     def add_texts(
         self,
         texts: list[str],
-        ids: Optional[list[str]] = None,
-        user_id: Optional[str] = None,
+        ids: list[str] | None = None,
+        user_id: str | None = None,
     ) -> list[str]:
         """Adds texts to the vectorstore."""
         metadatas = [{"user_id": user_id} for _ in texts] if user_id else None
@@ -51,9 +51,9 @@ class VectorStoreGateway:
     def add_text(
         self,
         text: str,
-        eid: Optional[str] = None,
-        user_id: Optional[str] = None,
-    ) -> List[str]:
+        eid: str | None = None,
+        user_id: str | None = None,
+    ) -> list[str]:
         """Adds a single text to the vectorstore."""
         result: list[str] = self.vectorstore.add_texts(
             texts=[text],
