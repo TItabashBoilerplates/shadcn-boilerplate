@@ -116,11 +116,6 @@ build-model-frontend-supabase:
 		mkdir -p $(DIR_PATH) && npx dotenvx run -f env/backend/${ENV}.env -- supabase gen types typescript --local > $(DIR_PATH)/schema.ts; \
 	fi
 
-.PHONY: build-model-prisma
-build-model-prisma:
-	# バックエンド用Prismaクライアントのみ生成（フロントエンドではSupabaseクライアントを使用）
-	@echo "Prisma client generation for backend only"
-
 # Edge functionsのモデルをビルド
 .PHONY: build-model-functions
 build-model-functions:
@@ -129,16 +124,6 @@ build-model-functions:
 		npx dotenvx run -f env/backend/${ENV}.env -- supabase start; \
 		mkdir -p ./supabase/functions/shared/types && npx dotenvx run -f env/backend/${ENV}.env -- supabase gen types typescript --local > ./supabase/functions/shared/types/schema.ts; \
 	fi
-
-# フロントエンドのSupabase型生成
-.PHONY: build-model-frontend-supabase-types
-build-model-frontend-supabase-types:
-	# ENV=localの場合のみ実行
-	if [ "${ENV}" = "local" ]; then \
-		npx dotenvx run -f env/backend/${ENV}.env -- supabase start; \
-	fi
-	# TypeScript型を生成
-	make build-model-frontend-supabase
 
 # モデルをビルド
 .PHONY: build-model
