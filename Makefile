@@ -7,6 +7,10 @@ ENV=local
 init:
 	# 必要なツールがインストールされているかチェック
 	sh ./bin/check_install.sh
+	# asdfプラグインを追加（既に追加済みの場合はスキップ）
+	asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git 2>/dev/null || true
+	asdf plugin add python https://github.com/asdf-community/asdf-python.git 2>/dev/null || true
+	asdf plugin add deno https://github.com/asdf-community/asdf-deno.git 2>/dev/null || true
 	# asdfをインストール
 	asdf install
 	# dotenvxとatlasをインストール
