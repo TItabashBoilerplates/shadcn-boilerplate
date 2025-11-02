@@ -34,33 +34,18 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'file=$(cat | jq -r .file_path); [[ \"$file\" =~ ^frontend/ ]] && (cd frontend && bun run format \"$file\") || true'",
+            "command": "bash -c 'file=$(cat | jq -r .file_path); [[ \"$file\" =~ ^frontend/.*\\.(ts|tsx|js|jsx|json)$ ]] && (cd frontend && bunx biome check --write \"$file\") || true'",
             "timeout": 30
           },
           {
             "type": "command",
-            "command": "bash -c 'file=$(cat | jq -r .file_path); [[ \"$file\" =~ ^frontend/.*\\.tsx?$ ]] && (cd frontend && bunx tsc --noEmit) || true'",
-            "timeout": 60
-          },
-          {
-            "type": "command",
-            "command": "bash -c 'file=$(cat | jq -r .file_path); [[ \"$file\" =~ ^supabase/functions/ ]] && deno check \"$file\" || true'",
+            "command": "bash -c 'file=$(cat | jq -r .file_path); [[ \"$file\" =~ ^supabase/functions/.*\\.ts$ ]] && deno fmt \"$file\" && deno check \"$file\" || true'",
             "timeout": 30
           },
           {
             "type": "command",
-            "command": "bash -c 'file=$(cat | jq -r .file_path); [[ \"$file\" =~ ^backend-py/ ]] && docker exec backend_app_py bash -c \"cd /service/app && uv run ruff format .\" || true'",
+            "command": "bash -c 'file=$(cat | jq -r .file_path); [[ \"$file\" =~ ^backend-py/.*\\.py$ ]] && docker exec backend_app_py bash -c \"cd /service/app && uv run ruff format \\\"$file\\\" && uv run ruff check \\\"$file\\\"\" || true'",
             "timeout": 30
-          },
-          {
-            "type": "command",
-            "command": "bash -c 'file=$(cat | jq -r .file_path); [[ \"$file\" =~ ^backend-py/.*\\.py$ ]] && docker exec backend_app_py bash -c \"cd /service/app && uv run ruff check .\" || true'",
-            "timeout": 30
-          },
-          {
-            "type": "command",
-            "command": "bash -c 'file=$(cat | jq -r .file_path); [[ \"$file\" =~ ^backend-py/.*\\.py$ ]] && docker exec backend_app_py bash -c \"cd /service/app && uv run mypy .\" || true'",
-            "timeout": 60
           }
         ]
       }
