@@ -38,9 +38,30 @@ make init                    # Full project initialization (run once)
 ```bash
 make run                     # Start backend services with Docker
 make frontend                # Start frontend (web) development server
-make local-ios-ts           # Start iOS development
-make local-android-ts       # Start Android development
-make stop                   # Stop all services
+make stop                    # Stop all services
+```
+
+### Lint & Format
+```bash
+# フロントエンド（Biome）
+make lint-frontend           # Biome lint（自動修正）
+make lint-frontend-ci        # Biome lint（CI用、修正なし）
+make format-frontend         # Biome format（自動修正）
+make format-frontend-check   # Biome formatチェック（チェックのみ）
+make type-check-frontend     # TypeScript型チェック
+
+# Edge Functions（Deno）
+make lint-functions          # Deno lint
+make format-functions        # Deno format（自動修正）
+make format-functions-check  # Deno formatチェック（チェックのみ）
+make check-functions         # Deno型チェック
+
+# 統合コマンド（推奨）
+make lint                    # 全体のlint（Frontend + Edge Functions）
+make format                  # 全体のformat（自動修正）
+make format-check            # 全体のformatチェック（CI用）
+make type-check              # 全体の型チェック
+make ci-check                # CI用の全チェック（lint + format + type）
 ```
 
 ### Database Operations (Atlas-based, Prisma-style)

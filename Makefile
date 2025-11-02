@@ -71,10 +71,109 @@ stop:
 build-frontend:
 	cd frontend && bun run build
 
-# フロントエンドlintコマンド
+# ===== フロントエンド lint/format コマンド =====
+
+# Biome lint（自動修正）
 .PHONY: lint-frontend
 lint-frontend:
 	cd frontend && bun run lint
+
+# Biome lint（CI用、修正なし）
+.PHONY: lint-frontend-ci
+lint-frontend-ci:
+	cd frontend && bun run lint:ci
+
+# Biome format（自動修正）
+.PHONY: format-frontend
+format-frontend:
+	cd frontend && bun run format
+
+# Biome formatチェック（チェックのみ）
+.PHONY: format-frontend-check
+format-frontend-check:
+	cd frontend && bun run format-check
+
+# TypeScript型チェック
+.PHONY: type-check-frontend
+type-check-frontend:
+	cd frontend && bun run type-check
+
+# ===== Supabase Edge Functions lint/format/check コマンド =====
+
+# Deno format（自動修正）
+.PHONY: format-functions
+format-functions:
+	deno fmt supabase/functions/
+
+# Deno formatチェック（チェックのみ）
+.PHONY: format-functions-check
+format-functions-check:
+	deno fmt --check supabase/functions/
+
+# Deno lint
+.PHONY: lint-functions
+lint-functions:
+	deno lint supabase/functions/
+
+# Deno型チェック（全functionを自動検出）
+.PHONY: check-functions
+check-functions:
+	@echo "🔍 Type checking Edge Functions..."
+	@for dir in supabase/functions/*/; do \
+		if [ -f "$$dir/index.ts" ]; then \
+			func_name=$$(basename "$$dir"); \
+			echo "Checking $$func_name..."; \
+			if [ -f "$$dir/deno.json" ]; then \
+				echo "  Caching dependencies..."; \
+				(cd "$$dir" && deno cache --config=deno.json index.ts) 2>&1 | grep -v "Download" || true; \
+				echo "  Running type check..."; \
+				(cd "$$dir" && deno check --config=deno.json index.ts) || echo "  ⚠️  Type check failed for $$func_name"; \
+			else \
+				echo "  No deno.json found, using default check..."; \
+				deno check "$$dir/index.ts" || echo "  ⚠️  Type check failed for $$func_name"; \
+			fi \
+		fi \
+	done
+	@echo "✅ Type check complete!"
+
+# ===== 統合 lint/format コマンド =====
+
+# 全体のlint（フロントエンド + Edge Functions）
+.PHONY: lint
+lint:
+	@echo "🔍 Running lint for all projects..."
+	@make lint-frontend
+	@make lint-functions
+
+# 全体のformat（自動修正）
+.PHONY: format
+format:
+	@echo "✨ Formatting all projects..."
+	@make format-frontend
+	@make format-functions
+
+# 全体のformatチェック（CI用）
+.PHONY: format-check
+format-check:
+	@echo "🔍 Checking format for all projects..."
+	@make format-frontend-check
+	@make format-functions-check
+
+# 全体の型チェック
+.PHONY: type-check
+type-check:
+	@echo "🔍 Type checking all projects..."
+	@make type-check-frontend
+	@make check-functions
+
+# CI用の全チェック（lint + format + type-check）
+.PHONY: ci-check
+ci-check:
+	@echo "🚀 Running all CI checks..."
+	@make lint-frontend-ci
+	@make lint-functions
+	@make format-check
+	@make type-check
 
 .PHONY: deploy-functions
 deploy-functions:

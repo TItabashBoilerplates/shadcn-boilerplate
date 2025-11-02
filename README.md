@@ -121,6 +121,35 @@ After successfully completing the setup, you can start the application using one
 ## Additional Commands
 
 ### Development Tools
+
+#### Code Quality
+- Lint & format all code (Frontend + Edge Functions):
+  ```bash
+  make lint           # Lint all projects
+  make format         # Format all projects
+  make format-check   # Check formatting (CI)
+  make type-check     # Type check all projects
+  make ci-check       # Run all CI checks
+  ```
+
+- Frontend specific (Biome):
+  ```bash
+  make lint-frontend           # Lint frontend code
+  make lint-frontend-ci        # Lint frontend (CI mode)
+  make format-frontend         # Format frontend code
+  make format-frontend-check   # Check frontend formatting
+  make type-check-frontend     # Type check frontend
+  ```
+
+- Edge Functions specific (Deno):
+  ```bash
+  make lint-functions          # Lint Edge Functions
+  make format-functions        # Format Edge Functions
+  make format-functions-check  # Check Edge Functions formatting
+  make check-functions         # Type check Edge Functions
+  ```
+
+#### Other Tools
 - Check services status:
   ```bash
   make check
@@ -129,11 +158,6 @@ After successfully completing the setup, you can start the application using one
 - Build frontend:
   ```bash
   make build-frontend
-  ```
-
-- Lint frontend code:
-  ```bash
-  make lint-frontend
   ```
 
 ### Database Operations (Atlas-based)
