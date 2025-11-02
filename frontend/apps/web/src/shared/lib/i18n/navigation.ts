@@ -8,5 +8,4 @@ import { routing } from '@/shared/config/i18n'
  * Next.js の標準ナビゲーション API のラッパー
  * 自動的にロケールを考慮したナビゲーションを提供
  */
-export const { Link, redirect, usePathname, useRouter, getPathname } =
-  createNavigation(routing)
+export const { Link, redirect, usePathname, useRouter, getPathname } = createNavigation(routing)

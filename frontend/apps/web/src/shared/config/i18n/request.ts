@@ -13,15 +13,14 @@ export default getRequestConfig(async ({ requestLocale }) => {
   // middleware で設定されたロケールを使用
   let locale = await requestLocale
 
-  // locale が定義されていない場合はデフォルトを使用
-  if (!locale || !routing.locales.includes(locale as any)) {
+  // locale が定義されていない場合、または有効なロケールでない場合はデフォルトを使用
+  if (!locale || !routing.locales.includes(locale as (typeof routing.locales)[number])) {
     locale = routing.defaultLocale
   }
 
   return {
     locale,
     // 翻訳メッセージを動的にインポート
-    messages: (await import(`@/shared/config/i18n/messages/${locale}.json`))
-      .default,
+    messages: (await import(`@/shared/config/i18n/messages/${locale}.json`)).default,
   }
 })

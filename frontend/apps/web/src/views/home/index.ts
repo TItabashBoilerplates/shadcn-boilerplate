@@ -1,3 +1,2 @@
-export { default as HomePage } from './ui/HomePage'
+export { default as HomePage, default } from './ui/HomePage'
 export { LanguageSwitcher } from './ui/LanguageSwitcher'
-export { default } from './ui/HomePage'

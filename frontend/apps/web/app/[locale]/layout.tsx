@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
-import { NextIntlClientProvider, hasLocale } from 'next-intl'
-import { getMessages, setRequestLocale } from 'next-intl/server'
-import { notFound } from 'next/navigation'
 import { Geist, Geist_Mono } from 'next/font/google'
+import { notFound } from 'next/navigation'
+import { hasLocale, NextIntlClientProvider } from 'next-intl'
+import { getMessages, setRequestLocale } from 'next-intl/server'
 import { routing } from '@/shared/config/i18n'
 import '@/app/styles/globals.css'
 
@@ -30,10 +30,7 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }))
 }
 
-export default async function LocaleLayout({
-  children,
-  params,
-}: LocaleLayoutProps) {
+export default async function LocaleLayout({ children, params }: LocaleLayoutProps) {
   const { locale } = await params
 
   // 有効なロケールかチェック
@@ -49,12 +46,8 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <NextIntlClientProvider messages={messages}>
-          {children}
-        </NextIntlClientProvider>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
       </body>
     </html>
   )

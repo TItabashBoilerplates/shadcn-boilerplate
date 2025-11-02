@@ -1,4 +1,4 @@
-import type { Database } from "../domain/entity/__generated__/schema.ts";
+import type { Database } from "../shared/types/schema.ts";
 import { createClient } from "@supabase/supabase-js";
 
 console.log("Hello from Deno Functions!");
@@ -57,23 +57,17 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    return new Response(
-      JSON.stringify({ error: "Method not allowed" }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 405,
-      },
-    );
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 405,
+    });
   } catch (error) {
     const errorMessage = error instanceof Error
       ? error.message
       : "Unknown error";
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
-      },
-    );
+    return new Response(JSON.stringify({ error: errorMessage }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+    });
   }
 });

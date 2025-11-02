@@ -1,6 +1,6 @@
 'use client'
 
-import Error from 'next/error'
+import NextError from 'next/error'
 
 /**
  * ルート not-found ページ
@@ -10,7 +10,7 @@ export default function NotFound() {
   return (
     <html lang="en">
       <body>
-        <Error statusCode={404} />
+        <NextError statusCode={404} />
       </body>
     </html>
   )

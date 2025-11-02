@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
 import type { Database } from '@workspace/types/schema'
+import type { NextRequest, NextResponse } from 'next/server'
 
 /**
  * Middleware用セッション更新関数
@@ -41,29 +41,31 @@ import type { Database } from '@workspace/types/schema'
  * 2. リフレッシュされたトークンを `request.cookies.set` でServer Componentsに渡す
  * 3. リフレッシュされたトークンを `response.cookies.set` でブラウザに渡す
  */
-export async function updateSession(
-  request: NextRequest,
-  response: NextResponse
-) {
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            // リクエストにCookieを設定（Server Componentsで利用可能に）
-            request.cookies.set(name, value)
-            // レスポンスにCookieを設定（ブラウザへ送信）
-            response.cookies.set(name, value, options)
-          })
-        },
+export async function updateSession(request: NextRequest, response: NextResponse) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      'Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.'
+    )
+  }
+
+  const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll()
       },
-    }
-  )
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          // リクエストにCookieを設定（Server Componentsで利用可能に）
+          request.cookies.set(name, value)
+          // レスポンスにCookieを設定（ブラウザへ送信）
+          response.cookies.set(name, value, options)
+        })
+      },
+    },
+  })
 
   // 重要: セッショントークンをリフレッシュ
   // getUser()を使用してトークンの真正性を検証

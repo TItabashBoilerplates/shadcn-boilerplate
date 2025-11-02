@@ -8,9 +8,7 @@
 
 // Client Components用
 export { createClient as createBrowserClient } from './client'
-
-// Server Components/Actions/Route Handlers用
-export { createClient as createServerClient } from './server'
-
 // Middleware用
 export { updateSession } from './middleware'
+// Server Components/Actions/Route Handlers用
+export { createClient as createServerClient } from './server'

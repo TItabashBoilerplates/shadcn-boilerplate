@@ -170,9 +170,12 @@ type-check:
 .PHONY: ci-check
 ci-check:
 	@echo "🚀 Running all CI checks..."
+	@echo "📝 Frontend: Biome CI (lint + format + organize imports)..."
 	@make lint-frontend-ci
+	@echo "📝 Edge Functions: Deno lint + format check..."
 	@make lint-functions
-	@make format-check
+	@make format-functions-check
+	@echo "🔍 Type checking all projects..."
 	@make type-check
 
 .PHONY: deploy-functions

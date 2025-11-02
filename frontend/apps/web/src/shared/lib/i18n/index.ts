@@ -3,9 +3,9 @@
  * Feature Sliced Design の Public API パターンに従う
  */
 export {
+  getPathname,
   Link,
   redirect,
   usePathname,
   useRouter,
-  getPathname,
 } from './navigation'

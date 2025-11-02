@@ -1,16 +1,17 @@
 // shadcn/ui components
+
+// Utils
+export { cn } from '../lib/utils'
 export { Button, buttonVariants } from './button'
 export {
   Card,
-  CardHeader,
-  CardFooter,
-  CardTitle,
   CardAction,
-  CardDescription,
   CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
 } from './card'
-export { Input } from './input'
-export { Label } from './label'
 export {
   Dialog,
   DialogClose,
@@ -23,6 +24,5 @@ export {
   DialogTitle,
   DialogTrigger,
 } from './dialog'
-
-// Utils
-export { cn } from '../lib/utils'
+export { Input } from './input'
+export { Label } from './label'
