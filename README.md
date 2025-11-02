@@ -3,9 +3,9 @@
 ## Description
 
 This is a full-stack application boilerplate with a multi-platform frontend and backend services:
-- **Frontend**: Next.js, shadcn/ui, TailwindCSS
+- **Frontend**: Next.js 16, shadcn/ui, TailwindCSS 4, Bun
 - **Backend**: FastAPI (Python) with Supabase Edge Functions
-- **Database**: PostgreSQL with Prisma ORM and pgvector extension
+- **Database**: PostgreSQL with Atlas (HCL-based schema management) and pgvector extension
 
 ## Development Environment
 
@@ -19,15 +19,16 @@ By adopting these environments, we can ensure efficient development and maintain
 ## Architecture
 
 ### Frontend Architecture
-- **Application**: Next.js 15 with App Router and Turbopack for development
+- **Application**: Next.js 16 with App Router and Turbopack for development
 - **Architecture**: Feature-Sliced Design (FSD) methodology with strict layer organization
 - **UI Framework**: shadcn/ui components built on Radix UI with TailwindCSS 4
-- **Tech Stack**: React 19, TypeScript, Bun package manager, Zustand for state management
+- **Tech Stack**: React 19, TypeScript, Bun package manager
+- **Build System**: Turbo for monorepo management
 
 ### Backend Architecture
 - **Python Backend**: FastAPI application in `backend-py/` using clean architecture patterns
 - **Edge Functions**: Supabase Edge Functions using Hono framework for serverless APIs
-- **Database**: PostgreSQL with Prisma ORM, includes pgvector extension for embeddings
+- **Database**: PostgreSQL with **Atlas** for schema management (HCL-based), includes pgvector extension for embeddings
 - **Infrastructure**: Supabase for auth/database, Docker containerization
 
 ### Key Features
@@ -135,21 +136,38 @@ After successfully completing the setup, you can start the application using one
   make lint-frontend
   ```
 
-### Database Operations
-- Run database migrations:
-  ```bash
-  make migration
-  ```
+### Database Operations (Atlas-based)
 
-- Seed database with initial data:
-  ```bash
-  make seed
-  ```
+**開発環境**:
+```bash
+# マイグレーション生成 + 適用 + 型生成（Prismaの migrate dev 相当）
+make migrate-dev
+# または短縮形
+make migration
+```
 
-- Rollback last migration:
-  ```bash
-  make rollback
-  ```
+**本番環境**:
+```bash
+# マイグレーションファイルを適用（Prismaの migrate deploy 相当）
+make migrate-deploy
+
+# ステージング環境
+ENV=staging make migrate-deploy
+
+# 本番環境
+ENV=production make migrate-deploy
+```
+
+**スキーマ検証**:
+```bash
+# スキーマ検証
+make atlas-validate
+
+# マイグレーションLintチェック
+make atlas-lint
+```
+
+詳細は `atlas/README.md` および `CLAUDE.md` の「Atlas Schema Management」セクションを参照してください。
 
 ### Model Generation
 - Build Supabase types for frontend:
@@ -176,9 +194,11 @@ After successfully completing the setup, you can start the application using one
 # Development Guidelines
 
 ## Code Quality
-- **Frontend**: ESLint with Next.js configuration, TypeScript strict mode, Prettier for formatting
+- **Frontend**: Biome for linting and formatting (Next.js 16 standard), TypeScript strict mode
 - **Backend**: Ruff for linting (line length: 88), MyPy for type checking
-- **UI Design**: shadcn/ui components with TailwindCSS 4 and CSS variables
+- **UI Design**: shadcn/ui components (Radix UI) with TailwindCSS 4 and CSS variables
+- **Package Manager**: Bun for fast dependency management
+- **Build System**: Turbo for efficient monorepo builds
 
 ## Architecture Patterns
 - **Frontend**: Feature-Sliced Design (FSD) with strict layer hierarchy (app → pages → widgets → features → entities → shared)
@@ -189,13 +209,14 @@ After successfully completing the setup, you can start the application using one
 
 The project includes integrations for:
 
-- **[Next.js 15](https://nextjs.org/)**: React framework with App Router and Turbopack
+- **[Next.js 16](https://nextjs.org/)**: React framework with App Router and Turbopack
 - **[shadcn/ui](https://ui.shadcn.com/)**: UI component library built on Radix UI
 - **[TailwindCSS 4](https://tailwindcss.com/)**: Utility-first CSS framework
 - **[Supabase](https://supabase.com/)**: Authentication, database, and Edge Functions
-- **[Prisma](https://prisma.io/)**: Database ORM with multi-client support
+- **[Atlas](https://atlasgo.io/)**: Database schema management with HCL-based declarative migrations
 - **[FastAPI](https://fastapi.tiangolo.com/)**: Python backend framework
 - **[Bun](https://bun.sh/)**: Fast package manager and JavaScript runtime
+- **[Turbo](https://turbo.build/)**: High-performance build system for monorepos
 - **[Docker](https://docker.com/)**: Containerization for consistent development environments
 
 ## Future Considerations

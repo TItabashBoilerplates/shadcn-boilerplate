@@ -15,32 +15,31 @@ env/
 # Build Outputs
 # =============================================================================
 # Frontend builds
-dist/
-build/
+**/dist/
+**/build/
 **/.next/**
-.vercel/
-frontend/.vercel/
+**/.vercel/
 
 # Expo
 .expo/
-web-build/
+**/web-build/
 
 # Python builds
-*.egg-info/
+**/*.egg-info/
 
 # =============================================================================
 # Caches & Temporary Files
 # =============================================================================
 # Build tool caches
-.turbo/**
-*.tsbuildinfo
+**/.turbo/**
+**/*.tsbuildinfo
 
 # Linter & Formatter caches
-.eslintcache
+**.eslintcache
 .prettier-cache
 
 # Python tool caches
-__pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
@@ -49,29 +48,29 @@ __pycache__/
 
 # Test coverage
 .coverage
-.coverage.*
+**.coverage.*
 htmlcov/
 
 # Metro
-.metro-health-check*
+**.metro-health-check*
 
 # =============================================================================
 # Logs
 # =============================================================================
-*.log
+**/*.log
 npm-debug.*
 yarn-debug.*
 yarn-error.*
-pnpm-debug.log*
-lerna-debug.log*
+**/*.pnpm-debug.log*
+**/*.lerna-debug.log*
 
 # =============================================================================
 # IDE & Editor
 # =============================================================================
 .vscode/
 .idea/
-*.swp
-*.swo
+**/*.swp
+**/*.scripts.swo
 *~
 
 # =============================================================================
@@ -90,6 +89,7 @@ Thumbs.db
 # Local environment files
 .env*.local
 env/secrets.env
+!env/**/local.env
 
 # =============================================================================
 # Native App Certificates & Keys

@@ -7,9 +7,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 This is a full-stack application boilerplate with a multi-platform frontend and backend services:
 
 ### Frontend Architecture
-- **Framework**: Next.js, shadcn/ui, TailwindCSS
-- **Tech Stack**: React 19, TypeScript, shadcn/ui library, Turbo for build orchestration
-- **Build System**: Ultra-runner for concurrent operations, Turbo for dependency management
+- **Framework**: Next.js 16 with App Router
+- **UI Library**: shadcn/ui (Radix UI + TailwindCSS 4)
+- **Tech Stack**: React 19, TypeScript, Bun package manager
+- **Build System**: Turbo for monorepo management
+- **Architecture Pattern**: Feature-Sliced Design (FSD)
 
 ### Backend Architecture
 - **Python Backend**: FastAPI application in `backend-py/` using clean architecture patterns
@@ -70,11 +72,11 @@ make build-model-functions          # Generate types for edge functions
 ### Frontend Development
 ```bash
 cd frontend
-yarn web                    # Next.js web development
-yarn ios                    # iOS development
-yarn android               # Android development
-yarn build                 # Build all packages
-yarn test                  # Run tests
+bun run dev                 # Next.js web development (Turbo)
+bun run build              # Build all packages
+bun run lint               # Run ESLint
+bun run format             # Format code with Biome
+bun run type-check         # TypeScript type checking
 ```
 
 ### Backend Development (Python)
@@ -222,10 +224,12 @@ policy "edit_policy_general_users" {
 ## Code Style and Quality
 
 ### Frontend
-- Biome for linting and formatting
-- 2-space indentation, 100-character line width
-- TypeScript strict mode
-- Import type enforced for type-only imports
+- **Linting & Formatting**: Biome (Next.js 16標準)
+- **UI Components**: shadcn/ui (Radix UI primitives)
+- **Styling**: TailwindCSS 4 with CSS variables
+- **Indentation**: 2-space, 100-character line width
+- **TypeScript**: Strict mode enabled
+- **Import Style**: Type-only imports enforced
 
 ### Date and Time Handling (Supabase + Database Best Practices)
 
@@ -514,47 +518,52 @@ table "events" {
 この実装により、タイムゾーン関連のバグとハイドレーションエラーを防ぎ、グローバルなアプリケーションでも一貫した日時処理が可能になります。
 
 ### UI Design System
-- **Design Language**: Unified design system based on Material Design 3 principles
-- **Theme System**: Use Material Design 3 compliant themes defined in `frontend/packages/config/src/material-theme.ts`
-- **Typography**: Material Design 3 typography system defined in `frontend/packages/config/src/material-text.tsx`
-- **Color Tokens**: Use only the predefined tokens below:
-  - **Base Colors**: `$color`, `$background`, `$borderColor`, `$placeholderColor`, `$outlineColor`
-  - **Material Design 3 Colors**: `$primary`, `$secondary`, `$tertiary`, `$error`
-  - **State Colors**: `$red`, `$green`, `$blue`, `$yellow` (each with 1-12 gradations)
-  - **Text Colors**: `$color1-12` (contrast gradations)
-  - **Shadow Colors**: `$shadow1-6`, `$shadowColor`
-  - **Monochrome Colors**: `$white1-12`, `$black1-12`
 
-### UI Implementation Guidelines
-1. **Theme Usage**: Always use `material_light` or `material_dark` themes
-2. **Typography**: Use Material Design 3 text components:
-   - Display: `DisplayLarge`, `DisplayMedium`, `DisplaySmall`
-   - Headline: `HeadlineLarge`, `HeadlineMedium`, `HeadlineSmall`
-   - Title: `TitleLarge`, `TitleMedium`, `TitleSmall`
-   - Body: `BodyLarge`, `BodyMedium`, `BodySmall`
-   - Label: `LabelLarge`, `LabelMedium`, `LabelSmall`
-   - Aliases: `H1-H6`, `Body1-2`, `Subtitle1-2`, `Caption`, `Overline`
-3. **Color Token Usage**: Only use predefined color tokens, avoid hardcoded color values
-4. **Accessibility**: Follow Material Design 3 accessibility guidelines
-5. **Responsive Design**: Consider cross-platform compatibility
+このプロジェクトは **shadcn/ui + TailwindCSS 4** を使用した統一的なデザインシステムを採用しています。
 
-### Example: Correct UI Implementation
-```typescript
-// ✅ Good example: Material Design 3 compliant
-<Theme name="material_light">
-  <Card padding="$4" borderColor="$outlineColor">
-    <TitleLarge color="$primary">Title</TitleLarge>
-    <BodyMedium color="$color">Body text</BodyMedium>
-    <Button theme="primary">Action</Button>
-  </Card>
-</Theme>
+#### shadcn/ui Components
+- **基盤**: Radix UI primitives（アクセシビリティ対応）
+- **スタイル**: TailwindCSS 4 with CSS variables
+- **カスタマイズ**: `frontend/apps/web/components.json` で管理
+- **共有コンポーネント**: `frontend/packages/ui/components/` に配置
 
-// ❌ Bad example: Hardcoded color values
-<Card padding="16" borderColor="#cccccc">
-  <Text fontSize="22" color="#6442d6">Title</Text>
-  <Text fontSize="14" color="#333333">Body text</Text>
-</Card>
-```
+#### UI Implementation Guidelines
+
+1. **shadcn/uiコンポーネントの使用**:
+   ```bash
+   # 新しいコンポーネントを追加
+   cd frontend
+   bun run ui:add button card input
+   ```
+
+2. **TailwindCSS CSS変数の使用**:
+   ```typescript
+   // ✅ Good: CSS変数を使用
+   <Card className="border-border bg-background">
+     <h2 className="text-foreground">Title</h2>
+     <p className="text-muted-foreground">Description</p>
+   </Card>
+
+   // ❌ Bad: ハードコードされた色
+   <Card className="border-gray-200 bg-white">
+     <h2 className="text-black">Title</h2>
+     <p className="text-gray-600">Description</p>
+   </Card>
+   ```
+
+3. **色の管理**:
+   - TailwindCSS CSS変数を使用（`--background`, `--foreground`, `--primary`, etc.）
+   - テーマファイル: `frontend/apps/web/app/globals.css`
+   - ダークモード対応: `dark:` プレフィックスで自動切り替え
+
+4. **アクセシビリティ**:
+   - Radix UIのアクセシビリティ機能を活用
+   - ARIA属性は自動で付与される
+   - キーボードナビゲーション対応
+
+5. **レスポンシブデザイン**:
+   - TailwindCSSのレスポンシブユーティリティを使用
+   - `sm:`, `md:`, `lg:`, `xl:` プレフィックス
 
 ### Backend Python
 - Ruff with comprehensive rule set (pyproject.toml)
@@ -605,41 +614,52 @@ Atlas スキーマから各プラットフォーム向けに型を生成：
 
 ## Important Notes for UI Implementation
 
-### Material Design 3 Theme Verification
-When implementing frontend UI, always follow these steps:
+### shadcn/ui + TailwindCSS 4 Guidelines
 
-1. **Check Theme Files**
-   - `frontend/packages/config/src/material-theme.ts` - Color token definitions
-   - `frontend/packages/config/src/material-text.tsx` - Typography components
-   - `frontend/packages/config/src/material-fonts.ts` - Font configurations
+フロントエンドUIを実装する際は、以下の手順に従ってください：
 
-2. **Reference Demo Pages**
-   - `http://localhost:3001/typography-example` - Typography system demo
-   - `http://localhost:3001/theme-example` - Theme and color system demo
+1. **コンポーネント設定の確認**
+   - `frontend/apps/web/components.json` - shadcn/ui設定ファイル
+   - `frontend/apps/web/app/globals.css` - TailwindCSS CSS変数定義
+   - `frontend/packages/ui/components/` - 共有コンポーネント
 
-3. **Available Components**
+2. **利用可能なコンポーネント**
    ```typescript
-   // Material Design 3 Typography Components
-   import {
-     DisplayLarge, HeadlineLarge, TitleLarge, BodyLarge, LabelLarge,
-     H1, H2, H3, H4, H5, H6, Body1, Body2, Caption
-   } from '@my/config'
+   // shadcn/uiコンポーネントのインポート
+   import { Button } from "@/components/ui/button"
+   import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+   import { Input } from "@/components/ui/input"
+   import { Label } from "@/components/ui/label"
+   import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
-   // Theme Usage
-   import { Theme } from '@my/ui'
-   <Theme name="material_light">
-     <TitleLarge color="$primary">Title</TitleLarge>
-   </Theme>
+   // 使用例
+   <Card>
+     <CardHeader>
+       <CardTitle>タイトル</CardTitle>
+       <CardDescription>説明文</CardDescription>
+     </CardHeader>
+     <CardContent>
+       <Button variant="default">ボタン</Button>
+     </CardContent>
+   </Card>
    ```
 
-4. **Strict Color Token Usage**
-   - Hardcoded color values (`#ffffff`, `rgb(255,255,255)`, etc.) are prohibited
-   - Always use predefined color tokens (`$primary`, `$color`, `$background`, etc.)
-   - When new colors are needed, add them to theme files following Material Design 3 guidelines
+3. **新しいコンポーネントの追加**
+   ```bash
+   cd frontend
+   bun run ui:add <component-name>
+   # 例: bun run ui:add table select checkbox
+   ```
 
-5. **Accessibility Compliance**
-   - Follow Material Design 3 contrast ratio standards
-   - Consider color vision deficiency (don't rely solely on color for information)
-   - Support screen readers
+4. **色の使用ルール**
+   - ハードコードされた色（`#ffffff`, `rgb(255,255,255)`, `gray-500`など）は禁止
+   - 必ずCSS変数を使用（`text-foreground`, `bg-background`, `border-border`, `text-primary`など）
+   - 新しい色が必要な場合は `app/globals.css` のCSS変数に追加
 
-This implementation ensures a unified, accessible, and maintainable UI system.
+5. **アクセシビリティ対応**
+   - Radix UIのアクセシビリティ機能を活用
+   - コントラスト比の基準に従う
+   - 色のみに依存しない情報伝達
+   - スクリーンリーダー対応
+
+この実装により、統一的でアクセシブル、メンテナンス可能なUIシステムが実現できます。
