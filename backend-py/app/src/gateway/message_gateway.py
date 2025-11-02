@@ -1,6 +1,6 @@
 from sqlmodel import Session, select
 
-from src.domain.entity.models import Message
+from src.domain.entity.models import Messages
 
 
 class MessageGateway:
@@ -10,8 +10,8 @@ class MessageGateway:
         virtual_sender_id: str,
         content: str,
         session: Session,
-    ) -> Message:
-        message = Message(
+    ) -> Messages:
+        message = Messages(
             chat_room_id=chat_room_id,
             virtual_user_id=virtual_sender_id,
             content=content,
@@ -25,16 +25,16 @@ class MessageGateway:
         self,
         message_id: int,
         session: Session,
-    ) -> Message | None:
-        statement = select(Message).where(Message.id == message_id)
+    ) -> Messages | None:
+        statement = select(Messages).where(Messages.id == message_id)
         return session.exec(statement).first()
 
     def get_all_by_chat_room_id(
         self,
         chat_room_id: int,
         session: Session,
-    ) -> list[Message]:
-        statement = select(Message).where(Message.chat_room_id == chat_room_id)
+    ) -> list[Messages]:
+        statement = select(Messages).where(Messages.chat_room_id == chat_room_id)
         return list(session.exec(statement).all())
 
     def update(
@@ -42,8 +42,8 @@ class MessageGateway:
         message_id: int,
         content: str,
         session: Session,
-    ) -> Message:
-        statement = select(Message).where(Message.id == message_id)
+    ) -> Messages:
+        statement = select(Messages).where(Messages.id == message_id)
         message = session.exec(statement).first()
         if message is None:
             raise ValueError("Message not found")
@@ -58,8 +58,8 @@ class MessageGateway:
         self,
         message_id: int,
         session: Session,
-    ) -> Message:
-        statement = select(Message).where(Message.id == message_id)
+    ) -> Messages:
+        statement = select(Messages).where(Messages.id == message_id)
         message = session.exec(statement).first()
         if message is None:
             raise ValueError("Message not found")

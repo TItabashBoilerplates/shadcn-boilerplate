@@ -3,7 +3,7 @@ from datetime import datetime
 
 from sqlmodel import Session, select
 
-from src.domain.entity.models import VirtualUser
+from src.domain.entity.models import VirtualUsers
 
 
 class VirtualUserGateway:
@@ -12,8 +12,8 @@ class VirtualUserGateway:
         name: str,
         owner_id: str,
         session: Session,
-    ) -> VirtualUser:
-        virtual_user = VirtualUser(
+    ) -> VirtualUsers:
+        virtual_user = VirtualUsers(
             id=str(uuid.uuid4()),
             name=name,
             owner_id=owner_id,
@@ -29,20 +29,20 @@ class VirtualUserGateway:
         self,
         virtual_user_id: str,
         session: Session,
-    ) -> VirtualUser | None:
-        statement = select(VirtualUser).where(VirtualUser.id == virtual_user_id)
+    ) -> VirtualUsers | None:
+        statement = select(VirtualUsers).where(VirtualUsers.id == virtual_user_id)
         return session.exec(statement).first()
 
-    def get_all(self, session: Session) -> list[VirtualUser]:
-        statement = select(VirtualUser)
+    def get_all(self, session: Session) -> list[VirtualUsers]:
+        statement = select(VirtualUsers)
         return list(session.exec(statement).all())
 
     def get_by_owner_id(
         self,
         owner_id: str,
         session: Session,
-    ) -> list[VirtualUser]:
-        statement = select(VirtualUser).where(VirtualUser.owner_id == owner_id)
+    ) -> list[VirtualUsers]:
+        statement = select(VirtualUsers).where(VirtualUsers.owner_id == owner_id)
         return list(session.exec(statement).all())
 
     def update(
@@ -50,8 +50,8 @@ class VirtualUserGateway:
         virtual_user_id: str,
         name: str,
         session: Session,
-    ) -> VirtualUser:
-        statement = select(VirtualUser).where(VirtualUser.id == virtual_user_id)
+    ) -> VirtualUsers:
+        statement = select(VirtualUsers).where(VirtualUsers.id == virtual_user_id)
         virtual_user = session.exec(statement).first()
         if virtual_user is None:
             raise ValueError("VirtualUser not found")
@@ -67,8 +67,8 @@ class VirtualUserGateway:
         self,
         virtual_user_id: str,
         session: Session,
-    ) -> VirtualUser:
-        statement = select(VirtualUser).where(VirtualUser.id == virtual_user_id)
+    ) -> VirtualUsers:
+        statement = select(VirtualUsers).where(VirtualUsers.id == virtual_user_id)
         virtual_user = session.exec(statement).first()
         if virtual_user is None:
             raise ValueError("VirtualUser not found")

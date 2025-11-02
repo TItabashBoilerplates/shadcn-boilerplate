@@ -1,6 +1,6 @@
 import os
 
-from langchain_anthropic import Anthropic, ChatAnthropic
+from langchain_anthropic import AnthropicLLM, ChatAnthropic
 from langchain_community.chat_models import ChatOllama, ChatPerplexity
 from langchain_community.embeddings import CohereEmbeddings, OllamaEmbeddings
 from langchain_core.embeddings import Embeddings
@@ -32,12 +32,12 @@ class LLMFactory:
         raise NotImplementedError(f"Invalid model name: {mode}")
 
     @staticmethod
-    def get_llm(mode: str, model: str) -> OpenAI | Anthropic | None:
+    def get_llm(mode: str, model: str) -> OpenAI | AnthropicLLM | None:
         """Get LLM object based on the mode and model"""
         if mode == "gpt":
             return OpenAI(openai_api_key=os.environ.get("OPENAI_API_KEY"), model=model)
         if mode == "claude":
-            return Anthropic(model=model, api_key=os.environ.get("ANTHROPIC_API_KEY"))
+            return AnthropicLLM(model=model, api_key=os.environ.get("ANTHROPIC_API_KEY"))
         if mode in {"perplexity", "ollama"}:
             return None
         raise NotImplementedError(f"Invalid model name: {mode}")

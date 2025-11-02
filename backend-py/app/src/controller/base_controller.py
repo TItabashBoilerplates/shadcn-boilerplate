@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from gotrue.types import User
+from supabase_auth.types import User
 
 from middleware.auth_middleware import verify_token
 

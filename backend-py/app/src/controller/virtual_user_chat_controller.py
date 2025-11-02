@@ -1,7 +1,7 @@
 from logging import getLogger
 
 from fastapi import APIRouter, Depends, HTTPException
-from gotrue.types import User
+from supabase_auth.types import User
 from sqlmodel import Session
 
 from src.domain.entity.supabase_webhook_payload import SupabaseWebhookPayload

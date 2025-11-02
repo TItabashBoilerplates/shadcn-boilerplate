@@ -51,6 +51,7 @@ class GeneralUsers(SQLModel, table=True):
         PrimaryKeyConstraint('id', name='general_users_pkey'),
         UniqueConstraint('account_name', name='general_users_account_name_unique')
     )
+    model_config = {"arbitrary_types_allowed": True}
 
     id: UUID = Field(sa_column=Column('id', Uuid, primary_key=True))
     display_name: str = Field(sa_column=Column('display_name', Text, server_default=text("''::text")))
@@ -83,6 +84,7 @@ class CorporateUsers(SQLModel, table=True):
         ForeignKeyConstraint(['organization_id'], ['organizations.id'], ondelete='CASCADE', name='corporate_users_organization_id_organizations_id_fk'),
         PrimaryKeyConstraint('id', name='corporate_users_pkey')
     )
+    model_config = {"arbitrary_types_allowed": True}
 
     id: UUID = Field(sa_column=Column('id', Uuid, primary_key=True))
     name: str = Field(sa_column=Column('name', Text, server_default=text("''::text")))
@@ -101,6 +103,7 @@ class GeneralUserProfiles(SQLModel, table=True):
         UniqueConstraint('email', name='general_user_profiles_email_unique'),
         UniqueConstraint('user_id', name='general_user_profiles_user_id_unique')
     )
+    model_config = {"arbitrary_types_allowed": True}
 
     id: Optional[int] = Field(default=None, sa_column=Column('id', Integer, primary_key=True))
     first_name: str = Field(sa_column=Column('first_name', Text, server_default=text("''::text")))
@@ -121,6 +124,7 @@ class UserChats(SQLModel, table=True):
         PrimaryKeyConstraint('id', name='user_chats_pkey'),
         Index('user_chats_user_id_chat_room_id_key', 'user_id', 'chat_room_id', unique=True)
     )
+    model_config = {"arbitrary_types_allowed": True}
 
     id: Optional[int] = Field(default=None, sa_column=Column('id', Integer, primary_key=True))
     user_id: UUID = Field(sa_column=Column('user_id', Uuid))
@@ -136,6 +140,7 @@ class VirtualUsers(SQLModel, table=True):
         ForeignKeyConstraint(['owner_id'], ['general_users.id'], ondelete='CASCADE', name='virtual_users_owner_id_general_users_id_fk'),
         PrimaryKeyConstraint('id', name='virtual_users_pkey')
     )
+    model_config = {"arbitrary_types_allowed": True}
 
     id: UUID = Field(sa_column=Column('id', Uuid, primary_key=True))
     name: str = Field(sa_column=Column('name', Text))
@@ -175,6 +180,7 @@ class Messages(SQLModel, table=True):
         ForeignKeyConstraint(['virtual_user_id'], ['virtual_users.id'], ondelete='CASCADE', name='messages_virtual_user_id_virtual_users_id_fk'),
         PrimaryKeyConstraint('id', name='messages_pkey')
     )
+    model_config = {"arbitrary_types_allowed": True}
 
     id: Optional[int] = Field(default=None, sa_column=Column('id', Integer, primary_key=True))
     chat_room_id: int = Field(sa_column=Column('chat_room_id', Integer))
@@ -196,6 +202,7 @@ class VirtualUserChats(SQLModel, table=True):
         PrimaryKeyConstraint('id', name='virtual_user_chats_pkey'),
         Index('virtual_user_chats_virtual_user_id_chat_room_id_key', 'virtual_user_id', 'chat_room_id', unique=True)
     )
+    model_config = {"arbitrary_types_allowed": True}
 
     id: Optional[int] = Field(default=None, sa_column=Column('id', Integer, primary_key=True))
     virtual_user_id: UUID = Field(sa_column=Column('virtual_user_id', Uuid))
@@ -211,6 +218,7 @@ class VirtualUserProfiles(SQLModel, table=True):
         ForeignKeyConstraint(['virtual_user_id'], ['virtual_users.id'], ondelete='CASCADE', name='virtual_user_profiles_virtual_user_id_virtual_users_id_fk'),
         PrimaryKeyConstraint('id', name='virtual_user_profiles_pkey')
     )
+    model_config = {"arbitrary_types_allowed": True}
 
     id: Optional[int] = Field(default=None, sa_column=Column('id', Integer, primary_key=True))
     personality: str = Field(sa_column=Column('personality', Text, server_default=text("'friendly'::text")))

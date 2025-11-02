@@ -3,7 +3,7 @@
 import os
 from logging import getLogger
 
-from gotrue.types import User
+from supabase_auth.types import User
 from supabase import Client, create_client
 
 logger = getLogger("uvicorn")
@@ -12,7 +12,7 @@ logger = getLogger("uvicorn")
 class SupabaseClient:
     def __init__(self, access_token: str | None = None) -> None:
         self.url: str | None = os.getenv("SUPABASE_URL")
-        self.key: str | None = os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+        self.key: str | None = os.getenv("SUPABASE_ANON_KEY")
         self.user = None
 
         if self.url is None or self.key is None:

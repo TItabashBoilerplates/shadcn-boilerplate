@@ -2,7 +2,7 @@ from logging import getLogger
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import APIKeyHeader
-from gotrue.types import User
+from supabase_auth.types import User
 
 from infra.supabase_client import SupabaseClient
 
