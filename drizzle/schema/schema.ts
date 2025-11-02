@@ -1,17 +1,17 @@
+import { sql } from 'drizzle-orm'
 import {
+  check,
+  customType,
+  integer,
+  jsonb,
+  pgPolicy,
   pgTable,
   serial,
   text,
-  uuid,
-  integer,
   timestamp,
-  jsonb,
-  check,
-  pgPolicy,
   uniqueIndex,
-  customType,
+  uuid,
 } from 'drizzle-orm/pg-core'
-import { sql } from 'drizzle-orm'
 // NOTE: Deno互換のため、拡張子を明示
 import { chatTypeEnum } from './types.ts'
 
@@ -44,50 +44,44 @@ export const organizations = pgTable('organizations', {
 })
 
 // ===== Corporate Users テーブル（RLS付き） =====
-export const corporateUsers = pgTable(
-  'corporate_users',
-  {
-    id: uuid('id').primaryKey(),
-    name: text('name').notNull().default(''),
-    organizationId: integer('organization_id')
-      .notNull()
-      .references(() => organizations.id, { onDelete: 'cascade' }),
-    createdAt: timestamp('created_at', {
-      withTimezone: true,
-      precision: 3,
-    })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp('updated_at', {
-      withTimezone: true,
-      precision: 3,
-    })
-      .notNull()
-      .defaultNow(),
-  }
-).enableRLS()
+export const corporateUsers = pgTable('corporate_users', {
+  id: uuid('id').primaryKey(),
+  name: text('name').notNull().default(''),
+  organizationId: integer('organization_id')
+    .notNull()
+    .references(() => organizations.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', {
+    withTimezone: true,
+    precision: 3,
+  })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', {
+    withTimezone: true,
+    precision: 3,
+  })
+    .notNull()
+    .defaultNow(),
+}).enableRLS()
 
 // ===== General Users テーブル（RLS付き） =====
-export const generalUsers = pgTable(
-  'general_users',
-  {
-    id: uuid('id').primaryKey(),
-    displayName: text('display_name').notNull().default(''),
-    accountName: text('account_name').notNull().unique(),
-    createdAt: timestamp('created_at', {
-      withTimezone: true,
-      precision: 3,
-    })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp('updated_at', {
-      withTimezone: true,
-      precision: 3,
-    })
-      .notNull()
-      .defaultNow(),
-  }
-).enableRLS()
+export const generalUsers = pgTable('general_users', {
+  id: uuid('id').primaryKey(),
+  displayName: text('display_name').notNull().default(''),
+  accountName: text('account_name').notNull().unique(),
+  createdAt: timestamp('created_at', {
+    withTimezone: true,
+    precision: 3,
+  })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', {
+    withTimezone: true,
+    precision: 3,
+  })
+    .notNull()
+    .defaultNow(),
+}).enableRLS()
 
 // ===== General Users RLS ポリシー =====
 
@@ -114,20 +108,17 @@ export const editPolicyGeneralUsers = pgPolicy('edit_policy_general_users', {
 }).link(generalUsers)
 
 // ===== General User Profiles テーブル（RLS付き） =====
-export const generalUserProfiles = pgTable(
-  'general_user_profiles',
-  {
-    id: serial('id').primaryKey(),
-    firstName: text('first_name').notNull().default(''),
-    lastName: text('last_name').notNull().default(''),
-    userId: uuid('user_id')
-      .notNull()
-      .unique()
-      .references(() => generalUsers.id, { onDelete: 'cascade' }),
-    email: text('email').notNull().unique(),
-    phoneNumber: text('phone_number'),
-  }
-).enableRLS()
+export const generalUserProfiles = pgTable('general_user_profiles', {
+  id: serial('id').primaryKey(),
+  firstName: text('first_name').notNull().default(''),
+  lastName: text('last_name').notNull().default(''),
+  userId: uuid('user_id')
+    .notNull()
+    .unique()
+    .references(() => generalUsers.id, { onDelete: 'cascade' }),
+  email: text('email').notNull().unique(),
+  phoneNumber: text('phone_number'),
+}).enableRLS()
 
 // ===== General User Profiles RLS ポリシー =====
 
@@ -146,12 +137,10 @@ export const selectOwnProfile = pgPolicy('select_own_profile', {
 }).link(generalUserProfiles)
 
 // 自分のプロフィールのみ編集可能
-export const insertPolicyGeneralUserProfiles = pgPolicy(
-  'insert_policy_general_user_profiles',
-  {
-    for: 'all',
-    to: 'authenticated',
-    using: sql`
+export const insertPolicyGeneralUserProfiles = pgPolicy('insert_policy_general_user_profiles', {
+  for: 'all',
+  to: 'authenticated',
+  using: sql`
     EXISTS (
       SELECT 1
       FROM general_users
@@ -159,7 +148,7 @@ export const insertPolicyGeneralUserProfiles = pgPolicy(
       AND general_users.id = (SELECT auth.uid())
     )
   `,
-    withCheck: sql`
+  withCheck: sql`
     EXISTS (
       SELECT 1
       FROM general_users
@@ -167,26 +156,22 @@ export const insertPolicyGeneralUserProfiles = pgPolicy(
       AND general_users.id = (SELECT auth.uid())
     )
   `,
-  }
-).link(generalUserProfiles)
+}).link(generalUserProfiles)
 
 // ===== Addresses テーブル（RLS付き） =====
-export const addresses = pgTable(
-  'addresses',
-  {
-    id: serial('id').primaryKey(),
-    street: text('street').notNull(),
-    city: text('city').notNull(),
-    state: text('state').notNull(),
-    postalCode: text('postal_code').notNull(),
-    country: text('country').notNull(),
-    profileId: integer('profile_id')
-      .unique()
-      .references(() => generalUserProfiles.id, {
-        onDelete: 'cascade',
-      }),
-  }
-).enableRLS()
+export const addresses = pgTable('addresses', {
+  id: serial('id').primaryKey(),
+  street: text('street').notNull(),
+  city: text('city').notNull(),
+  state: text('state').notNull(),
+  postalCode: text('postal_code').notNull(),
+  country: text('country').notNull(),
+  profileId: integer('profile_id')
+    .unique()
+    .references(() => generalUserProfiles.id, {
+      onDelete: 'cascade',
+    }),
+}).enableRLS()
 
 // ===== Chat Rooms テーブル（RLS付き） =====
 export const chatRooms = pgTable('chat_rooms', {
@@ -346,12 +331,7 @@ export const userChats = pgTable(
       .notNull()
       .references(() => chatRooms.id, { onDelete: 'cascade' }),
   },
-  (table) => [
-    uniqueIndex('user_chats_user_id_chat_room_id_key').on(
-      table.userId,
-      table.chatRoomId
-    ),
-  ]
+  (table) => [uniqueIndex('user_chats_user_id_chat_room_id_key').on(table.userId, table.chatRoomId)]
 ).enableRLS()
 
 // ===== User Chats RLS ポリシー =====
@@ -460,7 +440,7 @@ export const embeddings = pgTable('embeddings', {
 })
 
 // ===== 型エクスポート（Inferで自動推論） =====
-import type { InferSelectModel, InferInsertModel } from 'drizzle-orm'
+import type { InferInsertModel, InferSelectModel } from 'drizzle-orm'
 
 // SELECT型（既存レコードの型）
 export type Organization = InferSelectModel<typeof organizations>

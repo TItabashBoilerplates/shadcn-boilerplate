@@ -152,13 +152,36 @@ check-functions:
 	done
 	@echo "✅ Type check complete!"
 
+# ===== Drizzle lint/format コマンド =====
+
+# Biome lint（自動修正）
+.PHONY: lint-drizzle
+lint-drizzle:
+	cd drizzle && bun run lint
+
+# Biome lint（CI用、修正なし）
+.PHONY: lint-drizzle-ci
+lint-drizzle-ci:
+	cd drizzle && bun run lint:ci
+
+# Biome format（自動修正）
+.PHONY: format-drizzle
+format-drizzle:
+	cd drizzle && bun run format
+
+# Biome formatチェック（チェックのみ）
+.PHONY: format-drizzle-check
+format-drizzle-check:
+	cd drizzle && bun run format-check
+
 # ===== 統合 lint/format コマンド =====
 
-# 全体のlint（フロントエンド + Edge Functions）
+# 全体のlint（フロントエンド + Drizzle + Edge Functions）
 .PHONY: lint
 lint:
 	@echo "🔍 Running lint for all projects..."
 	@make lint-frontend
+	@make lint-drizzle
 	@make lint-functions
 
 # 全体のformat（自動修正）
@@ -166,6 +189,7 @@ lint:
 format:
 	@echo "✨ Formatting all projects..."
 	@make format-frontend
+	@make format-drizzle
 	@make format-functions
 
 # 全体のformatチェック（CI用）
@@ -173,6 +197,7 @@ format:
 format-check:
 	@echo "🔍 Checking format for all projects..."
 	@make format-frontend-check
+	@make format-drizzle-check
 	@make format-functions-check
 
 # 全体の型チェック
@@ -188,6 +213,8 @@ ci-check:
 	@echo "🚀 Running all CI checks..."
 	@echo "📝 Frontend: Biome CI (lint + format + organize imports)..."
 	@make lint-frontend-ci
+	@echo "📝 Drizzle: Biome CI (lint + format)..."
+	@make lint-drizzle-ci
 	@echo "📝 Edge Functions: Deno lint + format check..."
 	@make lint-functions
 	@make format-functions-check

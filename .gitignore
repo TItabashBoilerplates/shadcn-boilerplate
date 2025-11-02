@@ -119,7 +119,6 @@ ipfs/contents/**
 # Supabase
 supabase/.branches/**
 supabase/.temp/**
-supabase/migrations/**
 
 # Prisma backup (migrated to Atlas)
 prisma.backup/**

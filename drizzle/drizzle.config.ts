@@ -12,7 +12,7 @@ export default defineConfig({
 
   // データベース接続（環境変数から取得）
   dbCredentials: {
-    url: process.env.DATABASE_URL!,
+    url: process.env.DATABASE_URL || '',
   },
 
   // マイグレーション設定
