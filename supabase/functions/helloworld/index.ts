@@ -1,5 +1,11 @@
 import type { Database } from "../shared/types/schema.ts";
 import { createClient } from "@supabase/supabase-js";
+// Drizzle型の使用例
+import type { InferSelectModel } from "npm:drizzle-orm";
+import { generalUsers } from "../shared/drizzle/index.ts";
+
+// Drizzle型を推論
+type User = InferSelectModel<typeof generalUsers>;
 
 console.log("Hello from Deno Functions!");
 
@@ -25,15 +31,26 @@ Deno.serve(async (req: Request) => {
     if (req.method === "GET") {
       const query = await supabaseClient
         .from("general_users")
-        .select("name")
+        .select("*")
         .limit(1);
 
       console.log(query.data);
       const generalUser = query.data?.[0];
 
+      // Drizzle型を使用して型安全にデータを扱う
+      const typedUser: User | undefined = generalUser as User | undefined;
+
       return new Response(
         JSON.stringify({
-          message: `Hello ${generalUser?.name ?? "World"}!`,
+          message: `Hello ${typedUser?.displayName ?? "World"}!`,
+          user: typedUser
+            ? {
+              id: typedUser.id,
+              displayName: typedUser.displayName,
+              accountName: typedUser.accountName,
+            }
+            : null,
+          info: "This response uses Drizzle types for type safety!",
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },

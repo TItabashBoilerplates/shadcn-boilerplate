@@ -2,3 +2,12 @@
 .branches
 .temp
 .env
+
+# dotenvx
+.env.keys
+.env.local
+.env.*.local
+
+# Generated files (build artifacts)
+functions/shared/drizzle/
+functions/shared/types/schema.ts

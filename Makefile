@@ -15,6 +15,14 @@ init:
 	asdf install
 	# dotenvxとatlasをインストール
 	npm install -g @dotenvx/dotenvx;
+	# .envファイルを作成（Docker Compose用のプロジェクト名設定）
+	@if [ ! -f ".env" ]; then \
+		echo "Creating .env file for Docker Compose..."; \
+		echo "PROJECT_NAME=$$(basename $$(pwd))" > .env; \
+		echo "✅ Created .env with PROJECT_NAME=$$(basename $$(pwd))"; \
+	else \
+		echo "ℹ️  .env file already exists, skipping creation"; \
+	fi
 	# Supabaseにログイン
 	npx dotenvx run -f env/backend/${ENV}.env -- supabase login
 	# Supabaseを初期化
@@ -29,16 +37,19 @@ init:
 	curl -sSf https://atlasgo.sh | sh
 	# フロントエンドとバックエンドの依存関係もインストール
 	cd frontend && bun install
-	# データベースのマイグレーションとモデルのビルドを実行
-	make atlas-init-migration
-	make build-model
+	@echo ""
+	@echo "✅ Initial setup complete!"
+	@echo ""
+	@echo "📝 Next steps:"
+	@echo "  1. Run 'make migrate-dev' to generate and apply initial database migrations"
+	@echo "  2. Run 'make run' to start backend services"
+	@echo "  3. Run 'make frontend' to start frontend development server"
+	@echo ""
 	@echo "Woo-hoo! Everything's ready to roll!"
 
 # ローカル環境での起動コマンド
 .PHONY: run
 run:
-	# プロジェクト名を設定
-	export PROJECT_NAME=$$(basename $$(pwd))
 	# # 共通の.git設定のファイルをコピー
 	# make copy-git-config
 	# Supabaseを起動（ENV=localの場合のみ）
@@ -50,6 +61,7 @@ run:
 		export ENV=${ENV}; \
 	fi
 	# docker-compose -f ./docker-compose.frontend.yaml -f ./docker-compose.ai.yaml -f ./docker-compose.backend.yaml -f ./docker-compose.batch.yaml up -d --force-recreate
+	export PROJECT_NAME=$$(basename $$(pwd))
 	docker-compose -f ./docker-compose.backend.yaml up -d --force-recreate
 
 
@@ -197,8 +209,6 @@ deploy-functions:
 # チェックコマンド
 .PHONY: check
 check:
-	# プロジェクト名を設定
-	export PROJECT_NAME=$$(basename $$(pwd))
 	# Supabaseを起動（ENV=localの場合のみ）
 	if [ "${ENV}" = "local" ]; then \
 		npx dotenvx run -f env/backend/${ENV}.env -- supabase start; \
@@ -213,13 +223,13 @@ copy-git-config:
 	\cp -f .git-dev/info/exclude .git/info/exclude
 
 # Supabaseのモデルをビルド（モノレポ対応）
-.PHONY: build-model-frontend-supabase
-build-model-frontend-supabase:
+.PHONY: build-model-frontend
+build-model-frontend:
 	# ENV=localの場合のみ実行
 	if [ "${ENV}" = "local" ]; then \
 		npx dotenvx run -f env/backend/${ENV}.env -- supabase start; \
-		$(eval DIR_PATH := "./frontend/packages/types"); \
-		mkdir -p $(DIR_PATH) && npx dotenvx run -f env/backend/${ENV}.env -- supabase gen types typescript --local > $(DIR_PATH)/schema.ts; \
+		mkdir -p "./frontend/packages/types"; \
+		supabase gen types typescript --local > "./frontend/packages/types/schema.ts"; \
 	fi
 
 # Edge functionsのモデルをビルド
@@ -228,25 +238,26 @@ build-model-functions:
 	# ENV=localの場合のみ実行
 	if [ "${ENV}" = "local" ]; then \
 		npx dotenvx run -f env/backend/${ENV}.env -- supabase start; \
-		mkdir -p ./supabase/functions/shared/types && npx dotenvx run -f env/backend/${ENV}.env -- supabase gen types typescript --local > ./supabase/functions/shared/types/schema.ts; \
+		mkdir -p ./supabase/functions/shared/types/supabase; \
+		supabase gen types typescript --local > ./supabase/functions/shared/types/supabase/schema.ts; \
+		mkdir -p ./supabase/functions/shared/drizzle && cp -r ./drizzle/schema/* ./supabase/functions/shared/drizzle/; \
+		echo "✅ Copied Drizzle schema to supabase/functions/shared/drizzle/"; \
 	fi
 
 # モデルをビルド
 .PHONY: build-model
 build-model:
 	# フロントエンドのモデルをビルド
-	make build-model-frontend-supabase
+	make build-model-frontend
 	# Edge functionsのモデルをビルド
 	make build-model-functions
 
-# ===== Atlas マイグレーションコマンド（Prisma風） =====
+# ===== Drizzle マイグレーションコマンド（Prisma風） =====
 
 # 開発用マイグレーション（Prismaの migrate dev に相当）
 # ローカル環境専用: マイグレーション生成 → 適用 → 型生成を一括実行
 .PHONY: migrate-dev
 migrate-dev:
-	@make atlas-validate;
-	@make atlas-lint;
 	@# ENVが指定されていて、かつlocal以外の場合は警告
 	@if [ -n "${ENV}" ] && [ "${ENV}" != "local" ]; then \
 		echo "⚠️  ERROR: migrate-dev is for local development only!"; \
@@ -257,23 +268,17 @@ migrate-dev:
 	fi
 	@echo "🚀 Running migrate-dev (generate + apply + build-model)..."
 	@echo ""
-	# Atlas Dev DBを起動
-	@echo "🐘 Starting Atlas dev database..."
-	export PROJECT_NAME=$$(basename $$(pwd)) && \
-	docker-compose -f docker-compose.backend.yaml up -d atlas_dev_db
-	@sleep 2
 	# Supabaseを起動
 	npx dotenvx run -f env/backend/local.env -- supabase start
 	# マイグレーションを生成
 	@echo "📝 Generating migration..."
-	npx dotenvx run -f env/migration/local.env -- atlas migrate diff \
-		--config file://atlas/atlas.hcl \
-		--env local
+	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run generate
 	# マイグレーションを適用
 	@echo "✅ Applying migration to local database..."
-	npx dotenvx run -f env/migration/local.env -- atlas migrate apply \
-		--config file://atlas/atlas.hcl \
-		--env local
+	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run migrate
+	# カスタムSQL（関数・トリガー・拡張）をプログラマティックに適用
+	@echo "🔧 Applying custom SQL (functions, triggers, extensions)..."
+	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run migrate:custom
 	# モデル生成
 	@echo "🔧 Generating database types..."
 	make build-model
@@ -286,8 +291,6 @@ migrate-dev:
 migrate-deploy:
 	@echo "🚀 Deploying migrations to ${ENV} environment..."
 	@echo ""
-	@make atlas-validate;
-	@make atlas-lint;
 	# Supabaseを起動（ENV=localの場合のみ）
 	if [ "${ENV}" = "local" ] || [ -z "${ENV}" ]; then \
 		npx dotenvx run -f env/backend/local.env -- supabase start; \
@@ -295,14 +298,17 @@ migrate-deploy:
 	# マイグレーションを適用
 	@if [ -z "${ENV}" ] || [ "${ENV}" = "local" ]; then \
 		echo "📍 Deploying to: local"; \
-		npx dotenvx run -f env/migration/local.env -- atlas migrate apply \
-			--config file://atlas/atlas.hcl \
-			--env local; \
+		cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run migrate; \
 	else \
 		echo "📍 Deploying to: ${ENV}"; \
-		npx dotenvx run -f env/migration/${ENV}.env -- atlas migrate apply \
-			--config file://atlas/atlas.hcl \
-			--env ${ENV}; \
+		cd drizzle && npx dotenvx run -f ../env/migration/${ENV}.env -- bun run migrate; \
+	fi
+	# カスタムSQL（関数・トリガー・拡張）を確実に適用
+	@echo "🔧 Applying custom SQL (functions, triggers, extensions)..."
+	@if [ -z "${ENV}" ] || [ "${ENV}" = "local" ]; then \
+		cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run migrate:custom; \
+	else \
+		cd drizzle && npx dotenvx run -f ../env/migration/${ENV}.env -- bun run migrate:custom; \
 	fi
 	# モデル生成（ローカルのみ）
 	@if [ -z "${ENV}" ] || [ "${ENV}" = "local" ]; then \
@@ -311,15 +317,27 @@ migrate-deploy:
 	@echo ""
 	@echo "✅ Migration deployment complete!"
 
-# スキーマ検証（Atlasベース）
-.PHONY: atlas-validate
-atlas-validate:
-	atlas schema validate --config file://atlas/atlas.hcl --env ${ENV}
+# マイグレーション生成のみ（migrate-devの一部を切り出し）
+.PHONY: migration
+migration: migrate-dev
 
-# マイグレーションLintチェック（Atlasベース）
-.PHONY: atlas-lint
-atlas-lint:
-	atlas migrate lint --config file://atlas/atlas.hcl --env ${ENV}
+# スキーマを直接DBにプッシュ（開発時の高速プロトタイピング用）
+.PHONY: drizzle-push
+drizzle-push:
+	@echo "🚀 Pushing schema to database..."
+	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run push
+
+# Drizzle Studio起動（GUIでDBを操作）
+.PHONY: drizzle-studio
+drizzle-studio:
+	@echo "🎨 Starting Drizzle Studio..."
+	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run studio
+
+# スキーマ検証（Drizzleベース）
+.PHONY: drizzle-validate
+drizzle-validate:
+	@echo "✅ Validating Drizzle schema..."
+	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run check
 
 # ===== その他のコマンド =====
 
