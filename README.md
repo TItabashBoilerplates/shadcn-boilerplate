@@ -7,6 +7,36 @@ This is a full-stack application boilerplate with a multi-platform frontend and 
 - **Backend**: FastAPI (Python) with Supabase Edge Functions
 - **Database**: PostgreSQL with Drizzle ORM for schema management and pgvector extension
 
+## Project Structure Highlights
+
+### Monorepo Configuration
+
+このプロジェクトは**ルートにpackage.jsonを持たない**独立型モノレポ構成です：
+
+- **`drizzle/`**: データベーススキーマ管理（独立パッケージ、Bun管理）
+- **`frontend/`**: Next.js 16モノレポ（Bun workspace、Turbo build system）
+- **`backend-py/`**: Python FastAPI（uv管理、独立）
+
+各ディレクトリが独自の依存関係とnode_modules/を持ち、クリーンに分離されています。
+
+### Package Managers
+
+用途に応じて最適なパッケージマネージャーを使用：
+
+- **Frontend**: Bun 1.2.8（高速、Node.js互換）
+- **Backend Python**: uv（Rust製、高速な依存関係管理）
+- **Drizzle**: Bun（frontendと同様）
+- **Edge Functions**: Deno（組み込みパッケージマネージャー）
+
+### Unified Code Quality
+
+全プロジェクトで統一されたコード品質管理：
+
+- **Frontend & Drizzle**: Biome（ESLint + Prettierの高速な代替）
+- **Backend Python**: Ruff（lint） + MyPy（型チェック）
+- **Edge Functions**: Deno native tools
+- **統合コマンド**: `make lint`, `make format`, `make ci-check`
+
 ## Development Environment
 
 For this project, we recommend the following development setup:
@@ -44,10 +74,16 @@ Ensure the following are installed:
 - [Docker](https://www.docker.com/)
 - [asdf](https://asdf-vm.com/)
 - [Supabase CLI](https://supabase.com/)
-- [Bun](https://bun.sh/) (for frontend package management)
-- [Node.js](https://nodejs.org/) (managed via asdf)
-- [Python 3.12+](https://python.org/) (for backend development)
 - Make
+
+The following tools will be automatically installed via asdf during `make init`:
+
+- **Node.js 22.9.0** (managed via asdf) - for frontend and Drizzle
+- **Python 3.12.9** (managed via asdf) - for backend development
+- **Deno 2.5.6** (managed via asdf) - for Edge Functions
+- **Bun 1.2.8** (installed via asdf nodejs plugin) - for frontend package management
+
+asdf plugins (nodejs, python, deno) will be automatically added during initialization.
 
 ## Setup
 
@@ -60,32 +96,47 @@ To set up the project environment, follow these steps:
    make init
    ```
 
-   This command will:
-   - Check for necessary tools
-   - Install asdf dependencies
-   - Log in to Supabase and initialize it
-   - Start Supabase
-   - Set up environment variables
-   - Install frontend dependencies with Bun
-   - Perform initial database migration
-   - Build necessary models
+   This command will automatically perform the following steps:
+
+   1. Add asdf plugins (nodejs, python, deno) if not already added
+   2. Install tools via asdf based on `.tool-versions`
+   3. Install dotenvx globally for environment variable management
+   4. Create `.env` file for Docker Compose (PROJECT_NAME configuration)
+   5. Log in to Supabase CLI and initialize Supabase
+   6. Start Supabase local development environment
+   7. Copy `env/secrets.env.example` to `env/secrets.env` (if not exists)
+   8. Install frontend dependencies with Bun
+   9. Run initial database migration and type generation
 
 2. **Environment Variable Setup**:
-   Open the `env/secrets.env` file and update the necessary environment variables. Ensure the following variables are set correctly:
+
+   Environment variables are organized by component in the `env/` directory:
+
+   ```
+   env/
+   ├── backend/local.env         # Backend service (Supabase URL, etc.)
+   ├── frontend/local.env        # Frontend (Next.js environment variables)
+   ├── migration/local.env       # Database migration (DATABASE_URL)
+   ├── secrets.env               # Secrets (.gitignore, created from example)
+   └── secrets.env.example       # Template for secrets
+   ```
+
+   After `make init`, open `env/secrets.env` and update the necessary environment variables:
 
    ```
    SUPABASE_URL=your_supabase_project_id
    SUPABASE_ANON_KEY=your_supabase_api_key
-   // Other necessary environment variables
+   # Other necessary environment variables
    ```
 
-   Note: This file contains sensitive information, so do not commit it to your version control system.
+   Note: `secrets.env` contains sensitive information and is git-ignored.
 
 3. **Database Setup**:
    The initial migration is performed as part of the `make init` command. If you need to run migrations separately, use:
 
    ```bash
-   make migration
+   make migration      # Alias for migrate-dev
+   make migrate-dev    # Generate + Apply migrations + Generate types (local only)
    ```
 
 ## Execution
@@ -120,34 +171,61 @@ After successfully completing the setup, you can start the application using one
 
 ## Additional Commands
 
+### Code Quality Management
+
+このプロジェクトでは、全コンポーネント（Frontend, Drizzle, Backend Python, Edge Functions）で統一されたコード品質管理を実現しています。
+
+#### Unified Commands (推奨)
+
+全プロジェクトを一括で管理するコマンド：
+
+```bash
+make lint           # 全プロジェクトのlint（自動修正）
+make format         # 全プロジェクトのformat（自動修正）
+make format-check   # 全プロジェクトのformatチェック（CI用、修正なし）
+make type-check     # 全プロジェクトの型チェック
+make ci-check       # CI用の全チェック（lint + format + type-check）
+```
+
+#### Frontend Specific (Biome)
+
+```bash
+make lint-frontend           # Biome lint（自動修正）
+make lint-frontend-ci        # Biome lint（CI用、修正なし）
+make format-frontend         # Biome format（自動修正）
+make format-frontend-check   # Biome formatチェック（チェックのみ）
+make type-check-frontend     # TypeScript型チェック
+```
+
+#### Drizzle Specific (Biome)
+
+```bash
+make lint-drizzle            # Biome lint（自動修正）
+make lint-drizzle-ci         # Biome lint（CI用、修正なし）
+make format-drizzle          # Biome format（自動修正）
+make format-drizzle-check    # Biome formatチェック（チェックのみ）
+```
+
+#### Backend Python Specific (Ruff + MyPy)
+
+```bash
+make lint-backend-py         # Ruff lint（自動修正）
+make lint-backend-py-ci      # Ruff lint（CI用、修正なし）
+make format-backend-py       # Ruff format（自動修正）
+make format-backend-py-check # Ruff formatチェック（チェックのみ）
+make type-check-backend-py   # MyPy型チェック（strict mode）
+```
+
+#### Edge Functions Specific (Deno)
+
+```bash
+make lint-functions          # Deno lint
+make format-functions        # Deno format（自動修正）
+make format-functions-check  # Deno formatチェック（チェックのみ）
+make check-functions         # Deno型チェック（全関数自動検出）
+```
+
 ### Development Tools
-
-#### Code Quality
-- Lint & format all code (Frontend + Edge Functions):
-  ```bash
-  make lint           # Lint all projects
-  make format         # Format all projects
-  make format-check   # Check formatting (CI)
-  make type-check     # Type check all projects
-  make ci-check       # Run all CI checks
-  ```
-
-- Frontend specific (Biome):
-  ```bash
-  make lint-frontend           # Lint frontend code
-  make lint-frontend-ci        # Lint frontend (CI mode)
-  make format-frontend         # Format frontend code
-  make format-frontend-check   # Check frontend formatting
-  make type-check-frontend     # Type check frontend
-  ```
-
-- Edge Functions specific (Deno):
-  ```bash
-  make lint-functions          # Lint Edge Functions
-  make format-functions        # Format Edge Functions
-  make format-functions-check  # Check Edge Functions formatting
-  make check-functions         # Type check Edge Functions
-  ```
 
 #### Other Tools
 - Check services status:
@@ -162,17 +240,28 @@ After successfully completing the setup, you can start the application using one
 
 ### Database Operations
 
-**開発環境**:
+このプロジェクトはDrizzle ORMでデータベーススキーマを管理しています。
+
+**開発環境（ローカル）**:
 ```bash
-# マイグレーション生成 + 適用 + 型生成
+# マイグレーション生成 + 適用 + 型生成（推奨）
 make migrate-dev
 # または短縮形
 make migration
+
+# スキーマを直接DBにプッシュ（プロトタイピング用）
+make drizzle-push
+
+# Drizzle Studio起動（GUI）
+make drizzle-studio
+
+# スキーマ検証
+make drizzle-validate
 ```
 
-**本番環境**:
+**本番環境（リモート）**:
 ```bash
-# マイグレーションファイルを適用
+# マイグレーションファイルを適用のみ（型生成は行わない）
 make migrate-deploy
 
 # ステージング環境
@@ -181,6 +270,11 @@ ENV=staging make migrate-deploy
 # 本番環境
 ENV=production make migrate-deploy
 ```
+
+**コマンドの使い分け**:
+- `make migration` / `make migrate-dev`: ローカル開発用。スキーマ変更→マイグレーション生成→適用→型生成を一括実行
+- `make migrate-deploy`: リモート環境用。既存のマイグレーションファイルを適用するのみ
+- `make drizzle-push`: マイグレーションファイルを生成せずにスキーマを直接プッシュ（実験・プロトタイピング用）
 
 詳細は `CLAUDE.md` の「Drizzle Schema Management」セクションを参照してください。
 

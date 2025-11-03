@@ -23,12 +23,112 @@ This is a full-stack application boilerplate with a multi-platform frontend and 
 - **Infrastructure**: Supabase for auth/database, Docker containerization
 - **AI Integration**: LangChain, OpenAI, multi-modal AI capabilities, vector search
 
+#### Backend Clean Architecture Structure
+
+```
+backend-py/app/src/
+├── controller/       # HTTPリクエスト/レスポンス処理のみ
+├── usecase/          # ビジネスロジック
+├── gateway/          # データアクセス抽象化インターフェース
+├── domain/           # エンティティ・モデル（models.py: sqlacodegen生成）
+├── infra/            # 外部依存（DB、API client、Supabase）
+└── middleware/       # 認証・CORS・ロギング
+```
+
+**責務の分離**:
+- Controllers: HTTP層のみ、ビジネスロジックを含まない
+- Use Cases: ビジネスロジック、orchestration
+- Gateways: データアクセスの抽象化（インターフェース定義）
+- Infrastructure: Gatewayの実装、外部システムとの統合
+- Domain: エンティティ、Value Objects（sqlacodegen自動生成）
+
+#### AI/ML Integration Details
+
+**実装済みの主要AI/MLライブラリ**:
+
+- **LLM Orchestration**:
+  - LangChain: 複雑なAIワークフロー構築
+  - LangGraph: ステートフルなエージェント実装
+  - LangSmith: モニタリング・デバッグ
+  - Langchainhub: プロンプトテンプレート管理
+
+- **LLM Providers**:
+  - OpenAI: GPT-4, DALL-E, Whisper統合
+  - Anthropic: Claude統合（LangChain経由）
+  - Replicate: オープンソースモデルAPI
+  - FAL: 高速AI推論API
+
+- **Deep Learning & ML**:
+  - Torch: ディープラーニングフレームワーク
+  - Diffusers: 画像生成（Stable Diffusion等）
+  - Transformers: HuggingFace モデル
+  - Accelerate: モデル高速化・分散学習
+
+- **Real-time Communication**:
+  - LiveKit: WebRTC/リアルタイム音声・映像通信
+  - livekit-api: LiveKit API client
+  - aiortc: WebRTC実装
+
+- **Voice & Audio**:
+  - Cartesia: 音声合成API
+
+- **Vector Search**:
+  - pgvector: PostgreSQL拡張、ベクトル類似検索
+
+- **Message Queue**:
+  - kombu: メッセージブローカー抽象化
+  - tembo-pgmq-python: PostgreSQLベースのメッセージキュー
+
 ### Database Design
 
 - Multi-client architecture with corporate users, general users, and virtual users
 - Chat system with rooms, messages, and user relationships
 - Vector embeddings table for AI/ML features
 - Clean separation between user types and permissions
+
+### Package Management
+
+**重要**: このプロジェクトは**ルートにpackage.jsonを持たない**独立型モノレポ構成です。
+
+各コンポーネントは用途に応じて最適なパッケージマネージャーを使用しています：
+
+- **Frontend** (`frontend/`): **Bun 1.2.8**
+  - 高速なJavaScript runtime & package manager
+  - Node.js完全互換、npmの代替
+  - Bun workspaceでモノレポ管理
+  - `frontend/package.json`で依存関係管理
+
+- **Backend Python** (`backend-py/`): **uv**
+  - Rust製の超高速Pythonパッケージマネージャー
+  - Ruff（linter）開発元による信頼性
+  - `backend-py/app/pyproject.toml`で依存関係管理
+
+- **Drizzle** (`drizzle/`): **Bun**
+  - frontendと同様にBunを使用
+  - 独立したパッケージとして管理
+  - `drizzle/package.json` + `drizzle/node_modules/`
+
+- **Edge Functions** (`supabase/functions/`): **Deno**
+  - Deno runtime組み込みのパッケージマネージャー
+  - `npm:` prefixでnpmパッケージをインポート
+  - 各関数の`deno.json`でimport map管理
+
+**ディレクトリ構成**:
+```
+/
+├── drizzle/
+│   ├── package.json          # Drizzle専用依存関係
+│   └── node_modules/         # Drizzle専用モジュール
+├── frontend/
+│   ├── package.json          # Frontend workspace定義
+│   └── node_modules/         # Frontend全体のモジュール
+└── backend-py/
+    └── app/
+        ├── pyproject.toml    # Python依存関係（uv管理）
+        └── .venv/            # Python仮想環境
+```
+
+この構成により、各コンポーネントが独立して最適なツールを使用でき、依存関係の競合を防ぎます。
 
 ## Development Commands
 
@@ -56,14 +156,27 @@ make format-frontend         # Biome format（自動修正）
 make format-frontend-check   # Biome formatチェック（チェックのみ）
 make type-check-frontend     # TypeScript型チェック
 
+# Drizzle（Biome）
+make lint-drizzle            # Biome lint（自動修正）
+make lint-drizzle-ci         # Biome lint（CI用、修正なし）
+make format-drizzle          # Biome format（自動修正）
+make format-drizzle-check    # Biome formatチェック（チェックのみ）
+
+# Backend Python（Ruff + MyPy）
+make lint-backend-py         # Ruff lint（自動修正）
+make lint-backend-py-ci      # Ruff lint（CI用、修正なし）
+make format-backend-py       # Ruff format（自動修正）
+make format-backend-py-check # Ruff formatチェック（チェックのみ）
+make type-check-backend-py   # MyPy型チェック（strict mode）
+
 # Edge Functions（Deno）
 make lint-functions          # Deno lint
 make format-functions        # Deno format（自動修正）
 make format-functions-check  # Deno formatチェック（チェックのみ）
-make check-functions         # Deno型チェック
+make check-functions         # Deno型チェック（全関数自動検出）
 
 # 統合コマンド（推奨）
-make lint                    # 全体のlint（Frontend + Edge Functions）
+make lint                    # 全体のlint（Frontend + Drizzle + Backend Python + Edge Functions）
 make format                  # 全体のformat（自動修正）
 make format-check            # 全体のformatチェック（CI用）
 make type-check              # 全体の型チェック
@@ -700,11 +813,23 @@ export const events = pgTable("events", {
 
 ### Backend Python
 
-- Ruff with comprehensive rule set (pyproject.toml)
-- Google-style docstrings
-- All functions must have type annotations
-- Async/await for all I/O operations
-- Clean architecture dependency rules enforced
+- **Package Manager**: uv（Rust製、高速なPythonパッケージマネージャー）
+- **Linting**: Ruff（Rust製の高速linter）
+  - 包括的なルールセット（pyproject.toml設定）
+  - 行長: 88文字
+  - 自動修正機能
+- **Type Checking**: MyPy（strict mode）
+  - すべての関数に型アノテーション必須
+  - 厳密な型チェック
+- **Code Style**:
+  - Google-style docstrings
+  - Async/await for all I/O operations
+  - Clean architecture dependency rules enforced
+  - Maximum function complexity: 3 (McCabe)
+- **Commands**:
+  - `make lint-backend-py` - Ruff lint（自動修正）
+  - `make format-backend-py` - Ruff format（自動修正）
+  - `make type-check-backend-py` - MyPy型チェック
 
 ### Edge Functions
 
@@ -720,11 +845,23 @@ export const events = pgTable("events", {
 
 ## Environment Configuration
 
-Environment files are in `env/` directory:
+Environment files are organized by component in the `env/` directory:
 
-- `env/secrets.env` - Copy from `env/secrets.env.example` and configure
-- `env/frontend/local.env` - Frontend environment variables
-- `env/migration/local.env` - Database migration settings
+```
+env/
+├── backend/local.env         # Backend service (Supabase URL, etc.)
+├── frontend/local.env        # Frontend (Next.js environment variables)
+├── migration/local.env       # Database migration (DATABASE_URL)
+├── secrets.env               # Secrets (.gitignore, created from example)
+└── secrets.env.example       # Template for secrets
+```
+
+- **`env/secrets.env`**: Copy from `env/secrets.env.example` and configure with actual credentials (git-ignored)
+- **`env/backend/local.env`**: Backend service configuration (Supabase URL, API keys, etc.)
+- **`env/frontend/local.env`**: Frontend environment variables (Next.js public variables)
+- **`env/migration/local.env`**: Database migration settings (DATABASE_URL for Drizzle)
+
+Environment variables are loaded using dotenvx for secure management.
 
 ## Special Notes
 
@@ -741,10 +878,20 @@ Drizzle スキーマから各プラットフォーム向けに型を生成：
 
 ### AI/ML Features
 
-- Vector embeddings with pgvector
-- LangChain integration for complex AI workflows
-- Multiple LLM providers supported (OpenAI, Anthropic)
-- RAG (Retrieval Augmented Generation) capabilities
+このプロジェクトは包括的なAI/ML機能を統合しています：
+
+- **Vector Search**: pgvector（PostgreSQL拡張）でベクトル類似検索
+- **LLM Orchestration**: LangChain/LangGraphで複雑なAIワークフロー構築
+- **LLM Providers**: OpenAI (GPT-4), Anthropic (Claude), Replicate, FAL
+- **Image Generation**: Diffusers（Stable Diffusion等）、DALL-E
+- **Deep Learning**: PyTorch, Transformers (HuggingFace), Accelerate
+- **Real-time Communication**: LiveKit（WebRTC音声・映像）、aiortc
+- **Voice Synthesis**: Cartesia API
+- **RAG (Retrieval Augmented Generation)**: ベクトル検索 + LLM統合
+- **Message Queue**: kombu, tembo-pgmq-python（PostgreSQLベース）
+- **Monitoring**: LangSmith（デバッグ・トレーシング）
+
+詳細な統合ライブラリリストは「AI/ML Integration Details」セクションを参照してください。
 
 ### Authentication
 
