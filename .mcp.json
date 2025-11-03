@@ -33,7 +33,14 @@
       ],
       "env": {}
     },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "chrome-devtools-mcp@latest"
+      ]
+    },
     "supabase": {
+      "type": "http",
       "url": "http://localhost:54321/mcp?read_only=true"
     }
   }
