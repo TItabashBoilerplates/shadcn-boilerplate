@@ -4,6 +4,15 @@ This file provides guidance to AI coding assistants (Cursor, GitHub Copilot, etc
 
 **Note**: For Claude Code specific guidance, see `CLAUDE.md`.
 
+## Domain-Specific Documentation
+
+For detailed information about each domain, refer to the following documentation:
+
+- **Frontend**: [`frontend/README.md`](frontend/README.md) - Next.js 16, React 19, Feature-Sliced Design, shadcn/ui
+- **Database Schema**: [`drizzle/README.md`](drizzle/README.md) - Drizzle ORM, RLS policies, migrations, pgvector
+- **Backend Python**: [`backend-py/README.md`](backend-py/README.md) - FastAPI, Clean Architecture, AI/ML integration
+- **Edge Functions**: [`supabase/functions/README.md`](supabase/functions/README.md) - Deno, Drizzle integration, type safety
+
 ## Project Overview
 
 shadcn-boilerplateは、最新のフルスタック技術を統合したエンタープライズグレードのボイラープレートです。
@@ -159,6 +168,8 @@ bun run ui:add button card input
 </Card>
 ```
 
+**→ For detailed frontend documentation, see [`frontend/README.md`](frontend/README.md)**
+
 ## Backend Development (FastAPI)
 
 ### Clean Architecture
@@ -228,6 +239,8 @@ async def generate_response(prompt: str) -> str:
     return response.content
 ```
 
+**→ For detailed Python backend documentation, see [`backend-py/README.md`](backend-py/README.md)**
+
 ## Edge Functions Development (Deno)
 
 ### Deno.serve API
@@ -285,6 +298,8 @@ Deno.serve(async (req) => {
 })
 ```
 
+**→ For detailed Edge Functions documentation, see [`supabase/functions/README.md`](supabase/functions/README.md)**
+
 ## Database Management (Drizzle ORM)
 
 ### Schema Management
@@ -333,6 +348,8 @@ export const selectOwnUser = pgPolicy('select_own_user', {
   using: sql`true`,
 }).link(generalUsers)
 ```
+
+**→ For detailed Drizzle ORM documentation, see [`drizzle/README.md`](drizzle/README.md)**
 
 ## Development Commands
 
@@ -384,11 +401,20 @@ ENV=production make migrate-deploy
 
 ## Important Files
 
+### Project-Wide Documentation
+
 - `README.md` - プロジェクト概要、セットアップ手順
 - `CLAUDE.md` - Claude Code向け詳細ガイド（最も包括的）
 - `AGENTS.md` - このファイル（AI assistants向けガイド）
 - `CONTRIBUTING.md` - コントリビューションガイド
 - `SECURITY.md` - セキュリティポリシー
+
+### Domain-Specific Documentation
+
+- [`frontend/README.md`](frontend/README.md) - Next.js 16, React 19, Feature-Sliced Design
+- [`drizzle/README.md`](drizzle/README.md) - Drizzle ORM, migrations, RLS policies
+- [`backend-py/README.md`](backend-py/README.md) - FastAPI, Clean Architecture, AI/ML
+- [`supabase/functions/README.md`](supabase/functions/README.md) - Deno Edge Functions
 
 ## Directory-Specific Rules
 

@@ -34,12 +34,7 @@
       "env": {}
     },
     "supabase": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-postgres",
-        "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
-      ]
+      "url": "http://localhost:54321/mcp?read_only=true"
     }
   }
 }

@@ -2,6 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Domain-Specific Documentation
+
+For detailed information about each domain, refer to the following documentation:
+
+- **Frontend**: [`frontend/README.md`](frontend/README.md) - Next.js 16, React 19, Feature-Sliced Design, shadcn/ui
+- **Database Schema**: [`drizzle/README.md`](drizzle/README.md) - Drizzle ORM, RLS policies, migrations, pgvector
+- **Backend Python**: [`backend-py/README.md`](backend-py/README.md) - FastAPI, Clean Architecture, AI/ML integration
+- **Edge Functions**: [`supabase/functions/README.md`](supabase/functions/README.md) - Deno, Drizzle integration, type safety
+
 ## Architecture Overview
 
 This is a full-stack application boilerplate with a multi-platform frontend and backend services:
@@ -13,6 +22,8 @@ This is a full-stack application boilerplate with a multi-platform frontend and 
 - **Tech Stack**: React 19, TypeScript, Bun package manager
 - **Build System**: Turbo for monorepo management
 - **Architecture Pattern**: Feature-Sliced Design (FSD)
+
+**→ For detailed frontend documentation, see [`frontend/README.md`](frontend/README.md)**
 
 ### Backend Architecture
 
@@ -41,6 +52,8 @@ backend-py/app/src/
 - Gateways: データアクセスの抽象化（インターフェース定義）
 - Infrastructure: Gatewayの実装、外部システムとの統合
 - Domain: エンティティ、Value Objects（sqlacodegen自動生成）
+
+**→ For detailed Python backend documentation, see [`backend-py/README.md`](backend-py/README.md)**
 
 #### AI/ML Integration Details
 
@@ -285,6 +298,8 @@ Deno.serve(async (req) => {
 - スキーマ変更時に型が自動更新される（`make build-model` 実行時）
 - Supabase 生成型と Drizzle 型の両方を使い分け可能
 
+**→ For detailed Edge Functions documentation, see [`supabase/functions/README.md`](supabase/functions/README.md)**
+
 ### Drizzle Schema Management
 
 **IMPORTANT**: このプロジェクトは **Drizzle ORM** でデータベーススキーマを管理しています（Atlas/Prisma から移行済み）。
@@ -454,6 +469,8 @@ await db.execute(sql.raw(customSql));
 - 環境変数管理がシンプル
 
 詳細は Drizzle 公式ドキュメントを参照してください。
+
+**→ For detailed Drizzle ORM documentation, see [`drizzle/README.md`](drizzle/README.md)**
 
 ## Code Style and Quality
 
