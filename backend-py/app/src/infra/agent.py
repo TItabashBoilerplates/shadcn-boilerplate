@@ -7,10 +7,5 @@ UserProxyAgentは、ユーザーの要求をAssistantAgentに転送するエー�
 import os
 
 config_list = [
-    # {
-    #     "model": "llama3",
-    #     "base_url": os.environ.get("AI_APP_URL"),
-    #     "api_key": "ollama",
-    # },
-    {"model": "gpt-4o-mini", "api_key": os.environ["OPENAI_API_KEY"]},
+    {"model": "gpt-5-mini", "api_key": os.environ["OPENAI_API_KEY"]},
 ]
