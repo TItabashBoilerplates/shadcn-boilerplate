@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",
+    "@workspace/auth": "workspace:*",
     "@workspace/client-supabase": "workspace:*",
     "@workspace/types": "workspace:*",
     "@workspace/ui": "workspace:*",

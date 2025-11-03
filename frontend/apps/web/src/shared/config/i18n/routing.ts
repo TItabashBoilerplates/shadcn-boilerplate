@@ -10,6 +10,9 @@ export const routing = defineRouting({
 
   // デフォルトの言語（マッチする言語がない場合に使用）
   defaultLocale: 'en',
+
+  // URLにロケールプレフィックスを表示しない（例: /login）
+  localePrefix: 'never',
 })
 
 // TypeScript 型エクスポート

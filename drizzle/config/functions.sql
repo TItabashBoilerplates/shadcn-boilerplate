@@ -1,6 +1,23 @@
 -- pgvector拡張を有効化
 CREATE EXTENSION IF NOT EXISTS vector;
 
+-- CUID風のユニークIDを生成する関数
+CREATE OR REPLACE FUNCTION generate_cuid()
+RETURNS TEXT
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  random_part TEXT;
+BEGIN
+  -- タイムスタンプとランダム値を組み合わせた16文字の英数字
+  random_part := lower(substring(
+    encode(sha256((random()::text || clock_timestamp()::text)::bytea), 'hex'),
+    1, 16
+  ));
+  RETURN 'user_' || random_part;
+END;
+$$;
+
 -- Auth Hook関数: 新規ユーザー作成時の処理
 -- Atlas HCL functions.hcl から変換
 CREATE OR REPLACE FUNCTION handle_new_user()
@@ -9,10 +26,19 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
+DECLARE
+  account_name_value TEXT;
 BEGIN
+  -- account_nameを取得、存在しない場合はCUIDを生成
+  account_name_value := COALESCE(
+    NEW.raw_user_meta_data ->> 'account_name',
+    generate_cuid()
+  );
+
   -- 新規ユーザーのIDをgeneral_usersテーブルに挿入
   INSERT INTO public.general_users(id, account_name)
-  VALUES (NEW.id, NEW.raw_user_meta_data ->> 'account_name');
+  VALUES (NEW.id, account_name_value);
+
   RETURN NEW;
 END;
 $$;

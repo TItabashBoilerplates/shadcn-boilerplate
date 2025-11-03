@@ -1,10 +1,10 @@
-import { notFound } from 'next/navigation'
+import { HomePage } from '@/views/home'
 
 /**
  * ルートページ
- * middleware がロケールプレフィックスを処理するため、
- * このページは表示されない（404 を返す）
+ * localePrefix: 'never' のため、ルートパスが有効
+ * ホームページを表示
  */
 export default function RootPage() {
-  notFound()
+  return <HomePage />
 }

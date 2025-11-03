@@ -1,5 +1,8 @@
+import { Button } from '@workspace/ui/components/button'
+import { ArrowRight } from 'lucide-react'
 import Image from 'next/image'
 import { getTranslations } from 'next-intl/server'
+import { Link } from '@/shared/lib/i18n'
 import { LanguageSwitcher } from './LanguageSwitcher'
 
 /**
@@ -30,6 +33,16 @@ export default async function HomePage() {
         <p className="text-lg">{t('description')}</p>
 
         <LanguageSwitcher />
+
+        {/* ログインボタン */}
+        <div className="w-full sm:w-auto">
+          <Button asChild size="lg" className="w-full sm:w-auto">
+            <Link href="/login">
+              Sign In
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
 
         <div className="flex gap-4 items-center flex-col sm:flex-row">
           <a
