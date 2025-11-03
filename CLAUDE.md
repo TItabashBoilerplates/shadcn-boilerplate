@@ -18,8 +18,8 @@ This is a full-stack application boilerplate with a multi-platform frontend and 
 
 - **Python Backend**: FastAPI application in `backend-py/` using clean architecture patterns
 - **Edge Functions**: Supabase Edge Functions using Deno's native `Deno.serve` API for serverless functions
-- **Database**: PostgreSQL with **Atlas** for schema management, includes pgvector extension for embeddings
-- **Schema Management**: Atlas HCL for declarative schema definitions and migrations
+- **Database**: PostgreSQL with **Drizzle ORM** for schema management, includes pgvector extension for embeddings
+- **Schema Management**: Drizzle ORM with TypeScript-based declarative schema definitions and migrations
 - **Infrastructure**: Supabase for auth/database, Docker containerization
 - **AI Integration**: LangChain, OpenAI, multi-modal AI capabilities, vector search
 
@@ -70,14 +70,14 @@ make type-check              # 全体の型チェック
 make ci-check                # CI用の全チェック（lint + format + type）
 ```
 
-### Database Operations (Drizzle-based, Prisma-style)
+### Database Operations
 
 ```bash
-# 開発用マイグレーション（Prismaの migrate dev に相当）
+# 開発用マイグレーション
 make migrate-dev           # マイグレーション生成 + 適用 + 型生成（ローカル専用）
 make migration             # migrate-dev のエイリアス
 
-# 本番用マイグレーション適用（Prismaの migrate deploy に相当）
+# 本番用マイグレーション適用
 make migrate-deploy        # マイグレーションファイルを適用（全環境）
 ENV=staging make migrate-deploy    # ステージング環境
 ENV=production make migrate-deploy # 本番環境
@@ -89,9 +89,8 @@ make build-model           # Supabase型とSQLModelを生成
 ### Model Generation
 
 ```bash
-make build-model-frontend-supabase  # Generate Supabase types for frontend
-make build-model-functions          # Generate types + copy Drizzle schema for Edge Functions
-# Note: Prismaクライアント生成は廃止（Drizzleに移行済み）
+make build-model-frontend  # Generate Supabase types for frontend
+make build-model-functions # Generate types + copy Drizzle schema for Edge Functions
 ```
 
 **Edge Functions 用に生成されるもの**:
@@ -218,7 +217,7 @@ drizzle/
   - 生成されたマイグレーションを適用
   - 開発データが保存される
 
-#### スキーマ変更ワークフロー（Prisma 風）
+#### スキーマ変更ワークフロー
 
 **ローカル開発**:
 
@@ -226,7 +225,7 @@ drizzle/
 # 1. スキーマ編集
 vi drizzle/schema/schema.ts
 
-# 2. マイグレーション生成 + 適用 + 型生成（Prismaの migrate dev）
+# 2. マイグレーション生成 + 適用 + 型生成
 make migrate-dev
 # または短縮形
 make migration
@@ -253,19 +252,11 @@ git push
 # 1. マイグレーションファイルを取得
 git pull
 
-# 2. マイグレーション適用（Prismaの migrate deploy）
+# 2. マイグレーション適用
 ENV=staging make migrate-deploy
 # または本番環境
 ENV=production make migrate-deploy
 ```
-
-**Prisma との比較**:
-| 操作 | Prisma | Drizzle (このプロジェクト) |
-|------|--------|--------------------------|
-| ローカル開発 | `prisma migrate dev` | `make migrate-dev` |
-| 本番デプロイ | `prisma migrate deploy` | `ENV=production make migrate-deploy` |
-| スキーマ定義 | `schema.prisma` | `drizzle/schema/*.ts` |
-| マイグレーションファイル | `prisma/migrations/` | `supabase/migrations/` |
 
 #### RLS（Row Level Security）の宣言的管理
 
@@ -368,9 +359,9 @@ await db.execute(sql.raw(customSql));
 
 #### データベース設定
 
-1. **Atlas Schema**:
+1. **Drizzle Schema**:
 
-   - 全ての日時カラムに `timestamptz(3)` 型を使用
+   - 全ての日時カラムに `timestamp` with `withTimezone: true` と `precision: 3` を使用
    - PostgreSQL の `TIMESTAMP WITH TIME ZONE` 型にマップされる
    - ミリ秒精度(3)は JavaScript の `Date` オブジェクトと完全互換
 
@@ -741,14 +732,12 @@ Environment files are in `env/` directory:
 
 Drizzle スキーマから各プラットフォーム向けに型を生成：
 
-- **Frontend**: Supabase TypeScript 型生成（`make build-model-frontend-supabase`）
+- **Frontend**: Supabase TypeScript 型生成（`make build-model-frontend`）
 - **Backend Python**: SQLModel（sqlacodegen でデータベースから直接生成）
 - **Edge Functions**:
   - Supabase TypeScript 型生成（`supabase gen types typescript`）
   - **NEW**: Drizzle スキーマを `supabase/functions/shared/drizzle/` にコピー（`make build-model-functions`）
   - `InferSelectModel` / `InferInsertModel` で型推論可能
-
-注意: Prisma クライアント生成は廃止されました（Drizzle 移行済み）
 
 ### AI/ML Features
 

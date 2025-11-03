@@ -153,8 +153,8 @@ alwaysApply: false
    - No blocking calls in async functions
 
 2. **Transaction Management**
-   - Database operations must be wrapped in transactions
-   - Use `async with prisma.tx() as transaction` pattern
+   - Database operations should be wrapped in transactions when necessary
+   - Use appropriate transaction pattern for your database client
    - Rollback must be handled appropriately
 
 ## Infrastructure Layer
@@ -162,7 +162,7 @@ alwaysApply: false
 ### Client Initialization
 1. **Client Wrapper Classes**
    - Infrastructure clients (DB, API, etc.) must be implemented in `src/infra/`
-   - Each client must have a dedicated wrapper class (e.g., `PrismaClient`, `SupabaseClient`)
+   - Each client must have a dedicated wrapper class (e.g., `DatabaseClient`, `SupabaseClient`)
    - Database clients must implement async context managers using `__aenter__` and `__aexit__`
    - Connection/disconnection logic must be properly handled in these methods
 
@@ -185,12 +185,12 @@ alwaysApply: false
    - Example:
      ```python
      class UserRepositoryImpl(UserRepository):
-         def __init__(self, prisma_client: PrismaClient):
-             self.prisma_client = prisma_client
-             
+         def __init__(self, db_client: DatabaseClient):
+             self.db_client = db_client
+
          async def find_by_id(self, user_id: str) -> User:
-             async with self.prisma_client as client:
-                 user_data = await client.user.find_unique(where={"id": user_id})
+             async with self.db_client as client:
+                 user_data = await client.get_user_by_id(user_id)
                  return User.model_validate(user_data)
      ```
 

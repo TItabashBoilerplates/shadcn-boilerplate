@@ -67,8 +67,8 @@
    - No blocking calls in async functions
 
 2. **Transaction Management**
-   - Database operations must be wrapped in transactions
-   - Use `async with prisma.tx() as transaction` pattern
+   - Database operations should be wrapped in transactions when necessary
+   - Use appropriate transaction pattern for your database client
    - Rollback must be handled appropriately
 
 ## Code Quality Enforcement

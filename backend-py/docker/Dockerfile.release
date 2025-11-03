@@ -25,17 +25,13 @@ RUN ln -sf /usr/share/zoneinfo/Asia/Tokyo /etc/localtime
 
 # Copy only necessary files
 COPY ./backend-py/app/pyproject.toml /service/pyproject.toml
-COPY ./prisma /service/prisma
 COPY ./backend-py/app /service/app
 
 ENV RUSTFLAGS="-C target-feature=-crt-static"
 
 # Install dependencies
 RUN uv cache clean
-RUN uv sync --no-dev && \
-    . .venv/bin/activate && \
-    uvx prisma -v && \
-    prisma generate --schema=./prisma/schema.prisma --generator backendPyClient
+RUN uv sync --no-dev
 
 # Production stage
 FROM python:3.12-slim-bookworm
@@ -45,7 +41,6 @@ WORKDIR /service
 # Copy only necessary files from builder
 COPY --from=builder /service/.venv /service/.venv
 COPY --from=builder /service/app /service/app
-COPY --from=builder /service/prisma /service/prisma
 
 # Set timezone
 RUN ln -sf /usr/share/zoneinfo/Asia/Tokyo /etc/localtime

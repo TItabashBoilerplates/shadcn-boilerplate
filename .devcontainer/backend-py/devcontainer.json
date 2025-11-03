@@ -50,6 +50,5 @@
       }
     }
   },
-  "initializeCommand": "supabase start",
-  "postStartCommand": "prisma generate --schema=../prisma/schema.prisma --generator backendPyClient"
+  "initializeCommand": "supabase start"
 }

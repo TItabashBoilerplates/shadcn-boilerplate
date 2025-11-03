@@ -9,7 +9,6 @@ services:
       - 4040:8000
     volumes:
       - ./backend-py/app:/service/app
-      - ./prisma:/service/prisma
       - ~/.cursor/extensions:/root/.cursor-server/extensions
       # - ~/.vscode/extensions:/root/.vscode-server/extensions
       - ~/.aws:/root/.aws
@@ -112,7 +111,3 @@ networks:
   supabase_network:
     name: supabase_network_${PROJECT_NAME}
     external: true
-
-volumes:
-  atlas_dev_data:
-    name: atlas_dev_data_${PROJECT_NAME}

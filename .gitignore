@@ -120,8 +120,5 @@ ipfs/contents/**
 supabase/.branches/**
 supabase/.temp/**
 
-# Prisma backup (migrated to Atlas)
-prisma.backup/**
-
 # Playwright MCP
 .playwright-mcp/**

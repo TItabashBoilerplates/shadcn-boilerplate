@@ -13,7 +13,7 @@ init:
 	asdf plugin add deno https://github.com/asdf-community/asdf-deno.git 2>/dev/null || true
 	# asdfをインストール
 	asdf install
-	# dotenvxとatlasをインストール
+	# dotenvxをインストール
 	npm install -g @dotenvx/dotenvx;
 	# .envファイルを作成（Docker Compose用のプロジェクト名設定）
 	@if [ ! -f ".env" ]; then \
@@ -33,8 +33,6 @@ init:
 	if [ ! -f "env/secrets.env" ]; then \
 		cp env/secrets.env.example env/secrets.env; \
 	fi
-	# Atlasのインストール（macOS / Linux）
-	curl -sSf https://atlasgo.sh | sh
 	# フロントエンドとバックエンドの依存関係もインストール
 	cd frontend && bun install
 	@echo ""
@@ -313,9 +311,9 @@ build-model:
 	# Edge functionsのモデルをビルド
 	make build-model-functions
 
-# ===== Drizzle マイグレーションコマンド（Prisma風） =====
+# ===== Drizzle マイグレーションコマンド =====
 
-# 開発用マイグレーション（Prismaの migrate dev に相当）
+# 開発用マイグレーション
 # ローカル環境専用: マイグレーション生成 → 適用 → 型生成を一括実行
 .PHONY: migrate-dev
 migrate-dev:
@@ -346,7 +344,7 @@ migrate-dev:
 	@echo ""
 	@echo "✨ Done! Don't forget to commit migration files to Git."
 
-# 本番用マイグレーション適用（Prismaの migrate deploy に相当）
+# 本番用マイグレーション適用
 # 全環境で使用可能: 既存のマイグレーションファイルを適用するだけ
 .PHONY: migrate-deploy
 migrate-deploy:
@@ -405,11 +403,11 @@ drizzle-validate:
 .PHONY: seed
 seed:
 	@echo "Warning: Seed functionality is currently disabled"
-	@echo "Please implement seed logic with Atlas if needed"
+	@echo "Please implement seed logic if needed"
 
 # ロールバックコマンド
 .PHONY: rollback
 rollback:
-	@echo "⚠️  Atlas does not have built-in rollback command."
-	@echo "For rollback, manually remove the last migration file and run 'make migration-apply'."
+	@echo "⚠️  Drizzle does not have built-in rollback command."
+	@echo "For rollback, manually remove the last migration file and re-run migrations."
 	@exit 1

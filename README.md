@@ -5,7 +5,7 @@
 This is a full-stack application boilerplate with a multi-platform frontend and backend services:
 - **Frontend**: Next.js 16, shadcn/ui, TailwindCSS 4, Bun
 - **Backend**: FastAPI (Python) with Supabase Edge Functions
-- **Database**: PostgreSQL with Atlas (HCL-based schema management) and pgvector extension
+- **Database**: PostgreSQL with Drizzle ORM for schema management and pgvector extension
 
 ## Development Environment
 
@@ -28,7 +28,7 @@ By adopting these environments, we can ensure efficient development and maintain
 ### Backend Architecture
 - **Python Backend**: FastAPI application in `backend-py/` using clean architecture patterns
 - **Edge Functions**: Supabase Edge Functions using Deno's native `Deno.serve` API for lightweight serverless functions
-- **Database**: PostgreSQL with **Atlas** for schema management (HCL-based), includes pgvector extension for embeddings
+- **Database**: PostgreSQL with **Drizzle ORM** for schema management, includes pgvector extension for embeddings
 - **Infrastructure**: Supabase for auth/database, Docker containerization
 
 ### Key Features
@@ -160,11 +160,11 @@ After successfully completing the setup, you can start the application using one
   make build-frontend
   ```
 
-### Database Operations (Atlas-based)
+### Database Operations
 
 **開発環境**:
 ```bash
-# マイグレーション生成 + 適用 + 型生成（Prismaの migrate dev 相当）
+# マイグレーション生成 + 適用 + 型生成
 make migrate-dev
 # または短縮形
 make migration
@@ -172,7 +172,7 @@ make migration
 
 **本番環境**:
 ```bash
-# マイグレーションファイルを適用（Prismaの migrate deploy 相当）
+# マイグレーションファイルを適用
 make migrate-deploy
 
 # ステージング環境
@@ -182,21 +182,12 @@ ENV=staging make migrate-deploy
 ENV=production make migrate-deploy
 ```
 
-**スキーマ検証**:
-```bash
-# スキーマ検証
-make atlas-validate
-
-# マイグレーションLintチェック
-make atlas-lint
-```
-
-詳細は `atlas/README.md` および `CLAUDE.md` の「Atlas Schema Management」セクションを参照してください。
+詳細は `CLAUDE.md` の「Drizzle Schema Management」セクションを参照してください。
 
 ### Model Generation
 - Build Supabase types for frontend:
   ```bash
-  make build-model-frontend-supabase
+  make build-model-frontend
   ```
 
 - Build types for Edge Functions:
@@ -238,7 +229,7 @@ The project includes integrations for:
 - **[shadcn/ui](https://ui.shadcn.com/)**: UI component library built on Radix UI
 - **[TailwindCSS 4](https://tailwindcss.com/)**: Utility-first CSS framework
 - **[Supabase](https://supabase.com/)**: Authentication, database, and Edge Functions
-- **[Atlas](https://atlasgo.io/)**: Database schema management with HCL-based declarative migrations
+- **[Drizzle ORM](https://orm.drizzle.team/)**: TypeScript ORM with declarative schema management
 - **[FastAPI](https://fastapi.tiangolo.com/)**: Python backend framework
 - **[Bun](https://bun.sh/)**: Fast package manager and JavaScript runtime
 - **[Turbo](https://turbo.build/)**: High-performance build system for monorepos
