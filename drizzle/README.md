@@ -8,9 +8,10 @@ This project uses **Drizzle ORM** for declarative schema management with the fol
 
 - **TypeScript-based schema** definitions
 - **Declarative RLS policies** co-located with table definitions
+- **Realtime publications** for real-time database subscriptions
 - **Automatic type inference** for type-safe database operations
 - **Supabase migration integration** (migrations stored in `supabase/migrations/`)
-- **Programmatic custom SQL execution** (pgvector, triggers, functions)
+- **Programmatic custom SQL execution** (pgvector, triggers, functions, realtime)
 
 ## Tech Stack
 
@@ -29,7 +30,7 @@ drizzle/
 │   ├── types.ts           # Enum definitions
 │   └── index.ts           # Public API (exports)
 ├── config/
-│   └── functions.sql      # Custom SQL (pgvector, triggers, auth hooks)
+│   └── functions.sql      # Custom SQL (pgvector, triggers, auth hooks, realtime)
 ├── drizzle.config.ts      # Drizzle Kit configuration
 ├── migrate.ts             # Custom SQL execution script
 ├── package.json           # Drizzle-specific dependencies
@@ -247,6 +248,14 @@ Custom SQL (pgvector extension, triggers, functions) is managed in `drizzle/conf
    EXECUTE FUNCTION handle_new_user();
    ```
 
+5. **Realtime publications**
+   ```sql
+   -- Enable realtime for specific tables
+   ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+   ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_rooms;
+   ALTER PUBLICATION supabase_realtime ADD TABLE public.user_chats;
+   ```
+
 ### Programmatic Execution
 
 Custom SQL is automatically executed after migrations via `migrate.ts`:
@@ -325,6 +334,60 @@ Drizzle doesn't support automatic rollback. To rollback:
 1. Delete the problematic migration file
 2. Create a new migration with inverse changes
 3. Apply the new migration
+
+## Realtime Publications
+
+Supabase Realtime allows clients to subscribe to database changes in real-time. This project manages Realtime publications through Drizzle's custom SQL.
+
+### Configuration Location
+
+Realtime publications are managed in `drizzle/config/functions.sql`:
+
+```sql
+-- Enable realtime for specific tables
+ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_rooms;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.user_chats;
+```
+
+### Adding Tables to Realtime
+
+To enable realtime updates for a new table:
+
+```sql
+-- Add table to realtime publication
+ALTER PUBLICATION supabase_realtime ADD TABLE public.your_table_name;
+```
+
+### Removing Tables from Realtime
+
+To disable realtime updates for a table:
+
+```sql
+-- Remove table from realtime publication
+ALTER PUBLICATION supabase_realtime DROP TABLE public.your_table_name;
+```
+
+### Important Notes
+
+1. **Service Configuration**: The `[realtime]` section in `supabase/config.toml` only controls whether the Realtime service is enabled and its port settings.
+
+2. **Table-Level Configuration**: Actual table publications (which tables support realtime) are managed here in Drizzle.
+
+3. **RLS Integration**: Realtime respects Row Level Security policies. Clients will only receive updates for rows they have permission to see.
+
+4. **Client Usage**: Once enabled, clients can subscribe to changes:
+
+```typescript
+// Frontend example
+const channel = supabase
+  .channel('messages')
+  .on('postgres_changes',
+    { event: '*', schema: 'public', table: 'messages' },
+    (payload) => console.log('Change received!', payload)
+  )
+  .subscribe()
+```
 
 ## pgvector Integration
 

@@ -2,6 +2,103 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## CRITICAL: Research-First Development Approach
+
+**MANDATORY REQUIREMENT**: Before starting any implementation or planning, you MUST conduct thorough research using available tools.
+
+### Research Protocol (MUST FOLLOW)
+
+#### 1. Pre-Implementation Research (REQUIRED)
+
+Before writing any code or creating a plan, you MUST:
+
+1. **Use Context7 MCP** to fetch the latest documentation for all relevant libraries and frameworks
+   - Example: If implementing a Next.js feature, fetch Next.js documentation first
+   - Example: If using a new npm package, research its latest API and best practices
+   - Example: If implementing Supabase features, verify current API specifications
+
+2. **Use WebSearch** to verify current best practices and common pitfalls
+   - Search for: "[Technology] [Feature] best practices 2025"
+   - Search for: "[Library] [Version] breaking changes"
+   - Search for: "[Framework] official documentation [specific feature]"
+
+3. **Use WebFetch** to read official documentation directly
+   - Fetch official docs, not blog posts or outdated tutorials
+   - Verify API syntax, parameter names, and return types
+   - Check for deprecation warnings and recommended alternatives
+
+#### 2. What to Research
+
+**ALWAYS research**:
+- Library/framework versions and their current APIs
+- Deprecated features and their replacements
+- Breaking changes in recent versions
+- Official recommended patterns and anti-patterns
+- TypeScript type definitions and interfaces
+- Configuration file formats and schemas
+- CLI command syntax and options
+
+**NEVER**:
+- Make assumptions based on memory or general knowledge
+- Use outdated patterns without verification
+- Implement features without checking official docs
+- Guess API signatures or parameter types
+
+#### 3. Research Checklist
+
+Before implementation, confirm you have:
+- [ ] Checked Context7 for latest library documentation
+- [ ] Verified API syntax with official sources
+- [ ] Searched for breaking changes and migration guides
+- [ ] Reviewed official examples and best practices
+- [ ] Confirmed TypeScript types and interfaces
+- [ ] Validated configuration formats
+
+#### 4. When Research is Required
+
+**MANDATORY research scenarios**:
+- Using any external library or framework
+- Implementing authentication or security features
+- Configuring build tools or bundlers
+- Setting up database schemas or migrations
+- Integrating third-party APIs or services
+- Using CLI tools with specific syntax
+- Implementing real-time features
+- Working with type definitions
+
+**Example: Before implementing Supabase Realtime**
+```bash
+# MUST DO:
+1. Use Context7: Get latest @supabase/supabase-js documentation
+2. Use WebFetch: Read https://supabase.com/docs/guides/realtime/postgres-changes
+3. Use WebSearch: Search "Supabase realtime ALTER PUBLICATION 2025"
+4. Verify: ALTER PUBLICATION syntax from PostgreSQL docs
+5. Confirm: RLS integration and client API
+# ONLY THEN: Write implementation code
+```
+
+#### 5. Consequences of Skipping Research
+
+**DO NOT**:
+- ❌ Implement features based on outdated knowledge
+- ❌ Use deprecated APIs without checking alternatives
+- ❌ Write code with incorrect syntax or parameters
+- ❌ Create configurations that don't match current schemas
+- ❌ Make assumptions about library behavior
+
+**ALWAYS**:
+- ✅ Research first, implement second
+- ✅ Verify with official documentation
+- ✅ Use current best practices
+- ✅ Check for breaking changes
+- ✅ Validate syntax and types
+
+### Enforcement
+
+This research-first approach is **NON-NEGOTIABLE**. Any implementation without proper research is considered incomplete and must be revised.
+
+---
+
 ## Domain-Specific Documentation
 
 For detailed information about each domain, refer to the following documentation:
@@ -300,6 +397,85 @@ Deno.serve(async (req) => {
 
 **→ For detailed Edge Functions documentation, see [`supabase/functions/README.md`](supabase/functions/README.md)**
 
+## Supabase Configuration Management
+
+**IMPORTANT**: Supabase service configurations and database schema management are handled separately.
+
+### Configuration Responsibilities
+
+#### 1. Supabase Service Configuration (`supabase/config.toml`)
+
+**Use for**: Infrastructure and service-level configurations
+
+- **Authentication**: OAuth providers, JWT settings, email/SMS, MFA
+  - `[auth]`, `[auth.email]`, `[auth.sms]`, `[auth.mfa]`
+  - `[auth.external.apple]`, `[auth.external.google]`, etc.
+- **Storage**: File size limits, buckets, image transformation
+  - `[storage]`, `[storage.buckets.*]`
+- **API**: Port, schemas exposed via API, max rows, TLS settings
+  - `[api]`
+- **Realtime Service**: Enable/disable service, port settings
+  - `[realtime]` - Service configuration only
+  - **Note**: Actual Realtime publications (which tables support realtime) are managed in Drizzle
+- **Studio**: Supabase Studio settings
+  - `[studio]`
+- **Edge Runtime**: Deno version, policies
+  - `[edge_runtime]`
+- **Analytics**: Backend configuration
+  - `[analytics]`
+
+**Configuration Example**:
+```toml
+# Enable OAuth provider
+[auth.external.google]
+enabled = true
+client_id = "your-client-id"
+secret = "env(GOOGLE_OAUTH_SECRET)"
+redirect_uri = "http://127.0.0.1:3000/auth/callback"
+
+# Configure storage limits
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+# Add storage bucket
+[storage.buckets.avatars]
+public = true
+file_size_limit = "5MiB"
+allowed_mime_types = ["image/png", "image/jpeg"]
+```
+
+**When to Edit**: When you need to:
+- Add OAuth providers (Google, GitHub, etc.)
+- Change JWT expiry time
+- Configure email/SMS providers
+- Adjust storage limits or add buckets
+- Modify API settings (ports, schemas exposed)
+- Enable/disable Supabase services
+
+#### 2. Database Schema Management (`drizzle/`)
+
+**Use for**: Database structure and data access rules
+
+- **Tables**: Schema definitions with TypeScript
+- **RLS Policies**: Row-level security policies
+- **Realtime Publications**: Enable realtime updates for specific tables
+- **Functions**: PostgreSQL functions and triggers
+- **Extensions**: pgvector, custom extensions
+- **Enums**: Database enum types
+- **Check Constraints**: Data validation rules
+
+**When to Edit**: When you need to:
+- Add/modify database tables
+- Change RLS policies
+- Enable/configure realtime updates for tables
+- Add database functions or triggers
+- Modify table relationships
+
+**→ See next section for Drizzle ORM details**
+
+---
+
 ### Drizzle Schema Management
 
 **IMPORTANT**: このプロジェクトは **Drizzle ORM** でデータベーススキーマを管理しています（Atlas/Prisma から移行済み）。
@@ -467,6 +643,22 @@ await db.execute(sql.raw(customSql));
 - TypeScript で型安全に実行
 - エラーハンドリングが統一的
 - 環境変数管理がシンプル
+
+#### Realtime Publications の管理
+
+Supabase Realtimeのpublication（どのテーブルでリアルタイム更新を有効にするか）は、`drizzle/config/functions.sql` で管理します：
+
+```sql
+-- Enable realtime for specific tables
+ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_rooms;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.user_chats;
+
+-- Remove table from realtime (if needed)
+-- ALTER PUBLICATION supabase_realtime DROP TABLE public.table_name;
+```
+
+**Note**: `supabase/config.toml` の `[realtime]` セクションはRealtimeサービスの有効化とポート設定のみです。実際にどのテーブルがリアルタイム更新をサポートするかはDrizzleで管理します。
 
 詳細は Drizzle 公式ドキュメントを参照してください。
 

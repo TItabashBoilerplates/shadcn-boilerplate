@@ -61,6 +61,10 @@ By adopting these environments, we can ensure efficient development and maintain
 - **Database**: PostgreSQL with **Drizzle ORM** for schema management, includes pgvector extension for embeddings
 - **Infrastructure**: Supabase for auth/database, Docker containerization
 
+#### Configuration Management
+- **Supabase Services** (`supabase/config.toml`): Auth, Storage, API settings, service-level configurations
+- **Database Schema** (`drizzle/`): Tables, RLS policies, Realtime publications, functions, triggers managed with Drizzle ORM
+
 ### Key Features
 - Multi-client architecture with corporate users, general users, and virtual users
 - Chat system with rooms, messages, and user relationships

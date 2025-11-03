@@ -4,6 +4,43 @@ This file provides guidance to AI coding assistants (Cursor, GitHub Copilot, etc
 
 **Note**: For Claude Code specific guidance, see `CLAUDE.md`.
 
+## CRITICAL: Research-First Development
+
+**MANDATORY**: Before implementing any feature, you MUST research the latest documentation and best practices.
+
+### Research Requirements
+
+1. **Check Official Documentation**
+   - Verify API syntax and parameters
+   - Check for breaking changes and deprecations
+   - Review official examples and recommended patterns
+
+2. **Verify Current Best Practices**
+   - Search for "[Technology] [Feature] best practices 2025"
+   - Look for migration guides if upgrading versions
+   - Check for security considerations
+
+3. **Never Assume**
+   - ❌ DO NOT implement based on outdated knowledge
+   - ❌ DO NOT guess API signatures or syntax
+   - ❌ DO NOT use deprecated patterns
+   - ✅ ALWAYS verify with official sources first
+
+### Example: Research Workflow
+
+```bash
+Before implementing Supabase Auth:
+1. Check Supabase Auth documentation
+2. Verify current API for getUser() vs getSession()
+3. Review security best practices
+4. Confirm TypeScript types
+5. THEN implement
+```
+
+**This research step is NON-NEGOTIABLE.**
+
+---
+
 ## Domain-Specific Documentation
 
 For detailed information about each domain, refer to the following documentation:
@@ -299,6 +336,43 @@ Deno.serve(async (req) => {
 ```
 
 **→ For detailed Edge Functions documentation, see [`supabase/functions/README.md`](supabase/functions/README.md)**
+
+## Supabase Configuration vs Database Schema
+
+**CRITICAL**: Supabase configurations and database schema are managed separately.
+
+### 1. Supabase Service Configuration (`supabase/config.toml`)
+
+**Use for**: Service-level settings
+
+- **Auth**: OAuth providers, JWT, email/SMS, MFA
+- **Storage**: File limits, buckets
+- **API**: Ports, exposed schemas
+- **Realtime**: Service enable/disable, port settings only
+  - **Note**: Table publications managed in Drizzle
+- **Edge Runtime**: Deno version
+
+```toml
+# Example: Enable Google OAuth
+[auth.external.google]
+enabled = true
+client_id = "your-client-id"
+secret = "env(GOOGLE_OAUTH_SECRET)"
+```
+
+### 2. Database Schema (`drizzle/`)
+
+**Use for**: Database structure
+
+- Tables, RLS policies
+- Realtime publications (table-level)
+- Functions, triggers
+- Extensions (pgvector)
+- Enums, constraints
+
+**→ See next section for details**
+
+---
 
 ## Database Management (Drizzle ORM)
 
