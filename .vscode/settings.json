@@ -4,7 +4,7 @@
   "editor.formatOnSave": true,
   "typescript.preferences.importModuleSpecifier": "non-relative",
 
-  // Deno
+  // Deno (Edge Functions)
   "deno.path": "/opt/homebrew/bin/deno",
   "deno.enablePaths": ["./supabase/functions"],
   "deno.importMap": "./supabase/functions/import_map.json",
@@ -15,21 +15,41 @@
   "deno.lint": true,
   "deno.unstable": false,
 
-  // Typescript
+  // Biome (Frontend + Drizzle)
   "[typescript]": {
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
+    "editor.defaultFormatter": "biomejs.biome",
+    "editor.codeActionsOnSave": {
+      "quickfix.biome": "explicit",
+      "source.organizeImports.biome": "explicit"
+    }
   },
 
-  // React
   "[typescriptreact]": {
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
+    "editor.defaultFormatter": "biomejs.biome",
+    "editor.codeActionsOnSave": {
+      "quickfix.biome": "explicit",
+      "source.organizeImports.biome": "explicit"
+    }
   },
 
-  // Javascript
   "[javascript]": {
     "editor.formatOnSave": true,
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
+    "editor.defaultFormatter": "biomejs.biome",
+    "editor.codeActionsOnSave": {
+      "quickfix.biome": "explicit",
+      "source.organizeImports.biome": "explicit"
+    }
+  },
+
+  "[json]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+
+  "[jsonc]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "biomejs.biome"
   }
 }

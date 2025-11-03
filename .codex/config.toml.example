@@ -1,0 +1,76 @@
+# Codex Configuration Example for shadcn-boilerplate
+#
+# このファイルを ~/.codex/config.toml にコピーして使用してください
+# Copy this file to ~/.codex/config.toml to use
+#
+# ドキュメント: https://developers.openai.com/codex/local-config/
+
+# ==========================================
+# 基本設定 (Basic Settings)
+# ==========================================
+
+# 使用するモデル (Model to use)
+model = "gpt-5-codex"
+
+# モデルプロバイダー (Model provider)
+model_provider = "openai"
+
+# 承認ポリシー (Approval policy)
+# - "untrusted": 信頼されていないコマンドのみ承認が必要
+# - "on-failure": 失敗時に承認を求める
+# - "on-request": リクエスト時に承認を求める
+# - "never": 承認なしで実行
+approval_policy = "untrusted"
+
+# サンドボックスモード (Sandbox mode)
+# - "no-write": 読み取り専用
+# - "workspace-write": ワークスペース内のみ書き込み可能
+# - "off": サンドボックス無効
+sandbox_mode = "workspace-write"
+
+# ==========================================
+# プロジェクト固有の設定 (Project-specific)
+# ==========================================
+
+# AGENTS.md は自動的に検出されます
+# このプロジェクトはルートに AGENTS.md があり、
+# Codex は自動的にそれをコンテキストとして使用します
+
+# ==========================================
+# プロフィール (Profiles)
+# ==========================================
+
+# 開発用プロフィール (Development profile)
+[profiles.dev]
+model = "gpt-5-codex"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+
+# 本番用プロフィール (Production profile)
+[profiles.prod]
+model = "gpt-5-codex"
+approval_policy = "on-failure"
+sandbox_mode = "no-write"
+
+# レビュー用プロフィール (Review profile)
+[profiles.review]
+model = "gpt-5-codex"
+approval_policy = "never"
+sandbox_mode = "no-write"
+
+# ==========================================
+# 使用方法 (Usage)
+# ==========================================
+#
+# デフォルト設定で実行:
+#   codex
+#
+# 特定のプロフィールで実行:
+#   codex --profile dev
+#   codex --profile prod
+#   codex --profile review
+#
+# コマンドラインでオーバーライド:
+#   codex --model gpt-5-codex
+#   codex --ask-for-approval on-request
+#   codex --sandbox workspace-write

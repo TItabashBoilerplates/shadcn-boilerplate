@@ -329,6 +329,19 @@ The project includes integrations for:
 - **[Turbo](https://turbo.build/)**: High-performance build system for monorepos
 - **[Docker](https://docker.com/)**: Containerization for consistent development environments
 
+### AI Coding Assistants
+
+このプロジェクトは、主要なAIコーディングアシスタントに最適化されています：
+
+- **[Claude Code](https://claude.com/claude-code)**: `CLAUDE.md` で詳細なガイドラインを提供
+- **[Cursor](https://cursor.com/)**: `.cursorrules` ファイルでプロジェクト固有のルールを定義
+- **[OpenAI Codex](https://openai.com/codex)**: `AGENTS.md` を自動検出し、`gpt-5-codex` モデルを使用
+  - セットアップガイド: `docs/codex-setup.md`
+  - 設定例: `.codex/config.toml.example`
+- **GitHub Copilot**: `AGENTS.md` でプロジェクトコンテキストを提供
+
+各AIアシスタントは、プロジェクトのアーキテクチャ、コーディング規約、ベストプラクティスを自動的に理解します。
+
 ## Future Considerations
 
 The following tools are being considered for implementation:

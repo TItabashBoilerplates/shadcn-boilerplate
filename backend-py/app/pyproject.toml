@@ -149,6 +149,12 @@ dev = [
     "ruff",
     "mypy",
 
+    # Testing
+    "pytest",
+    "pytest-cov",
+    "pytest-asyncio",
+    "httpx",  # For testing FastAPI
+
     # 画像生成AI
     "diffusers",
     "transformers",
@@ -159,6 +165,15 @@ dev = [
     "torchao",
     "huggingface-hub",
 ]
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-ra -q --cov=src --cov-report=term-missing --cov-report=html"
+asyncio_mode = "auto"
 
 # [build-system]
 # requires = ["hatchling"]

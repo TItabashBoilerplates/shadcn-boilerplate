@@ -1,0 +1,69 @@
+# shadcn-boilerplate Cursor Rules
+
+このプロジェクトは、Next.js 16 + shadcn/ui + Drizzle ORM + Supabaseを使用したフルスタックボイラープレートです。
+
+## プロジェクト構成
+
+- **Frontend**: Next.js 16, React 19, shadcn/ui, TailwindCSS 4, Bun
+- **Backend Python**: FastAPI, Clean Architecture, Ruff + MyPy
+- **Database**: Drizzle ORM (TypeScript), PostgreSQL, Supabase
+- **Edge Functions**: Deno, Supabase Edge Functions
+- **モノレポ**: 独立型（ルートpackage.jsonなし）
+
+## 重要な原則
+
+### 1. 常に日本語で会話する
+すべてのコミュニケーションは日本語で行ってください。
+
+### 2. コード品質管理
+- **Frontend & Drizzle**: Biome（ESLint + Prettierの代替）
+- **Backend Python**: Ruff (lint) + MyPy (type check)
+- **Edge Functions**: Deno native tools
+
+### 3. テスト駆動開発（TDD）
+- 原則としてTDDで進める
+- テストを先に書き、実装後にテストをパスさせる
+- フロントエンド: Vitest
+- バックエンド: pytest
+
+### 4. ドキュメントの参照
+実装前に以下を必ず確認：
+- `README.md` - プロジェクト概要、セットアップ手順
+- `CLAUDE.md` - 詳細な開発ガイドライン（最も重要）
+- `AGENTS.md` - AIエージェント向けガイド
+- `CONTRIBUTING.md` - コントリビューションガイド
+
+## ディレクトリ別のルール
+
+各ディレクトリに特化したルールは、そのディレクトリの`.cursorrules`を参照してください：
+- `frontend/.cursorrules` - Next.js/React開発
+- `backend-py/app/.cursorrules` - Python/FastAPI開発
+- `supabase/functions/.cursorrules` - Deno Edge Functions開発
+
+## 開発コマンド
+
+```bash
+# 統合コマンド（推奨）
+make lint           # 全プロジェクトのlint
+make format         # 全プロジェクトのformat
+make ci-check       # CI用の全チェック
+
+# 初期化・実行
+make init           # プロジェクト初期化
+make run            # バックエンド起動
+make frontend       # フロントエンド起動
+
+# データベース
+make migration      # マイグレーション生成 + 適用 + 型生成
+make migrate-deploy # 本番環境へのマイグレーション適用
+```
+
+## コミット前のチェックリスト
+
+1. `make ci-check` を実行してすべてのチェックをパス
+2. テストを実行して全てパス
+3. CLAUDE.mdのガイドラインに準拠していることを確認
+
+## ライセンス
+
+MIT License

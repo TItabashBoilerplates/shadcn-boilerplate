@@ -1,0 +1,217 @@
+# Backend Python (FastAPI) Cursor Rules
+
+このディレクトリは、FastAPIを使用したPythonバックエンドアプリケーションです。
+
+## アーキテクチャ
+
+- **Framework**: FastAPI
+- **Architecture**: Clean Architecture
+- **ORM**: SQLModel (Drizzleから型生成)
+- **Package Manager**: uv (Rust製、高速)
+- **Linter**: Ruff (line length: 88)
+- **Type Checker**: MyPy (strict mode)
+
+## Clean Architecture Structure
+
+```
+src/
+├── controller/       # HTTPリクエスト/レスポンス処理のみ
+├── usecase/          # ビジネスロジック
+├── gateway/          # データアクセス抽象化インターフェース
+├── domain/           # エンティティ・モデル（models.py: sqlacodegen生成）
+├── infra/            # 外部依存（DB、API client、Supabase）
+└── middleware/       # 認証・CORS・ロギング
+```
+
+## コーディング規約
+
+### 1. Type Annotations (必須)
+
+すべての関数に型アノテーションを付ける：
+
+```python
+# ✅ Good
+def get_user(user_id: str) -> User | None:
+    """Retrieve user by ID."""
+    return user_repository.get(user_id)
+
+# ❌ Bad
+def get_user(user_id):
+    return user_repository.get(user_id)
+```
+
+### 2. Async/Await
+
+すべてのI/O操作はasync/awaitを使用：
+
+```python
+# ✅ Good
+async def fetch_data(url: str) -> dict:
+    """Fetch data from external API."""
+    async with httpx.AsyncClient() as client:
+        response = await client.get(url)
+        return response.json()
+
+# ❌ Bad (blocking I/O)
+def fetch_data(url: str) -> dict:
+    response = requests.get(url)
+    return response.json()
+```
+
+### 3. Docstrings
+
+Google-style docstringsを使用：
+
+```python
+def calculate_total(items: list[Item]) -> Decimal:
+    """Calculate the total price of items.
+
+    Args:
+        items: List of items to calculate total for.
+
+    Returns:
+        Total price as Decimal.
+
+    Raises:
+        ValueError: If items list is empty.
+    """
+    if not items:
+        raise ValueError("Items list cannot be empty")
+    return sum(item.price for item in items)
+```
+
+### 4. Error Handling
+
+適切なエラーハンドリング：
+
+```python
+# ✅ Good
+async def get_user(user_id: str) -> User:
+    """Get user by ID."""
+    user = await user_repository.get(user_id)
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail=f"User {user_id} not found"
+        )
+    return user
+```
+
+### 5. 依存性注入
+
+FastAPIの依存性注入を活用：
+
+```python
+from fastapi import Depends
+
+async def get_current_user(
+    token: str = Depends(oauth2_scheme)
+) -> User:
+    """Get current authenticated user."""
+    # Token verification logic
+    return user
+
+@app.get("/me")
+async def read_users_me(
+    current_user: User = Depends(get_current_user)
+) -> User:
+    """Get current user info."""
+    return current_user
+```
+
+## AI/ML統合
+
+このプロジェクトは包括的なAI/ML機能を統合：
+
+- **LLM Orchestration**: LangChain, LangGraph, LangSmith
+- **LLM Providers**: OpenAI (GPT-4), Anthropic (Claude), Replicate, FAL
+- **Deep Learning**: PyTorch, Diffusers, Transformers, Accelerate
+- **Real-time**: LiveKit (WebRTC), aiortc
+- **Voice**: Cartesia
+- **Vector Search**: pgvector
+
+```python
+# Example: LangChain usage
+from langchain_openai import ChatOpenAI
+from langchain.schema import HumanMessage
+
+async def generate_response(prompt: str) -> str:
+    """Generate AI response using OpenAI."""
+    llm = ChatOpenAI(model="gpt-4")
+    message = HumanMessage(content=prompt)
+    response = await llm.ainvoke([message])
+    return response.content
+```
+
+## Development Commands
+
+```bash
+# Install dependencies
+uv sync --dev
+
+# Lint & Format
+uv run ruff check .        # Lint
+uv run ruff format .       # Format
+uv run mypy src/           # Type check
+
+# Testing
+uv run pytest              # Run tests
+uv run pytest --cov        # With coverage
+```
+
+## Testing
+
+- **Framework**: pytest
+- **Async**: pytest-asyncio
+- **Coverage**: pytest-cov
+
+```python
+# Example test
+import pytest
+from fastapi.testclient import TestClient
+
+@pytest.fixture
+def client():
+    from src.main import app
+    return TestClient(app)
+
+def test_health_check(client):
+    """Test health endpoint."""
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+@pytest.mark.asyncio
+async def test_async_function():
+    """Test async function."""
+    result = await some_async_function()
+    assert result is not None
+```
+
+## Code Quality Checks
+
+コミット前に必ず実行：
+
+```bash
+make lint-backend-py         # Lint
+make format-backend-py       # Format
+make type-check-backend-py   # Type check
+uv run pytest                # Tests
+```
+
+## 禁止事項
+
+- ❌ 型アノテーションなし
+- ❌ Blocking I/O（`requests`など）
+- ❌ 複雑な関数（McCabe complexity > 3）
+- ❌ Docstringsなし
+- ❌ ハードコードされた環境変数
+- ❌ SQLインジェクション脆弱性
+
+## Clean Architecture依存ルール
+
+- Controllers → Use Cases → Gateways → Domain
+- Controllersはビジネスロジックを含まない
+- Use CasesはHTTPに依存しない
+- Gatewaysはインターフェース定義のみ
+- Infraが実装を提供

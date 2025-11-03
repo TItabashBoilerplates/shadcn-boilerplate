@@ -1,0 +1,137 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+
+jobs:
+  lint-and-format-check:
+    name: Lint & Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.8"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.5.6"
+
+      - name: Install Frontend dependencies
+        run: |
+          cd frontend
+          bun install
+
+      - name: Install Drizzle dependencies
+        run: |
+          cd drizzle
+          bun install
+
+      - name: Install Backend Python dependencies
+        run: |
+          cd backend-py/app
+          pip install uv
+          uv sync --dev
+
+      - name: Lint & Format Check (All Projects)
+        run: make ci-check
+
+  type-check:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.8"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.5.6"
+
+      - name: Install Frontend dependencies
+        run: |
+          cd frontend
+          bun install
+
+      - name: Install Drizzle dependencies
+        run: |
+          cd drizzle
+          bun install
+
+      - name: Install Backend Python dependencies
+        run: |
+          cd backend-py/app
+          pip install uv
+          uv sync --dev
+
+      - name: Type Check (All Projects)
+        run: make type-check
+
+  test-frontend:
+    name: Test Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.8"
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          bun install
+          # Install test dependencies
+          bun add -d vitest @vitejs/plugin-react jsdom @testing-library/react @testing-library/jest-dom
+
+      - name: Run tests
+        run: |
+          cd frontend
+          bun run vitest run
+
+  test-backend:
+    name: Test Backend Python
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          cd backend-py/app
+          pip install uv
+          uv sync --dev
+
+      - name: Run tests
+        run: |
+          cd backend-py/app
+          uv run pytest

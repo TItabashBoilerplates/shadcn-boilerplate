@@ -36,7 +36,6 @@ env/
 
 # Linter & Formatter caches
 **.eslintcache
-.prettier-cache
 
 # Python tool caches
 **/__pycache__/
@@ -67,7 +66,22 @@ yarn-error.*
 # =============================================================================
 # IDE & Editor
 # =============================================================================
-.vscode/
+# VS Code user-specific files (exclude)
+.vscode/*
+# But include recommended settings (include)
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# Cursor
+.cursor/
+
+# Codex user-specific files (exclude)
+.codex/*
+# But include example config (include)
+!.codex/config.toml.example
+
 .idea/
 **/*.swp
 **/*.scripts.swo
