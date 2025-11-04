@@ -1,4 +1,8 @@
 {
+  "imports": {
+    "drizzle-orm": "npm:drizzle-orm@^0.44.7",
+    "drizzle-orm/": "npm:drizzle-orm@^0.44.7/"
+  },
   "lint": {
     "exclude": ["shared/drizzle/", "shared/types/supabase/"]
   },

@@ -104,7 +104,10 @@ jobs:
       - name: Edge Functions - Deno Check
         run: |
           for dir in supabase/functions/*/; do
-            [ -f "${dir}index.ts" ] && deno check "${dir}index.ts"
+            if [ -f "${dir}index.ts" ]; then
+              echo "Checking $(basename ${dir})..."
+              (cd "${dir}" && deno check index.ts)
+            fi
           done
 
   test-frontend:
