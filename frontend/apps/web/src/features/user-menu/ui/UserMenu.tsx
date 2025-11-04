@@ -38,9 +38,7 @@ export function UserMenu({ userEmail }: UserMenuProps) {
     <DropdownMenu>
       <DropdownMenuTrigger className="focus:outline-none">
         <Avatar className="h-9 w-9 cursor-pointer transition-opacity hover:opacity-80">
-          <AvatarFallback className="bg-primary text-primary-foreground">
-            {initial}
-          </AvatarFallback>
+          <AvatarFallback className="bg-primary text-primary-foreground">{initial}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
