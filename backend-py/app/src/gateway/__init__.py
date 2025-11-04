@@ -1,1 +1,1 @@
-"""gateway package"""
+"""gateway package."""

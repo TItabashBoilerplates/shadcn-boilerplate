@@ -1,4 +1,5 @@
 from logging import getLogger
+from typing import NoReturn
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import APIKeyHeader
@@ -9,6 +10,14 @@ from infra.supabase_client import SupabaseClient
 authorization_header = APIKeyHeader(name="Authorization", auto_error=True)
 
 logger = getLogger("uvicorn")
+
+
+def _raise_unauthorized(detail: str) -> NoReturn:
+    """Raise unauthorized HTTP exception."""
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=detail,
+    )
 
 
 async def verify_token(auth_header: str = Depends(authorization_header)) -> User:
@@ -22,17 +31,14 @@ async def verify_token(auth_header: str = Depends(authorization_header)) -> User
 
     try:
         supabase_client = SupabaseClient(access_token=token)
-        user = supabase_client.get_user()
+        user: User | None = supabase_client.get_user()
         logger.info("user: %s", user)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_FORBIDDEN,
-                detail="Unauthorized",
-            )
-        return user
+        if user is not None:
+            return user
+        _raise_unauthorized("Unauthorized")
     except Exception as e:
-        logger.error(f"error: {e}")
+        logger.exception("Authentication error")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Unauthorized",
-        )
+        ) from e

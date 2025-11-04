@@ -1,10 +1,13 @@
 # Supabase Edge Functions
 
-Deno-based serverless functions with native `Deno.serve` API and Drizzle schema integration for type safety.
+Deno-based serverless functions with native `Deno.serve` API and Drizzle schema
+integration for type safety.
 
 ## Overview
 
-Supabase Edge Functions provide serverless compute for backend logic, running on Deno runtime with TypeScript support. This project integrates Drizzle ORM schemas for complete type safety across the stack.
+Supabase Edge Functions provide serverless compute for backend logic, running on
+Deno runtime with TypeScript support. This project integrates Drizzle ORM
+schemas for complete type safety across the stack.
 
 ### Tech Stack
 
@@ -39,9 +42,11 @@ supabase/functions/
 
 ### 1. Native Deno.serve API
 
-Edge Functions use Deno's built-in `Deno.serve` for lightweight, efficient serverless functions.
+Edge Functions use Deno's built-in `Deno.serve` for lightweight, efficient
+serverless functions.
 
 **Example**:
+
 ```typescript
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight
@@ -53,13 +58,18 @@ Deno.serve(async (req: Request) => {
     // Your logic here
     return new Response(
       JSON.stringify({ message: "Success" }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage = error instanceof Error
+      ? error.message
+      : "Unknown error";
     return new Response(
       JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   }
 });
@@ -67,12 +77,14 @@ Deno.serve(async (req: Request) => {
 
 ### 2. Drizzle Schema Integration
 
-Edge Functions can import and use Drizzle schemas directly for type-safe database operations.
+Edge Functions can import and use Drizzle schemas directly for type-safe
+database operations.
 
 **Type Inference**:
+
 ```typescript
-import type { InferSelectModel, InferInsertModel } from "npm:drizzle-orm";
-import { generalUsers, chatRooms, messages } from "../shared/drizzle/index.ts";
+import type { InferInsertModel, InferSelectModel } from "npm:drizzle-orm";
+import { chatRooms, generalUsers, messages } from "../shared/drizzle/index.ts";
 
 // Infer types from Drizzle schemas
 type User = InferSelectModel<typeof generalUsers>;
@@ -82,6 +94,7 @@ type Message = InferSelectModel<typeof messages>;
 ```
 
 **Usage with Supabase Client**:
+
 ```typescript
 import { createClient } from "npm:@supabase/supabase-js@^2";
 import type { InferSelectModel } from "npm:drizzle-orm";
@@ -92,7 +105,7 @@ type User = InferSelectModel<typeof generalUsers>;
 Deno.serve(async (req: Request) => {
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!
+    Deno.env.get("SUPABASE_ANON_KEY")!,
   );
 
   // Query with Supabase client
@@ -108,22 +121,26 @@ Deno.serve(async (req: Request) => {
   return new Response(
     JSON.stringify({
       message: `Hello ${user?.displayName ?? "World"}!`,
-      user: user ? {
-        id: user.id,
-        displayName: user.displayName,
-        accountName: user.accountName,
-      } : null,
+      user: user
+        ? {
+          id: user.id,
+          displayName: user.displayName,
+          accountName: user.accountName,
+        }
+        : null,
     }),
-    { headers: { "Content-Type": "application/json" } }
+    { headers: { "Content-Type": "application/json" } },
   );
 });
 ```
 
 ### 3. npm Package Imports
 
-Edge Functions use `npm:` prefix to import npm packages (JSR and HTTP imports are discouraged).
+Edge Functions use `npm:` prefix to import npm packages (JSR and HTTP imports
+are discouraged).
 
 **deno.json Configuration**:
+
 ```json
 {
   "imports": {
@@ -134,6 +151,7 @@ Edge Functions use `npm:` prefix to import npm packages (JSR and HTTP imports ar
 ```
 
 **Forbidden**:
+
 - ❌ JSR imports (`jsr:@package/name`)
 - ❌ HTTP imports (`https://deno.land/x/...`)
 - ❌ Old frameworks (Oak, etc.)
@@ -160,7 +178,8 @@ type User = InferSelectModel<typeof generalUsers>;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 Deno.serve(async (req: Request) => {
@@ -180,7 +199,7 @@ Deno.serve(async (req: Request) => {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
+      { global: { headers: { Authorization: authHeader } } },
     );
 
     // Verify user authentication
@@ -194,13 +213,18 @@ Deno.serve(async (req: Request) => {
 
     return new Response(
       JSON.stringify(result),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage = error instanceof Error
+      ? error.message
+      : "Unknown error";
     return new Response(
       JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   }
 });
@@ -249,7 +273,8 @@ Always handle CORS preflight requests:
 ```typescript
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 Deno.serve(async (req: Request) => {
@@ -273,12 +298,16 @@ try {
   const errorMessage = error instanceof Error ? error.message : "Unknown error";
   return new Response(
     JSON.stringify({ error: errorMessage }),
-    { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    },
   );
 }
 ```
 
 **Forbidden**:
+
 ```typescript
 // ❌ Bad: No type guard
 catch (error) {
@@ -294,7 +323,7 @@ Use Supabase Auth client for authentication:
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_ANON_KEY")!,
-  { global: { headers: { Authorization: req.headers.get("Authorization")! } } }
+  { global: { headers: { Authorization: req.headers.get("Authorization")! } } },
 );
 
 const { data: { user }, error } = await supabase.auth.getUser();
@@ -308,8 +337,8 @@ if (error || !user) {
 Leverage Drizzle schemas for complete type safety:
 
 ```typescript
-import type { InferSelectModel, InferInsertModel } from "npm:drizzle-orm";
-import { messages, chatRooms } from "../shared/drizzle/index.ts";
+import type { InferInsertModel, InferSelectModel } from "npm:drizzle-orm";
+import { chatRooms, messages } from "../shared/drizzle/index.ts";
 
 type Message = InferSelectModel<typeof messages>;
 type NewMessage = InferInsertModel<typeof messages>;
@@ -327,7 +356,8 @@ const typedMessages: Message[] = data as Message[];
 
 ### Drizzle Schemas
 
-Located in `shared/drizzle/`, automatically copied from `drizzle/schema/` during type generation:
+Located in `shared/drizzle/`, automatically copied from `drizzle/schema/` during
+type generation:
 
 ```bash
 # Generate types and copy Drizzle schemas
@@ -335,11 +365,13 @@ make build-model-functions
 ```
 
 **Generated Files**:
+
 - `shared/drizzle/index.ts` - Export entry point
 - `shared/drizzle/schema.ts` - All table definitions
 - `shared/drizzle/types.ts` - Enum definitions
 
 **Available Tables**:
+
 - generalUsers, generalUserProfiles
 - corporateUsers, organizations
 - chatRooms, messages, userChats
@@ -357,6 +389,7 @@ supabase gen types typescript --local > functions/shared/types/supabase/schema.t
 ```
 
 **Usage**:
+
 ```typescript
 import type { Database } from "../shared/types/supabase/schema.ts";
 
@@ -424,6 +457,7 @@ Deno.test("should return success message", async () => {
 ```
 
 Run tests:
+
 ```bash
 deno test --allow-env --allow-net
 ```
@@ -547,6 +581,7 @@ supabase secrets list
 ## VS Code Configuration
 
 `.vscode/settings.json`:
+
 ```json
 {
   "deno.enable": true,

@@ -1,3 +1,5 @@
+from typing import Annotated
+
 from fastapi import APIRouter, Depends
 from sqlmodel import Session
 from supabase_auth.types import User
@@ -12,7 +14,7 @@ router = APIRouter()
 
 @router.get("/")
 async def root(
-    current_user: User = Depends(verify_token),
+    current_user: Annotated[User, Depends(verify_token)],
 ) -> dict[str, str]:
     return {"message": f"Hello {current_user.email}"}
 
@@ -22,11 +24,11 @@ async def healthcheck() -> dict[str, str]:
     return {"message": "OK"}
 
 
-@router.post("/api/chat", response_model=ChatResponse)
+@router.post("/api/chat")
 async def chat(
     request: ChatRequest,
-    session: Session = Depends(get_session),
-    auth_header: str = Depends(authorization_header),
+    session: Annotated[Session, Depends(get_session)],
+    auth_header: Annotated[str, Depends(authorization_header)],
 ) -> ChatResponse:
     """Chat endpoint that uses all domain models.
 
@@ -42,7 +44,8 @@ async def chat(
     """
     # Extract token from header
     if not auth_header.startswith("Bearer "):
-        raise ValueError("Invalid authorization header format")
+        msg = "Invalid authorization header format"
+        raise ValueError(msg)
 
     token = auth_header.split(" ")[1]
 

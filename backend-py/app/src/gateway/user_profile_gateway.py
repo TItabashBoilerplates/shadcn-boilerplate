@@ -1,5 +1,7 @@
 """User Profile Gateway for managing user profiles."""
 
+from uuid import UUID
+
 from sqlmodel import Session, select
 
 from src.domain.entity.models import GeneralUserProfiles
@@ -9,7 +11,7 @@ class UserProfileGateway:
     """Gateway for user profile operations."""
 
     def get_by_user_id(
-        self, user_id: str, session: Session
+        self, user_id: UUID, session: Session
     ) -> GeneralUserProfiles | None:
         """Get user profile by user ID.
 
@@ -25,28 +27,7 @@ class UserProfileGateway:
         )
         return session.exec(statement).first()
 
-    def create(
-        self, user_id: str, bio: str | None, session: Session
-    ) -> GeneralUserProfiles:
-        """Create a new user profile.
-
-        Args:
-            user_id: User ID
-            bio: User bio
-            session: Database session
-
-        Returns:
-            Created user profile
-        """
-        profile = GeneralUserProfiles(user_id=user_id, bio=bio)
-        session.add(profile)
-        session.commit()
-        session.refresh(profile)
-        return profile
-
-    def get_or_create(
-        self, user_id: str, session: Session
-    ) -> GeneralUserProfiles:
+    def get_or_create(self, user_id: UUID, session: Session) -> GeneralUserProfiles:
         """Get existing profile or create a new one.
 
         Args:
@@ -58,5 +39,15 @@ class UserProfileGateway:
         """
         profile = self.get_by_user_id(user_id, session)
         if profile is None:
-            profile = self.create(user_id, None, session)
+            # GeneralUserProfilesにはbio属性がないため、emailなど必須フィールドを指定
+            # 実際の実装では適切なデフォルト値を設定する必要がある
+            profile = GeneralUserProfiles(
+                user_id=user_id,
+                email=f"user_{user_id}@temp.example.com",  # 一時的なemail
+                first_name="",
+                last_name="",
+            )
+            session.add(profile)
+            session.commit()
+            session.refresh(profile)
         return profile

@@ -1,5 +1,7 @@
 """Chat API request and response models."""
 
+from typing import Any
+
 from pydantic import BaseModel
 
 
@@ -17,4 +19,4 @@ class ChatResponse(BaseModel):
     user_message_id: int
     ai_message_id: int
     ai_response: str
-    virtual_user: dict
+    virtual_user: dict[str, Any]

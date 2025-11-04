@@ -9,6 +9,7 @@ services:
       - 4040:8000
     volumes:
       - ./backend-py/app:/service/app
+      - /service/app/.venv  # Prevent host .venv from being mounted (macOS vs Linux binary conflict)
       - ~/.cursor/extensions:/root/.cursor-server/extensions
       # - ~/.vscode/extensions:/root/.vscode-server/extensions
       - ~/.aws:/root/.aws
@@ -25,9 +26,8 @@ services:
     command: >
       /bin/bash -c "
         uv sync --group dev &&
-        . .venv/bin/activate &&
-        sqlacodegen \"$$DIRECT_URL\" --generator sqlmodels --outfile src/domain/entity/models.py &&
-        uvicorn app:app --proxy-headers --reload --host 0.0.0.0
+        uv run sqlacodegen \"$$DIRECT_URL\" --generator sqlmodels --outfile src/domain/entity/models.py &&
+        uv run uvicorn app:app --proxy-headers --reload --host 0.0.0.0
       "
   # backend_app_py_release:
   #   container_name: backend_app_py_release

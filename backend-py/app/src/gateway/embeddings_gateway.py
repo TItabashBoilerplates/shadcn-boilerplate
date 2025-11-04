@@ -18,14 +18,16 @@ class EmbeddingsGateway:
         Returns:
             Number of embeddings
         """
-        statement = select(func.count(Embeddings.id)).where(
-            Embeddings.metadata_["user_id"].astext == user_id
+        statement = (
+            select(func.count())
+            .select_from(Embeddings)
+            .where(Embeddings.metadata_["user_id"].astext == user_id)
         )
         return session.exec(statement).one()
 
     def search_similar(
         self,
-        query: str,
+        _query: str,
         limit: int,
         session: Session,
     ) -> list[Embeddings]:

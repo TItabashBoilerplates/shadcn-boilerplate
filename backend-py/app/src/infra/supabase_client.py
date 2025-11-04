@@ -1,10 +1,13 @@
-"""このモジュールは、Supabaseクライアントを作成し、環境変数からSupabaseのURLとキーを取得します。"""
+"""このモジュールは、Supabaseクライアントを作成し、環境変数からSupabaseのURLとキーを取得します。."""
 
+import contextlib
 import os
 from logging import getLogger
 
-from supabase_auth.types import User
 from supabase import Client, create_client
+from supabase_auth.types import User
+
+from src.domain.exceptions import AuthenticationError, ConfigurationError
 
 logger = getLogger("uvicorn")
 
@@ -16,7 +19,8 @@ class SupabaseClient:
         self.user = None
 
         if self.url is None or self.key is None:
-            raise Exception("supabase url or anon key is not set")
+            msg = "supabase url or anon key is not set"
+            raise ConfigurationError(msg)
 
         self.client: Client = create_client(
             self.url,
@@ -24,11 +28,15 @@ class SupabaseClient:
         )
 
         if access_token is not None:
-            logger.info(f"access token: {access_token}")
+            logger.info("access token: %s", access_token)
             try:
                 user_response = self.client.auth.get_user(access_token)
-            except Exception:
-                raise Exception("Failed to get user")
+            except Exception as e:
+                msg = "Failed to get user"
+                raise AuthenticationError(msg) from e
+            if user_response is None:
+                msg = "User response is None"
+                raise AuthenticationError(msg)
             self.user = user_response.user
             if self.user is None:
                 return
@@ -40,8 +48,5 @@ class SupabaseClient:
 
 # クライアントのインスタンス化と利用例
 if __name__ == "__main__":
-    try:
+    with contextlib.suppress(Exception):
         supabase = SupabaseClient()
-        print("Client: ", supabase.client)
-    except Exception as e:
-        print("An error occurred:", e)

@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from sqlmodel import Session, select
 
 from src.domain.entity.models import ChatRooms, UserChats
@@ -6,7 +8,7 @@ from src.domain.entity.models import ChatRooms, UserChats
 class ChatRoomGateway:
     def create(
         self,
-        user_id: str,
+        user_id: UUID,
         session: Session,
     ) -> ChatRooms:
         # チャットルームを作成
@@ -30,15 +32,6 @@ class ChatRoomGateway:
         statement = select(ChatRooms).where(ChatRooms.id == chat_room_id)
         return session.exec(statement).first()
 
-    def get_all_by_user_id(
-        self,
-        user_id: str,
-        session: Session,
-    ) -> list[ChatRooms]:
-        # UserChatsを経由してChatRoomsを取得
-        statement = select(ChatRooms).join(UserChats).where(UserChats.user_id == user_id)
-        return list(session.exec(statement).all())
-
     def update(
         self,
         chat_room_id: int,
@@ -47,7 +40,8 @@ class ChatRoomGateway:
         statement = select(ChatRooms).where(ChatRooms.id == chat_room_id)
         chat_room = session.exec(statement).first()
         if chat_room is None:
-            raise ValueError("ChatRoom not found")
+            msg = "ChatRoom not found"
+            raise ValueError(msg)
 
         # 必要に応じて属性を更新
         session.add(chat_room)
@@ -63,7 +57,8 @@ class ChatRoomGateway:
         statement = select(ChatRooms).where(ChatRooms.id == chat_room_id)
         chat_room = session.exec(statement).first()
         if chat_room is None:
-            raise ValueError("ChatRoom not found")
+            msg = "ChatRoom not found"
+            raise ValueError(msg)
 
         session.delete(chat_room)
         session.commit()

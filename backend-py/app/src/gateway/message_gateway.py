@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from sqlmodel import Session, select
 
 from src.domain.entity.models import Messages
@@ -7,7 +9,7 @@ class MessageGateway:
     def create(
         self,
         chat_room_id: int,
-        virtual_sender_id: str,
+        virtual_sender_id: UUID,
         content: str,
         session: Session,
     ) -> Messages:
@@ -46,7 +48,8 @@ class MessageGateway:
         statement = select(Messages).where(Messages.id == message_id)
         message = session.exec(statement).first()
         if message is None:
-            raise ValueError("Message not found")
+            msg = "Message not found"
+            raise ValueError(msg)
 
         message.content = content
         session.add(message)
@@ -62,7 +65,8 @@ class MessageGateway:
         statement = select(Messages).where(Messages.id == message_id)
         message = session.exec(statement).first()
         if message is None:
-            raise ValueError("Message not found")
+            msg = "Message not found"
+            raise ValueError(msg)
 
         session.delete(message)
         session.commit()

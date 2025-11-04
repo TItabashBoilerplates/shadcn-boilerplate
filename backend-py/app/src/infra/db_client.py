@@ -15,8 +15,6 @@ if not DATABASE_URL:
     msg = "DATABASE_URL environment variable is not set"
     raise ValueError(msg)
 
-# SQLModelエンジンの作成（同期処理）
-# echo=Trueでクエリログを出力（本番環境ではFalseに設定）
 engine = create_engine(
     DATABASE_URL,
     echo=True,

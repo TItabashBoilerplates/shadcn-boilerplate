@@ -1,4 +1,4 @@
-"""このモジュールは、AssistantAgentとUserProxyAgentの設定を行います。
+"""このモジュールは、AssistantAgentとUserProxyAgentの設定を行います。.
 
 AssistantAgentは、ユーザーの要求に応じて適切なアクションを実行するエージェントです。
 UserProxyAgentは、ユーザーの要求をAssistantAgentに転送するエージェントです。
