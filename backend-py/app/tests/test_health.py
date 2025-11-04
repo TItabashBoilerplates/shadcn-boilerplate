@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 def client():
     """Create a test client for the FastAPI application."""
     # Import here to avoid circular imports
-    from src.main import app
+    from src.app import app
 
     return TestClient(app)
 

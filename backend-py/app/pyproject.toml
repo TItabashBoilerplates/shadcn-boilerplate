@@ -3,12 +3,16 @@
 python_version = "3.12"
 exclude = [
     '^\.venv/',
-    '^src/domain/entity/models\.py$',
 ]
 strict = true
 ignore_missing_imports = true
 install_types = true
 non_interactive = true
+
+# Auto-generated files should be excluded from type checking
+[[tool.mypy.overrides]]
+module = "src.domain.entity.models"
+ignore_errors = true
 
 [tool.ruff]
 # Same as Black.
