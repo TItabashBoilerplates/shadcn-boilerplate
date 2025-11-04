@@ -368,6 +368,119 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 3. **Lazy load heavy components** with `dynamic` imports
 4. **Optimize images** with Next.js `<Image>` component
 
+## Deployment
+
+### Vercel Deployment
+
+This monorepo is optimized for deployment on Vercel with Turborepo integration.
+
+#### Configuration Files
+
+**`apps/web/vercel.json`** - Vercel configuration for the web app:
+
+```json
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "buildCommand": "cd ../.. && turbo build --filter=@workspace/web",
+  "installCommand": "cd ../.. && bun install",
+  "outputDirectory": ".next",
+  "devCommand": "bun run dev"
+}
+```
+
+Key features:
+- **Monorepo build**: Uses Turbo to build only the web app
+- **Bun package manager**: Installs dependencies with Bun
+- **Security headers**: Adds X-Content-Type-Options, X-Frame-Options, etc.
+- **Function timeouts**: Configures max duration for API routes
+
+#### Vercel Project Settings
+
+When creating a new Vercel project, configure the following:
+
+1. **Framework Preset**: Next.js
+2. **Root Directory**: `frontend/apps/web`
+3. **Build Command**: (automatically detected from vercel.json)
+4. **Install Command**: (automatically detected from vercel.json)
+5. **Output Directory**: (automatically detected from vercel.json)
+6. **Node.js Version**: 20.x or later (recommended: 22.x)
+
+#### Environment Variables
+
+Set the following environment variables in Vercel project settings:
+
+**Required**:
+- `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anonymous key
+
+**Optional**:
+- `NEXT_PUBLIC_API_URL` - Backend API URL (if using separate backend)
+
+#### Deployment Workflow
+
+1. **Connect Repository**: Link your Git repository to Vercel
+2. **Configure Settings**: Set Root Directory to `frontend/apps/web`
+3. **Add Environment Variables**: Configure Supabase credentials
+4. **Deploy**: Push to main branch or trigger manual deployment
+
+**Automatic Deployments**:
+- **Production**: Deployments from `main` branch
+- **Preview**: Deployments from `develop` or `staging` branches
+- **Ignored**: Branches starting with `internal-*`
+
+#### Vercel CLI Deployment
+
+```bash
+# Install Vercel CLI
+bun add -g vercel
+
+# Login to Vercel
+vercel login
+
+# Deploy to preview
+cd frontend/apps/web
+vercel
+
+# Deploy to production
+vercel --prod
+```
+
+#### Monorepo Considerations
+
+- **Turborepo Cache**: Vercel automatically provides remote caching for Turborepo
+- **Build Performance**: Only the web app is built (`--filter=@workspace/web`)
+- **Workspace Dependencies**: All `@workspace/*` packages are built automatically
+- **Install Performance**: Bun provides fast dependency installation
+
+#### Deployment Best Practices
+
+1. **Test Locally**: Run `bun run build` before pushing
+2. **Check Types**: Run `bun run type-check` to catch type errors
+3. **Lint Code**: Run `bun run lint` to ensure code quality
+4. **Preview Deployments**: Test changes in preview environments before merging
+5. **Environment Variables**: Never commit secrets, use Vercel environment variables
+
+#### Troubleshooting Deployment
+
+**Build Fails with "Module not found"**:
+- Ensure all workspace dependencies are listed in `package.json`
+- Run `bun install` locally to verify dependencies
+
+**Environment Variables Not Available**:
+- Ensure variables are prefixed with `NEXT_PUBLIC_` for client-side access
+- Check Vercel project settings for correct variable names
+
+**Build Timeout**:
+- Check Turborepo cache is working correctly
+- Consider upgrading to a higher-tier plan for faster builds
+
+**Deployment Ignored**:
+- Check `git.deploymentEnabled` settings in `vercel.json`
+- Verify branch name doesn't match ignore patterns
+
+For more information, see [Vercel Monorepo Documentation](https://vercel.com/docs/monorepos).
+
 ## Troubleshooting
 
 ### Hydration Errors
