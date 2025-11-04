@@ -1,0 +1,8 @@
+{
+  "lint": {
+    "exclude": ["shared/drizzle/", "shared/types/supabase/"]
+  },
+  "fmt": {
+    "exclude": ["shared/drizzle/", "shared/types/supabase/"]
+  }
+}
