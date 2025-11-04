@@ -45,8 +45,17 @@ jobs:
           pip install uv
           uv sync --dev
 
-      - name: Lint & Format Check (All Projects)
-        run: make ci-check
+      - name: Frontend - Biome CI
+        run: cd frontend && bun run lint:ci
+
+      - name: Drizzle - Biome CI
+        run: cd drizzle && bun run lint:ci
+
+      - name: Backend Python - Ruff Check
+        run: cd backend-py/app && uv run ruff check src/ && uv run ruff format --check src/
+
+      - name: Edge Functions - Deno Lint & Format
+        run: deno lint supabase/functions/ && deno fmt --check supabase/functions/
 
   type-check:
     name: Type Check
@@ -86,8 +95,17 @@ jobs:
           pip install uv
           uv sync --dev
 
-      - name: Type Check (All Projects)
-        run: make type-check
+      - name: Frontend - Type Check
+        run: cd frontend && bun run type-check
+
+      - name: Backend Python - MyPy
+        run: cd backend-py/app && uv run mypy src/
+
+      - name: Edge Functions - Deno Check
+        run: |
+          for dir in supabase/functions/*/; do
+            [ -f "${dir}index.ts" ] && deno check "${dir}index.ts"
+          done
 
   test-frontend:
     name: Test Frontend
