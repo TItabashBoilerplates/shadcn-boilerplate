@@ -4,7 +4,7 @@ from uuid import UUID
 
 from sqlmodel import Session, select
 
-from src.domain.entity.models import VirtualUsers
+from domain.entity.models import VirtualUsers
 
 
 class VirtualUserGateway:

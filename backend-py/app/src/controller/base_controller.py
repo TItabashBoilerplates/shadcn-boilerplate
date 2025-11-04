@@ -4,10 +4,10 @@ from fastapi import APIRouter, Depends
 from sqlmodel import Session
 from supabase_auth.types import User
 
+from domain.entity.chat import ChatRequest, ChatResponse
 from infra.db_client import get_session
 from middleware.auth_middleware import authorization_header, verify_token
-from src.domain.entity.chat import ChatRequest, ChatResponse
-from src.usecase.chat_usecase import ChatUseCase
+from usecase.chat_usecase import ChatUseCase
 
 router = APIRouter()
 

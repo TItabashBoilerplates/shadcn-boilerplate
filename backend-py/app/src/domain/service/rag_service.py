@@ -1,6 +1,7 @@
+from pydantic import BaseModel
+
 from gateway.llm_gateway import LLMGateway
 from gateway.vectorstore_gateway import VectorStoreGateway
-from pydantic import BaseModel
 
 
 class RAGService:

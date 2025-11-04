@@ -2,9 +2,9 @@ from uuid import UUID
 
 from sqlmodel import Session, select
 
-from src.domain.entity.models import GeneralUsers
-from src.domain.exceptions import AuthenticationError
-from src.infra.supabase_client import SupabaseClient
+from domain.entity.models import GeneralUsers
+from domain.exceptions import AuthenticationError
+from infra.supabase_client import SupabaseClient
 
 
 class CurrentUserGateway:

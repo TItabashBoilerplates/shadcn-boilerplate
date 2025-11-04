@@ -7,7 +7,7 @@ from logging import getLogger
 from supabase import Client, create_client
 from supabase_auth.types import User
 
-from src.domain.exceptions import AuthenticationError, ConfigurationError
+from domain.exceptions import AuthenticationError, ConfigurationError
 
 logger = getLogger("uvicorn")
 

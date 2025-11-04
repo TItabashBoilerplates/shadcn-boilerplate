@@ -4,7 +4,7 @@ from uuid import UUID
 
 from sqlmodel import Session, select
 
-from src.domain.entity.models import GeneralUserProfiles
+from domain.entity.models import GeneralUserProfiles
 
 
 class UserProfileGateway:

@@ -4,18 +4,15 @@ import uuid
 
 from sqlmodel import Session, select
 
-from src.domain.entity.chat import ChatRequest, ChatResponse
-from src.domain.entity.models import (
-    VirtualUserChats,
-    VirtualUserProfiles,
-)
-from src.gateway.chat_room_gateway import ChatRoomGateway
-from src.gateway.current_user_gateway import CurrentUserGateway
-from src.gateway.embeddings_gateway import EmbeddingsGateway
-from src.gateway.message_gateway import MessageGateway
-from src.gateway.openai_gateway import OpenAIGateway
-from src.gateway.user_profile_gateway import UserProfileGateway
-from src.gateway.virtual_user_gateway import VirtualUserGateway
+from domain.entity.chat import ChatRequest, ChatResponse
+from domain.entity.models import VirtualUserChats, VirtualUserProfiles
+from gateway.chat_room_gateway import ChatRoomGateway
+from gateway.current_user_gateway import CurrentUserGateway
+from gateway.embeddings_gateway import EmbeddingsGateway
+from gateway.message_gateway import MessageGateway
+from gateway.openai_gateway import OpenAIGateway
+from gateway.user_profile_gateway import UserProfileGateway
+from gateway.virtual_user_gateway import VirtualUserGateway
 
 
 class ChatUseCase:
