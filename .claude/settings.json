@@ -17,6 +17,11 @@
       "mcp__supabase",
       "mcp__shadcn",
       "Bash(tree:*)"
+    ],
+    "deny": [
+      "Bash(make migrate-dev:*)",
+      "Bash(make migrate-deploy:*)",
+      "Bash(make migration:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
@@ -25,7 +30,8 @@
     "magicuidesign",
     "shadcn",
     "playwright",
-    "supabase"
+    "supabase",
+    "chrome-devtools"
   ],
   "hooks": {
     "PostToolUse": [

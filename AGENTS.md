@@ -41,6 +41,88 @@ Before implementing Supabase Auth:
 
 ---
 
+## CRITICAL: Development Command Guidelines
+
+**MANDATORY**: Always use Makefile commands for development operations.
+
+### Command Usage Policy
+
+#### 1. Use Makefile Commands (REQUIRED)
+
+**ALWAYS use `make` commands** for:
+
+- **Linting**: `make lint`, `make lint-frontend`, `make lint-backend-py`, `make lint-functions`
+- **Formatting**: `make format`, `make format-frontend`, `make format-backend-py`
+- **Type Checking**: `make type-check`, `make type-check-frontend`, `make type-check-backend-py`
+- **Building**: `make build`, `make build-frontend`
+- **Testing**: `make test`, `make test-frontend`, `make test-backend-py`
+- **CI Checks**: `make ci-check`
+
+```bash
+# ✅ Good
+make lint-frontend
+make format
+make ci-check
+
+# ❌ Bad
+cd frontend && bun run biome check
+cd backend-py && uv run ruff check
+```
+
+#### 2. Database Migration Policy (CRITICAL)
+
+**❌ NEVER automatically execute database migrations.**
+
+**Rules**:
+
+1. **Schema Changes Only**: Edit schema files only
+2. **NO Automatic Migration**: Never run `make migrate-dev`, `make migrate-deploy`, `make migration`
+3. **User Confirmation Required**: Always prompt user to execute migrations manually
+
+```bash
+# ✅ Good Workflow
+# 1. Edit schema
+vi drizzle/schema/schema.ts
+
+# 2. Inform user
+"スキーマを更新しました。以下を実行してください：
+make migrate-dev"
+
+# 3. User executes manually
+make migrate-dev
+
+# ❌ Bad - DO NOT DO THIS
+make migrate-dev  # Automatic execution - PROHIBITED
+```
+
+**Why**:
+
+- Migrations are **irreversible**
+- Affects **production data**
+- User must review migration SQL
+- Prevents data loss
+
+#### 3. Type Generation
+
+**Allowed** (read-only):
+
+```bash
+make build-model-frontend
+make build-model-functions
+```
+
+**Prohibited** (includes migration):
+
+```bash
+make migrate-dev  # Requires user approval
+```
+
+### Enforcement
+
+This policy is **NON-NEGOTIABLE**. Always ask user approval for database operations.
+
+---
+
 ## Domain-Specific Documentation
 
 For detailed information about each domain, refer to the following documentation:
