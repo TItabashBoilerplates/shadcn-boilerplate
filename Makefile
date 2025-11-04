@@ -23,6 +23,18 @@ init:
 	else \
 		echo "ℹ️  .env file already exists, skipping creation"; \
 	fi
+	# env/backend/local.envのshadcn-boilerplateをプロジェクト名に置き換え
+	@if [ -f "env/backend/${ENV}.env" ]; then \
+		PROJECT_NAME=$$(basename $$(pwd)); \
+		if grep -q "shadcn-boilerplate" "env/backend/${ENV}.env"; then \
+			echo "Updating env/backend/${ENV}.env with PROJECT_NAME=$$PROJECT_NAME..."; \
+			sed -i.bak "s/shadcn-boilerplate/$$PROJECT_NAME/g" "env/backend/${ENV}.env"; \
+			rm -f "env/backend/${ENV}.env.bak"; \
+			echo "✅ Updated env/backend/${ENV}.env"; \
+		else \
+			echo "ℹ️  env/backend/${ENV}.env already updated or no shadcn-boilerplate found"; \
+		fi \
+	fi
 	# Supabaseにログイン
 	npx dotenvx run -f env/backend/${ENV}.env -- supabase login
 	# Supabaseを初期化
