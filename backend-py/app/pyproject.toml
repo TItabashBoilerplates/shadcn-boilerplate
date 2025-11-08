@@ -159,6 +159,7 @@ dev = [
     "pytest",
     "pytest-cov",
     "pytest-asyncio",
+    "pytest-mock",
     "httpx",  # For testing FastAPI
 
     # 画像生成AI
