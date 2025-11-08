@@ -14,7 +14,8 @@
       "!!**/.turbo",
       "!!**/dist",
       "!!**/build",
-      "!!**/.cache"
+      "!!**/.cache",
+      "!!**/packages/types/schema.ts"
     ]
   },
   "formatter": {
