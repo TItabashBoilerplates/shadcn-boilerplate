@@ -65,6 +65,7 @@ run:
 	# Supabaseを起動（ENV=localの場合のみ）
 	if [ "${ENV}" = "local" ]; then \
 		npx dotenvx run -f env/backend/${ENV}.env -- supabase start; \
+		npx dotenvx run -f env/backend/${ENV}.env -- supabase seed buckets --local; \
 	fi
 	# Docker Composeでサービスを起動
 	if [ "${ENV}" != "local" ]; then \
