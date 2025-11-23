@@ -1,0 +1,266 @@
+# Supabase Configuration Management
+
+**IMPORTANT**: Supabase service configurations and database schema management are handled separately.
+
+## Configuration Responsibilities
+
+### 1. Supabase Service Configuration (`supabase/config.toml`)
+
+**Use for**: Infrastructure and service-level configurations
+
+- **Authentication**: OAuth providers, JWT settings, email/SMS, MFA
+  - `[auth]`, `[auth.email]`, `[auth.sms]`, `[auth.mfa]`
+  - `[auth.external.apple]`, `[auth.external.google]`, etc.
+- **Storage**: File size limits, buckets, image transformation
+  - `[storage]`, `[storage.buckets.*]`
+- **API**: Port, schemas exposed via API, max rows, TLS settings
+  - `[api]`
+- **Realtime Service**: Enable/disable service, port settings
+  - `[realtime]` - Service configuration only
+  - **Note**: Actual Realtime publications (which tables support realtime) are managed in Drizzle
+- **Studio**: Supabase Studio settings
+  - `[studio]`
+- **Edge Runtime**: Deno version, policies
+  - `[edge_runtime]`
+- **Analytics**: Backend configuration
+  - `[analytics]`
+
+**Configuration Example**:
+```toml
+# Enable OAuth provider
+[auth.external.google]
+enabled = true
+client_id = "your-client-id"
+secret = "env(GOOGLE_OAUTH_SECRET)"
+redirect_uri = "http://127.0.0.1:3000/auth/callback"
+
+# Configure storage limits
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+# Add storage bucket
+[storage.buckets.avatars]
+public = true
+file_size_limit = "5MiB"
+allowed_mime_types = ["image/png", "image/jpeg"]
+```
+
+**When to Edit**: When you need to:
+- Add OAuth providers (Google, GitHub, etc.)
+- Change JWT expiry time
+- Configure email/SMS providers
+- Adjust storage limits or add buckets
+- Modify API settings (ports, schemas exposed)
+- Enable/disable Supabase services
+
+### 2. Database Schema Management (`drizzle/`)
+
+**Use for**: Database structure and data access rules
+
+- **Tables**: Schema definitions with TypeScript
+- **RLS Policies**: Row-level security policies
+- **Realtime Publications**: Enable realtime updates for specific tables
+- **Functions**: PostgreSQL functions and triggers
+- **Extensions**: pgvector, custom extensions
+- **Enums**: Database enum types
+- **Check Constraints**: Data validation rules
+
+**When to Edit**: When you need to:
+- Add/modify database tables
+- Change RLS policies
+- Enable/configure realtime updates for tables
+- Add database functions or triggers
+- Modify table relationships
+
+**→ See [Drizzle Schema Management](#drizzle-schema-management) below for details**
+
+---
+
+## Drizzle Schema Management
+
+**IMPORTANT**: This project uses **Drizzle ORM** for database schema management (migrated from Atlas/Prisma).
+
+### Schema Structure
+
+Schemas are defined in TypeScript in the `drizzle/` directory:
+
+```
+drizzle/
+├── drizzle.config.ts         # Drizzle Kit configuration file
+├── migrate.ts                # Custom SQL execution script (programmatic execution)
+├── schema/
+│   ├── schema.ts             # Main schema (tables, RLS, check constraints centrally managed)
+│   ├── types.ts              # Enum definitions
+│   └── index.ts              # Public API (schema exports)
+├── config/
+│   └── functions.sql         # Custom SQL (functions, triggers, extensions)
+└── (migrations stored in supabase/migrations/)
+```
+
+**Important**: The `drizzle/` directory is managed as an independent package with its own `package.json` and dependencies. The project root is kept clean.
+
+**Monorepo Structure**:
+
+```
+/
+├── package.json              # Workspace definition (includes drizzle, frontend)
+├── drizzle/
+│   ├── package.json          # Drizzle-specific dependencies and scripts
+│   ├── node_modules/         # Drizzle-specific dependencies
+│   ├── drizzle.config.ts
+│   └── ...
+└── frontend/
+    ├── package.json          # Frontend-specific dependencies and scripts
+    └── ...
+```
+
+**Important**: Drizzle Kit uses only one database:
+
+- **url database** (localhost:54322): Supabase Local DB
+  - Auto-generates migration SQL from schema definitions
+  - Applies generated migrations
+  - Development data is stored here
+
+### Schema Change Workflow
+
+**Local Development**:
+
+```bash
+# 1. Edit schema
+vi drizzle/schema/schema.ts
+
+# 2. Generate + apply migration + type generation
+make migrate-dev
+# or short form
+make migration
+
+# 3. Review generated migration file
+cat supabase/migrations/0000_*.sql
+
+# Execute directly in drizzle/ directory
+cd drizzle
+bun run generate  # Generate migration
+bun run migrate   # Apply migration
+bun run check     # Validate schema
+bun run studio    # Launch Drizzle Studio
+
+# 4. Commit to Git
+git add supabase/migrations/
+git commit -m "Add new feature schema"
+git push
+```
+
+**Remote Environment (CI/CD or Manual)**:
+
+```bash
+# 1. Fetch migration files
+git pull
+
+# 2. Apply migration
+ENV=staging make migrate-deploy
+# or production environment
+ENV=production make migrate-deploy
+```
+
+### RLS (Row Level Security) Declarative Management
+
+**Important**: RLS is fully managed with Drizzle ORM's `pgPolicy` function and placed in **the same file** as table definitions (`schema.ts`).
+
+**Managing Table Definitions and RLS Policies Together**:
+
+```typescript
+import { pgTable, uuid, text, pgPolicy } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+
+// Table definition
+export const generalUsers = pgTable("general_users", {
+  id: uuid("id").primaryKey(),
+  accountName: text("account_name").notNull().unique(),
+  // ... other columns ...
+}).enableRLS(); // Enable RLS
+
+// Define RLS policies for this table immediately after
+export const selectOwnUser = pgPolicy("select_own_user", {
+  for: "select",
+  to: ["anon", "authenticated"],
+  using: sql`true`,
+}).link(generalUsers);
+
+export const editPolicyGeneralUsers = pgPolicy("edit_policy_general_users", {
+  for: "all",
+  to: "authenticated",
+  using: sql`(SELECT auth.uid()) = id`,
+  withCheck: sql`(SELECT auth.uid()) = id`,
+}).link(generalUsers);
+```
+
+**Policy Parameters**:
+
+- **for**: Operation type (`'select'`, `'insert'`, `'update'`, `'delete'`, `'all'`)
+- **to**: Target role(s) (array or string)
+- **using**: Condition for viewable/editable rows (`sql` tagged template)
+- **withCheck**: Validation condition for inserts/updates (`sql` tagged template)
+
+**Benefits**:
+
+- TypeScript type safety
+- Table and its RLS policies visible in the same file
+- Lower cognitive load (no need to navigate between files)
+- Edit tables and policies together when making changes
+
+### Migration Management
+
+- Drizzle Kit automatically generates migration SQL
+- Migration history stored in `supabase/migrations/`
+- Rollback by manually deleting migration files and re-applying
+
+**Custom SQL (Functions, Triggers, Extensions) Management**:
+
+Custom SQL (pgvector extension, auth hooks, triggers, etc.) is managed in `drizzle/config/functions.sql` and executed **programmatically**:
+
+```typescript
+// drizzle/migrate.ts - Custom SQL execution script
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import { sql } from "drizzle-orm";
+
+const client = postgres(process.env.DATABASE_URL);
+const db = drizzle(client);
+
+// Read and execute functions.sql
+const customSql = readFileSync("drizzle/config/functions.sql", "utf-8");
+await db.execute(sql.raw(customSql));
+```
+
+**Execution Timing**:
+
+- `make migrate-dev`: Auto-executed after migration apply
+- `make migrate-deploy`: Auto-executed after migration apply (all environments)
+
+**Benefits**:
+
+- No dependency on CLI tools (`psql`)
+- Type-safe execution with TypeScript
+- Unified error handling
+- Simple environment variable management
+
+### Realtime Publications Management
+
+Supabase Realtime publications (which tables support realtime updates) are managed in `drizzle/config/functions.sql`:
+
+```sql
+-- Enable realtime for specific tables
+ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_rooms;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.user_chats;
+
+-- Remove table from realtime (if needed)
+-- ALTER PUBLICATION supabase_realtime DROP TABLE public.table_name;
+```
+
+**Note**: The `[realtime]` section in `supabase/config.toml` is only for enabling the Realtime service and port settings. Which tables support realtime updates is managed in Drizzle.
+
+For more details, refer to the official Drizzle documentation.
+
+**→ For detailed Drizzle ORM documentation, see [`drizzle/README.md`](../../drizzle/README.md)**
