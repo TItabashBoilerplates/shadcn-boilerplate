@@ -160,7 +160,7 @@ dev = [
     "pytest-cov",
     "pytest-asyncio",
     "pytest-mock",
-    "httpx",  # For testing FastAPI
+    "testcontainers[postgres]",
 
     # 画像生成AI
     "diffusers",
@@ -171,6 +171,8 @@ dev = [
     "compel",
     "torchao",
     "huggingface-hub",
+
+    "httpx",
 ]
 
 [tool.pytest.ini_options]

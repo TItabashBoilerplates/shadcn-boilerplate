@@ -57,13 +57,21 @@ This directory contains guidelines for Claude Code when working in this reposito
    - Component usage
    - Accessibility compliance
 
+### Testing and Quality Assurance
+
+10. **[Testing Guidelines](./testing.md)** ⚠️ **MUST READ**
+    - Test-Driven Development (TDD) requirement
+    - supabase-test for frontend API testing
+    - RLS policy testing requirements
+    - CI/CD integration
+
 ### Environment Configuration
 
-10. **[Environment Configuration](./environment.md)**
+11. **[Environment Configuration](./environment.md)**
     - Environment variable management
     - dotenvx usage
 
-11. **[Special Notes](./special-notes.md)**
+12. **[Special Notes](./special-notes.md)**
     - Type generation
     - AI/ML features
     - Authentication
@@ -85,4 +93,6 @@ For detailed information, refer to the following documentation:
 1. **Pre-implementation research is mandatory** - No implementation based on assumptions
 2. **Use Makefile commands** - Do not execute tools directly
 3. **Database migrations require manual approval** - No automatic execution
-4. **Use TailwindCSS CSS variables** - No hardcoded colors
+4. **Test-Driven Development (TDD) is mandatory** - Write tests before implementation
+5. **Use supabase-test for Supabase API testing** - Test all RLS policies
+6. **Use TailwindCSS CSS variables** - No hardcoded colors

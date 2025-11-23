@@ -227,6 +227,371 @@ This is a full-stack application boilerplate with a multi-platform frontend and 
 
 **→ For detailed frontend documentation, see [`frontend/README.md`](frontend/README.md)**
 
+### Frontend Testing with supabase-test
+
+**CRITICAL**: All frontend API segments that interact with Supabase MUST be tested using `supabase-test`.
+
+#### Important: About This Testing Approach
+
+**This guide uses a community-recommended practical approach**, not the official supabase-test method.
+
+**Two Approaches**:
+
+1. **Official supabase-test Approach**: Use `db.query()` to execute raw SQL
+   - Example: [launchql/supabase-test-suite](https://github.com/launchql/supabase-test-suite)
+   - Tests database schema and RLS policies directly with SQL
+   - Does NOT use `@supabase/supabase-js` client
+
+2. **Practical Approach (This Guide)**: Use `@supabase/supabase-js` client + `supabase-test`
+   - Recommended by: [index.garden/supabase-vitest](https://index.garden/supabase-vitest/), [Supabase Testing Docs](https://supabase.com/docs/guides/local-development/testing/overview)
+   - Tests actual frontend code (Supabase client library)
+   - Requires `jsdom` environment for localStorage support
+   - **More practical for real-world frontend development**
+
+**Why Practical Approach?**: Your actual FSD api segment code uses `@supabase/supabase-js`, so tests should too.
+
+#### What is supabase-test?
+
+`supabase-test` is a TypeScript-first testing library specialized for testing Supabase databases and Row-Level Security (RLS) policies:
+
+- **Isolated Test Environments**: Each test runs in an isolated transaction with automatic rollback
+- **Role Simulation**: Easily simulate PostgreSQL roles (`authenticated`, `anon`)
+- **JWT Context**: Set JWT claims to test RLS policies
+- **Zero Config**: Works out of the box with LaunchQL projects
+- **CI/CD Ready**: Seamless integration with GitHub Actions
+
+**Package**: [supabase-test](https://www.npmjs.com/package/supabase-test)
+
+#### Setup Requirements
+
+**1. Installation**:
+
+```bash
+cd frontend
+bun add -d supabase-test
+```
+
+**2. Vitest Configuration** (`frontend/vitest.config.ts`):
+
+**CRITICAL**: Must use `jsdom` environment for Supabase client compatibility.
+
+```typescript
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    globals: true,
+    environment: 'jsdom',  // Required for @supabase/supabase-js localStorage support
+    setupFiles: ['./tests/setup.ts'],
+    testTimeout: 10000,
+  },
+});
+```
+
+**Why `jsdom` is Required**:
+
+- **Vitest Default**: Runs tests in Node.js environment (no browser APIs like `localStorage`)
+- **Supabase Client Behavior**: `@supabase/supabase-js` stores auth tokens in `localStorage`
+- **jsdom Solution**: Simulates browser environment in Node.js, providing `localStorage` API
+
+**Without jsdom**: `ReferenceError: localStorage is not defined`
+
+**Note**: The official supabase-test approach (using `db.query()`) does NOT require jsdom.
+
+**3. Test Setup File** (`frontend/tests/setup.ts`):
+
+```typescript
+import { beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { getConnections } from 'supabase-test';
+
+let db;
+let teardown;
+
+beforeAll(async () => {
+  ({ db, teardown } = await getConnections());
+});
+
+afterAll(() => teardown());
+beforeEach(() => db.beforeEach());
+afterEach(() => db.afterEach());
+
+export { db };
+```
+
+**4. Start Supabase Local Stack**:
+
+```bash
+npx supabase start
+```
+
+#### Testing Pattern for FSD API Segment
+
+**Directory Structure**:
+
+```
+src/
+├── entities/
+│   └── user/
+│       ├── api/
+│       │   ├── userApi.ts          # Supabase API implementation
+│       │   └── userApi.test.ts     # supabase-test tests
+│       ├── model/
+│       └── ui/
+└── features/
+    └── authentication/
+        ├── api/
+        │   ├── authApi.ts
+        │   └── authApi.test.ts
+        ├── model/
+        └── ui/
+```
+
+#### TDD Workflow with supabase-test
+
+**Test-Driven Development (TDD) Cycle**:
+
+1. **Red**: Write a failing test first
+2. **Green**: Write minimal code to make the test pass
+3. **Refactor**: Improve code while keeping tests green
+
+**Example: Step 1 - Red (Failing Test)**:
+
+```typescript
+import { describe, it, expect, beforeEach } from 'vitest';
+import { db } from '@/tests/setup';
+import { getUserProfile } from './userApi';
+import crypto from 'crypto';
+
+describe('User API - RLS Policy Tests', () => {
+  const userId = crypto.randomUUID();
+
+  beforeEach(async () => {
+    await db.query(`
+      INSERT INTO general_users (id, account_name, display_name)
+      VALUES ($1, 'testuser', 'Test User')
+    `, [userId]);
+  });
+
+  it('authenticated user can fetch own profile', async () => {
+    db.setContext({
+      role: 'authenticated',
+      'jwt.claims.sub': userId
+    });
+
+    const profile = await getUserProfile(userId);
+
+    expect(profile).toBeDefined();
+    expect(profile.user_id).toBe(userId);
+  });
+});
+```
+
+Run test to confirm it fails:
+
+```bash
+cd frontend
+bun test
+# → getUserProfile is not defined ✗
+```
+
+**Example: Step 2 - Green (Minimal Implementation)**:
+
+```typescript
+// src/entities/user/api/userApi.ts
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+export async function getUserProfile(userId: string) {
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+```
+
+Run test to confirm it passes:
+
+```bash
+bun test
+# → ✓ authenticated user can fetch own profile
+```
+
+**Example: Step 3 - Refactor (Improve Code)**:
+
+```typescript
+export async function getUserProfile(userId: string) {
+  // Add input validation
+  if (!userId) throw new Error('User ID is required');
+
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+
+  if (error) {
+    // Better error handling
+    if (error.code === 'PGRST116') {
+      throw new Error('User profile not found');
+    }
+    throw error;
+  }
+
+  return data;
+}
+```
+
+Run test again to ensure refactoring didn't break anything:
+
+```bash
+bun test
+# → ✓ authenticated user can fetch own profile
+```
+
+#### RLS Policy Testing Requirements
+
+**MANDATORY**: When testing RLS policies, you MUST verify:
+
+1. **All Operations**: SELECT, INSERT, UPDATE, DELETE
+2. **All Roles**: `anon`, `authenticated`
+3. **Positive Cases**: Operations that should succeed
+4. **Negative Cases**: Operations that should be denied
+
+**Example: Comprehensive RLS Test**:
+
+```typescript
+describe('User API - RLS Policy Tests', () => {
+  const userId1 = crypto.randomUUID();
+  const userId2 = crypto.randomUUID();
+
+  beforeEach(async () => {
+    await db.query(`
+      INSERT INTO general_users (id, account_name, display_name)
+      VALUES ($1, 'user1', 'User One'), ($2, 'user2', 'User Two')
+    `, [userId1, userId2]);
+
+    await db.query(`
+      INSERT INTO user_profiles (user_id, bio, avatar_url)
+      VALUES ($1, 'Bio 1', 'https://example.com/1.jpg'),
+             ($2, 'Bio 2', 'https://example.com/2.jpg')
+    `, [userId1, userId2]);
+  });
+
+  describe('SELECT policy', () => {
+    it('authenticated user can fetch own profile', async () => {
+      db.setContext({ role: 'authenticated', 'jwt.claims.sub': userId1 });
+      const profile = await getUserProfile(userId1);
+      expect(profile.user_id).toBe(userId1);
+    });
+
+    it('authenticated user can fetch other user profile (public info)', async () => {
+      db.setContext({ role: 'authenticated', 'jwt.claims.sub': userId1 });
+      const profile = await getUserProfile(userId2);
+      expect(profile.user_id).toBe(userId2);
+    });
+
+    it('anonymous user cannot fetch profile', async () => {
+      db.setContext({ role: 'anon' });
+      await expect(getUserProfile(userId1)).rejects.toThrow();
+    });
+  });
+
+  describe('UPDATE policy', () => {
+    it('authenticated user can update own profile', async () => {
+      db.setContext({ role: 'authenticated', 'jwt.claims.sub': userId1 });
+      const updated = await updateUserProfile(userId1, { bio: 'Updated bio' });
+      expect(updated.bio).toBe('Updated bio');
+    });
+
+    it('authenticated user cannot update other user profile', async () => {
+      db.setContext({ role: 'authenticated', 'jwt.claims.sub': userId1 });
+      await expect(
+        updateUserProfile(userId2, { bio: 'Hacked!' })
+      ).rejects.toThrow(/row-level security policy/);
+    });
+  });
+});
+```
+
+#### Test Execution Commands
+
+```bash
+# Run all tests
+cd frontend
+bun test
+
+# Run tests in watch mode
+bun test:watch
+
+# Run specific test file
+bun test src/entities/user/api/userApi.test.ts
+
+# Run tests with coverage
+bun test --coverage
+```
+
+#### Best Practices
+
+1. **Test Isolation**: Use unique IDs (`crypto.randomUUID()`) for each test
+2. **RLS Error Validation**: Verify RLS policy violations throw correct errors
+3. **Multiple Clients**: Separate admin (service role) and user clients
+4. **Fixture Data**: Use admin client to bypass RLS when setting up test data
+
+**Example: Admin Client for Fixture Setup**:
+
+```typescript
+import { createClient } from '@supabase/supabase-js';
+
+// Admin client (bypasses RLS)
+const adminClient = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { persistSession: false } }  // IMPORTANT: Disable session persistence
+);
+
+beforeEach(async () => {
+  // Use admin client to set up fixtures (bypasses RLS)
+  await adminClient.from('users').insert([
+    { id: userId1, name: 'Alice' },
+    { id: userId2, name: 'Bob' }
+  ]);
+});
+```
+
+#### Troubleshooting
+
+**Session Persistence Issue**:
+
+```typescript
+// Problem: Test user loses session after sign-in
+// Solution: Use jsdom environment in vitest.config.ts
+export default defineConfig({
+  test: {
+    environment: 'jsdom',  // Browser-like environment
+  },
+});
+```
+
+**Service Role Client Session Conflict**:
+
+```typescript
+// Problem: Service role client picks up regular user session
+// Solution: Disable session persistence
+const adminClient = createClient(url, serviceKey, {
+  auth: { persistSession: false }  // Disable storage-based session loading
+});
+```
+
+**→ For detailed testing guidelines, see [`.agent/rules/testing.md`](.agent/rules/testing.md)**
+
 ### Backend Architecture
 
 - **Python Backend**: FastAPI application in `backend-py/` using clean architecture patterns

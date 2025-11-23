@@ -179,8 +179,10 @@ make ci-check       # CI用の全チェック
 3. 実装する
 4. すべてのテストが通るまで繰り返す
 
-- **Frontend**: Vitest + @testing-library/react
+- **Frontend**: Vitest + @testing-library/react + **supabase-test** (for Supabase API testing)
 - **Backend**: pytest + pytest-asyncio
+
+**→ For detailed testing guidelines, see [`.agent/rules/testing.md`](.agent/rules/testing.md)**
 
 ## Frontend Development (Next.js 16)
 
@@ -286,6 +288,134 @@ bun run ui:add button card input
   <h2 className="text-black">Title</h2>
 </Card>
 ```
+
+### Test-Driven Development (TDD) for Frontend
+
+**CRITICAL**: All frontend API segments that interact with Supabase MUST use `supabase-test` for testing.
+
+**Note**: This guide uses a **practical approach** (testing `@supabase/supabase-js` client) rather than the official supabase-test approach (direct SQL). This is more practical for real-world frontend development.
+
+**Two Approaches**:
+- **Official**: `db.query()` with raw SQL ([example](https://github.com/launchql/supabase-test-suite))
+- **Practical (This Guide)**: `@supabase/supabase-js` client + Vitest + jsdom
+
+#### TDD Workflow
+
+1. **Red**: Write a failing test first
+2. **Green**: Write minimal code to make the test pass
+3. **Refactor**: Improve code while keeping tests green
+
+#### Setup supabase-test
+
+```bash
+cd frontend
+bun add -d supabase-test
+```
+
+**Vitest Configuration** (`frontend/vitest.config.ts`):
+
+```typescript
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    globals: true,
+    environment: 'jsdom',  // Required for @supabase/supabase-js localStorage support
+    setupFiles: ['./tests/setup.ts'],
+    testTimeout: 10000,
+  },
+});
+```
+
+**Why jsdom**: Supabase client uses `localStorage` for auth, which requires browser environment simulation.
+
+**Test Setup** (`frontend/tests/setup.ts`):
+
+```typescript
+import { beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { getConnections } from 'supabase-test';
+
+let db;
+let teardown;
+
+beforeAll(async () => {
+  ({ db, teardown } = await getConnections());
+});
+
+afterAll(() => teardown());
+beforeEach(() => db.beforeEach());
+afterEach(() => db.afterEach());
+
+export { db };
+```
+
+#### Testing Pattern
+
+**Directory Structure**:
+
+```
+src/entities/user/
+├── api/
+│   ├── userApi.ts          # Supabase API calls
+│   └── userApi.test.ts     # supabase-test tests
+├── model/
+└── ui/
+```
+
+**Test Example** (`userApi.test.ts`):
+
+```typescript
+import { describe, it, expect, beforeEach } from 'vitest';
+import { db } from '@/tests/setup';
+import { getUserProfile } from './userApi';
+import crypto from 'crypto';
+
+describe('User API - RLS Tests', () => {
+  const userId = crypto.randomUUID();
+
+  beforeEach(async () => {
+    await db.query(`
+      INSERT INTO general_users (id, account_name, display_name)
+      VALUES ($1, 'testuser', 'Test User')
+    `, [userId]);
+  });
+
+  it('authenticated user can fetch own profile', async () => {
+    db.setContext({
+      role: 'authenticated',
+      'jwt.claims.sub': userId
+    });
+
+    const profile = await getUserProfile(userId);
+    expect(profile.user_id).toBe(userId);
+  });
+
+  it('anonymous user cannot fetch profile', async () => {
+    db.setContext({ role: 'anon' });
+    await expect(getUserProfile(userId)).rejects.toThrow();
+  });
+});
+```
+
+#### RLS Policy Testing Requirements
+
+**MANDATORY**: Test all CRUD operations and roles:
+
+- ✅ SELECT, INSERT, UPDATE, DELETE operations
+- ✅ `anon` and `authenticated` roles
+- ✅ Positive cases (should succeed)
+- ✅ Negative cases (should be denied)
+
+**Test Commands**:
+
+```bash
+cd frontend
+bun test                    # Run all tests
+bun test:watch              # Watch mode
+bun test --coverage         # With coverage
+```
+
+**→ For detailed testing guidelines, see [`.agent/rules/testing.md`](.agent/rules/testing.md)**
 
 **→ For detailed frontend documentation, see [`frontend/README.md`](frontend/README.md)**
 

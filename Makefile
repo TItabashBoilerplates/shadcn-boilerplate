@@ -304,6 +304,14 @@ build-model-frontend:
 		supabase gen types typescript --local > "./frontend/packages/types/schema.ts"; \
 	fi
 
+.PHONY: build-model-backend
+build-model-backend:
+	# ENV=localの場合のみ実行
+	if [ "${ENV}" = "local" ]; then \
+		npx dotenvx run -f env/backend/${ENV}.env -- supabase start; \
+		docker-compose -f ./docker-compose.backend.yaml restart; \
+	fi
+
 # Edge functionsのモデルをビルド
 .PHONY: build-model-functions
 build-model-functions:
@@ -323,6 +331,8 @@ build-model:
 	make build-model-frontend
 	# Edge functionsのモデルをビルド
 	make build-model-functions
+	# バックエンドのモデルをビルド
+	make build-model-backend
 
 # ===== Drizzle マイグレーションコマンド =====
 
