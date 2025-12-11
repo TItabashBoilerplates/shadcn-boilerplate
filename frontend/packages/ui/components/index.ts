@@ -2,6 +2,7 @@
 
 // Utils
 export { cn } from '../lib/utils'
+export { Badge, badgeVariants } from './badge'
 export { Button, buttonVariants } from './button'
 export {
   Card,
@@ -26,3 +27,9 @@ export {
 } from './dialog'
 export { Input } from './input'
 export { Label } from './label'
+export {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './tooltip'
