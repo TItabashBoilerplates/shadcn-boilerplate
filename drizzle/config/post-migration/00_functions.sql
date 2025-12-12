@@ -1,5 +1,9 @@
--- pgvector拡張を有効化
-CREATE EXTENSION IF NOT EXISTS vector;
+-- =============================================
+-- Post-Migration SQL: Functions & Triggers
+-- =============================================
+-- このファイルはマイグレーション適用後に実行されます。
+-- テーブルに依存する関数・トリガーを定義します。
+-- =============================================
 
 -- CUID風のユニークIDを生成する関数
 CREATE OR REPLACE FUNCTION generate_cuid()

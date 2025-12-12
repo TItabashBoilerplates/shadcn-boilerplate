@@ -389,15 +389,18 @@ migrate-dev:
 	@echo ""
 	# Supabaseを起動
 	npx dotenvx run -f env/backend/local.env -- supabase start
+	# Pre-migration SQL適用（extensions等）
+	@echo "🔧 Applying pre-migration SQL (extensions)..."
+	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run migrate:pre
 	# マイグレーションを生成
 	@echo "📝 Generating migration..."
 	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run generate
 	# マイグレーションを適用
 	@echo "✅ Applying migration to local database..."
 	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run migrate
-	# カスタムSQL（関数・トリガー・拡張）をプログラマティックに適用
-	@echo "🔧 Applying custom SQL (functions, triggers, extensions)..."
-	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run migrate:custom
+	# Post-migration SQL適用（functions/triggers等）
+	@echo "🔧 Applying post-migration SQL (functions, triggers)..."
+	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run migrate:post
 	# モデル生成
 	@echo "🔧 Generating database types..."
 	make build-model
@@ -414,6 +417,13 @@ migrate-deploy:
 	if [ "${ENV}" = "local" ] || [ -z "${ENV}" ]; then \
 		npx dotenvx run -f env/backend/local.env -- supabase start; \
 	fi
+	# Pre-migration SQL適用（extensions等）
+	@echo "🔧 Applying pre-migration SQL (extensions)..."
+	@if [ -z "${ENV}" ] || [ "${ENV}" = "local" ]; then \
+		cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run migrate:pre; \
+	else \
+		cd drizzle && npx dotenvx run -f ../env/migration/${ENV}.env -- bun run migrate:pre; \
+	fi
 	# マイグレーションを適用
 	@if [ -z "${ENV}" ] || [ "${ENV}" = "local" ]; then \
 		echo "📍 Deploying to: local"; \
@@ -422,12 +432,12 @@ migrate-deploy:
 		echo "📍 Deploying to: ${ENV}"; \
 		cd drizzle && npx dotenvx run -f ../env/migration/${ENV}.env -- bun run migrate; \
 	fi
-	# カスタムSQL（関数・トリガー・拡張）を確実に適用
-	@echo "🔧 Applying custom SQL (functions, triggers, extensions)..."
+	# Post-migration SQL適用（functions/triggers等）
+	@echo "🔧 Applying post-migration SQL (functions, triggers)..."
 	@if [ -z "${ENV}" ] || [ "${ENV}" = "local" ]; then \
-		cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run migrate:custom; \
+		cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run migrate:post; \
 	else \
-		cd drizzle && npx dotenvx run -f ../env/migration/${ENV}.env -- bun run migrate:custom; \
+		cd drizzle && npx dotenvx run -f ../env/migration/${ENV}.env -- bun run migrate:post; \
 	fi
 	# モデル生成（ローカルのみ）
 	@if [ -z "${ENV}" ] || [ "${ENV}" = "local" ]; then \

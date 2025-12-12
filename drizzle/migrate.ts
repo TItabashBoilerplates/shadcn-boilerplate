@@ -1,28 +1,52 @@
 #!/usr/bin/env bun
 
 /**
- * Drizzle Migration Script
+ * Drizzle Custom SQL Migration Script
  *
- * このスクリプトは、Drizzleマイグレーション実行後に
- * カスタムSQL（pgvector拡張、関数、トリガーなど）を適用します。
- *
- * config/ ディレクトリ内の全ての .sql ファイルを自動的に検出し、
- * アルファベット順で順次実行します。
- * エラーが発生した場合でも処理を続行し、最後にサマリーを表示します。
+ * このスクリプトは、カスタムSQL（拡張機能、関数、トリガーなど）を適用します。
  *
  * 使用方法:
- *   bun run drizzle/migrate.ts
+ *   bun run migrate.ts <phase>
+ *
+ * フェーズ:
+ *   pre-migration  - config/pre-migration/ 内のSQLを実行（extensions等）
+ *   post-migration - config/post-migration/ 内のSQLを実行（functions/triggers等）
+ *
+ * 例:
+ *   bun run migrate.ts pre-migration   # マイグレーション前に実行
+ *   bun run migrate.ts post-migration  # マイグレーション後に実行
  *
  * 環境変数:
  *   DATABASE_URL - PostgreSQL接続文字列（必須）
  */
 
-import { readdirSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { sql } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 
-async function main() {
+const VALID_PHASES = ['pre-migration', 'post-migration'] as const
+type Phase = (typeof VALID_PHASES)[number]
+
+function showUsage(): void {
+  console.log('')
+  console.log('Usage: bun run migrate.ts <phase>')
+  console.log('')
+  console.log('Phases:')
+  console.log('  pre-migration  - Execute config/pre-migration/*.sql (extensions, etc.)')
+  console.log('  post-migration - Execute config/post-migration/*.sql (functions, triggers, etc.)')
+  console.log('')
+  console.log('Examples:')
+  console.log('  bun run migrate.ts pre-migration')
+  console.log('  bun run migrate.ts post-migration')
+  console.log('')
+}
+
+function isValidPhase(phase: string): phase is Phase {
+  return VALID_PHASES.includes(phase as Phase)
+}
+
+async function executeSqlFiles(configDir: string, phase: Phase): Promise<void> {
   const databaseUrl = Bun.env.DATABASE_URL
 
   if (!databaseUrl) {
@@ -30,24 +54,32 @@ async function main() {
     process.exit(1)
   }
 
-  console.log('🔌 Connecting to database...')
+  const targetDir = `${configDir}/${phase}`
 
-  // PostgreSQL接続（マイグレーション実行後は接続を閉じるため max: 1）
+  // ディレクトリが存在するか確認
+  if (!existsSync(targetDir)) {
+    console.log(`⚠️  Directory not found: ${targetDir}`)
+    console.log('Skipping SQL execution.')
+    return
+  }
+
+  console.log(`🔌 Connecting to database...`)
+
+  // PostgreSQL接続（実行後は接続を閉じるため max: 1）
   const client = postgres(databaseUrl, { max: 1 })
   const db = drizzle(client)
 
   try {
-    console.log('📖 Reading SQL files from config/ directory...')
+    console.log(`📖 Reading SQL files from ${phase}/...`)
 
-    // config/ ディレクトリ内の全 .sql ファイルを取得
-    const configDir = `${import.meta.dir}/config`
-    const sqlFiles = readdirSync(configDir)
+    // 対象ディレクトリ内の全 .sql ファイルを取得
+    const sqlFiles = readdirSync(targetDir)
       .filter((file) => file.endsWith('.sql'))
       .sort() // アルファベット順でソート（一貫性のため）
 
     if (sqlFiles.length === 0) {
-      console.log('⚠️  No SQL files found in config/ directory')
-      console.log('Skipping custom SQL execution.')
+      console.log(`⚠️  No SQL files found in ${phase}/`)
+      console.log('Skipping SQL execution.')
     } else {
       console.log(`Found ${sqlFiles.length} SQL file(s): ${sqlFiles.join(', ')}`)
       console.log('')
@@ -59,7 +91,7 @@ async function main() {
       for (const file of sqlFiles) {
         try {
           console.log(`🔧 Executing ${file}...`)
-          const sqlPath = `${configDir}/${file}`
+          const sqlPath = `${targetDir}/${file}`
           const sqlFile = Bun.file(sqlPath)
           const sqlContent = await sqlFile.text()
 
@@ -87,6 +119,7 @@ async function main() {
       const failed = results.filter((r) => !r.success)
 
       console.log('📊 Execution Summary:')
+      console.log(`  Phase: ${phase}`)
       console.log(`  Total files: ${results.length}`)
       console.log(`  Successful: ${successful.length}`)
       console.log(`  Failed: ${failed.length}`)
@@ -109,7 +142,7 @@ async function main() {
         console.log('⚠️  Some SQL files failed to execute. Please check the errors above.')
         // 失敗があっても exit(1) しない（警告のみ）
       }
-    } // else ブロックの終了
+    }
   } catch (error) {
     console.error('❌ Fatal error during SQL execution:')
     if (error instanceof Error) {
@@ -122,6 +155,33 @@ async function main() {
     // 接続を確実にクローズ
     await client.end()
   }
+}
+
+async function main() {
+  const args = process.argv.slice(2)
+  const phase = args[0]
+
+  // 引数チェック
+  if (!phase) {
+    console.error('❌ Error: Phase argument is required')
+    showUsage()
+    process.exit(1)
+  }
+
+  if (!isValidPhase(phase)) {
+    console.error(`❌ Error: Invalid phase "${phase}"`)
+    showUsage()
+    process.exit(1)
+  }
+
+  console.log(`🚀 Running ${phase} SQL scripts...`)
+  console.log('')
+
+  const configDir = `${import.meta.dir}/config`
+  await executeSqlFiles(configDir, phase)
+
+  console.log('')
+  console.log(`✨ ${phase} phase complete!`)
 }
 
 main()
