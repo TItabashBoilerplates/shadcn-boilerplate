@@ -8,7 +8,8 @@
     ".": "./index.ts",
     "./client": "./client.ts",
     "./server": "./server.ts",
-    "./middleware": "./middleware.ts"
+    "./middleware": "./middleware.ts",
+    "./native": "./native.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit"
@@ -24,5 +25,13 @@
   },
   "peerDependencies": {
     "next": "^16.0.0"
+  },
+  "peerDependenciesMeta": {
+    "next": {
+      "optional": true
+    },
+    "@react-native-async-storage/async-storage": {
+      "optional": true
+    }
   }
 }

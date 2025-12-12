@@ -81,6 +81,42 @@ run:
 frontend:
 	cd frontend && npx dotenvx run -f ../env/frontend/${ENV}.env -- bun run dev
 
+# ===== Mobile (Expo) コマンド =====
+
+# Mobile開発サーバー起動（全プラットフォーム選択可能）
+.PHONY: mobile
+mobile:
+	cd frontend/apps/mobile && npx dotenvx run -f ../../../env/frontend/${ENV}.env -- bunx expo start
+
+# Mobile開発サーバー起動（iOS）
+.PHONY: mobile-ios
+mobile-ios:
+	cd frontend/apps/mobile && npx dotenvx run -f ../../../env/frontend/${ENV}.env -- bunx expo start --ios
+
+# Mobile開発サーバー起動（Android）
+.PHONY: mobile-android
+mobile-android:
+	cd frontend/apps/mobile && npx dotenvx run -f ../../../env/frontend/${ENV}.env -- bunx expo start --android
+
+# Mobile開発サーバー起動（Web）
+.PHONY: mobile-web
+mobile-web:
+	cd frontend/apps/mobile && npx dotenvx run -f ../../../env/frontend/${ENV}.env -- bunx expo start --web
+
+# Mobile型チェック
+.PHONY: type-check-mobile
+type-check-mobile:
+	cd frontend/apps/mobile && npx tsc --noEmit
+
+# Mobileビルド（EASを使用）
+.PHONY: build-mobile-ios
+build-mobile-ios:
+	cd frontend/apps/mobile && npx dotenvx run -f ../../../env/frontend/${ENV}.env -- bunx eas build --platform ios
+
+.PHONY: build-mobile-android
+build-mobile-android:
+	cd frontend/apps/mobile && npx dotenvx run -f ../../../env/frontend/${ENV}.env -- bunx eas build --platform android
+
 # ローカル環境での停止コマンド
 .PHONY: stop
 stop:
@@ -246,6 +282,7 @@ format-check:
 type-check:
 	@echo "🔍 Type checking all projects..."
 	@make type-check-frontend
+	@make type-check-mobile
 	@make type-check-backend-py
 	@make check-functions
 
