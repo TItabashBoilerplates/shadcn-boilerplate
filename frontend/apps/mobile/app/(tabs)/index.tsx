@@ -5,6 +5,7 @@ import { HelloWave } from '@/components/hello-wave'
 import ParallaxScrollView from '@/components/parallax-scroll-view'
 import { ThemedText } from '@/components/themed-text'
 import { ThemedView } from '@/components/themed-view'
+import { Button, ButtonText } from '@/components/ui/button'
 
 export default function HomeScreen() {
   return (
@@ -21,6 +22,23 @@ export default function HomeScreen() {
       <View className="bg-blue-500 p-4 rounded-lg mb-4">
         <Text className="text-white font-bold text-lg">NativeWind v5 Works!</Text>
         <Text className="text-white/80">TailwindCSS v4 + Expo Canary</Text>
+      </View>
+
+      {/* gluestack-ui Button Demo */}
+      <View className="gap-3 mb-4">
+        <Text className="text-lg font-bold">gluestack-ui Buttons</Text>
+        <Button action="primary" onPress={() => console.log('Primary pressed')}>
+          <ButtonText>Primary Button</ButtonText>
+        </Button>
+        <Button action="secondary" onPress={() => console.log('Secondary pressed')}>
+          <ButtonText>Secondary Button</ButtonText>
+        </Button>
+        <Button variant="outline" onPress={() => console.log('Outline pressed')}>
+          <ButtonText>Outline Button</ButtonText>
+        </Button>
+        <Button size="lg" onPress={() => console.log('Large pressed')}>
+          <ButtonText>Large Button</ButtonText>
+        </Button>
       </View>
 
       <ThemedView style={styles.titleContainer}>
