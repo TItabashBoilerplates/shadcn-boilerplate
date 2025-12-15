@@ -34,6 +34,7 @@ check_and_install() {
 check_and_install "docker" "brew install docker"
 check_and_install "supabase" "brew install supabase-cli"
 check_and_install "asdf" "brew install asdf"
+check_and_install "ni" "npm install -g @antfu/ni"
 # エラーチェック
 if [ $ERROR -eq 1 ]; then
     echo "${RED}Error: One or more packages are not installed.${NO_COLOR}"

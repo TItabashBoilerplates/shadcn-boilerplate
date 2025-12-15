@@ -1,4 +1,5 @@
 import { AuthProvider } from '@workspace/auth'
+import { QueryProvider } from '@workspace/query'
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { notFound } from 'next/navigation'
@@ -48,9 +49,11 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
   return (
     <html lang={locale} suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <AuthProvider>
-          <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
+          </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   )

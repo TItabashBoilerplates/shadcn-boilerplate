@@ -46,7 +46,7 @@ init:
 		cp env/secrets.env.example env/secrets.env; \
 	fi
 	# フロントエンドとバックエンドの依存関係もインストール
-	cd frontend && bun install
+	cd frontend && ni
 	@echo ""
 	@echo "✅ Initial setup complete!"
 	@echo ""
@@ -79,43 +79,43 @@ run:
 # ローカル環境でのフロントエンド起動コマンド
 .PHONY: frontend
 frontend:
-	cd frontend && npx dotenvx run -f ../env/frontend/${ENV}.env -- bun run dev
+	cd frontend && npx dotenvx run -f ../env/frontend/${ENV}.env -- nr dev
 
 # ===== Mobile (Expo) コマンド =====
 
 # Mobile開発サーバー起動（全プラットフォーム選択可能）
 .PHONY: mobile
 mobile:
-	cd frontend/apps/mobile && npx dotenvx run -f ../../../env/frontend/${ENV}.env -- bunx expo start
+	cd frontend/apps/mobile && npx dotenvx run -f ../../../env/frontend/${ENV}.env -- nlx expo start
 
 # Mobile開発サーバー起動（iOS）
 .PHONY: mobile-ios
 mobile-ios:
-	cd frontend/apps/mobile && npx dotenvx run -f ../../../env/frontend/${ENV}.env -- bunx expo start --ios
+	cd frontend/apps/mobile && npx dotenvx run -f ../../../env/frontend/${ENV}.env -- nlx expo start --ios
 
 # Mobile開発サーバー起動（Android）
 .PHONY: mobile-android
 mobile-android:
-	cd frontend/apps/mobile && npx dotenvx run -f ../../../env/frontend/${ENV}.env -- bunx expo start --android
+	cd frontend/apps/mobile && npx dotenvx run -f ../../../env/frontend/${ENV}.env -- nlx expo start --android
 
 # Mobile開発サーバー起動（Web）
 .PHONY: mobile-web
 mobile-web:
-	cd frontend/apps/mobile && npx dotenvx run -f ../../../env/frontend/${ENV}.env -- bunx expo start --web
+	cd frontend/apps/mobile && npx dotenvx run -f ../../../env/frontend/${ENV}.env -- nlx expo start --web
 
 # Mobile型チェック
 .PHONY: type-check-mobile
 type-check-mobile:
-	cd frontend/apps/mobile && npx tsc --noEmit
+	cd frontend/apps/mobile && nlx tsc --noEmit
 
 # Mobileビルド（EASを使用）
 .PHONY: build-mobile-ios
 build-mobile-ios:
-	cd frontend/apps/mobile && npx dotenvx run -f ../../../env/frontend/${ENV}.env -- bunx eas build --platform ios
+	cd frontend/apps/mobile && npx dotenvx run -f ../../../env/frontend/${ENV}.env -- nlx eas build --platform ios
 
 .PHONY: build-mobile-android
 build-mobile-android:
-	cd frontend/apps/mobile && npx dotenvx run -f ../../../env/frontend/${ENV}.env -- bunx eas build --platform android
+	cd frontend/apps/mobile && npx dotenvx run -f ../../../env/frontend/${ENV}.env -- nlx eas build --platform android
 
 # ローカル環境での停止コマンド
 .PHONY: stop
@@ -132,34 +132,34 @@ stop:
 # フロントエンドビルドコマンド
 .PHONY: build-frontend
 build-frontend:
-	cd frontend && bun run build
+	cd frontend && nr build
 
 # ===== フロントエンド lint/format コマンド =====
 
 # Biome lint（自動修正）
 .PHONY: lint-frontend
 lint-frontend:
-	cd frontend && bun run lint
+	cd frontend && nr lint
 
 # Biome lint（CI用、修正なし）
 .PHONY: lint-frontend-ci
 lint-frontend-ci:
-	cd frontend && bun run lint:ci
+	cd frontend && nr lint:ci
 
 # Biome format（自動修正）
 .PHONY: format-frontend
 format-frontend:
-	cd frontend && bun run format
+	cd frontend && nr format
 
 # Biome formatチェック（チェックのみ）
 .PHONY: format-frontend-check
 format-frontend-check:
-	cd frontend && bun run format-check
+	cd frontend && nr format-check
 
 # TypeScript型チェック
 .PHONY: type-check-frontend
 type-check-frontend:
-	cd frontend && bun run type-check
+	cd frontend && nr type-check
 
 # ===== Supabase Edge Functions lint/format/check コマンド =====
 
@@ -204,22 +204,22 @@ check-functions:
 # Biome lint（自動修正）
 .PHONY: lint-drizzle
 lint-drizzle:
-	cd drizzle && bun run lint
+	cd drizzle && nr lint
 
 # Biome lint（CI用、修正なし）
 .PHONY: lint-drizzle-ci
 lint-drizzle-ci:
-	cd drizzle && bun run lint:ci
+	cd drizzle && nr lint:ci
 
 # Biome format（自動修正）
 .PHONY: format-drizzle
 format-drizzle:
-	cd drizzle && bun run format
+	cd drizzle && nr format
 
 # Biome formatチェック（チェックのみ）
 .PHONY: format-drizzle-check
 format-drizzle-check:
-	cd drizzle && bun run format-check
+	cd drizzle && nr format-check
 
 # ===== Backend Python lint/format コマンド =====
 
@@ -391,16 +391,16 @@ migrate-dev:
 	npx dotenvx run -f env/backend/local.env -- supabase start
 	# Pre-migration SQL適用（extensions等）
 	@echo "🔧 Applying pre-migration SQL (extensions)..."
-	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run migrate:pre
+	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- nr migrate:pre
 	# マイグレーションを生成
 	@echo "📝 Generating migration..."
-	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run generate
+	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- nr generate
 	# マイグレーションを適用
 	@echo "✅ Applying migration to local database..."
-	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run migrate
+	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- nr migrate
 	# Post-migration SQL適用（functions/triggers等）
 	@echo "🔧 Applying post-migration SQL (functions, triggers)..."
-	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run migrate:post
+	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- nr migrate:post
 	# モデル生成
 	@echo "🔧 Generating database types..."
 	make build-model
@@ -420,24 +420,24 @@ migrate-deploy:
 	# Pre-migration SQL適用（extensions等）
 	@echo "🔧 Applying pre-migration SQL (extensions)..."
 	@if [ -z "${ENV}" ] || [ "${ENV}" = "local" ]; then \
-		cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run migrate:pre; \
+		cd drizzle && npx dotenvx run -f ../env/migration/local.env -- nr migrate:pre; \
 	else \
-		cd drizzle && npx dotenvx run -f ../env/migration/${ENV}.env -- bun run migrate:pre; \
+		cd drizzle && npx dotenvx run -f ../env/migration/${ENV}.env -- nr migrate:pre; \
 	fi
 	# マイグレーションを適用
 	@if [ -z "${ENV}" ] || [ "${ENV}" = "local" ]; then \
 		echo "📍 Deploying to: local"; \
-		cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run migrate; \
+		cd drizzle && npx dotenvx run -f ../env/migration/local.env -- nr migrate; \
 	else \
 		echo "📍 Deploying to: ${ENV}"; \
-		cd drizzle && npx dotenvx run -f ../env/migration/${ENV}.env -- bun run migrate; \
+		cd drizzle && npx dotenvx run -f ../env/migration/${ENV}.env -- nr migrate; \
 	fi
 	# Post-migration SQL適用（functions/triggers等）
 	@echo "🔧 Applying post-migration SQL (functions, triggers)..."
 	@if [ -z "${ENV}" ] || [ "${ENV}" = "local" ]; then \
-		cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run migrate:post; \
+		cd drizzle && npx dotenvx run -f ../env/migration/local.env -- nr migrate:post; \
 	else \
-		cd drizzle && npx dotenvx run -f ../env/migration/${ENV}.env -- bun run migrate:post; \
+		cd drizzle && npx dotenvx run -f ../env/migration/${ENV}.env -- nr migrate:post; \
 	fi
 	# モデル生成（ローカルのみ）
 	@if [ -z "${ENV}" ] || [ "${ENV}" = "local" ]; then \
@@ -454,19 +454,19 @@ migration: migrate-dev
 .PHONY: drizzle-push
 drizzle-push:
 	@echo "🚀 Pushing schema to database..."
-	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run push
+	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- nr push
 
 # Drizzle Studio起動（GUIでDBを操作）
 .PHONY: drizzle-studio
 drizzle-studio:
 	@echo "🎨 Starting Drizzle Studio..."
-	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run studio
+	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- nr studio
 
 # スキーマ検証（Drizzleベース）
 .PHONY: drizzle-validate
 drizzle-validate:
 	@echo "✅ Validating Drizzle schema..."
-	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run check
+	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- nr check
 
 # ===== その他のコマンド =====
 

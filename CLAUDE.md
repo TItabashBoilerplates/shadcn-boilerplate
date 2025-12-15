@@ -227,6 +227,140 @@ This is a full-stack application boilerplate with a multi-platform frontend and 
 
 **→ For detailed frontend documentation, see [`frontend/README.md`](frontend/README.md)**
 
+### TanStack Query（サーバー状態管理）
+
+このプロジェクトは **TanStack Query v5** を使用してサーバー状態を管理しています。
+
+#### 状態管理の役割分担
+
+| 状態タイプ | 説明 | 管理方法 |
+|-----------|------|----------|
+| **ローカルUI状態** | モーダル開閉、フォーム入力、タブ選択 | `useState` |
+| **グローバル共有状態** | 認証セッション（複数コンポーネント共有） | Zustand (`@workspace/auth`) |
+| **サーバー状態** | DBデータ、API応答、Supabaseクエリ結果 | **TanStack Query** (`@workspace/query`) |
+
+#### パッケージ構成
+
+```
+frontend/packages/query/
+├── package.json
+├── index.ts                    # Public API（hooks/types エクスポート）
+├── provider/
+│   └── QueryProvider.tsx       # QueryClientProvider ラッパー
+└── client/
+    └── queryClient.ts          # SSR対応QueryClient設定
+```
+
+#### 使用方法
+
+**基本的なクエリ（Supabase連携）**:
+
+```typescript
+'use client'
+import { useQuery, useMutation, useQueryClient } from '@workspace/query'
+import { createClient } from '@workspace/client-supabase/client'
+
+// Query Keys（FSD api segment に配置）
+export const userKeys = {
+  all: ['users'] as const,
+  detail: (id: string) => [...userKeys.all, id] as const,
+  profile: (id: string) => [...userKeys.detail(id), 'profile'] as const,
+}
+
+// クエリフック
+export function useUserProfile(userId: string) {
+  const supabase = createClient()
+
+  return useQuery({
+    queryKey: userKeys.profile(userId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single()
+
+      if (error) throw error
+      return data
+    },
+  })
+}
+
+// ミューテーションフック
+export function useUpdateUserProfile() {
+  const supabase = createClient()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ userId, updates }: { userId: string; updates: Partial<UserProfile> }) => {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .update(updates)
+        .eq('user_id', userId)
+        .select()
+        .single()
+
+      if (error) throw error
+      return data
+    },
+    onSuccess: (data, { userId }) => {
+      // キャッシュを自動更新
+      queryClient.invalidateQueries({ queryKey: userKeys.profile(userId) })
+    },
+  })
+}
+```
+
+**コンポーネントでの使用**:
+
+```typescript
+'use client'
+import { useUserProfile, useUpdateUserProfile } from '@/entities/user/api'
+
+export function UserSettings({ userId }: { userId: string }) {
+  const { data: profile, isLoading, error } = useUserProfile(userId)
+  const updateProfile = useUpdateUserProfile()
+
+  if (isLoading) return <div>Loading...</div>
+  if (error) return <div>Error: {error.message}</div>
+
+  return (
+    <button
+      onClick={() => updateProfile.mutate({ userId, updates: { bio: 'Updated!' } })}
+      disabled={updateProfile.isPending}
+    >
+      {updateProfile.isPending ? 'Saving...' : 'Update Profile'}
+    </button>
+  )
+}
+```
+
+#### FSD配置方針
+
+| FSDレイヤー | TanStack Query 配置 |
+|------------|---------------------|
+| **shared/api** | 共通Query Key ファクトリ、基底クエリ関数 |
+| **entities/*/api** | エンティティのCRUD用クエリ/ミューテーション |
+| **features/*/api** | フィーチャー固有のクエリ/ミューテーション |
+
+#### Provider設定
+
+`QueryProvider` は `app/[locale]/layout.tsx` で `AuthProvider` の外側にラップされています:
+
+```typescript
+<QueryProvider>
+  <AuthProvider>
+    <NextIntlClientProvider messages={messages}>
+      {children}
+    </NextIntlClientProvider>
+  </AuthProvider>
+</QueryProvider>
+```
+
+#### DevTools
+
+開発環境では画面右下に **ReactQueryDevtools** が自動表示されます。キャッシュ状態、クエリ履歴、リフェッチタイミングを確認できます。
+
 ### Frontend Testing with supabase-test
 
 **CRITICAL**: All frontend API segments that interact with Supabase MUST be tested using `supabase-test`.
@@ -709,6 +843,48 @@ backend-py/app/src/
 ```
 
 この構成により、各コンポーネントが独立して最適なツールを使用でき、依存関係の競合を防ぎます。
+
+### ni (パッケージマネージャー抽象化)
+
+このプロジェクトは [ni](https://github.com/antfu-collective/ni) を使用してパッケージマネージャーコマンドを統一しています。`ni` はプロジェクトのロックファイル（`bun.lockb`, `package-lock.json` など）を自動検出し、適切なパッケージマネージャーのコマンドを実行します。
+
+#### 主要コマンド
+
+| ni コマンド | Bun 変換結果 | 用途 |
+|---|---|---|
+| `ni` | `bun install` | 依存関係インストール |
+| `ni package` | `bun add package` | パッケージ追加 |
+| `ni -D package` | `bun add -d package` | 開発依存追加 |
+| `nr script` | `bun run script` | スクリプト実行 |
+| `nlx command` | `bunx command` | 一時実行 |
+| `nun package` | `bun remove package` | パッケージ削除 |
+| `nci` | `bun install --frozen-lockfile` | CI用クリーンインストール |
+
+#### インストール
+
+```bash
+# macOS/Linux (Homebrew)
+brew install ni
+
+# または npm
+npm install -g @antfu/ni
+```
+
+**注記**: `make init` 実行時に ni がインストールされていない場合、エラーが表示されます。
+
+#### 使用例
+
+```bash
+# Frontend で依存関係をインストール
+cd frontend && ni
+
+# スクリプト実行
+cd frontend && nr dev
+cd drizzle && nr generate
+
+# 一時実行（bunx 相当）
+cd frontend && nlx tsc --noEmit
+```
 
 ## Development Commands
 
