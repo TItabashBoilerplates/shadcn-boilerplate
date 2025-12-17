@@ -9,7 +9,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```
 .claude/
 ├── rules/          # 常に適用されるポリシー・制約
+│   ├── tdd.md            # テスト駆動開発（TDD）必須
 │   ├── research.md       # Research-First ポリシー
+│   ├── supabase-first.md # Supabase優先アーキテクチャ
 │   ├── commands.md       # Makefile コマンド必須
 │   ├── database.md       # マイグレーション承認必須
 │   ├── frontend.md       # Frontend コード規約
@@ -26,7 +28,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     ├── datetime/         # 日時処理
     ├── shadcn-ui/        # shadcn/ui + TailwindCSS
     ├── supabase-test/    # RLS テスト
-    └── i18n/             # next-intl 多言語対応
+    ├── i18n/             # next-intl 多言語対応
+    └── langchain/        # LangChain/LangGraph/LangSmith
 ```
 
 ## Domain Documentation

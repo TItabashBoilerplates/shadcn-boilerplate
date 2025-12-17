@@ -10,11 +10,11 @@ from langchain_openai import ChatOpenAI
 class OpenAIGateway:
     """Gateway for OpenAI API calls using LangChain."""
 
-    def __init__(self, model: str = "gpt-4o-mini", temperature: float = 0.7) -> None:
+    def __init__(self, model: str = "gpt-5.2-mini", temperature: float = 0.7) -> None:
         """Initialize OpenAI Gateway.
 
         Args:
-            model: OpenAI model name (default: gpt-4o-mini)
+            model: OpenAI model name (default: gpt-5.2-mini)
             temperature: Response randomness (0.0-1.0)
         """
         api_key = os.getenv("OPENAI_API_KEY")

@@ -492,10 +492,51 @@ LIVEKIT_API_SECRET=your-livekit-secret
 ### Code Style
 
 1. **Type hints**: Always use type annotations
-2. **Async/await**: Use for all I/O operations
-3. **Docstrings**: Google-style for all public functions
-4. **Error handling**: Use appropriate exception types
-5. **Logging**: Use structured logging
+2. **Async/await**: Use for all I/O operations (HTTP, external APIs)
+3. **SQLModel**: Use **synchronous** operations (see below)
+4. **Docstrings**: Google-style for all public functions
+5. **Error handling**: Use appropriate exception types
+6. **Logging**: Use structured logging
+
+### SQLModel Operations (Synchronous)
+
+**IMPORTANT**: SQLModel database operations MUST use **synchronous** implementation.
+
+SQLModel's async support is **not yet officially available**. According to the [official roadmap](https://github.com/fastapi/sqlmodel/issues/654), "Async tools and docs" remains an uncompleted task. Until official async support is released, use synchronous Session and operations:
+
+```python
+# ✅ Good: Sync SQLModel operations
+from sqlmodel import Session, select
+
+class UserGateway:
+    def get_by_id(self, session: Session, user_id: str) -> User | None:
+        statement = select(User).where(User.id == user_id)
+        return session.exec(statement).first()
+
+    def create(self, session: Session, user: User) -> User:
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        return user
+
+# ❌ Bad: Async SQLModel
+async def get_user(session: AsyncSession, user_id: str) -> User | None:
+    ...
+```
+
+FastAPI endpoints can still be async while using sync SQLModel internally:
+
+```python
+@router.get("/users/{user_id}")
+async def get_user(
+    user_id: str,
+    session: Session = Depends(get_session),
+) -> UserResponse:
+    # Sync SQLModel operation inside async endpoint is OK
+    gateway = UserGateway()
+    user = gateway.get_by_id(session, user_id)
+    return UserResponse.from_orm(user)
+```
 
 ### Testing Strategy
 
