@@ -70,6 +70,71 @@ export const profiles = pgTable('profiles', {
 })
 ```
 
+### AmbiguousForeignKeysError の回避 (sqlacodegen)
+
+`sqlacodegen` で SQLModel を自動生成する際、**同じテーブルへの複数の外部キー参照**があると `AmbiguousForeignKeysError` が発生する。
+
+**原因**: sqlacodegen Issue [#376](https://github.com/agronholm/sqlacodegen/issues/376)（未解決）
+**発生箇所**: `make run` 時の SQLModel 自動生成 (`backend-py/app/src/domain/entity/models.py`)
+
+#### 問題のあるパターン
+
+```typescript
+// ❌ Wrong: 同じテーブルへの複数の外部キー参照
+export const messages = pgTable('messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  senderId: uuid('sender_id').references(() => users.id),
+  receiverId: uuid('receiver_id').references(() => users.id),
+})
+// → sqlacodegen が relationship 生成時にどの FK を使うか判断できずエラー
+```
+
+#### 推奨パターン A: 中間テーブルで分離
+
+```typescript
+// ✅ Correct: 役割ごとに中間テーブルを作成
+export const messageSenders = pgTable('message_senders', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  messageId: uuid('message_id').references(() => messages.id),
+  userId: uuid('user_id').references(() => users.id),
+})
+
+export const messageReceivers = pgTable('message_receivers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  messageId: uuid('message_id').references(() => messages.id),
+  userId: uuid('user_id').references(() => users.id),
+})
+```
+
+#### 推奨パターン B: 単一参照に限定
+
+```typescript
+// ✅ Correct: 同じテーブルへの参照は1つのみ
+export const messages = pgTable('messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  authorId: uuid('author_id').references(() => users.id), // 1つだけ
+})
+
+// 受信者は別テーブルで管理
+export const messageRecipients = pgTable('message_recipients', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  messageId: uuid('message_id').references(() => messages.id),
+  userId: uuid('user_id').references(() => users.id),
+})
+```
+
+#### やむを得ず複数参照が必要な場合
+
+```typescript
+// ⚠️ 注意: sqlacodegen でエラーの可能性あり
+// backend-py 側で手動対応が必要になる場合がある
+export const documents = pgTable('documents', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  createdBy: uuid('created_by').references(() => users.id),
+  updatedBy: uuid('updated_by').references(() => users.id),
+})
+```
+
 ---
 
 ## Type Generation (Allowed)

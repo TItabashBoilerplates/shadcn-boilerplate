@@ -39,6 +39,30 @@ Research is REQUIRED when:
 - Implementing real-time features
 - Working with type definitions
 
+## spec サブエージェントとの連携
+
+技術選定や新規モジュールのセットアップ時は、`spec` サブエージェントを積極的に活用してください。
+
+### spec エージェントを使用すべき場面
+
+- 新しいライブラリ/フレームワークの導入
+- 既存パッケージのメジャーアップデート
+- 設定ファイルの作成・変更
+- ビルドツールのセットアップ
+
+### 調査レポートの保存先
+
+spec エージェントは調査結果を `docs/_research/` に保存します：
+
+```
+docs/_research/
+├── 2024-01-15-tailwindcss-v4.md
+├── 2024-01-16-nextjs-16.md
+└── ...
+```
+
+これらのレポートは将来の参照用に保持され、同じ技術の再調査時に参考にできます。
+
 ## Enforcement
 
 This research-first approach is **NON-NEGOTIABLE**. Any implementation without proper research is considered incomplete and must be revised.
