@@ -80,6 +80,77 @@ When proposing backend implementation, you MUST explain:
 - Built-in RLS security
 - Real-time capabilities out of the box
 
+---
+
+## Storage Policy (MANDATORY)
+
+### Default: Private Buckets
+
+**ALWAYS use Private buckets** unless the user explicitly requests Public buckets.
+
+```toml
+# supabase/config.toml
+[storage.buckets.documents]
+public = false  # DEFAULT: Private
+file_size_limit = "50MiB"
+```
+
+### File Access via createSignedUrl
+
+Private buckets require signed URLs for file access:
+
+```typescript
+// ✅ Correct: Use createSignedUrl for private files
+const { data } = await supabase.storage
+  .from('documents')
+  .createSignedUrl('path/to/file.pdf', 60)  // 60秒有効
+
+// ❌ Wrong: getPublicUrl on private bucket (won't work)
+const { data } = supabase.storage
+  .from('documents')
+  .getPublicUrl('path/to/file.pdf')
+```
+
+### Path Prefix Convention (RESTful)
+
+Use RESTful hierarchical path structure:
+
+```
+{resource}/{id}/{sub-resource}/{filename}
+```
+
+Examples:
+- `users/{user_id}/avatar.png`
+- `users/{user_id}/documents/{doc_id}.pdf`
+- `projects/{project_id}/assets/logo.png`
+
+```typescript
+// ✅ Correct: RESTful path structure
+const path = `users/${userId}/avatar.png`
+await supabase.storage.from('files').upload(path, file)
+
+// ✅ Correct: Nested resource
+const path = `projects/${projectId}/attachments/${fileId}.pdf`
+await supabase.storage.from('files').upload(path, file)
+
+// ❌ Wrong: No resource hierarchy
+const path = `avatar.png`
+```
+
+### When to Use Public Buckets
+
+Public buckets are allowed **ONLY** when:
+1. User explicitly requests it
+2. Files are truly public (marketing assets, public blog images)
+3. High-performance CDN caching is required
+
+### Prohibited Patterns
+
+**NEVER**:
+- Use public buckets for user-uploaded content without explicit approval
+- Store sensitive files without RLS policies
+- Use `getPublicUrl` for private buckets
+
 ## Enforcement
 
 This Supabase-first policy is **NON-NEGOTIABLE**. All backend implementations require explicit justification for why supabase-js is insufficient.

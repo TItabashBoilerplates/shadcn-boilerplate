@@ -183,4 +183,10 @@ export function AuthStatus() {
 | フォーム送信 | Server Action | Server Client |
 | ユーザー操作 | Client Component | Browser Client |
 
-詳細: [auth.md](auth.md), [rls.md](rls.md)
+## 詳細ガイド
+
+| トピック | ファイル | 内容 |
+|---------|---------|------|
+| ストレージ | [storage.md](storage.md) | バケット設計、パスプレフィックス、RLSポリシー |
+| RLS パフォーマンス | [rls-advanced.md](rls-advanced.md) | 最適化テクニック、security definer |
+| Realtime 認証 | [realtime.md](realtime.md) | Private Channel、realtime.messages RLS |

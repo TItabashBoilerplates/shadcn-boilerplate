@@ -30,6 +30,48 @@ make migrate-dev"
 # Claude runs make migrate-dev automatically - PROHIBITED
 ```
 
+## Schema Design Rules (MANDATORY)
+
+### Primary Key: UUID
+
+**ALWAYS use UUID** for primary keys, not auto-increment integers.
+
+```typescript
+// ✅ Correct: UUID primary key
+import { uuid } from 'drizzle-orm/pg-core'
+
+export const users = pgTable('users', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  // ...
+})
+
+// ❌ Wrong: Auto-increment integer
+export const users = pgTable('users', {
+  id: serial('id').primaryKey(),  // DO NOT USE
+  // ...
+})
+```
+
+### Benefits of UUID
+
+1. **Security**: IDs are not guessable/sequential
+2. **Distributed systems**: No collision when merging data
+3. **Privacy**: Doesn't expose record count
+4. **Supabase Auth**: Consistent with `auth.users.id` (UUID)
+
+### Foreign Keys
+
+```typescript
+// ✅ Correct: UUID foreign key referencing auth.users
+export const profiles = pgTable('profiles', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => authUsers.id),
+  // ...
+})
+```
+
+---
+
 ## Type Generation (Allowed)
 
 Type generation is allowed as it's a read-only operation:
