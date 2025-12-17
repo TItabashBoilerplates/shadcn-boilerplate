@@ -30,6 +30,62 @@ backend-py/app/src/
 - **Infrastructure**: Gateway implementations, external system integration
 - **Domain**: Entities, Value Objects
 
+## DRY Principle (MANDATORY)
+
+**重複実装は徹底的に排除し、コードをクリーンに保つ。**
+
+### 共通化の原則
+
+| 対象 | 配置場所 | 例 |
+|------|---------|-----|
+| **エンティティ・型定義** | `domain/entity/` | models.py, types |
+| **Gateway インターフェース** | `gateway/` | 抽象化されたデータアクセス |
+| **共通ユーティリティ** | `infra/` or `domain/service/` | 再利用可能なロジック |
+| **ミドルウェア** | `middleware/` | 認証、ロギング |
+
+### 禁止事項
+
+```python
+# ❌ Bad: 同じクエリロジックを複数の UseCase で重複
+class ChatUseCase:
+    def get_user(self, session, user_id):
+        return session.exec(select(User).where(User.id == user_id)).first()
+
+class ProfileUseCase:
+    def get_user(self, session, user_id):  # 重複!
+        return session.exec(select(User).where(User.id == user_id)).first()
+
+# ✅ Good: Gateway に共通化
+class UserGateway:
+    def get_by_id(self, session: Session, user_id: str) -> User | None:
+        return session.exec(select(User).where(User.id == user_id)).first()
+
+class ChatUseCase:
+    def __init__(self):
+        self.user_gateway = UserGateway()
+```
+
+```python
+# ❌ Bad: Supabase クライアント初期化を各所で重複
+# usecase/chat.py
+supabase = create_client(url, key)
+# usecase/profile.py
+supabase = create_client(url, key)
+
+# ✅ Good: infra で一元管理
+# infra/supabase_client.py
+from src.infra.supabase_client import SupabaseClient
+```
+
+### チェックリスト
+
+新しいコードを書く前に確認：
+
+1. **既存の Gateway に同様の操作があるか？** → あれば再利用
+2. **他の UseCase でも使う可能性があるか？** → Gateway に実装
+3. **ドメインロジックが重複していないか？** → Domain Service に共通化
+4. **インフラ接続が重複していないか？** → infra/ に一元化
+
 ## Code Style
 
 - **Linting**: Ruff

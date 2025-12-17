@@ -14,6 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 │   ├── supabase-first.md # Supabase優先アーキテクチャ
 │   ├── commands.md       # Makefile コマンド必須
 │   ├── database.md       # マイグレーション承認必須
+│   ├── auto-generated.md # 自動生成ファイル編集禁止
 │   ├── frontend.md       # Frontend コード規約
 │   ├── backend-py.md     # Python コード規約
 │   ├── edge-functions.md # Edge Functions 規約
@@ -26,7 +27,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     ├── supabase/         # Supabase 認証・RLS
     ├── drizzle/          # Drizzle ORM スキーマ
     ├── datetime/         # 日時処理
-    ├── shadcn-ui/        # shadcn/ui + TailwindCSS
+    ├── shadcn-ui/        # shadcn/ui + TailwindCSS (Web)
+    ├── gluestack/        # gluestack-ui + NativeWind (Mobile)
     ├── supabase-test/    # RLS テスト
     ├── i18n/             # next-intl 多言語対応
     └── langchain/        # LangChain/LangGraph/LangSmith
@@ -38,7 +40,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 | ドメイン | ドキュメント |
 |---------|-------------|
-| Frontend | [`frontend/README.md`](frontend/README.md) |
+| Frontend (Web) | [`frontend/README.md`](frontend/README.md) |
+| Frontend (Mobile) | [`frontend/apps/mobile/README.md`](frontend/apps/mobile/README.md) |
 | Database Schema | [`drizzle/README.md`](drizzle/README.md) |
 | Backend Python | [`backend-py/README.md`](backend-py/README.md) |
 | Edge Functions | [`supabase/functions/README.md`](supabase/functions/README.md) |
@@ -53,8 +56,10 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 
 | Layer | Technology |
 |-------|------------|
-| **Frontend** | Next.js 16, React 19, TypeScript, Bun |
-| **UI** | shadcn/ui, Radix UI, TailwindCSS 4 |
+| **Frontend (Web)** | Next.js 16, React 19, TypeScript, Bun |
+| **Frontend (Mobile)** | Expo 55, React Native, TypeScript |
+| **UI (Web)** | shadcn/ui, Radix UI, TailwindCSS 4 |
+| **UI (Mobile)** | gluestack-ui, NativeWind 5, TailwindCSS 4 |
 | **State** | TanStack Query (server), Zustand (global) |
 | **Architecture** | Feature Sliced Design (FSD) |
 | **i18n** | next-intl (en, ja) |
@@ -66,7 +71,8 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 
 | Component | Package Manager |
 |-----------|----------------|
-| Frontend (`frontend/`) | **Bun** |
+| Frontend Web (`frontend/apps/web/`) | **Bun** |
+| Frontend Mobile (`frontend/apps/mobile/`) | **Bun** |
 | Backend Python (`backend-py/`) | **uv** |
 | Drizzle (`drizzle/`) | **Bun** |
 | Edge Functions (`supabase/functions/`) | **Deno** |
