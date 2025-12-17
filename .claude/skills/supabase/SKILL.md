@@ -187,6 +187,7 @@ export function AuthStatus() {
 
 | トピック | ファイル | 内容 |
 |---------|---------|------|
+| クライアント設定 | [client-setup.md](client-setup.md) | @supabase/ssr、Server/Browser Client、Middleware、Cookie管理 |
 | ストレージ | [storage.md](storage.md) | バケット設計、パスプレフィックス、RLSポリシー |
 | RLS パフォーマンス | [rls-advanced.md](rls-advanced.md) | 最適化テクニック、security definer |
 | Realtime 認証 | [realtime.md](realtime.md) | Private Channel、realtime.messages RLS |

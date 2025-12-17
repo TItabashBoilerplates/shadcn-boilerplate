@@ -251,6 +251,118 @@ reset request.jwt.claims;
 
 ---
 
+## 重要: INSERT + SELECT パターンの落とし穴
+
+**これは非常によくあるエラーです。** `.insert().select()` を使用する際、SELECT ポリシーがないと 403 エラーになります。
+
+### 問題の本質
+
+```
+.insert({...}).select('id')
+       ↓
+PostgreSQL: INSERT INTO ... RETURNING id
+       ↓
+RETURNING句 = SELECT権限が必要
+       ↓
+SELECTポリシーがないと403
+```
+
+### 公式の言及
+
+[GitHub Discussion #36619](https://github.com/orgs/supabase/discussions/36619) でSupabaseのメンテナーが明確に説明しています：
+
+> "In postgres RLS the insert policy is not enough, you actually need the select policy to be true too."
+
+これは **PostgreSQL の RLS の仕様** であり、Supabase 固有の問題ではありません。
+
+### エラー例
+
+```typescript
+// ❌ 403 エラー: SELECTポリシーがない
+const { data, error } = await supabase
+  .from('work_creators')
+  .insert({ work_id: workId, creator_id: creatorId })
+  .select('id')  // ← RETURNING句 = SELECT権限が必要
+
+// error: { code: '42501', message: 'permission denied for table work_creators' }
+```
+
+### 解決策（3つ）
+
+| 方法 | 説明 | コード例 |
+|------|------|---------|
+| **1. SELECTポリシー追加** | 挿入した行を読める条件を追加 | RLS ポリシーを追加 |
+| **2. `.select()` を使わない** | クライアントでUUID生成して渡す | `insert({ id: crypto.randomUUID(), ... })` |
+| **3. `returning: 'minimal'`** | RETURNING句を無効化 | `insert({...}, { returning: 'minimal' })` |
+
+### 解決策1: SELECTポリシー追加
+
+```sql
+-- INSERT ポリシー
+create policy "Users can insert own data"
+on work_creators for insert
+to authenticated
+with check ( (select auth.uid()) = user_id );
+
+-- ✅ SELECT ポリシーも必要
+create policy "Users can read own data"
+on work_creators for select
+to authenticated
+using ( (select auth.uid()) = user_id );
+```
+
+### 解決策2: `.select()` を使わない
+
+```typescript
+// ✅ クライアントでUUIDを生成して渡す
+const id = crypto.randomUUID()
+
+const { error } = await supabase
+  .from('work_creators')
+  .insert({ id, work_id: workId, creator_id: creatorId })
+  // .select() を使わない
+
+// id は既に分かっているので RETURNING 不要
+```
+
+### 解決策3: `returning: 'minimal'`
+
+```typescript
+// ✅ RETURNING句を無効化
+const { error } = await supabase
+  .from('work_creators')
+  .insert(
+    { work_id: workId, creator_id: creatorId },
+    { returning: 'minimal' }  // RETURNING を使わない
+  )
+```
+
+### この問題がよく起きる理由
+
+1. **Supabase JS Client は `.insert().select()` パターンを推奨している**
+2. **公式ドキュメントでこの制約が目立つ場所に書かれていない**
+3. **多対多テーブル（work_creators 等）を使う設計で SELECT ポリシーが後から効く場合に頻発**
+
+### 推奨アプローチ
+
+```typescript
+// ✅ 推奨: INSERT するテーブルには必ず SELECT ポリシーも用意
+// または、クライアントで ID を生成して .select() を使わない
+
+// パターン A: SELECT ポリシーを用意
+const { data, error } = await supabase
+  .from('posts')
+  .insert({ title: 'Hello' })
+  .select('id')  // SELECT ポリシーがあれば OK
+
+// パターン B: ID を事前生成
+const id = crypto.randomUUID()
+await supabase.from('posts').insert({ id, title: 'Hello' })
+// 返り値が不要なら .select() なしで OK
+```
+
+---
+
 ## チェックリスト
 
 - [ ] `auth.uid()` / `auth.jwt()` を `(select ...)` でラップしているか
@@ -260,6 +372,7 @@ reset request.jwt.claims;
 - [ ] ジョインを最小化しているか
 - [ ] security definer 関数は private スキーマにあるか
 - [ ] user_metadata を認可に使用していないか
+- [ ] **INSERT ポリシーのあるテーブルに SELECT ポリシーがあるか（`.select()` を使う場合）**
 
 ---
 
@@ -268,3 +381,6 @@ reset request.jwt.claims;
 - [RLS Performance Recommendations](https://supabase.com/docs/guides/database/postgres/row-level-security#rls-performance-recommendations)
 - [RLS Performance Tests](https://github.com/GaryAustin1/RLS-Performance)
 - [Multiple Permissive Policies](https://supabase.com/docs/guides/database/database-advisors?lint=0006_multiple_permissive_policies)
+- [INSERT + SELECT requires SELECT policy (GitHub Discussion #36619)](https://github.com/orgs/supabase/discussions/36619)
+- [Database API 42501 Errors](https://supabase.com/docs/guides/troubleshooting/database-api-42501-errors)
+- [Row Level Security Guide](https://supabase.com/docs/guides/database/postgres/row-level-security)
