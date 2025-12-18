@@ -116,6 +116,8 @@ graph = create_react_agent(
 )
 ```
 
+> **ストリーミング時の注意**: `with_structured_output` でストリーミングする場合は **Pydantic ではなく TypedDict を使用**する必要があります。詳細は [structured-output-streaming.md](structured-output-streaming.md) を参照。
+
 ## セキュリティ原則
 
 | 原則                 | 説明                                         |
@@ -134,11 +136,12 @@ tools = [FileSystemTool(base_path="/app/uploads", read_only=True)]
 
 ## 詳細ドキュメント
 
-| トピック       | ファイル                     |
-| -------------- | ---------------------------- |
-| LangGraph 詳細 | [langgraph.md](langgraph.md) |
-| LangSmith 評価 | [langsmith.md](langsmith.md) |
-| セキュリティ   | [security.md](security.md)   |
+| トピック                       | ファイル                                                         |
+| ------------------------------ | ---------------------------------------------------------------- |
+| LangGraph 詳細                 | [langgraph.md](langgraph.md)                                     |
+| LangSmith 評価                 | [langsmith.md](langsmith.md)                                     |
+| セキュリティ                   | [security.md](security.md)                                       |
+| Structured Output ストリーミング | [structured-output-streaming.md](structured-output-streaming.md) |
 
 ## リリースポリシー
 

@@ -1,0 +1,27 @@
+{
+  "name": "@workspace/api-client",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./client": "./src/client.ts",
+    "./query": "./src/query.ts"
+  },
+  "scripts": {
+    "generate": "bun run scripts/generate.ts",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.15.0",
+    "openapi-react-query": "^0.5.1"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.10.1",
+    "typescript": "^5.8.0"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5"
+  }
+}
