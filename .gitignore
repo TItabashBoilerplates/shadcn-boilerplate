@@ -74,14 +74,6 @@ yarn-error.*
 !.vscode/tasks.json
 !.vscode/launch.json
 
-# Cursor
-.cursor/
-
-# Codex user-specific files (exclude)
-.codex/*
-# But include example config (include)
-!.codex/config.toml.example
-
 .idea/
 **/*.swp
 **/*.scripts.swo
@@ -136,3 +128,6 @@ supabase/.temp/**
 
 # Playwright MCP
 .playwright-mcp/**
+
+# Codex CLI local settings (config.toml.example is tracked)
+.codex/config.toml
