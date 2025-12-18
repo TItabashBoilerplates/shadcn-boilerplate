@@ -137,6 +137,89 @@ export const documents = pgTable('documents', {
 
 ---
 
+## RLS Policy Design Rules (MANDATORY)
+
+### No Helper Functions
+
+**NEVER create PostgreSQL helper functions for RLS policies.**
+All RLS logic MUST be defined inline within `drizzle/schema/*.ts` using `pgPolicy`.
+
+```typescript
+// ✅ Correct: Inline SQL in pgPolicy
+export const selectOwnUser = pgPolicy('select_own_user', {
+  for: 'select',
+  to: 'authenticated',
+  using: sql`(SELECT auth.uid()) = id`,
+}).link(users)
+
+// ✅ Correct: EXISTS subquery for related table checks
+export const selectPolicyMessages = pgPolicy('select_policy_messages', {
+  for: 'select',
+  to: 'authenticated',
+  using: sql`
+    EXISTS (
+      SELECT 1
+      FROM user_chats
+      WHERE user_chats.chat_room_id = messages.chat_room_id
+      AND user_chats.user_id = (SELECT auth.uid())
+    )
+  `,
+}).link(messages)
+
+// ❌ Wrong: Using helper functions
+CREATE FUNCTION is_owner(user_id uuid) RETURNS boolean AS $$
+  SELECT user_id = auth.uid()
+$$ LANGUAGE sql SECURITY DEFINER;
+
+export const selectPolicy = pgPolicy('select_policy', {
+  for: 'select',
+  using: sql`is_owner(user_id)`,  // DO NOT USE helper functions
+}).link(myTable)
+```
+
+### Why No Helper Functions?
+
+1. **Single Source of Truth**: All RLS logic is visible in `drizzle/schema/`
+2. **Version Control**: Policies are tracked with schema changes
+3. **Debugging**: No hidden function logic to trace
+4. **Migration Safety**: Functions require separate management and can become orphaned
+5. **Transparency**: Security logic is explicit and reviewable
+
+### RLS Definition Location
+
+| Component | Location |
+|-----------|----------|
+| Table definition | `drizzle/schema/*.ts` |
+| RLS enablement | `.enableRLS()` on table |
+| Policy definition | `pgPolicy(...)` in same file |
+| Policy linking | `.link(tableName)` |
+
+### Common Patterns
+
+```typescript
+// Pattern 1: Direct user ID comparison
+using: sql`(SELECT auth.uid()) = user_id`
+
+// Pattern 2: EXISTS with related table
+using: sql`
+  EXISTS (
+    SELECT 1 FROM related_table
+    WHERE related_table.id = current_table.foreign_id
+    AND related_table.owner_id = (SELECT auth.uid())
+  )
+`
+
+// Pattern 3: Service role only (admin operations)
+to: 'supabase_auth_admin',
+withCheck: sql`true`
+
+// Pattern 4: Public read access
+to: ['anon', 'authenticated'],
+using: sql`true`
+```
+
+---
+
 ## Type Generation (Allowed)
 
 Type generation is allowed as it's a read-only operation:
