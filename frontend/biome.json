@@ -93,6 +93,16 @@
           }
         }
       }
+    },
+    {
+      "includes": ["packages/app/hooks/useSupabaseQuery.ts"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "useExhaustiveDependencies": "off"
+          }
+        }
+      }
     }
   ]
 }

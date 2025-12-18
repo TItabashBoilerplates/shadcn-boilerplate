@@ -54,7 +54,6 @@ export function useSupabaseQuery<T>(queryFn: () => Promise<T>, deps: readonly un
 
   useEffect(() => {
     execute()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps)
 
   const refetch = useCallback(() => {
