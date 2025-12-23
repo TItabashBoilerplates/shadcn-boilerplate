@@ -1,4 +1,4 @@
-import { Button } from '@workspace/ui/components/button'
+import { Button } from '@workspace/ui-web/components/button'
 import { ArrowRight } from 'lucide-react'
 import Image from 'next/image'
 import { getTranslations } from 'next-intl/server'

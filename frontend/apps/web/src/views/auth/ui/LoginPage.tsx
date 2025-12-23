@@ -4,7 +4,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@workspace/ui/components/card'
+} from '@workspace/ui-web/components/card'
 import { LogIn } from 'lucide-react'
 import { LoginForm } from '@/features/auth'
 

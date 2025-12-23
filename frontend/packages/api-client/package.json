@@ -18,6 +18,8 @@
     "openapi-react-query": "^0.5.1"
   },
   "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^22.0.0",
     "openapi-typescript": "^7.10.1",
     "typescript": "^5.8.0"
   },

@@ -16,7 +16,7 @@
     "@workspace/auth": "workspace:*",
     "@workspace/client-supabase": "workspace:*",
     "@workspace/types": "workspace:*",
-    "@workspace/ui": "workspace:*",
+    "@workspace/ui-web": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.539.0",

@@ -6,7 +6,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@workspace/ui/components/select'
+} from '@workspace/ui-web/components/select'
 import { useParams } from 'next/navigation'
 import { type ReactNode, useTransition } from 'react'
 import { usePathname, useRouter } from '@/shared/lib/i18n'

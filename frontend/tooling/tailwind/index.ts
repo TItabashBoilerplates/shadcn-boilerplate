@@ -9,6 +9,7 @@ export * from './theme'
 export const webContent = [
   './app/**/*.{js,jsx,ts,tsx}',
   './src/**/*.{js,jsx,ts,tsx}',
-  '../../packages/ui/**/*.{js,jsx,ts,tsx}',
+  '../../packages/ui/web/**/*.{js,jsx,ts,tsx}',
+  '../../packages/tokens/**/*.{js,jsx,ts,tsx}',
   '../../packages/app/**/*.{js,jsx,ts,tsx}',
 ] as const

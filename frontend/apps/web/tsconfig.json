@@ -20,9 +20,10 @@
     "types": ["node", "react", "react-dom"],
     "paths": {
       "@/*": ["./src/*"],
-      "@workspace/ui/components": ["../../packages/ui/components"],
-      "@workspace/ui/components/*": ["../../packages/ui/components/*"],
-      "@workspace/ui/lib/*": ["../../packages/ui/lib/*"]
+      "@workspace/ui-web": ["../../packages/ui/web/components"],
+      "@workspace/ui-web/*": ["../../packages/ui/web/*"],
+      "@workspace/tokens": ["../../packages/tokens/src"],
+      "@workspace/tokens/*": ["../../packages/tokens/src/*"]
     }
   },
   "include": [

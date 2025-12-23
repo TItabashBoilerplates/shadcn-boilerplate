@@ -4,7 +4,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@workspace/ui/components/card'
+} from '@workspace/ui-web/components/card'
 import { ShieldCheck } from 'lucide-react'
 import { VerifyOTPForm } from '@/features/auth'
 

@@ -3,6 +3,7 @@
   "compilerOptions": {
     "composite": true,
     "baseUrl": ".",
+    "types": ["node", "bun"],
     "paths": {
       "@workspace/api-client/*": ["./*"]
     }

@@ -10,7 +10,8 @@ export * from './theme'
 export const nativeContent: string[] = [
   './app/**/*.{js,jsx,ts,tsx}',
   './components/**/*.{js,jsx,ts,tsx}',
-  '../../packages/ui/**/*.{js,jsx,ts,tsx}',
+  '../../packages/ui/mobile/**/*.{js,jsx,ts,tsx}',
+  '../../packages/tokens/**/*.{js,jsx,ts,tsx}',
   '../../packages/app/**/*.{js,jsx,ts,tsx}',
 ]
 
