@@ -1,50 +1,221 @@
-# Welcome to your Expo app 👋
+# Mobile App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Expo 55 React Native application with gluestack-ui and NativeWind styling.
 
-## Get started
+## Tech Stack
 
-1. Install dependencies
+| Layer | Technology |
+|-------|------------|
+| **Framework** | Expo 55, React Native |
+| **Routing** | Expo Router (file-based) |
+| **UI Library** | gluestack-ui |
+| **Styling** | NativeWind 5 (TailwindCSS for React Native) |
+| **State** | TanStack Query, Zustand |
+| **Icons** | lucide-react-native |
 
-   ```bash
-   npm install
-   ```
+## Project Structure
 
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+apps/mobile/
+├── app/                    # Expo Router (file-based routing)
+│   ├── (tabs)/             # Tab navigation
+│   ├── _layout.tsx         # Root layout
+│   └── +not-found.tsx      # 404 page
+├── components/             # App-specific components
+├── constants/              # App constants
+├── hooks/                  # App-specific hooks
+├── global.css              # TailwindCSS styles
+└── tailwind.config.ts      # TailwindCSS configuration
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## UI Components
 
-## Learn more
+This app uses **gluestack-ui** components from `@workspace/ui/mobile`:
 
-To learn more about developing your project with Expo, look at the following resources:
+```typescript
+import { Button, ButtonText } from '@workspace/ui/mobile/components/button'
+import { GluestackUIProvider } from '@workspace/ui/mobile/components/gluestack-ui-provider'
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### Adding New Components
 
-## Join the community
+```bash
+# From frontend directory
+bun run ui:add:mobile button card input
 
-Join our community of developers creating universal apps.
+# Or directly from this directory
+bunx gluestack-ui@latest add button --use-bun
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Components are installed to `packages/ui/mobile/components/`.
+
+### Available Components
+
+- Button, Card, Input, Text
+- Modal, Toast, Overlay
+- Box, HStack, VStack, Center
+- And more...
+
+## Development
+
+### Prerequisites
+
+- Node.js 20+
+- Bun 1.2+
+- Expo Go app (iOS/Android) or emulator
+
+### Getting Started
+
+```bash
+# Install dependencies (from frontend root)
+cd frontend
+bun install
+
+# Start Expo development server
+cd apps/mobile
+bun run start
+
+# Or with specific platform
+bun run ios      # iOS Simulator
+bun run android  # Android Emulator
+bun run web      # Web browser
+```
+
+### Common Commands
+
+```bash
+bun run start              # Start Expo dev server
+bun run ios                # Run on iOS Simulator
+bun run android            # Run on Android Emulator
+bun run web                # Run in web browser
+bun run type-check         # TypeScript type check
+```
+
+## Styling with NativeWind
+
+NativeWind brings TailwindCSS utility classes to React Native:
+
+```tsx
+import { View, Text } from 'react-native'
+
+export function MyComponent() {
+  return (
+    <View className="flex-1 items-center justify-center bg-background">
+      <Text className="text-foreground text-xl font-bold">
+        Hello World
+      </Text>
+    </View>
+  )
+}
+```
+
+### CSS Variables
+
+Use CSS variables for theming (defined in `global.css`):
+
+```tsx
+// Colors automatically adapt to light/dark mode
+<View className="bg-background border-border">
+  <Text className="text-foreground">Primary text</Text>
+  <Text className="text-muted-foreground">Secondary text</Text>
+</View>
+```
+
+## Design Tokens
+
+Shared tokens from `@workspace/tokens`:
+
+```typescript
+import { colors, radius } from '@workspace/tokens'
+```
+
+## State Management
+
+### TanStack Query (Server State)
+
+```typescript
+import { useQuery } from '@tanstack/react-query'
+
+function MyComponent() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['items'],
+    queryFn: fetchItems,
+  })
+}
+```
+
+### Zustand (Global State)
+
+```typescript
+import { useUserStore } from '@/stores/user'
+
+function MyComponent() {
+  const user = useUserStore((state) => state.user)
+}
+```
+
+## File-Based Routing (Expo Router)
+
+```
+app/
+├── _layout.tsx           # Root layout
+├── index.tsx             # Home screen (/)
+├── (tabs)/               # Tab group
+│   ├── _layout.tsx       # Tab layout
+│   ├── index.tsx         # First tab
+│   └── explore.tsx       # Second tab
+└── +not-found.tsx        # 404 screen
+```
+
+## Authentication
+
+Uses `@workspace/auth` for Supabase authentication:
+
+```typescript
+import { useAuth } from '@workspace/auth'
+
+function MyComponent() {
+  const { user, signIn, signOut } = useAuth()
+}
+```
+
+## Environment Variables
+
+Set in `env/frontend/local.env`:
+
+```env
+EXPO_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
+
+**Note**: Expo uses `EXPO_PUBLIC_` prefix (not `NEXT_PUBLIC_`).
+
+## Troubleshooting
+
+### Metro Bundler Issues
+
+```bash
+# Clear Metro cache
+bun run start --clear
+```
+
+### NativeWind Not Working
+
+1. Ensure `nativewind-env.d.ts` exists in `packages/ui/mobile/`
+2. Check `tailwind.config.ts` content paths include UI packages
+3. Restart Metro bundler
+
+### Type Errors
+
+```bash
+# Run type check
+bun run type-check
+```
+
+## Additional Resources
+
+- [Expo Documentation](https://docs.expo.dev/)
+- [Expo Router](https://docs.expo.dev/router/introduction/)
+- [gluestack-ui Documentation](https://gluestack.io/ui/docs)
+- [NativeWind Documentation](https://www.nativewind.dev/)
+- [TailwindCSS](https://tailwindcss.com/)

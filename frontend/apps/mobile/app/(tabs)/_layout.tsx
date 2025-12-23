@@ -1,12 +1,14 @@
+import { IconSymbol } from '@workspace/ui/mobile/components'
+import { Colors } from '@workspace/ui/mobile/constants'
+import { useColorScheme } from '@workspace/ui/mobile/hooks'
 import { Tabs } from 'expo-router'
 
-import { HapticTab } from '@/components/haptic-tab'
-import { IconSymbol } from '@/components/ui/icon-symbol'
-import { Colors } from '@/constants/theme'
-import { useColorScheme } from '@/hooks/use-color-scheme'
+import { useI18n } from '@/shared/hooks'
+import { HapticTab } from '@/shared/ui'
 
 export default function TabLayout() {
   const colorScheme = useColorScheme()
+  const { t } = useI18n()
 
   return (
     <Tabs
@@ -19,14 +21,14 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: t('navigation.home'),
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="explore"
         options={{
-          title: 'Explore',
+          title: t('navigation.explore'),
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
         }}
       />

@@ -6,7 +6,7 @@
  * @module features/user-menu/ui/UserMenu
  */
 
-import { Avatar, AvatarFallback } from '@workspace/ui-web/components/avatar'
+import { Avatar, AvatarFallback } from '@workspace/ui/web/components/avatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +14,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@workspace/ui-web/components/dropdown-menu'
+} from '@workspace/ui/web/components/dropdown-menu'
 import { LogOut, User } from 'lucide-react'
 import { signOut } from '@/features/auth'
 

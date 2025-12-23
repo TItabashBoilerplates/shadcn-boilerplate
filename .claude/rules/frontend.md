@@ -33,12 +33,15 @@ paths: frontend/**/*.{ts,tsx,js,jsx}
 ```
 frontend/
 ├── apps/
-│   ├── web/          # Next.js Web アプリ
-│   └── mobile/       # Expo React Native アプリ
+│   ├── web/              # Next.js Web アプリ
+│   └── mobile/           # Expo React Native アプリ
 └── packages/
-    ├── ui/           # 共通 UI コンポーネント
+    ├── ui/
+    │   ├── web/          # shadcn/ui + MagicUI (Web専用)
+    │   └── mobile/       # gluestack-ui (Native専用)
+    ├── tokens/           # デザイントークン (共有)
     ├── client-supabase/  # Supabase クライアント
-    ├── query/        # TanStack Query 設定
+    ├── query/            # TanStack Query 設定
     └── tailwind-config/  # TailwindCSS 共通設定
 ```
 
@@ -50,12 +53,14 @@ frontend/
 
 | 対象 | 配置場所 | 例 |
 |------|---------|-----|
-| **UI コンポーネント** | `packages/ui/` | Button, Card, Input |
+| **Web UI コンポーネント** | `packages/ui/web/` | Button, Card, Input (shadcn/ui) |
+| **Mobile UI コンポーネント** | `packages/ui/mobile/` | Button, Card (gluestack-ui) |
+| **デザイントークン** | `packages/tokens/` | colors, radius |
 | **Supabase クライアント** | `packages/client-supabase/` | createClient, types |
 | **TanStack Query 設定** | `packages/query/` | QueryClient, hooks |
 | **TailwindCSS 設定** | `packages/tailwind-config/` | theme, plugins |
 | **型定義** | `packages/*/types/` | 共通インターフェース |
-| **ユーティリティ** | `packages/ui/lib/` or app の `shared/lib/` | cn, formatDate |
+| **ユーティリティ** | `packages/ui/web/lib/` or app の `shared/lib/` | cn, formatDate |
 
 ### 禁止事項
 
@@ -64,9 +69,11 @@ frontend/
 // apps/web/src/shared/ui/button.tsx
 // apps/mobile/components/ui/button.tsx (同じロジック)
 
-// ✅ Good: packages で共通化
-// packages/ui/src/button.tsx
-import { Button } from '@workspace/ui'
+// ✅ Good: packages で共通化（プラットフォーム別）
+// packages/ui/web/components/button.tsx (Web)
+// packages/ui/mobile/components/button/ (Mobile)
+import { Button } from '@workspace/ui/web/components/button' // Web
+import { Button } from '@workspace/ui/mobile/components/button' // Mobile
 ```
 
 ```typescript
@@ -112,10 +119,12 @@ import { queryClient, defaultOptions } from '@workspace/query'
 ```typescript
 // 1. External packages
 import { useState, useEffect } from 'react'
-import { useQuery } from '@workspace/query'
+import { useQuery } from '@tanstack/react-query'
 
 // 2. Workspace packages
-import { Button } from '@workspace/ui/components'
+import { Button } from '@workspace/ui/web/components/button' // Web
+import { Button } from '@workspace/ui/mobile/components/button' // Mobile
+import { colors } from '@workspace/tokens'
 import { createClient } from '@workspace/client-supabase/client'
 
 // 3. FSD layers (top to bottom)

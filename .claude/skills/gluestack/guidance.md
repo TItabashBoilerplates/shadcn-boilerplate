@@ -19,16 +19,23 @@ React Native (Expo) アプリケーションにおける gluestack-ui コンポ�
 ### コンポーネント配置
 
 ```
-frontend/apps/mobile/
-├── components/
-│   └── ui/           # gluestack-ui カスタムコンポーネント
-│       ├── button/
-│       │   └── index.tsx
-│       ├── input/
-│       │   └── index.tsx
-│       └── ...
-├── app/              # Expo Router ページ
-└── tailwind.config.ts
+frontend/
+├── packages/ui/mobile/              # gluestack-ui コンポーネント（共有）
+│   ├── components/
+│   │   ├── button/
+│   │   │   └── index.tsx
+│   │   ├── gluestack-ui-provider/   # プロバイダー
+│   │   │   └── index.tsx
+│   │   └── ...
+│   ├── layout/                      # レイアウトコンポーネント
+│   ├── hooks/                       # Mobile固有フック
+│   └── gluestack-ui.config.json     # CLI設定
+│
+└── apps/mobile/
+    ├── app/                         # Expo Router ページ
+    ├── components/                  # アプリ固有コンポーネント
+    ├── global.css                   # TailwindCSS スタイル
+    └── tailwind.config.ts
 ```
 
 ### gluestack-ui の設計思想
@@ -292,15 +299,31 @@ export const supabase = createClient(
 
 ## 新規コンポーネント追加手順
 
+### gluestack-ui CLI を使用（推奨）
+
+```bash
+# frontend ディレクトリから
+cd frontend
+bun run ui:add:mobile <component-name>
+
+# または packages/ui/mobile から直接
+cd packages/ui/mobile
+bunx gluestack-ui@latest add <component-name> --use-bun
+```
+
+コンポーネントは `packages/ui/mobile/components/` にインストールされます。
+
+### 手動で追加する場合
+
 1. **パッケージインストール**
    ```bash
-   cd frontend/apps/mobile
+   cd frontend/packages/ui/mobile
    bun add @gluestack-ui/<component-name>
    ```
 
 2. **コンポーネントファイル作成**
    ```
-   components/ui/<component-name>/index.tsx
+   packages/ui/mobile/components/<component-name>/index.tsx
    ```
 
 3. **実装パターンに従う**
@@ -313,6 +336,17 @@ export const supabase = createClient(
    export { Component, ComponentText, ComponentIcon, ... }
    export type { ComponentProps }
    ```
+
+## インポートパターン
+
+```tsx
+// workspace パッケージから（推奨）
+import { Button, ButtonText } from '@workspace/ui/mobile/components/button'
+import { GluestackUIProvider } from '@workspace/ui/mobile/components/gluestack-ui-provider'
+
+// ユーティリティ
+import { tva } from '@gluestack-ui/nativewind-utils/tva'
+```
 
 ## 参考リンク
 

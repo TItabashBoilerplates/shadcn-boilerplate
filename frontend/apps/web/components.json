@@ -14,7 +14,7 @@
     "components": "@/shared/ui",
     "hooks": "@/shared/lib/hooks",
     "lib": "@/shared/lib",
-    "utils": "@workspace/ui-web/lib/utils",
-    "ui": "@workspace/ui-web/components"
+    "utils": "@workspace/ui/web/lib/utils",
+    "ui": "@workspace/ui/web/components"
   }
 }

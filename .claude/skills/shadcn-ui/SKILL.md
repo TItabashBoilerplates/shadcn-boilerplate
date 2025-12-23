@@ -11,9 +11,10 @@ description: shadcn/ui + TailwindCSS 4 による UI 実装ガイダンス。コ�
 
 | 項目 | 場所 |
 |------|------|
-| shadcn/ui 設定 | `frontend/apps/web/components.json` |
+| shadcn/ui 設定 | `frontend/packages/ui/web/components.json` |
 | CSS 変数定義 | `frontend/apps/web/app/globals.css` |
-| 共有コンポーネント | `frontend/packages/ui/components/` |
+| デザイントークン | `frontend/packages/tokens/src/` |
+| 共有コンポーネント | `frontend/packages/ui/web/components/` |
 
 ## 基盤技術
 
@@ -24,27 +25,33 @@ description: shadcn/ui + TailwindCSS 4 による UI 実装ガイダンス。コ�
 ## コンポーネント追加
 
 ```bash
+# frontend ディレクトリから実行
 cd frontend
-bun run ui:add <component-name>
+bun run ui:add:web <component-name>
 
 # 例: 複数コンポーネントを追加
-bun run ui:add button card input dialog
+bun run ui:add:web button card input dialog
+
+# または直接実行
+cd packages/ui/web && bunx shadcn@canary add button
 ```
+
+コンポーネントは `packages/ui/web/components/` にインストールされます。
 
 ## インポートパターン
 
 ```typescript
-// shadcn/ui コンポーネント
-import { Button } from '@/components/ui/button'
+// workspace パッケージから（推奨）
+import { Button } from '@workspace/ui/web/components/button'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+} from '@workspace/ui/web/components/card'
+import { Input } from '@workspace/ui/web/components/input'
+import { Label } from '@workspace/ui/web/components/label'
 import {
   Dialog,
   DialogContent,
@@ -52,7 +59,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'
+} from '@workspace/ui/web/components/dialog'
+
+// ユーティリティ
+import { cn } from '@workspace/ui/web/lib/utils'
 ```
 
 ## CSS 変数の使用（必須）
@@ -201,7 +211,7 @@ TailwindCSS のレスポンシブユーティリティを使用:
 ### カード + フォーム
 
 ```typescript
-import { Button } from '@/components/ui/button'
+import { Button } from '@workspace/ui/web/components/button'
 import {
   Card,
   CardContent,
@@ -209,9 +219,9 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+} from '@workspace/ui/web/components/card'
+import { Input } from '@workspace/ui/web/components/input'
+import { Label } from '@workspace/ui/web/components/label'
 
 export function LoginCard() {
   return (
@@ -250,8 +260,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+} from '@workspace/ui/web/components/dialog'
+import { Button } from '@workspace/ui/web/components/button'
 
 export function ConfirmDialog() {
   return (

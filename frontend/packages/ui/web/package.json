@@ -1,5 +1,5 @@
 {
-  "name": "@workspace/ui-web",
+  "name": "@workspace/ui/web",
   "version": "0.0.0",
   "private": true,
   "type": "module",

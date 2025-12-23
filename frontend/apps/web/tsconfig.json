@@ -20,8 +20,8 @@
     "types": ["node", "react", "react-dom"],
     "paths": {
       "@/*": ["./src/*"],
-      "@workspace/ui-web": ["../../packages/ui/web/components"],
-      "@workspace/ui-web/*": ["../../packages/ui/web/*"],
+      "@workspace/ui/web": ["../../packages/ui/web/components"],
+      "@workspace/ui/web/*": ["../../packages/ui/web/*"],
       "@workspace/tokens": ["../../packages/tokens/src"],
       "@workspace/tokens/*": ["../../packages/tokens/src/*"]
     }

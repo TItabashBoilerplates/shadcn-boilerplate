@@ -5,7 +5,7 @@
     "composite": true,
     "baseUrl": ".",
     "paths": {
-      "@workspace/ui-web/*": ["./*"],
+      "@workspace/ui/web/*": ["./*"],
       "@workspace/tokens": ["../../tokens/src"],
       "@workspace/tokens/*": ["../../tokens/src/*"]
     }

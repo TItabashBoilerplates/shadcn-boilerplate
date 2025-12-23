@@ -22,31 +22,47 @@ This frontend follows **Feature-Sliced Design (FSD)**, an architectural methodol
 ```
 frontend/
 ├── apps/
-│   └── web/                    # Next.js application
-│       ├── app/                # Next.js App Router
-│       │   ├── [locale]/       # Internationalized routes
-│       │   ├── layout.tsx
-│       │   └── page.tsx
-│       └── src/                # Feature-Sliced Design layers
-│           ├── app/            # Application layer (providers, global styles)
-│           ├── views/          # Views layer (full-page components)
-│           ├── widgets/        # Widgets layer (composite UI blocks)
-│           ├── features/       # Features layer (business features)
-│           ├── entities/       # Entities layer (business entities)
-│           └── shared/         # Shared layer (reusable code)
+│   ├── web/                    # Next.js application
+│   │   ├── app/                # Next.js App Router
+│   │   │   ├── [locale]/       # Internationalized routes
+│   │   │   ├── layout.tsx
+│   │   │   └── page.tsx
+│   │   └── src/                # Feature-Sliced Design layers
+│   │       ├── app/            # Application layer (providers, global styles)
+│   │       ├── views/          # Views layer (full-page components)
+│   │       ├── widgets/        # Widgets layer (composite UI blocks)
+│   │       ├── features/       # Features layer (business features)
+│   │       ├── entities/       # Entities layer (business entities)
+│   │       └── shared/         # Shared layer (reusable code)
+│   │
+│   └── mobile/                 # Expo React Native application
+│       ├── app/                # Expo Router (file-based routing)
+│       └── components/         # App-specific components
 │
-├── packages/                   # Shared packages
-│   ├── ui/                     # shadcn/ui component library
+├── packages/
+│   ├── ui/
+│   │   ├── web/                # shadcn/ui + MagicUI (Web)
+│   │   │   ├── components/     # shadcn/ui components
+│   │   │   ├── magicui/        # MagicUI components
+│   │   │   └── lib/            # Utilities (cn, etc.)
+│   │   └── mobile/             # gluestack-ui (React Native)
+│   │       ├── components/     # gluestack-ui components
+│   │       ├── layout/         # Layout components
+│   │       └── hooks/          # Mobile-specific hooks
+│   │
+│   ├── tokens/                 # Design tokens (shared)
+│   │   ├── src/                # Token definitions (colors, radius)
+│   │   └── scripts/            # CSS generation scripts
+│   │
 │   ├── auth/                   # Authentication package
 │   ├── types/                  # Supabase type definitions
-│   ├── client/                 # Supabase client
-│   ├── api-client/             # API client
-│   └── utils/                  # Utilities
+│   ├── client-supabase/        # Supabase client
+│   ├── api-client/             # Backend API client
+│   └── query/                  # TanStack Query configuration
 │
 └── tooling/                    # Development tools
-    ├── eslint/
-    ├── typescript/
-    └── tailwind/
+    ├── typescript/             # TypeScript configurations
+    └── tailwind/               # TailwindCSS configurations
 ```
 
 ## Feature-Sliced Design (FSD)
@@ -78,16 +94,29 @@ FSD organizes code into **layers** and **slices**, promoting maintainability and
 
 ## Design System
 
-### shadcn/ui Components
+This project uses a **platform-specific UI approach**:
 
-This project uses **shadcn/ui**, a collection of accessible, customizable components built on Radix UI.
+| Platform | UI Library | Package |
+|----------|------------|---------|
+| **Web** | shadcn/ui + MagicUI | `@workspace/ui/web` |
+| **Mobile** | gluestack-ui + NativeWind | `@workspace/ui/mobile` |
+| **Shared** | Design Tokens | `@workspace/tokens` |
 
-#### Adding New Components
+### Web: shadcn/ui Components
+
+**shadcn/ui** provides accessible, customizable components built on Radix UI.
+
+#### Adding New Components (Web)
 
 ```bash
-cd frontend
-bun run ui:add button card input dialog
+# From frontend directory
+bun run ui:add:web button card input dialog
+
+# Or directly
+cd packages/ui/web && bunx shadcn@canary add button
 ```
+
+Components are installed to `packages/ui/web/components/`.
 
 #### Available Components
 
@@ -95,6 +124,36 @@ bun run ui:add button card input dialog
 - Dialog, Dropdown Menu, Select
 - Avatar, Separator, Navigation Menu
 - And more...
+
+### Mobile: gluestack-ui Components
+
+**gluestack-ui** provides accessible components optimized for React Native with NativeWind styling.
+
+#### Adding New Components (Mobile)
+
+```bash
+# From frontend directory
+bun run ui:add:mobile button card input
+
+# Or directly
+cd packages/ui/mobile && bunx gluestack-ui@latest add button --use-bun
+```
+
+Components are installed to `packages/ui/mobile/components/`.
+
+### Design Tokens
+
+Shared design tokens (colors, radius, spacing) are defined in `packages/tokens/`:
+
+```typescript
+// Usage in both Web and Mobile
+import { colors, radius } from '@workspace/tokens'
+```
+
+Generate CSS files:
+```bash
+bun run tokens:build
+```
 
 ### TailwindCSS 4 with CSS Variables
 
@@ -124,7 +183,7 @@ bun run ui:add button card input dialog
 - `--destructive`, `--destructive-foreground`
 - `--border`, `--input`, `--ring`, `--radius`
 
-Theme configuration: `packages/ui/styles/globals.css`
+Theme configuration: `packages/tokens/` and `apps/web/app/globals.css`
 
 ## Development
 
@@ -155,7 +214,9 @@ bun run lint:ci          # Biome lint (CI mode, no fix)
 bun run format           # Biome format (auto-fix)
 
 # UI Components
-bun run ui:add <name>    # Add shadcn/ui component
+bun run ui:add:web <name>     # Add shadcn/ui component (Web)
+bun run ui:add:mobile <name>  # Add gluestack-ui component (Mobile)
+bun run tokens:build          # Generate CSS from design tokens
 
 # Type Generation
 bun run generate:types   # Generate Supabase types
@@ -284,8 +345,10 @@ export function DateDisplay({ utcDate }: DateDisplayProps) {
 
 - **Strict mode**: Enabled
 - **Path aliases**:
-  - `@/*` → `apps/web/src/*`
-  - `@workspace/ui/*` → `packages/ui/*`
+  - `@/*` → `apps/web/src/*` or `apps/mobile/*`
+  - `@workspace/ui/web` → `packages/ui/web`
+  - `@workspace/ui/mobile` → `packages/ui/mobile`
+  - `@workspace/tokens` → `packages/tokens`
 
 ## Testing
 
@@ -308,7 +371,9 @@ Packages can reference each other using `@workspace/` prefix:
 ```json
 {
   "dependencies": {
-    "@workspace/ui": "workspace:*",
+    "@workspace/ui/web": "workspace:*",
+    "@workspace/ui/mobile": "workspace:*",
+    "@workspace/tokens": "workspace:*",
     "@workspace/auth": "workspace:*",
     "@workspace/types": "workspace:*"
   }

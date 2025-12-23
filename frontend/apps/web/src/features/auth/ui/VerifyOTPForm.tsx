@@ -1,8 +1,8 @@
 'use client'
 
-import { Button } from '@workspace/ui-web/components/button'
-import { Input } from '@workspace/ui-web/components/input'
-import { Label } from '@workspace/ui-web/components/label'
+import { Button } from '@workspace/ui/web/components/button'
+import { Input } from '@workspace/ui/web/components/input'
+import { Label } from '@workspace/ui/web/components/label'
 import { KeyRound } from 'lucide-react'
 import { useActionState, useState } from 'react'
 import { resendOtp, verifyOtp } from '../api'

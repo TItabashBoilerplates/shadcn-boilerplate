@@ -1,6 +1,6 @@
 'use client'
 
-import { Avatar, AvatarFallback, AvatarImage } from '@workspace/ui-web/components/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@workspace/ui/web/components/avatar'
 import { User } from 'lucide-react'
 import type { User as UserType } from '../model/types'
 
