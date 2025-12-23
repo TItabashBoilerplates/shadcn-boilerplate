@@ -7,8 +7,6 @@
   "exports": {
     ".": "./index.ts",
     "./client": "./client.ts",
-    "./server": "./server.ts",
-    "./middleware": "./middleware.ts",
     "./native": "./native.ts"
   },
   "scripts": {
@@ -20,16 +18,10 @@
     "@workspace/types": "workspace:*"
   },
   "devDependencies": {
-    "next": "^16.0.0",
     "typescript": "^5.8.0"
   },
-  "peerDependencies": {
-    "next": "^16.0.0"
-  },
+  "peerDependencies": {},
   "peerDependenciesMeta": {
-    "next": {
-      "optional": true
-    },
     "@react-native-async-storage/async-storage": {
       "optional": true
     }

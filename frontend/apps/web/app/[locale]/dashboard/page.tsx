@@ -1,7 +1,7 @@
-import { createClient } from '@workspace/client-supabase/server'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { BackendApiClient } from '@/shared/api'
+import { createServerClient as createClient } from '@/shared/lib/supabase'
 import { DashboardPage } from '@/views/dashboard'
 import { Header } from '@/widgets/header'
 

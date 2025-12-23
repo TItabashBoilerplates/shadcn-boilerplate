@@ -1,14 +1,14 @@
 'use client'
 
 /**
- * useRequireAuth - 認証必須フック
+ * useRequireAuth - 認証必須フック (Next.js専用)
  *
- * @module @workspace/auth/hooks/useRequireAuth
+ * @module @/shared/hooks/useRequireAuth
  */
 
+import { useAuthStore } from '@workspace/auth'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { useAuthStore } from '../store/authStore'
 
 /**
  * 認証必須ページで使用するフック

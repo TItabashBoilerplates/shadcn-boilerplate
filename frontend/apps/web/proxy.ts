@@ -1,6 +1,6 @@
-import { updateSession } from '@workspace/client-supabase/middleware'
 import type { NextRequest } from 'next/server'
 import createMiddleware from 'next-intl/middleware'
+import { updateSession } from '@/shared/lib/supabase'
 import { routing } from './src/shared/config/i18n'
 
 /**

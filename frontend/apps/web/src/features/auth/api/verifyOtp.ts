@@ -1,7 +1,7 @@
 'use server'
 
-import { createClient } from '@workspace/client-supabase/server'
 import { redirect } from 'next/navigation'
+import { createServerClient as createClient } from '@/shared/lib/supabase'
 
 /**
  * OTPトークンを検証してログイン

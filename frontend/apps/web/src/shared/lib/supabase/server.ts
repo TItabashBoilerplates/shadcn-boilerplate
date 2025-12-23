@@ -12,11 +12,11 @@ import { cookies } from 'next/headers'
  * @example
  * ```typescript
  * // Server Component
- * import { createClient } from '@workspace/client-supabase/server'
+ * import { createServerClient } from '@/shared/lib/supabase'
  * import { redirect } from 'next/navigation'
  *
  * export default async function Page() {
- *   const supabase = await createClient()
+ *   const supabase = await createServerClient()
  *   const { data: { user } } = await supabase.auth.getUser() // セキュア
  *
  *   if (!user) redirect('/login')
@@ -28,11 +28,11 @@ import { cookies } from 'next/headers'
  * ```typescript
  * // Server Action
  * 'use server'
- * import { createClient } from '@workspace/client-supabase/server'
+ * import { createServerClient } from '@/shared/lib/supabase'
  * import { revalidatePath } from 'next/cache'
  *
  * export async function updateProfile(formData: FormData) {
- *   const supabase = await createClient()
+ *   const supabase = await createServerClient()
  *   const { error } = await supabase
  *     .from('profiles')
  *     .update({ name: formData.get('name') })

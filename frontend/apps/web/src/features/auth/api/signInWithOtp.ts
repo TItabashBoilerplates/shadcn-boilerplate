@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@workspace/client-supabase/server'
+import { createServerClient as createClient } from '@/shared/lib/supabase'
 
 /**
  * パスワードレス認証：メールアドレスにOTPを送信

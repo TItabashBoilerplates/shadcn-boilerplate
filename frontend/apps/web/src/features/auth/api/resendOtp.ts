@@ -1,6 +1,6 @@
 'use server'
 
-import { createClient } from '@workspace/client-supabase/server'
+import { createServerClient as createClient } from '@/shared/lib/supabase'
 
 /**
  * OTPを再送信
