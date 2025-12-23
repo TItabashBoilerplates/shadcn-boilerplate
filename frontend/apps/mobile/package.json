@@ -23,7 +23,7 @@
     "expo": "^55.0.0-canary-20251210-1f163e3",
     "expo-constants": "18.1.0-canary-20251210-1f163e3",
     "expo-font": "14.1.0-canary-20251210-1f163e3",
-    "expo-haptics": "15.0.9-canary-20251210-1f163e3",
+    "expo-haptics": "15.0.9-canary-20251223-b83b31e",
     "expo-image": "3.1.0-canary-20251210-1f163e3",
     "expo-linking": "8.0.11-canary-20251210-1f163e3",
     "expo-localization": "^17.0.8",
