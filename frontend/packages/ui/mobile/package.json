@@ -29,12 +29,12 @@
     "expo-symbols": "1.1.0-canary-20251210-1f163e3",
     "lucide-react-native": "^0.560.0",
     "nativewind": "^4.1.23",
-    "react-native-reanimated": "~4.1.1"
+    "react-native-reanimated": "~4.2.1"
   },
   "devDependencies": {
-    "@types/react": "~19.1.0",
-    "react": "19.2.1",
-    "react-native": "0.82.1",
+    "@types/react": "~19.2.7",
+    "react": "19.2.3",
+    "react-native": "0.83.1",
     "react-native-css": "^3.0.1",
     "typescript": "~5.9.2"
   },
