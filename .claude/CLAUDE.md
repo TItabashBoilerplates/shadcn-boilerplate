@@ -67,6 +67,8 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 | **Database** | PostgreSQL, Drizzle ORM, pgvector |
 | **Auth** | Supabase Auth |
 
+**MANDATORY**: すべてのユーザー向けテキストは多言語対応（i18n）必須。詳細は `.claude/skills/i18n/` を参照。
+
 ### Package Management
 
 | Component | Package Manager |

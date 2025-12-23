@@ -4,7 +4,7 @@ import createMiddleware from 'next-intl/middleware'
 import { routing } from './src/shared/config/i18n'
 
 /**
- * Next.js Proxy (formerly Middleware)
+ * Next.js 16 Proxy (formerly Middleware)
  *
  * 統合機能:
  * 1. next-intl: ロケールベースのルーティング（i18n）
@@ -13,10 +13,12 @@ import { routing } from './src/shared/config/i18n'
  * 処理順序:
  * - まず next-intl でルーティング処理
  * - 次に Supabase でセッション更新
+ *
+ * @see https://nextjs.org/docs/app/building-your-application/routing/middleware
  */
 const handleI18nRouting = createMiddleware(routing)
 
-export default async function middleware(request: NextRequest) {
+export default async function proxy(request: NextRequest) {
   // Step 1: next-intl のルーティング処理
   const response = handleI18nRouting(request)
 
