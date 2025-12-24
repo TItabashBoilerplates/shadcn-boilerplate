@@ -10,8 +10,7 @@
     "./query": "./src/query.ts"
   },
   "scripts": {
-    "generate": "bun run scripts/generate.ts",
-    "type-check": "tsc --noEmit"
+    "generate": "bun run scripts/generate.ts"
   },
   "dependencies": {
     "openapi-fetch": "^0.15.0",
