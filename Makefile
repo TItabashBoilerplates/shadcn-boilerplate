@@ -226,27 +226,27 @@ format-drizzle-check:
 # Ruff lint（自動修正）
 .PHONY: lint-backend-py
 lint-backend-py:
-	docker exec backend_app_py bash -c "cd /service/app && uv run ruff check --fix src/"
+	cd backend-py/app && uv run ruff check --fix src/
 
 # Ruff lint（CI用、修正なし）
 .PHONY: lint-backend-py-ci
 lint-backend-py-ci:
-	docker exec backend_app_py bash -c "cd /service/app && uv run ruff check src/"
+	cd backend-py/app && uv run ruff check src/
 
 # Ruff format（自動修正）
 .PHONY: format-backend-py
 format-backend-py:
-	docker exec backend_app_py bash -c "cd /service/app && uv run ruff format src/"
+	cd backend-py/app && uv run ruff format src/
 
 # Ruff formatチェック（チェックのみ）
 .PHONY: format-backend-py-check
 format-backend-py-check:
-	docker exec backend_app_py bash -c "cd /service/app && uv run ruff format --check src/"
+	cd backend-py/app && uv run ruff format --check src/
 
 # MyPy型チェック
 .PHONY: type-check-backend-py
 type-check-backend-py:
-	docker exec backend_app_py bash -c "cd /service/app && uv run mypy src/"
+	cd backend-py/app && uv run mypy src/
 
 # ===== 統合 lint/format コマンド =====
 
