@@ -8,6 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 実装前に必ず **Context7 MCP** または **WebSearch/WebFetch** で公式ドキュメントを確認すること
 - ライブラリの API、設定ファイル形式、CLI 構文は**必ずファクトを調査**してから使用
 - 「たぶんこうだろう」「以前こうだった」という推測での実装は**絶対に行わない**
+- **モジュール・パッケージは必ず最新バージョンを調査し、最新のAPIを使用すること**
 - 詳細は `.claude/rules/research.md` を参照
 
 ## Memory Structure
