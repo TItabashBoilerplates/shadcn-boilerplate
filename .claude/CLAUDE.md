@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**CRITICAL - 推測実装の完全禁止**:
+
+- **推測・記憶・一般知識に基づく実装は一切禁止**
+- 実装前に必ず **Context7 MCP** または **WebSearch/WebFetch** で公式ドキュメントを確認すること
+- ライブラリの API、設定ファイル形式、CLI 構文は**必ずファクトを調査**してから使用
+- 「たぶんこうだろう」「以前こうだった」という推測での実装は**絶対に行わない**
+- 詳細は `.claude/rules/research.md` を参照
+
 ## Memory Structure
 
 このプロジェクトは `.claude/` ディレクトリでメモリを構造化しています：
@@ -38,13 +46,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 詳細なドメイン情報は各 README を参照：
 
-| ドメイン | ドキュメント |
-|---------|-------------|
-| Frontend (Web) | [`frontend/README.md`](frontend/README.md) |
+| ドメイン          | ドキュメント                                                       |
+| ----------------- | ------------------------------------------------------------------ |
+| Frontend (Web)    | [`frontend/README.md`](frontend/README.md)                         |
 | Frontend (Mobile) | [`frontend/apps/mobile/README.md`](frontend/apps/mobile/README.md) |
-| Database Schema | [`drizzle/README.md`](drizzle/README.md) |
-| Backend Python | [`backend-py/README.md`](backend-py/README.md) |
-| Edge Functions | [`supabase/functions/README.md`](supabase/functions/README.md) |
+| Database Schema   | [`drizzle/README.md`](drizzle/README.md)                           |
+| Backend Python    | [`backend-py/README.md`](backend-py/README.md)                     |
+| Edge Functions    | [`supabase/functions/README.md`](supabase/functions/README.md)     |
 
 ---
 
@@ -54,32 +62,32 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 
 ### Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| **Frontend (Web)** | Next.js 16, React 19, TypeScript, Bun |
-| **Frontend (Mobile)** | Expo 55, React Native, TypeScript |
-| **UI (Web)** | shadcn/ui, Radix UI, TailwindCSS 4 |
-| **UI (Mobile)** | gluestack-ui, NativeWind 5, TailwindCSS 4 |
-| **State** | TanStack Query (server), Zustand (global) |
-| **Architecture** | Feature Sliced Design (FSD) |
-| **i18n** | next-intl (en, ja) |
-| **Backend** | FastAPI (Python), Supabase Edge Functions (Deno) |
-| **Database** | PostgreSQL, Drizzle ORM, pgvector |
-| **Auth** | Supabase Auth |
+| Layer                 | Technology                                       |
+| --------------------- | ------------------------------------------------ |
+| **Frontend (Web)**    | Next.js 16, React 19, TypeScript, Bun            |
+| **Frontend (Mobile)** | Expo 55, React Native, TypeScript                |
+| **UI (Web)**          | shadcn/ui, Radix UI, TailwindCSS 4               |
+| **UI (Mobile)**       | gluestack-ui, NativeWind 5, TailwindCSS 4        |
+| **State**             | TanStack Query (server), Zustand (global)        |
+| **Architecture**      | Feature Sliced Design (FSD)                      |
+| **i18n**              | next-intl (en, ja)                               |
+| **Backend**           | FastAPI (Python), Supabase Edge Functions (Deno) |
+| **Database**          | PostgreSQL, Drizzle ORM, pgvector                |
+| **Auth**              | Supabase Auth                                    |
 
 **MANDATORY**: すべてのユーザー向けテキストは多言語対応（i18n）必須。詳細は `.claude/skills/i18n/` を参照。
 
-**MANDATORY**: すべての実装はテスト駆動開発（TDD）を厳守。**作業終了時は必ずAll Green（全テスト通過）を確認**。詳細は `.claude/rules/tdd.md` を参照。
+**MANDATORY**: すべての実装はテスト駆動開発（TDD）を厳守。**作業終了時は必ず All Green（全テスト通過）を確認**。詳細は `.claude/rules/tdd.md` を参照。
 
 ### Package Management
 
-| Component | Package Manager |
-|-----------|----------------|
-| Frontend Web (`frontend/apps/web/`) | **Bun** |
-| Frontend Mobile (`frontend/apps/mobile/`) | **Bun** |
-| Backend Python (`backend-py/`) | **uv** |
-| Drizzle (`drizzle/`) | **Bun** |
-| Edge Functions (`supabase/functions/`) | **Deno** |
+| Component                                 | Package Manager |
+| ----------------------------------------- | --------------- |
+| Frontend Web (`frontend/apps/web/`)       | **Bun**         |
+| Frontend Mobile (`frontend/apps/mobile/`) | **Bun**         |
+| Backend Python (`backend-py/`)            | **uv**          |
+| Drizzle (`drizzle/`)                      | **Bun**         |
+| Edge Functions (`supabase/functions/`)    | **Deno**        |
 
 ---
 
@@ -120,26 +128,26 @@ env/
 
 ### ni Commands (Package Manager Abstraction)
 
-| ni | Bun equivalent |
-|----|----------------|
-| `ni` | `bun install` |
-| `ni package` | `bun add package` |
+| ni              | Bun equivalent       |
+| --------------- | -------------------- |
+| `ni`            | `bun install`        |
+| `ni package`    | `bun add package`    |
 | `ni -D package` | `bun add -d package` |
-| `nr script` | `bun run script` |
-| `nlx command` | `bunx command` |
+| `nr script`     | `bun run script`     |
+| `nlx command`   | `bunx command`       |
 
 ---
 
 ## Supabase Configuration
 
-| Setting | Location |
-|---------|----------|
-| Auth (OAuth, JWT, MFA) | `supabase/config.toml` |
-| Storage buckets | `supabase/config.toml` |
-| API settings | `supabase/config.toml` |
-| Tables | `drizzle/schema/` |
-| RLS policies | `drizzle/schema/` |
-| Realtime | `drizzle/config/functions.sql` |
+| Setting                | Location                       |
+| ---------------------- | ------------------------------ |
+| Auth (OAuth, JWT, MFA) | `supabase/config.toml`         |
+| Storage buckets        | `supabase/config.toml`         |
+| API settings           | `supabase/config.toml`         |
+| Tables                 | `drizzle/schema/`              |
+| RLS policies           | `drizzle/schema/`              |
+| Realtime               | `drizzle/config/functions.sql` |
 
 ---
 

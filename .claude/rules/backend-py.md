@@ -186,3 +186,39 @@ async def get_user(
         raise HTTPException(status_code=404)
     return UserResponse.from_orm(user)
 ```
+
+## LLM Client Policy (MANDATORY)
+
+**原則**: すべてのLLMクライアント実装は **LangChain** を使用する。
+
+### 理由
+
+- **統一されたインターフェース**: 複数のLLMプロバイダー（OpenAI, Anthropic, etc.）を一貫したAPIで利用可能
+- **LangGraph統合**: エージェント・ワークフロー実装との連携
+- **LangSmith連携**: トレーシング・評価・モニタリングの一元管理
+- **本プロジェクトのAI/ML基盤**: `backend-py/README.md` で定義されたLangChain/LangGraphアーキテクチャとの整合性
+
+### 必須パターン
+
+```python
+# ✅ Good: LangChain を使用
+from langchain_openai import ChatOpenAI
+from langchain_anthropic import ChatAnthropic
+
+llm = ChatOpenAI(model="gpt-5.2")
+response = llm.invoke("Hello")
+
+# ❌ Bad: 直接SDKを使用
+from openai import OpenAI
+client = OpenAI()
+response = client.chat.completions.create(...)
+```
+
+### 例外
+
+以下の場合のみ直接SDKの使用を許可：
+- LangChainが未対応の最新API機能
+- LangChainラッパーにバグがある場合
+- パフォーマンスクリティカルで軽量実装が必要な場合
+
+**例外を適用する場合は、コードコメントで理由を明記すること。**
