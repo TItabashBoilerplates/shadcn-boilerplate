@@ -69,7 +69,7 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 
 **MANDATORY**: すべてのユーザー向けテキストは多言語対応（i18n）必須。詳細は `.claude/skills/i18n/` を参照。
 
-**MANDATORY**: すべての実装はテスト駆動開発（TDD）を厳守。詳細は `.claude/rules/tdd.md` を参照。
+**MANDATORY**: すべての実装はテスト駆動開発（TDD）を厳守。**作業終了時は必ずAll Green（全テスト通過）を確認**。詳細は `.claude/rules/tdd.md` を参照。
 
 ### Package Management
 

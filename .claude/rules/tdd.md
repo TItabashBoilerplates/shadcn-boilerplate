@@ -62,6 +62,36 @@ TDD is NOT required for:
 - Static assets (images, fonts, etc.)
 - Type definition files (when auto-generated)
 
+## All Green Policy (MANDATORY)
+
+**作業終了時は必ずすべてのテストが通過（All Green）していること。**
+
+### 作業終了前チェックリスト
+
+1. **全テスト実行**: `make test` を実行
+2. **失敗テストの対応**:
+   - 原因分析を実施
+   - 実装の修正（テストは変更しない）
+   - 再度テスト実行
+3. **All Green確認**: すべてのテストがパスするまで繰り返す
+
+### 失敗テストへの対応
+
+| 状況 | 対応 |
+|------|------|
+| 実装バグ | 実装を修正 |
+| テスト環境問題 | 環境を修正し再実行 |
+| 既存テストの破壊 | リグレッションを修正 |
+| フレーキーテスト | 根本原因を特定し安定化 |
+
+### 禁止事項
+
+**NEVER**:
+- 失敗テストを放置して作業を終了
+- テストをスキップ（`skip`/`xfail`）して回避
+- 失敗テストを削除して対処
+- 「後で直す」として先送り
+
 ## Enforcement
 
 This TDD policy is **NON-NEGOTIABLE**. Implementations without prior test cases are considered incomplete and must be revised to include tests first.
