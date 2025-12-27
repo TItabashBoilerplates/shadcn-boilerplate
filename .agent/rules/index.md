@@ -1,6 +1,6 @@
-# Claude Code Guidelines - Overview
+# Antigravity Agent Guidelines - Overview
 
-This directory contains guidelines for Claude Code when working in this repository.
+This directory contains guidelines for Antigravity Agent when working in this repository.
 
 ## Documentation Structure
 
