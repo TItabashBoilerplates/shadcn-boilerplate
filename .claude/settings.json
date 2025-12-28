@@ -55,18 +55,6 @@
           }
         ]
       }
-    ],
-    "SessionEnd": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "cd frontend && bun run build",
-            "timeout": 120
-          }
-        ]
-      }
     ]
   },
   "enabledPlugins": {

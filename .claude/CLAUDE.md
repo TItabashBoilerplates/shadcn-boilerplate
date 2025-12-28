@@ -25,6 +25,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 │   ├── commands.md       # Makefile コマンド必須
 │   ├── database.md       # マイグレーション承認必須
 │   ├── auto-generated.md # 自動生成ファイル編集禁止
+│   ├── clean-code.md     # クリーンコード（後方互換禁止・重複禁止）
 │   ├── frontend.md       # Frontend コード規約
 │   ├── backend-py.md     # Python コード規約
 │   ├── edge-functions.md # Edge Functions 規約
@@ -83,6 +84,8 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 **MANDATORY**: すべての実装はテスト駆動開発（TDD）を厳守。**作業終了時は必ず All Green（全テスト通過）を確認**。詳細は `.claude/rules/tdd.md` を参照。
 
 **MANDATORY**: 単体テストでは**外部SDK（pipモジュール）を丸ごとMockしない**。本物のSDKを使い、I/O層（HTTP/DB）のみ差し替えることで、**TypeError・ValueError・RuntimeError を単体テスト時点で検知**し、型安全で堅牢な状態を維持する。詳細は `.claude/rules/backend-py.md` および `.claude/skills/python-testing/` を参照。
+
+**MANDATORY**: コードは常にクリーンな状態を維持。後方互換コード・重複コード・未使用コードは残さない（明示的な指示がある場合を除く）。詳細は `.claude/rules/clean-code.md` を参照。
 
 ### Package Management
 
