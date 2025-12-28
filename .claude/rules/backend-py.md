@@ -189,22 +189,22 @@ async def get_user(
 
 ## Python Unit Testing Policy (MANDATORY)
 
-**原則**: 外部SDKの型不整合・誤用を単体テストレベルで検知する。
+**原則**: 外部SDKの型不整合・値不正を単体テストレベルで検知する。
 
 ### 目的
 
-- **TypeError（型不整合・誤用）を単体テストで検知**
+- **TypeError（型不整合）・ValueError（値不正）を単体テストで検知**
 - **課金・ネットワーク呼び出しは避ける**（外部APIは叩かない）
-- **都合の良いモック（MagicMock等）による型問題の隠蔽を防ぐ**
+- **都合の良いモック（MagicMock等）による問題の隠蔽を防ぐ**
 
 ### 3つの原則
 
 1. **外部SDK（pipモジュール）を丸ごとMockしない**
-   - モジュール全体をMockすると、属性が生えたり戻り値が何でも通ったりして、TypeErrorが隠れる
+   - モジュール全体をMockすると、属性が生えたり戻り値が何でも通ったりして、TypeError/ValueErrorが隠れる
 
 2. **本物のSDKを使い、差し替えるのは"境界（I/O）"だけ**
    - ネットワーク/ファイル/DBなど外部I/Oはテストで遮断
-   - SDKの型・パース挙動は本物のまま通す
+   - SDKの型チェック・バリデーション・パース挙動は本物のまま通す
 
 3. **Mockが必要なら `autospec` / `spec_set` で本物APIに縛る**
 
@@ -219,15 +219,16 @@ async def get_user(
 ### 禁止パターン
 
 ```python
-# ❌ Bad: SDK全体をMock（型チェックが効かない）
+# ❌ Bad: SDK全体をMock（型チェック・バリデーションが効かない）
 @patch('openai.OpenAI')
 def test_chat(mock_openai):
     mock_openai.return_value.chat.completions.create.return_value = MagicMock()
-    # 誤ったAPIでもテストが通ってしまう
+    # 誤ったAPI、不正な値でもテストが通ってしまう
 
 # ❌ Bad: MagicMockで何でも通す
 mock_response = MagicMock()
 mock_response.choices[0].message.content = "test"  # 実際のAPIと異なっても気づけない
+# model="" や messages=[] など不正な値もスルーされる
 
 # ✅ Good: httpx層で差し替え（SDKは本物）
 import respx
