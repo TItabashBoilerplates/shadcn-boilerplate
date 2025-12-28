@@ -187,6 +187,68 @@ async def get_user(
     return UserResponse.from_orm(user)
 ```
 
+## Python Unit Testing Policy (MANDATORY)
+
+**原則**: 外部SDKの型不整合・誤用を単体テストレベルで検知する。
+
+### 目的
+
+- **TypeError（型不整合・誤用）を単体テストで検知**
+- **課金・ネットワーク呼び出しは避ける**（外部APIは叩かない）
+- **都合の良いモック（MagicMock等）による型問題の隠蔽を防ぐ**
+
+### 3つの原則
+
+1. **外部SDK（pipモジュール）を丸ごとMockしない**
+   - モジュール全体をMockすると、属性が生えたり戻り値が何でも通ったりして、TypeErrorが隠れる
+
+2. **本物のSDKを使い、差し替えるのは"境界（I/O）"だけ**
+   - ネットワーク/ファイル/DBなど外部I/Oはテストで遮断
+   - SDKの型・パース挙動は本物のまま通す
+
+3. **Mockが必要なら `autospec` / `spec_set` で本物APIに縛る**
+
+### 推奨パターン
+
+| パターン | 手法 | 効果 |
+|----------|------|------|
+| **A: HTTP層差し替え** | `respx`, `httpx_mock` | SDKは本物、I/Oのみ遮断 |
+| **B: autospec/spec_set** | `patch(..., autospec=True)` | シグネチャ違いを検知 |
+| **C: Adapter + Fake** | 薄いラッパー + Fake実装 | SDK更新耐性向上 |
+
+### 禁止パターン
+
+```python
+# ❌ Bad: SDK全体をMock（型チェックが効かない）
+@patch('openai.OpenAI')
+def test_chat(mock_openai):
+    mock_openai.return_value.chat.completions.create.return_value = MagicMock()
+    # 誤ったAPIでもテストが通ってしまう
+
+# ❌ Bad: MagicMockで何でも通す
+mock_response = MagicMock()
+mock_response.choices[0].message.content = "test"  # 実際のAPIと異なっても気づけない
+
+# ✅ Good: httpx層で差し替え（SDKは本物）
+import respx
+from openai import OpenAI
+
+@respx.mock
+def test_chat():
+    respx.post("https://api.openai.com/v1/chat/completions").respond(json={...})
+    client = OpenAI()
+    response = client.chat.completions.create(...)  # 本物のSDK
+
+# ✅ Good: autospecで本物APIに縛る
+@patch('mymodule.openai_client', autospec=True)
+def test_with_autospec(mock_client):
+    # シグネチャ違いはTypeErrorになる
+```
+
+詳細なガイダンスは `.claude/skills/python-testing/SKILL.md` を参照。
+
+---
+
 ## LLM Client Policy (MANDATORY)
 
 **原則**: すべてのLLMクライアント実装は **LangChain** を使用する。

@@ -39,7 +39,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     ├── datetime/         # 日時処理
     ├── shadcn-ui/        # shadcn/ui + TailwindCSS (Web)
     ├── gluestack/        # gluestack-ui + NativeWind (Mobile)
-    ├── supabase-test/    # RLS テスト
+    ├── supabase-test/    # RLS テスト（Frontend）
+    ├── python-testing/   # Python単体テスト（外部SDK/TypeError検知）
     ├── i18n/             # next-intl 多言語対応
     └── langchain/        # LangChain/LangGraph/LangSmith
 ```
