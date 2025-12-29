@@ -29,7 +29,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 │   ├── frontend.md       # Frontend コード規約
 │   ├── backend-py.md     # Python コード規約
 │   ├── edge-functions.md # Edge Functions 規約
-│   └── i18n.md           # 多言語対応（必須）
+│   ├── i18n.md           # 多言語対応（必須）
+│   └── ui-testing.md     # UIテスト（Storybook必須・単体テスト不要）
 │
 └── skills/         # 質問時に参照するガイダンス
     ├── fsd/              # Feature Sliced Design
@@ -40,6 +41,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     ├── datetime/         # 日時処理
     ├── shadcn-ui/        # shadcn/ui + TailwindCSS (Web)
     ├── gluestack/        # gluestack-ui + NativeWind (Mobile)
+    ├── storybook/        # Storybook 10 コンポーネントカタログ
     ├── supabase-test/    # RLS テスト（Frontend）
     ├── python-testing/   # Python単体テスト（外部SDK/TypeError検知）
     ├── i18n/             # next-intl 多言語対応

@@ -67,13 +67,12 @@ run:
 		npx dotenvx run -f env/backend/${ENV}.env -- supabase start; \
 		npx dotenvx run -f env/backend/${ENV}.env -- supabase seed buckets --local; \
 	fi
-	# Docker Composeでサービスを起動
+	# Docker Composeでサービスを起動（backend + storybook）
 	if [ "${ENV}" != "local" ]; then \
 		export ENV=${ENV}; \
 	fi
-	# docker-compose -f ./docker-compose.frontend.yaml -f ./docker-compose.ai.yaml -f ./docker-compose.backend.yaml -f ./docker-compose.batch.yaml up -d --force-recreate
 	export PROJECT_NAME=$$(basename $$(pwd))
-	docker-compose -f ./docker-compose.backend.yaml up -d --force-recreate
+	docker-compose -f ./docker-compose.backend.yaml -f ./docker-compose.frontend.yaml up -d --force-recreate
 
 
 # ローカル環境でのフロントエンド起動コマンド
@@ -123,7 +122,7 @@ stop:
 	if [ "${ENV}" != "local" ]; then \
 		export ENV=${ENV}; \
 	fi
-	docker-compose -f ./docker-compose.backend.yaml down
+	docker-compose -f ./docker-compose.backend.yaml -f ./docker-compose.frontend.yaml down
 	# Supabaseを停止（ENV=localの場合のみ）
 	if [ "${ENV}" = "local" ]; then \
 		npx dotenvx run -f env/backend/${ENV}.env -- supabase stop; \
@@ -483,3 +482,15 @@ rollback:
 	@echo "⚠️  Drizzle does not have built-in rollback command."
 	@echo "For rollback, manually remove the last migration file and re-run migrations."
 	@exit 1
+
+# ===== Storybook コマンド =====
+
+# Storybook単独起動（ローカル開発用）
+.PHONY: storybook
+storybook:
+	cd frontend && bun run storybook
+
+# Storybookビルド
+.PHONY: build-storybook
+build-storybook:
+	cd frontend && bun run build-storybook

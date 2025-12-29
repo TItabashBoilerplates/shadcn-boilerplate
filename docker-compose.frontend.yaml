@@ -1,51 +1,17 @@
-version: "3.8"
 services:
-  # frontend_app:
-  #   container_name: frontend_app
-  #   image: node:21
-  #   ports:
-  #     - 3000:3000
-  #   volumes:
-  #     - ./frontend:/app
-  #     - exception-node-modules:/app/node_modules
-  #     - exception-node-modules-next:/app/apps/next/node_modules
-  #   tty: true
-  #   hostname: frontend
-  #   working_dir: /app
-  #   networks:
-  #     - supabase_network
-  #   env_file:
-  #     - ./env/local.docker.env
-  #     - ./env/secrets.env
-  #   entrypoint: "/bin/bash -c 'yarn set version 4.1.0 && yarn install --refresh-lockfile && yarn web'"
   storybook:
     container_name: storybook
     build:
-      context: ./frontend/docker
-      dockerfile: Dockerfile
+      context: ./frontend
+      dockerfile: docker/Dockerfile
     ports:
       - 6006:6006
     volumes:
       - ./frontend:/app
-      - exception-node-modules:/app/node_modules
-      - exception-node-modules-next:/app/apps/next/node_modules
-      # - ~/.cursor/extensions:/root/.cursor-server/extensions
-      # - ~/.vscode/extensions:/root/.vscode-server/extensions
+      - storybook_node_modules:/app/node_modules
     tty: true
     hostname: storybook
     working_dir: /app
-    networks:
-      - supabase_network
-    env_file:
-      - ./env/local.docker.env
-      - ./env/secrets.env
-    entrypoint: "/bin/bash -c 'yarn set version 4.5.0 && yarn install --refresh-lockfile && yarn storybook'"
 
 volumes:
-  exception-node-modules:
-  exception-node-modules-next:
-
-networks:
-  supabase_network:
-    name: supabase_network_${PROJECT_NAME}
-    external: true
+  storybook_node_modules:

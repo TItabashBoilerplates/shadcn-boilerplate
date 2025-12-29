@@ -61,6 +61,50 @@ TDD is NOT required for:
 - Configuration files (config.toml, .env, etc.)
 - Static assets (images, fonts, etc.)
 - Type definition files (when auto-generated)
+- **UI コンポーネント**（Storybook で品質担保）
+
+## UI コンポーネントのテスト方針
+
+**UI コンポーネントは単体テスト不要。代わりに Storybook を必須とする。**
+
+### 単体テスト不要（Storybook 対象）
+
+| 対象 | 場所 |
+|------|------|
+| shadcn/ui | `packages/ui/web/components/` |
+| MagicUI | `packages/ui/web/magicui/` |
+| gluestack-ui | `packages/ui/mobile/components/` |
+| Shared UI | `apps/web/src/shared/ui/` |
+| Entity UI | `apps/web/src/entities/*/ui/` |
+| Feature UI | `apps/web/src/features/*/ui/` |
+| Widget UI | `apps/web/src/widgets/*/ui/` |
+| View UI | `apps/web/src/views/*/ui/` |
+
+### 単体テスト必須（TDD 対象）
+
+| 対象 | 場所 |
+|------|------|
+| ビジネスロジック | `*/model/` |
+| API / データ取得 | `*/api/` |
+| ユーティリティ | `*/lib/` |
+| カスタムフック（ロジック） | `*/model/use*.ts` |
+
+### 例
+
+```
+features/auth/
+├── ui/
+│   ├── LoginForm.tsx          # ❌ 単体テスト不要
+│   └── LoginForm.stories.tsx  # ✅ Storybook 必須
+├── model/
+│   ├── useLoginForm.ts        # ✅ 単体テスト必須（TDD）
+│   └── useLoginForm.test.ts
+└── api/
+    ├── login.ts               # ✅ 単体テスト必須（TDD）
+    └── login.test.ts
+```
+
+→ 詳細は `.claude/rules/ui-testing.md` および `.claude/skills/storybook/` を参照
 
 ## All Green Policy (MANDATORY)
 
