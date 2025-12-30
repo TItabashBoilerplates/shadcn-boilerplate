@@ -485,9 +485,14 @@ rollback:
 
 # ===== Storybook コマンド =====
 
-# Storybook単独起動（ローカル開発用）
+# Storybook起動（Docker - 推奨）
 .PHONY: storybook
 storybook:
+	docker compose -f docker-compose.frontend.yaml up --build
+
+# Storybook起動（ローカル - Dockerが使えない場合のみ）
+.PHONY: storybook-local
+storybook-local:
 	cd frontend && bun run storybook
 
 # Storybookビルド

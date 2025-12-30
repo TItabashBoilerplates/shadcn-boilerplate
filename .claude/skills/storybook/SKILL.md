@@ -18,15 +18,19 @@ description: Storybook Docker 環境でのコンポーネント開発ガイダ�
 
 ## 起動方法
 
+**MANDATORY**: Storybook は基本的に **Docker コンテナ上で実行**する。
+
 ```bash
-# Docker での起動（推奨）
+# Docker での起動（必須）
 docker-compose -f docker-compose.frontend.yaml up --build
 
-# ローカルでの起動（開発時）
-cd frontend && bun run storybook
+# または Makefile 経由
+make storybook
 ```
 
 ブラウザで `http://localhost:6006` にアクセス。
+
+> **Note**: ローカル実行（`cd frontend && bun run storybook`）は Docker が使用できない特殊な状況でのみ使用。
 
 ## Story ファイルの配置
 
@@ -84,6 +88,7 @@ const meta = {
 
 ```typescript
 import type { Meta, StoryObj } from "@storybook/react";
+import { fn } from "storybook/test";
 import { ComponentName } from "./component-name";
 
 const meta = {
@@ -93,13 +98,16 @@ const meta = {
     layout: "centered", // or 'fullscreen', 'padded'
   },
   tags: ["autodocs"],
+  args: {
+    // イベントハンドラーはデフォルト値として fn() を設定
+    onClick: fn(),
+  },
   argTypes: {
     // Props のコントロール設定
     category: {
       control: "select",
       options: ["option1", "option2"],
     },
-    onClick: { action: "clicked" },
   },
 } satisfies Meta<typeof ComponentName>;
 
@@ -146,6 +154,104 @@ const meta = {
     ),
   ],
 };
+```
+
+## Storybook 10 のお作法（MANDATORY）
+
+### インポートパターン
+
+**CRITICAL**: Storybook 10 では `storybook/*` からインポートする。`@storybook/*` は非推奨。
+
+| 用途                 | Storybook 10          | 旧（非推奨）              |
+| -------------------- | --------------------- | ------------------------- |
+| テストユーティリティ | `storybook/test`      | `@storybook/test`         |
+| React ユーティリティ | `storybook/react`     | `@storybook/react`（一部）|
+| プレビュー API       | `storybook/preview-api` | `@storybook/preview-api` |
+
+### 必須インポート
+
+```typescript
+// テスト・アクション用（MANDATORY）
+import { fn, expect, userEvent, within } from "storybook/test";
+
+// 型定義（これは @storybook/react のまま）
+import type { Meta, StoryObj } from "@storybook/react";
+
+// Portable Stories（コンポーネントテスト連携用）
+import { composeStories } from "storybook/react";
+```
+
+### アクションの定義
+
+**MANDATORY**: イベントハンドラーには必ず `fn()` を使用する。
+
+```typescript
+// ✅ GOOD: fn() を使用
+import { fn } from "storybook/test";
+
+const meta = {
+  component: Button,
+  args: {
+    onClick: fn(),
+    onHover: fn(),
+  },
+} satisfies Meta<typeof Button>;
+
+// ❌ BAD: action() を使用（Storybook 8 以前の書き方）
+import { action } from "@storybook/addon-actions";
+
+const meta = {
+  component: Button,
+  argTypes: {
+    onClick: { action: "clicked" },  // 使用禁止
+  },
+};
+```
+
+### Play Function（インタラクションテスト）
+
+```typescript
+import { fn, expect, userEvent, within } from "storybook/test";
+
+export const ClickTest: Story = {
+  args: {
+    onClick: fn(),
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement);
+    const button = canvas.getByRole("button");
+
+    await userEvent.click(button);
+    await expect(args.onClick).toHaveBeenCalled();
+  },
+};
+```
+
+### Portable Stories（コンポーネントテスト連携）
+
+Story を Vitest/Jest のテストで再利用する場合：
+
+```typescript
+// component.stories.tsx
+export const Default: Story = { args: { title: "Hello" } };
+export const Loading: Story = { args: { isLoading: true } };
+
+// component.test.tsx（Vitest/Jest）
+import { composeStories } from "storybook/react";
+import { render, screen } from "@testing-library/react";
+import * as stories from "./component.stories";
+
+const { Default, Loading } = composeStories(stories);
+
+test("renders default state", () => {
+  render(<Default />);
+  expect(screen.getByText("Hello")).toBeInTheDocument();
+});
+
+test("renders loading state", () => {
+  render(<Loading />);
+  expect(screen.getByRole("progressbar")).toBeInTheDocument();
+});
 ```
 
 ## Next.js モック
@@ -790,10 +896,17 @@ export const MobileView: Story = { ... }  // これは不要
 
 新しい Story を追加する前に確認:
 
+### Storybook 10 準拠（CRITICAL）
+
+- [ ] `fn()` は `storybook/test` からインポート（`import { fn } from "storybook/test"`）
+- [ ] `@storybook/test` は使用していない（非推奨）
+- [ ] `@storybook/addon-actions` は使用していない（非推奨）
+- [ ] イベントハンドラーは `args` で `fn()` を定義（`argTypes: { onClick: { action: "clicked" } }` は使用禁止）
+- [ ] Play function のユーティリティは `storybook/test` から統一インポート
+
 ### 必須
 
 - [ ] Story の `title` が FSD 構造に準拠している
-- [ ] アクションには `fn()` を使用（`import { fn } from 'storybook/test'`）
 - [ ] JSX を使用するファイルで `React` をインポートしている
 - [ ] Server Component ではなく Client Component を Story 化している
 - [ ] MobileView / TabletView 用の Story を作成していない（Viewport ツールを使用）
