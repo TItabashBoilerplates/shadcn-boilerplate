@@ -1,721 +1,285 @@
 ---
 name: storybook
-description: Storybook 10 によるコンポーネントカタログ管理ガイダンス。ストーリー作成、React Native Web（gluestack-ui）対応、Docker起動、サイドバー構成についての質問に使用。モノレポ全体のコンポーネント可視化支援を提供。
+description: Storybook Docker 環境でのコンポーネント開発ガイダンス。Story ファイルの作成、FSD 構成に合わせたサイドバー構造、Next.js モック、Lucide React アイコン、HMR 設定についての質問に使用。UIコンポーネントのカタログ管理の実装支援を提供。
 ---
 
 # Storybook スキル
 
-このプロジェクトは **Storybook 10** を使用して、モノレポ全体のコンポーネントカタログを管理しています。
+このプロジェクトは **Storybook 10 + Vite** を Docker 上で実行し、packages と apps の UI コンポーネントを一元管理しています。
 
 ## 構成
 
-| 項目 | 場所 |
-|------|------|
-| Storybook 設定 | `frontend/.storybook/main.ts` |
-| グローバルデコレーター | `frontend/.storybook/preview.tsx` |
-| Docker 設定 | `docker-compose.frontend.yaml` |
-| Dockerfile | `frontend/docker/Dockerfile` |
-
-## 技術スタック
-
-| 項目 | バージョン/技術 |
-|------|----------------|
-| **Storybook** | 10.1.10 |
-| **Framework** | @storybook/nextjs |
-| **React Native Web** | @storybook/addon-react-native-web |
-| **Node** | >=20.19.0 |
-| **Bun** | >=1.2.0 |
+| 項目           | 場所                                |
+| -------------- | ----------------------------------- |
+| Storybook 設定 | `frontend/.storybook/`              |
+| Docker 設定    | `docker-compose.frontend.yaml`      |
+| Dockerfile     | `frontend/docker/Dockerfile`        |
+| CSS            | `frontend/.storybook/storybook.css` |
 
 ## 起動方法
 
-### Docker で起動（推奨）
-
 ```bash
-# プロジェクトルートで実行
-make run
+# Docker での起動（推奨）
+docker-compose -f docker-compose.frontend.yaml up --build
 
-# Storybook: http://localhost:6006
+# ローカルでの起動（開発時）
+cd frontend && bun run storybook
 ```
 
-### ローカル開発
+ブラウザで `http://localhost:6006` にアクセス。
 
-```bash
-cd frontend
-bun run storybook
+## Story ファイルの配置
+
+### 対象ディレクトリ
+
+```typescript
+// frontend/.storybook/main.ts
+stories: [
+  // Packages
+  "../packages/ui/web/**/*.stories.@(ts|tsx)",
+  "../packages/ui/mobile/**/*.stories.@(ts|tsx)",
+  // Apps - FSD レイヤー
+  "../apps/web/src/entities/**/*.stories.@(ts|tsx)",
+  "../apps/web/src/features/**/*.stories.@(ts|tsx)",
+  "../apps/web/src/widgets/**/*.stories.@(ts|tsx)",
+  "../apps/mobile/src/widgets/**/*.stories.@(ts|tsx)",
+];
 ```
 
-## サイドバー構成
+### サイドバー構造（FSD 準拠）
 
-Storybook のサイドバーは**モノレポ・FSD 構成に対応**しています：
+**MANDATORY**: Story の `title` はプロジェクトのモノレポ・FSD 構成に合わせる。
 
+| 対象               | title パターン                          | 例                                   |
+| ------------------ | --------------------------------------- | ------------------------------------ |
+| packages/ui/web    | `packages/ui/web/{Component}`           | `packages/ui/web/Button`             |
+| packages/ui/mobile | `packages/ui/mobile/{Component}`        | `packages/ui/mobile/Button`          |
+| apps/web entities  | `apps/web/entities/{slice}/{Component}` | `apps/web/entities/quest/QuestCard`  |
+| apps/web features  | `apps/web/features/{slice}/{Component}` | `apps/web/features/vote/VoteModal`   |
+| apps/web widgets   | `apps/web/widgets/{slice}/{Component}`  | `apps/web/widgets/app-shell/Sidebar` |
+
+```typescript
+// ✅ Good: FSD 構造に準拠
+const meta = {
+  title: "apps/web/entities/quest/QuestCard",
+  component: QuestCard,
+} satisfies Meta<typeof QuestCard>;
+
+// ❌ Bad: 独自のカテゴリ名
+const meta = {
+  title: "Entities/Quest/QuestCard",
+  component: QuestCard,
+};
+
+// ❌ Bad: フラットな構造
+const meta = {
+  title: "QuestCard",
+  component: QuestCard,
+};
 ```
-📦 PACKAGES
-├── 📁 UI Web
-│   ├── 📁 Components    # packages/ui/web/components/
-│   └── 📁 MagicUI       # packages/ui/web/magicui/
-└── 📁 UI Mobile
-    ├── 📁 Components    # packages/ui/mobile/components/
-    └── 📁 Layout        # packages/ui/mobile/layout/
 
-📦 SHARED              # apps/web/src/shared/ui/
-
-📦 ENTITIES            # apps/web/src/entities/*/ui/
-
-📦 FEATURES            # apps/web/src/features/*/ui/
-
-📦 WIDGETS             # apps/web/src/widgets/*/ui/
-
-📦 VIEWS               # apps/web/src/views/*/ui/
-```
-
-## ストーリーファイルの作成
-
-### 配置ルール
-
-| コンポーネント種別 | ストーリー配置場所 |
-|-------------------|-------------------|
-| Web UI コンポーネント | `packages/ui/web/components/*.stories.tsx` |
-| MagicUI コンポーネント | `packages/ui/web/magicui/*.stories.tsx` |
-| Mobile UI コンポーネント | `packages/ui/mobile/components/*/*.stories.tsx` |
-| Shared UI | `apps/web/src/shared/ui/**/*.stories.tsx` |
-| Entity UI | `apps/web/src/entities/*/ui/*.stories.tsx` |
-| Feature UI | `apps/web/src/features/*/ui/*.stories.tsx` |
-| Widget UI | `apps/web/src/widgets/*/ui/*.stories.tsx` |
-| View UI | `apps/web/src/views/*/ui/*.stories.tsx` |
-
-### ファイル命名規則
-
-```
-ComponentName.stories.tsx
-```
+## Story ファイルの書き方
 
 ### 基本テンプレート
 
 ```typescript
-import type { Meta, StoryObj } from '@storybook/react'
-import { ComponentName } from './ComponentName'
+import type { Meta, StoryObj } from "@storybook/react";
+import { ComponentName } from "./component-name";
 
 const meta = {
+  title: "apps/web/entities/slice/ComponentName",
   component: ComponentName,
-  parameters: { layout: 'centered' },  // or 'fullscreen' for large components
-  tags: ['autodocs'],                   // Optional: auto-generate docs
-  argTypes: {
-    // コントロールの定義
-    variant: {
-      control: 'select',
-      options: ['default', 'outline', 'ghost'],
-    },
+  parameters: {
+    layout: "centered", // or 'fullscreen', 'padded'
   },
-} satisfies Meta<typeof ComponentName>
+  tags: ["autodocs"],
+  argTypes: {
+    // Props のコントロール設定
+    category: {
+      control: "select",
+      options: ["option1", "option2"],
+    },
+    onClick: { action: "clicked" },
+  },
+} satisfies Meta<typeof ComponentName>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
+// 基本ストーリー
 export const Default: Story = {
   args: {
-    children: 'Button',
+    title: "Default Title",
+    // ...other props
   },
-}
+};
 
-export const AllVariants: Story = {
+// バリエーション
+export const WithCustomProps: Story = {
+  args: {
+    title: "Custom Title",
+    variant: "secondary",
+  },
+};
+
+// カスタムレンダリング
+export const CustomRender: Story = {
   render: () => (
     <div className="flex gap-4">
-      <ComponentName variant="default">Default</ComponentName>
-      <ComponentName variant="outline">Outline</ComponentName>
+      <ComponentName title="Item 1" />
+      <ComponentName title="Item 2" />
     </div>
   ),
-}
+};
 ```
 
-### 重要: title プロパティは指定しない
-
-`main.ts` の `titlePrefix` 設定により、自動的にサイドバー構造が決定されます。
+### Decorator の使用
 
 ```typescript
-// ❌ Bad: 明示的な title 指定
 const meta = {
-  title: 'UI/Components/Button',  // 指定しない
-  component: Button,
-}
+  // ...
+  decorators: [
+    (Story) => (
+      <div className="w-[400px]">
+        <Story />
+      </div>
+    ),
+  ],
+};
+```
 
-// ✅ Good: title を省略（titlePrefix から自動生成）
-const meta = {
-  component: Button,
-  parameters: { layout: 'centered' },
+## Next.js モック
+
+### 設定済みモック
+
+| モジュール        | モックファイル                        |
+| ----------------- | ------------------------------------- |
+| `next/navigation` | `.storybook/mocks/next-navigation.ts` |
+| `next/link`       | `.storybook/mocks/next-link.tsx`      |
+| `next/image`      | `.storybook/mocks/next-image.tsx`     |
+
+### エイリアス設定
+
+**CRITICAL**: 配列形式で定義し、**より具体的なパスを先に**記述する。
+
+```typescript
+// frontend/.storybook/main.ts viteFinal
+resolve: {
+  // 配列形式で順序を保証（オブジェクト形式は使用しない）
+  alias: [
+    // React Native Web
+    { find: 'react-native', replacement: 'react-native-web' },
+    // Workspace - 具体的なパスを先に
+    { find: '@workspace/ui/web', replacement: join(__dirname, '../packages/ui/web') },
+    { find: '@workspace/ui/mobile', replacement: join(__dirname, '../packages/ui/mobile') },
+    { find: '@workspace/tokens', replacement: join(__dirname, '../packages/tokens/src') },
+    // App aliases - 具体的なパスを先に
+    { find: '@/shared/lib/i18n', replacement: join(__dirname, './mocks/shared-lib-i18n.tsx') },
+    { find: '@', replacement: join(__dirname, '../apps/web/src') },
+    // Next.js mocks
+    { find: 'next/navigation', replacement: join(__dirname, './mocks/next-navigation.ts') },
+    { find: 'next/link', replacement: join(__dirname, './mocks/next-link.tsx') },
+    { find: 'next/image', replacement: join(__dirname, './mocks/next-image.tsx') },
+    // next-intl - 具体的なサブパスを先に
+    { find: 'next-intl/navigation', replacement: join(__dirname, './mocks/next-intl.tsx') },
+    { find: 'next-intl/routing', replacement: join(__dirname, './mocks/next-intl.tsx') },
+    { find: 'next-intl/server', replacement: join(__dirname, './mocks/next-intl.tsx') },
+    { find: 'next-intl', replacement: join(__dirname, './mocks/next-intl.tsx') },
+  ],
 }
 ```
 
-## Web コンポーネント（shadcn/ui）
+→ 詳細は「トラブルシューティング > Vite エイリアスの順序問題」を参照
 
-### ストーリー例
+### モックの実装例
+
+**next-navigation.ts**:
 
 ```typescript
-// packages/ui/web/components/button.stories.tsx
-import type { Meta, StoryObj } from '@storybook/react'
-import { Button } from './button'
-
-const meta = {
-  component: Button,
-  parameters: { layout: 'centered' },
-  tags: ['autodocs'],
-  argTypes: {
-    variant: {
-      control: 'select',
-      options: ['default', 'destructive', 'outline', 'secondary', 'ghost', 'link'],
-    },
-    size: {
-      control: 'select',
-      options: ['default', 'sm', 'lg', 'icon'],
-    },
-    disabled: {
-      control: 'boolean',
-    },
-  },
-} satisfies Meta<typeof Button>
-
-export default meta
-type Story = StoryObj<typeof meta>
-
-export const Default: Story = {
-  args: { children: 'Button', variant: 'default' },
-}
-
-export const AllVariants: Story = {
-  render: () => (
-    <div className="flex flex-wrap gap-4">
-      <Button variant="default">Default</Button>
-      <Button variant="destructive">Destructive</Button>
-      <Button variant="outline">Outline</Button>
-      <Button variant="secondary">Secondary</Button>
-      <Button variant="ghost">Ghost</Button>
-      <Button variant="link">Link</Button>
-    </div>
-  ),
-}
+export const usePathname = () => "/";
+export const useRouter = () => ({
+  push: () => {},
+  replace: () => {},
+  back: () => {},
+});
+export const useSearchParams = () => new URLSearchParams();
 ```
 
-## Mobile コンポーネント（gluestack-ui + NativeWind）
-
-### React Native Web 対応
-
-Mobile コンポーネントは **React Native Web** 経由でブラウザ表示されます。
-
-`main.ts` で以下の設定が適用されています：
+**next-image.tsx**:
 
 ```typescript
-{
-  name: '@storybook/addon-react-native-web',
-  options: {
-    modulesToTranspile: [
-      'nativewind',
-      'react-native-css-interop',
-      'react-native-reanimated',
-      '@gluestack-ui/button',
-      '@gluestack-ui/core',
-      '@gluestack-ui/nativewind-utils',
-      '@gluestack-ui/overlay',
-      '@gluestack-ui/toast',
-      '@gluestack-ui/utils',
-    ],
-    babelPresetReactOptions: {
-      jsxImportSource: 'nativewind',
-    },
-    babelPresets: ['nativewind/babel'],
-    babelPlugins: ['react-native-reanimated/plugin'],
-  },
+import type { CSSProperties } from "react";
+import * as React from "react"; // JSX 用に必須
+
+interface MockImageProps {
+  src: string | { src: string };
+  alt: string;
+  width?: number;
+  height?: number;
+  fill?: boolean;
+  className?: string;
+  style?: CSSProperties;
+  priority?: boolean;
 }
-```
 
-### GluestackUIProvider デコレーター
+function NextImage({
+  src,
+  alt,
+  fill,
+  className,
+  style,
+  ...props
+}: MockImageProps) {
+  const imgSrc = typeof src === "string" ? src : src.src;
 
-`preview.tsx` で Mobile ストーリーには自動的に `GluestackUIProvider` がラップされます：
-
-```typescript
-(Story: React.ComponentType, context) => {
-  const isMobileStory = context.title.startsWith('Packages/UI Mobile')
-  if (isMobileStory) {
+  if (fill) {
     return (
-      <GluestackUIProvider mode="light">
-        <Story />
-      </GluestackUIProvider>
-    )
+      <img
+        src={imgSrc}
+        alt={alt}
+        className={className}
+        style={{
+          position: "absolute",
+          height: "100%",
+          width: "100%",
+          inset: 0,
+          objectFit: "cover",
+          ...style,
+        }}
+        {...props}
+      />
+    );
   }
-  return <Story />
+
+  return (
+    <img
+      src={imgSrc}
+      alt={alt}
+      className={className}
+      style={style}
+      {...props}
+    />
+  );
 }
+
+export default NextImage;
 ```
 
-### Mobile ストーリー例
+## アイコン
+
+**MANDATORY**: Lucide React を使用する。Material Symbols は使用しない。
 
 ```typescript
-// packages/ui/mobile/components/button/button.stories.tsx
-import type { Meta, StoryObj } from '@storybook/react'
-import { Button, ButtonText } from './index'
+// ✅ Good: Lucide React
+import { Trophy, Flag, TrendingUp } from "lucide-react";
 
-const meta = {
-  component: Button,
-  parameters: { layout: 'centered' },
-  tags: ['autodocs'],
-  argTypes: {
-    action: {
-      control: 'select',
-      options: ['primary', 'secondary', 'positive', 'negative'],
-    },
-    variant: {
-      control: 'select',
-      options: ['solid', 'outline', 'link'],
-    },
-    size: {
-      control: 'select',
-      options: ['xs', 'sm', 'md', 'lg', 'xl'],
-    },
-    isDisabled: {
-      control: 'boolean',
-    },
-  },
-} satisfies Meta<typeof Button>
-
-export default meta
-type Story = StoryObj<typeof meta>
-
-export const Default: Story = {
-  render: (args) => (
-    <Button {...args}>
-      <ButtonText>Button</ButtonText>
-    </Button>
-  ),
-  args: {
-    action: 'primary',
-    variant: 'solid',
-    size: 'md',
-  },
-}
-
-export const AllActions: Story = {
-  render: () => (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
-      <Button action="primary">
-        <ButtonText>Primary</ButtonText>
-      </Button>
-      <Button action="secondary">
-        <ButtonText>Secondary</ButtonText>
-      </Button>
-      <Button action="positive">
-        <ButtonText>Positive</ButtonText>
-      </Button>
-      <Button action="negative">
-        <ButtonText>Negative</ButtonText>
-      </Button>
-    </div>
-  ),
-}
+// ❌ Bad: Material Symbols / Google Fonts
+<span className="material-symbols-outlined">sports</span>;
 ```
 
-### Mobile スタイリングの注意点
-
-Mobile ストーリーでは、TailwindCSS クラスの代わりに **inline style** を使用：
-
-```typescript
-// ✅ Good: inline style を使用（React Native Web 互換）
-<div style={{ display: 'flex', gap: '16px' }}>
-
-// ❌ Bad: TailwindCSS クラス（Mobile では動作しない場合がある）
-<div className="flex gap-4">
-```
-
-## フック・コンテキストのモック（必須）
-
-UI コンポーネントが使用するフックや動的な値は、**すべてモックまたはデコレーターで提供**する必要があります。
-
-### モックが必要なもの
-
-| カテゴリ | フック/値 | モック方法 |
-|---------|----------|-----------|
-| **認証** | `useAuth`, `useSession`, `getUser()` | デコレーター or args |
-| **i18n** | `useTranslations`, `getTranslations` | `@storybook/nextjs` 自動対応 |
-| **ルーティング** | `useRouter`, `usePathname`, `useParams` | `parameters.nextjs` |
-| **データ取得** | `useQuery`, Supabase クエリ | MSW or モックデータ |
-| **状態管理** | Zustand stores | デコレーター |
-
-### Next.js ルーティングのモック
-
-```typescript
-// preview.tsx で設定済み
-parameters: {
-  nextjs: {
-    appDirectory: true,
-  },
-},
-
-// 個別ストーリーでルートをモック
-export const WithParams: Story = {
-  parameters: {
-    nextjs: {
-      navigation: {
-        pathname: '/users/[id]',
-        query: { id: '123' },
-      },
-    },
-  },
-}
-```
-
-### 認証状態のモック
-
-```typescript
-// デコレーターでモックユーザーを提供
-import type { Meta, StoryObj } from '@storybook/react'
-import { AuthProvider } from '@/shared/lib/auth'
-
-const mockUser = {
-  id: 'user-123',
-  email: 'test@example.com',
-  name: 'Test User',
-}
-
-const meta = {
-  component: UserProfile,
-  decorators: [
-    (Story) => (
-      <AuthProvider value={{ user: mockUser, isAuthenticated: true }}>
-        <Story />
-      </AuthProvider>
-    ),
-  ],
-} satisfies Meta<typeof UserProfile>
-
-// 複数の認証状態をストーリーで表現
-export const LoggedIn: Story = {
-  decorators: [
-    (Story) => (
-      <AuthProvider value={{ user: mockUser, isAuthenticated: true }}>
-        <Story />
-      </AuthProvider>
-    ),
-  ],
-}
-
-export const LoggedOut: Story = {
-  decorators: [
-    (Story) => (
-      <AuthProvider value={{ user: null, isAuthenticated: false }}>
-        <Story />
-      </AuthProvider>
-    ),
-  ],
-}
-```
-
-### i18n のモック
-
-`@storybook/nextjs` が `next-intl` を自動的にモックします。追加設定は不要：
-
-```typescript
-// useTranslations は自動的に動作
-// キーがそのまま表示される（例: "HomePage.title"）
-
-// 実際の翻訳を表示したい場合はデコレーターで提供
-import { NextIntlClientProvider } from 'next-intl'
-import messages from '@/shared/config/i18n/messages/ja.json'
-
-const meta = {
-  component: LocalizedComponent,
-  decorators: [
-    (Story) => (
-      <NextIntlClientProvider locale="ja" messages={messages}>
-        <Story />
-      </NextIntlClientProvider>
-    ),
-  ],
-}
-```
-
-### TanStack Query のモック
-
-```typescript
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: false,
-      staleTime: Infinity,
-    },
-  },
-})
-
-// グローバルデコレーター（preview.tsx に追加可能）
-const meta = {
-  component: DataComponent,
-  decorators: [
-    (Story) => (
-      <QueryClientProvider client={queryClient}>
-        <Story />
-      </QueryClientProvider>
-    ),
-  ],
-}
-
-// モックデータを使用するストーリー
-export const WithData: Story = {
-  args: {
-    initialData: [
-      { id: 1, name: 'Item 1' },
-      { id: 2, name: 'Item 2' },
-    ],
-  },
-}
-```
-
-### Zustand ストアのモック
-
-```typescript
-import { useUserStore } from '@/entities/user/model/store'
-
-// ストアの初期状態をモック
-export const WithUserData: Story = {
-  decorators: [
-    (Story) => {
-      // ストーリー表示前に状態をセット
-      useUserStore.setState({
-        user: { id: '123', name: 'Test User' },
-        isLoading: false,
-      })
-      return <Story />
-    },
-  ],
-}
-
-export const Loading: Story = {
-  decorators: [
-    (Story) => {
-      useUserStore.setState({
-        user: null,
-        isLoading: true,
-      })
-      return <Story />
-    },
-  ],
-}
-```
-
-### Supabase クライアントのモック
-
-```typescript
-// モックデータを props で渡すパターン（推奨）
-export const WithPosts: Story = {
-  args: {
-    posts: [
-      { id: 1, title: 'Post 1', content: 'Content 1' },
-      { id: 2, title: 'Post 2', content: 'Content 2' },
-    ],
-  },
-}
-
-// コンポーネント設計: データ取得と表示を分離
-// ❌ Bad: コンポーネント内でデータ取得
-function PostList() {
-  const { data } = await supabase.from('posts').select()
-  return <div>{data.map(...)}</div>
-}
-
-// ✅ Good: データは props で受け取る（Storybook でテストしやすい）
-function PostList({ posts }: { posts: Post[] }) {
-  return <div>{posts.map(...)}</div>
-}
-```
-
-### グローバルデコレーターの設定
-
-`preview.tsx` で共通のモック/プロバイダーを設定：
-
-```typescript
-// frontend/.storybook/preview.tsx
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { NextIntlClientProvider } from 'next-intl'
-import messages from '../apps/web/src/shared/config/i18n/messages/ja.json'
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: { retry: false, staleTime: Infinity },
-  },
-})
-
-const preview: Preview = {
-  decorators: [
-    // 既存のデコレーター...
-
-    // TanStack Query
-    (Story) => (
-      <QueryClientProvider client={queryClient}>
-        <Story />
-      </QueryClientProvider>
-    ),
-
-    // i18n（必要な場合）
-    (Story) => (
-      <NextIntlClientProvider locale="ja" messages={messages}>
-        <Story />
-      </NextIntlClientProvider>
-    ),
-  ],
-}
-```
-
-### 画像・静的アセットのモック
-
-```typescript
-// ✅ Good: プレースホルダー画像を使用
-export const WithAvatar: Story = {
-  args: {
-    user: {
-      name: 'Test User',
-      avatarUrl: 'https://placehold.co/100x100',  // プレースホルダー
-    },
-  },
-}
-
-// ✅ Good: Storybook の staticDirs から読み込み
-// main.ts で設定: staticDirs: ['../apps/web/public']
-export const WithLocalImage: Story = {
-  args: {
-    imageUrl: '/images/sample.png',  // public/ からの相対パス
-  },
-}
-
-// ✅ Good: Base64 データ URL（小さい画像）
-const PLACEHOLDER_IMAGE = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2NjYyIvPjwvc3ZnPg=='
-
-export const WithPlaceholder: Story = {
-  args: {
-    imageUrl: PLACEHOLDER_IMAGE,
-  },
-}
-```
-
-### 推奨プレースホルダーサービス
-
-| サービス | URL | 用途 |
-|---------|-----|------|
-| **placehold.co** | `https://placehold.co/300x200` | 汎用プレースホルダー |
-| **picsum.photos** | `https://picsum.photos/300/200` | ランダム写真 |
-| **ui-avatars.com** | `https://ui-avatars.com/api/?name=Test` | アバター |
-
-```typescript
-// アバターのモック例
-const mockUsers = [
-  { id: 1, name: 'Alice', avatar: 'https://ui-avatars.com/api/?name=Alice&background=random' },
-  { id: 2, name: 'Bob', avatar: 'https://ui-avatars.com/api/?name=Bob&background=random' },
-]
-
-// 商品画像のモック例
-const mockProducts = [
-  { id: 1, name: 'Product 1', image: 'https://picsum.photos/seed/product1/400/300' },
-  { id: 2, name: 'Product 2', image: 'https://picsum.photos/seed/product2/400/300' },
-]
-```
-
-### Next.js Image コンポーネントのモック
-
-```typescript
-// next/image は @storybook/nextjs で自動モックされる
-// 追加設定は不要
-
-// ただし、外部ドメインの画像を使用する場合は next.config.ts で許可が必要
-// Storybook では通常の <img> タグとしてレンダリングされる
-```
-
-### Supabase Storage 画像のモック
-
-```typescript
-// ❌ Bad: 実際の Supabase Storage URL を使用
-export const WithRealImage: Story = {
-  args: {
-    imageUrl: 'https://xxx.supabase.co/storage/v1/object/public/...',
-  },
-}
-
-// ✅ Good: プレースホルダーに置き換え
-export const WithImage: Story = {
-  args: {
-    imageUrl: 'https://placehold.co/400x300?text=Product+Image',
-  },
-}
-
-// ✅ Good: ローカルのサンプル画像を使用
-// apps/web/public/storybook/ にサンプル画像を配置
-export const WithSampleImage: Story = {
-  args: {
-    imageUrl: '/storybook/sample-product.png',
-  },
-}
-```
-
-### モック設計の原則
-
-1. **Props 優先**: データは可能な限り props で渡す設計にする
-2. **分離**: データ取得ロジックと UI を分離する
-3. **デコレーター**: グローバルな依存はデコレーターで提供
-4. **状態バリエーション**: Loading, Error, Empty, WithData など複数ストーリーを用意
-5. **外部依存排除**: 画像・アセットはプレースホルダーまたはローカルファイルを使用
-
-```typescript
-// 推奨パターン: 複数の状態をストーリーで表現
-export const Default: Story = { args: { data: mockData } }
-export const Loading: Story = { args: { isLoading: true } }
-export const Empty: Story = { args: { data: [] } }
-export const Error: Story = { args: { error: new Error('Failed') } }
-export const NoImage: Story = { args: { imageUrl: null } }
-```
-
-## Widget / FSD レイヤーのストーリー
-
-### Widget ストーリー例
-
-```typescript
-// apps/web/src/widgets/header/ui/Header.stories.tsx
-import type { Meta, StoryObj } from '@storybook/react'
-import { Header } from './Header'
-
-const meta = {
-  component: Header,
-  parameters: {
-    layout: 'fullscreen',  // Widget は fullscreen が適切
-  },
-} satisfies Meta<typeof Header>
-
-export default meta
-type Story = StoryObj<typeof meta>
-
-export const Default: Story = {}
-```
-
-## 新しい gluestack-ui コンポーネント追加時
-
-新しい gluestack-ui コンポーネントを追加する場合、`main.ts` の `modulesToTranspile` への追加が必要な場合があります：
-
-```typescript
-modulesToTranspile: [
-  // 既存
-  'nativewind',
-  'react-native-css-interop',
-  '@gluestack-ui/button',
-  // 新規追加
-  '@gluestack-ui/NEW_COMPONENT',
-],
-```
+アイコンマッピングは `packages/ui/web/components/icon/icon.tsx` で管理。
 
 ## Docker 設定
-
-### Dockerfile
-
-```dockerfile
-FROM oven/bun:1.2.8-alpine AS base
-WORKDIR /app
-
-FROM base AS dev
-EXPOSE 6006
-CMD ["sh", "-c", "bun install && bun run storybook -- --host 0.0.0.0"]
-```
 
 ### docker-compose.frontend.yaml
 
@@ -724,60 +288,530 @@ services:
   storybook:
     container_name: storybook
     build:
-      context: ./frontend
-      dockerfile: docker/Dockerfile
+      context: ./frontend/docker
+      dockerfile: Dockerfile
     ports:
       - 6006:6006
     volumes:
       - ./frontend:/app
-      - storybook_node_modules:/app/node_modules
+      - storybook-node-modules:/app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true # HMR 有効化
+      - WATCHPACK_POLLING=true # HMR 有効化
     tty: true
-    hostname: storybook
     working_dir: /app
 
 volumes:
-  storybook_node_modules:
+  storybook-node-modules:
+```
+
+### Dockerfile
+
+```dockerfile
+FROM oven/bun:1.2-alpine
+
+WORKDIR /app
+
+RUN apk add --no-cache git
+
+EXPOSE 6006
+
+# CI モードではなく通常モードで起動（HMR 有効）
+CMD ["sh", "-c", "bun install && bun run storybook"]
+```
+
+## HMR（Hot Module Replacement）
+
+### 有効化の条件
+
+1. `environment` に `CHOKIDAR_USEPOLLING=true` と `WATCHPACK_POLLING=true` を設定
+2. `CI=true` 環境変数を設定しない
+3. `storybook:ci` ではなく `storybook` スクリプトを使用
+
+### 確認方法
+
+ファイルを編集して自動リロードされることを確認。
+
+## 既知の制限事項
+
+### NativeWind v5 + Storybook
+
+**問題**: NativeWind v5 は `jsx-runtime` をエクスポートしていないため、Mobile コンポーネントはスタイルが適用されない状態で表示される。
+
+**対応**: NativeWind v5 の安定版リリースを待つ。Mobile コンポーネントは構造のみ確認可能。
+
+## TailwindCSS 4 統合
+
+```typescript
+// frontend/.storybook/main.ts viteFinal
+const { default: tailwindcss } = await import("@tailwindcss/vite");
+config.plugins ||= [];
+config.plugins.push(tailwindcss());
+```
+
+CSS は `.storybook/storybook.css` でインポート:
+
+```css
+@import "tailwindcss";
+@import "../packages/tokens/web.css";
 ```
 
 ## トラブルシューティング
 
-### Mobile コンポーネントが表示されない
+### `process is not defined`
 
-1. `modulesToTranspile` に必要なパッケージが含まれているか確認
-2. `GluestackUIProvider` がデコレーターで適用されているか確認
-3. `context.title.startsWith('Packages/UI Mobile')` の条件を確認
+**原因**: Next.js Image が Node.js の `process` を参照
 
-### Docker でビルドエラー
+**解決**:
 
-```bash
-# node_modules を再構築
-docker-compose -f docker-compose.frontend.yaml down -v
-docker-compose -f docker-compose.frontend.yaml up --build
+```typescript
+// main.ts viteFinal
+define: { 'process.env': {} }
 ```
 
-### ストーリーがサイドバーに表示されない
+### `React is not defined`
 
-1. ファイル名が `*.stories.tsx` になっているか確認
-2. `main.ts` の `stories` 設定でパスが正しいか確認
-3. `files` パターンがファイル配置と一致しているか確認
+**原因**: `.tsx` ファイルで JSX を使用しているが、React が明示的にインポートされていない
+
+**エラー例**:
+
+```
+ReferenceError: React is not defined
+    at preview.decorators
+```
+
+**解決策 1**: React を明示的にインポート
+
+```typescript
+// ❌ BAD: React インポートなし
+import type { ReactNode } from "react";
+
+function Wrapper({ children }: { children: ReactNode }) {
+  return <div>{children}</div>; // React is not defined エラー
+}
+
+// ✅ GOOD: React を明示的にインポート
+import React, { type ReactNode } from "react";
+
+function Wrapper({ children }: { children: ReactNode }) {
+  return <div>{children}</div>;
+}
+```
+
+**解決策 2**: createElement を使用（Biome がインポートを type に変換する場合）
+
+```typescript
+// Biome が `import React` を `import type React` に変換してしまう場合
+import { createElement, Fragment, type ReactNode } from "react";
+
+function Wrapper({ children }: { children: ReactNode }) {
+  return createElement(Fragment, null, children);
+}
+```
+
+**注意**: `preview.tsx` や `.tsx` モックファイルでは React ランタイムが必要。
+
+---
+
+### `__dirname is not defined`
+
+**エラー**:
+
+```
+ReferenceError: __dirname is not defined
+    at node_modules/next/dist/compiled/@opentelemetry/api/index.js
+```
+
+**原因**: `next/cache` 等のサーバーサイド専用モジュールが `__dirname` を使用している
+
+**解決**: `next/cache` をモック化
+
+1. モックファイルを作成:
+
+```typescript
+// frontend/.storybook/mocks/next-cache.ts
+export const revalidatePath = (_path: string): void => {};
+export const revalidateTag = (_tag: string): void => {};
+export const unstable_cache = <T extends (...args: unknown[]) => unknown>(
+  fn: T
+): T => fn;
+export const unstable_noStore = (): void => {};
+export const cache = <T extends (...args: unknown[]) => unknown>(fn: T): T =>
+  fn;
+```
+
+2. `main.ts` にエイリアスを追加:
+
+```typescript
+'next/cache': join(__dirname, './mocks/next-cache.ts'),
+```
+
+---
+
+### `next-intl/routing` が解決できない
+
+**エラー**:
+
+```
+Failed to resolve import "next-intl/routing"
+```
+
+**原因**: `next-intl/routing` が `next/cache` に依存しており、サーバーサイド専用
+
+**解決**: `next-intl/routing` と関連モジュールをモック化
+
+```typescript
+// main.ts エイリアス
+'next-intl': join(__dirname, './mocks/next-intl.tsx'),
+'next-intl/server': join(__dirname, './mocks/next-intl.tsx'),
+'next-intl/routing': join(__dirname, './mocks/next-intl.tsx'),
+'next-intl/navigation': join(__dirname, './mocks/next-intl.tsx'),
+'next/cache': join(__dirname, './mocks/next-cache.ts'),
+```
+
+**モック内容** (`next-intl.tsx` に追加):
+
+```typescript
+export const defineRouting = <
+  T extends { locales: readonly string[]; defaultLocale: string }
+>(
+  config: T
+) => config;
+
+export const createNavigation = () => ({
+  Link: ({ children, href }: { children: ReactNode; href: string }) =>
+    createElement("a", { href }, children),
+  useRouter: () => ({ push: () => {}, replace: () => {}, back: () => {} }),
+  usePathname: () => "/",
+});
+```
+
+---
+
+### アクションのスパイ（fn）
+
+**Storybook 10 では `storybook/test` からインポート**:
+
+```typescript
+// ✅ GOOD: Storybook 10 推奨
+import { fn } from "storybook/test";
+
+export const Example: Story = {
+  args: {
+    onClick: fn(),
+    onSubmit: fn(),
+  },
+};
+
+// ❌ BAD: 古いパッケージ（Storybook 8用）
+import { fn } from "@storybook/test";
+```
+
+**`fn()` のメリット**:
+
+- Actions パネルでイベント呼び出しを確認可能
+- Play function でのテスト・アサーションが可能
+- `mockReturnValue()`, `mockResolvedValue()` 等のモック機能
+
+**Play function 例**:
+
+```typescript
+import { fn, expect, userEvent, within } from "storybook/test";
+
+export const ClickTest: Story = {
+  args: {
+    onClick: fn(),
+  },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button"));
+    await expect(args.onClick).toHaveBeenCalled();
+  },
+};
+```
+
+---
+
+### `Failed to fetch dynamically imported module`
+
+**エラー**:
+
+```
+Failed to fetch dynamically imported module: http://localhost:6006/path/to/story.tsx
+```
+
+**原因**: Story ファイルまたはその依存関係のインポートに問題がある
+
+**デバッグ手順**:
+
+1. **コンテナログを確認**:
+
+   ```bash
+   docker logs storybook --tail 100
+   ```
+
+2. **実際のエラーを特定**: ログに詳細なエラーメッセージが表示される
+
+   ```
+   Failed to resolve import "XXXXX" from "path/to/file.tsx"
+   ```
+
+3. **依存関係を追跡**: コンポーネントの import チェーンを確認
+
+   - Story → コンポーネント → entities/features → hooks → 外部パッケージ
+
+4. **エイリアス/モックを追加**: 必要に応じて `main.ts` にエイリアスを追加
+
+---
+
+### Vite エイリアスの順序問題（CRITICAL）
+
+**エラー**:
+
+```
+[vite:load-fallback] Could not load ./.storybook/mocks/next-intl.tsx/routing
+ENOTDIR: not a directory
+```
+
+**原因**: Vite のオブジェクト形式エイリアスでは解決順序が保証されない。`next-intl` が `next-intl/routing` より先にマッチすると、`./mocks/next-intl.tsx` + `/routing` = `./mocks/next-intl.tsx/routing` を探してしまう。
+
+**解決**: **配列形式**でエイリアスを定義し、**より具体的なパスを先に**記述する。
+
+```typescript
+// ❌ BAD: オブジェクト形式（順序が保証されない）
+resolve: {
+  alias: {
+    'next-intl': join(__dirname, './mocks/next-intl.tsx'),
+    'next-intl/routing': join(__dirname, './mocks/next-intl.tsx'),  // マッチしない可能性
+  },
+}
+
+// ✅ GOOD: 配列形式（順序が保証される）
+resolve: {
+  alias: [
+    // より具体的なパスを先に
+    { find: 'next-intl/navigation', replacement: join(__dirname, './mocks/next-intl.tsx') },
+    { find: 'next-intl/routing', replacement: join(__dirname, './mocks/next-intl.tsx') },
+    { find: 'next-intl/server', replacement: join(__dirname, './mocks/next-intl.tsx') },
+    // 一般的なパスを後に
+    { find: 'next-intl', replacement: join(__dirname, './mocks/next-intl.tsx') },
+  ],
+}
+```
+
+**ルール**:
+
+1. **サブパスを持つモジュール**（`next-intl/routing`, `@workspace/ui/web` 等）は配列形式で定義
+2. **具体的なパス → 一般的なパス**の順に並べる
+3. 同様のパターン: `@/shared/lib/i18n` → `@`, `@workspace/ui/web` → `@workspace`
+
+---
+
+### ワークスペースパッケージが解決できない
+
+**エラー**:
+
+```
+Failed to resolve import "@workspace/query"
+Failed to resolve import "@workspace/client-supabase/client"
+```
+
+**原因**: Storybook の Vite 設定にワークスペースエイリアスがない
+
+**解決**: `main.ts` の `viteFinal` でエイリアスを追加
+
+```typescript
+// frontend/.storybook/main.ts
+async viteFinal(config) {
+  return mergeConfig(config, {
+    resolve: {
+      alias: {
+        // Workspace packages
+        '@workspace/ui/web': join(__dirname, '../packages/ui/web'),
+        '@workspace/ui/mobile': join(__dirname, '../packages/ui/mobile'),
+        '@workspace/tokens': join(__dirname, '../packages/tokens/src'),
+        '@workspace/query': join(__dirname, '../packages/query'),
+        '@workspace/client-supabase/client': join(__dirname, './mocks/workspace-client-supabase.ts'),
+        // ...
+      },
+    },
+  })
+}
+```
+
+---
+
+### TanStack Query フックがエラーになる
+
+**エラー**:
+
+```
+No QueryClient set, use QueryClientProvider to set one
+```
+
+**原因**: TanStack Query のフックが QueryClient なしで呼び出されている
+
+**解決**: `preview.tsx` で QueryClientProvider をグローバルデコレータとして設定
+
+```typescript
+// frontend/.storybook/preview.tsx
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import React, { type ReactNode } from "react";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+      staleTime: Infinity,
+    },
+  },
+});
+
+function Providers({ children }: { children: ReactNode }) {
+  return (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+}
+
+const preview: Preview = {
+  decorators: [
+    (Story) => (
+      <Providers>
+        <Story />
+      </Providers>
+    ),
+  ],
+};
+```
+
+---
+
+### アイコンが文字で表示される
+
+**原因**: Google Fonts が読み込まれていないか、Material Symbols を使用している
+
+**解決**: Lucide React に移行。`packages/ui/web/components/icon/icon.tsx` を確認。
+
+---
+
+## Server Component の扱い
+
+**重要**: Server Component（`async` 関数）は Storybook で直接 Story 化できない。
+
+### 対処方法
+
+1. **子コンポーネントを個別に Story 化**
+
+   - Server Component 内の Client Component を抽出
+   - 各 Client Component に Story を作成
+
+2. **例**: HomePage (Server) → ActiveQuestsSection (Client)
+
+   ```typescript
+   // ❌ BAD: Server Component を Story 化しようとする
+   // HomePage.stories.tsx - async 関数はエラー
+
+   // ✅ GOOD: 子の Client Component を Story 化
+   // active-quests-section.stories.tsx
+   ```
+
+## ベストプラクティス
+
+### ビルドチェック（MANDATORY）
+
+**重要**: Story 追加・変更後は **ビルドチェックを実行する**。UI でのデバッグは非効率。
+
+```bash
+# ビルドチェック（推奨）
+docker exec storybook bun run build-storybook
+
+# ローカル実行
+cd frontend && bun run build-storybook
+```
+
+ビルドエラーがあれば、詳細なエラーメッセージがターミナルに表示される。
+
+**開発中の確認方法**:
+
+```bash
+# Docker ログでリアルタイム確認
+docker logs storybook -f
+
+# 直近のエラー確認
+docker logs storybook --tail 100
+```
+
+**キャッシュクリアが必要な場合**:
+
+```bash
+docker exec storybook rm -rf node_modules/.cache/storybook node_modules/.vite
+docker restart storybook
+```
+
+---
+
+### レスポンシブ確認は Viewport ツールを使用
+
+**MANDATORY**: モバイルビュー用の Story は作成しない。Storybook の Viewport ツールを使用する。
+
+```typescript
+// ❌ BAD: モバイル用 Story を作成
+export const MobileView: Story = {
+  parameters: {
+    viewport: { defaultViewport: "mobile1" },
+  },
+};
+
+export const TabletView: Story = {
+  parameters: {
+    viewport: { defaultViewport: "tablet" },
+  },
+};
+
+// ✅ GOOD: Storybook ツールバーの Viewport ボタンで切り替え
+// → Story は作成しない。ユーザーが自由にビューポートを変更可能
+```
+
+**例外**: モバイル専用コンポーネント（bottom-nav 等）は**コンポーネント自体**の Story を作成する。
+
+```typescript
+// ✅ GOOD: モバイル専用コンポーネントの Story
+// bottom-nav.stories.tsx
+export const Default: Story = {}  // コンポーネント自体の Story
+
+// ❌ BAD: 他コンポーネントの「モバイル表示版」Story
+// app-shell.stories.tsx
+export const MobileView: Story = { ... }  // これは不要
+```
+
+---
 
 ## チェックリスト
 
-### ファイル・構成
+新しい Story を追加する前に確認:
 
-- [ ] ストーリーファイルは `*.stories.tsx` で命名
-- [ ] `title` プロパティは指定しない（titlePrefix を使用）
-- [ ] Web コンポーネントは TailwindCSS クラスを使用
-- [ ] Mobile コンポーネントは inline style を使用
-- [ ] Mobile ストーリーは `Packages/UI Mobile` で始まる
-- [ ] 新しい gluestack-ui パッケージは `modulesToTranspile` に追加
+### 必須
 
-### モック（必須）
+- [ ] Story の `title` が FSD 構造に準拠している
+- [ ] アクションには `fn()` を使用（`import { fn } from 'storybook/test'`）
+- [ ] JSX を使用するファイルで `React` をインポートしている
+- [ ] Server Component ではなく Client Component を Story 化している
+- [ ] MobileView / TabletView 用の Story を作成していない（Viewport ツールを使用）
 
-- [ ] 認証状態（useAuth, useSession）はデコレーターでモック
-- [ ] ルーティング（useRouter, useParams）は `parameters.nextjs` でモック
-- [ ] データ取得は props 経由でモックデータを渡す
-- [ ] Zustand ストアは `setState` でモック
-- [ ] 画像は**プレースホルダー**または**ローカルファイル**を使用
-- [ ] 外部 API / Supabase への依存は排除
-- [ ] 複数状態（Loading, Error, Empty, WithData）のストーリーを用意
+### 依存関係
+
+- [ ] 必要なワークスペースパッケージのエイリアスが `main.ts` にある
+- [ ] 外部依存（Supabase, next-intl 等）のモックがある
+- [ ] TanStack Query を使用する場合、`preview.tsx` に QueryClientProvider がある
+
+### UI/スタイル
+
+- [ ] Lucide React アイコンを使用している（Material Symbols ではない）
+- [ ] TailwindCSS スタイルが適用されている
+- [ ] HMR が動作している（ファイル変更で自動リロード）
+
+### ビルドチェック
+
+- [ ] Story 追加・変更後は `docker exec storybook bun run build-storybook` でビルドチェック
+- [ ] 設定変更後は `docker exec storybook rm -rf node_modules/.cache/storybook node_modules/.vite && docker restart storybook` でキャッシュクリア
+- [ ] 開発中のエラー確認は `docker logs storybook -f` でリアルタイム監視
