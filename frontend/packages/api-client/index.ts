@@ -5,29 +5,36 @@
  *
  * @example
  * ```typescript
- * // 基本的な fetch クライアント
- * import { createBackendClient } from '@workspace/api-client'
+ * // クライアント設定
+ * import { client } from '@workspace/api-client'
  *
- * const client = createBackendClient({ accessToken: session.access_token })
- * const { data, error } = await client.GET('/healthcheck')
+ * client.setConfig({
+ *   baseUrl: process.env.NEXT_PUBLIC_BACKEND_PY_URL,
+ *   headers: { Authorization: `Bearer ${accessToken}` },
+ * })
  *
- * // TanStack Query 統合
- * import { createBackendQueryClient } from '@workspace/api-client'
+ * // SDK 関数の直接使用
+ * import { getHealthcheck, postApiChat } from '@workspace/api-client'
  *
- * const $api = createBackendQueryClient({ accessToken })
- * const { data, isLoading } = $api.useQuery('get', '/healthcheck')
+ * const { data, error } = await getHealthcheck()
+ * const { data: chatData } = await postApiChat({ body: { message: 'Hello' } })
+ *
+ * // TanStack Query hooks の使用
+ * import { getHealthcheckOptions, postApiChatMutation } from '@workspace/api-client'
+ *
+ * // useQuery
+ * const { data, isLoading } = useQuery(getHealthcheckOptions())
+ *
+ * // useMutation
+ * const mutation = useMutation(postApiChatMutation())
+ * mutation.mutate({ body: { message: 'Hello' } })
  * ```
  */
 
-// Client exports
-export { type BackendClient, type BackendClientOptions, createBackendClient } from './src/client'
+// Client configuration
+export { client } from '@hey-api/client-fetch'
 
-// Query exports
-export {
-  type BackendQueryClient,
-  type BackendQueryClientOptions,
-  createBackendQueryClient,
-} from './src/query'
-
-// Type exports
-export type { paths } from './src/schema'
+// SDK functions
+export * from './src/generated/sdk.gen'
+// Types
+export * from './src/generated/types.gen'

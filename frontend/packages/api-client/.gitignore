@@ -1,3 +1,2 @@
-# Auto-generated OpenAPI schema types
-# Run `bun run generate` to regenerate
-src/schema.d.ts
+# Note: Generated files (src/generated/) are committed to git
+# Run `bun run generate` to regenerate when backend API changes

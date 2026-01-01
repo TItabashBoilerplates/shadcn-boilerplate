@@ -338,8 +338,8 @@ build-model-frontend:
 		npx dotenvx run -f env/backend/${ENV}.env -- supabase start; \
 		mkdir -p "./frontend/packages/types"; \
 		supabase gen types typescript --local > "./frontend/packages/types/schema.ts"; \
-		echo "🔧 Generating backend API client types..."; \
-		cd frontend/packages/api-client && bun run generate || echo "⚠️  Backend API client type generation skipped (backend not running)"; \
+		echo "🔧 Generating backend API client (Hey API)..."; \
+		cd frontend && bun run --filter @workspace/api-client generate || echo "⚠️  Backend API client generation skipped (backend not running)"; \
 	fi
 
 .PHONY: build-model-backend

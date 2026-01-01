@@ -2,12 +2,17 @@
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
   "tasks": {
+    "generate": {
+      "cache": false,
+      "outputs": ["src/generated/**"]
+    },
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "generate"],
       "inputs": ["$TURBO_DEFAULT$", ".env*", "!**/.env*.local"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**", ".expo/**"]
     },
     "dev": {
+      "dependsOn": ["generate"],
       "cache": false,
       "persistent": true
     },
@@ -54,7 +59,9 @@
   "globalEnv": [
     "NEXT_PUBLIC_SUPABASE_URL",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_BACKEND_PY_URL",
     "EXPO_PUBLIC_SUPABASE_URL",
-    "EXPO_PUBLIC_SUPABASE_ANON_KEY"
+    "EXPO_PUBLIC_SUPABASE_ANON_KEY",
+    "BACKEND_URL"
   ]
 }
