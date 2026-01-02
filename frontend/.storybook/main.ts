@@ -1,16 +1,21 @@
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import type { StorybookConfig } from '@storybook/nextjs'
+
+// ESM環境では __dirname が使えないため import.meta.url から取得
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 const config: StorybookConfig = {
   framework: '@storybook/nextjs',
 
   stories: [
     // ============================================
-    // PACKAGES
+    // PACKAGES - Web UI のみ（Mobile は TailwindCSS 4 互換性問題のため一時無効）
     // ============================================
-    // packages/ui/web
     {
       directory: '../packages/ui/web/components',
-      files: '**/*.stories.@(js|jsx|ts|tsx)',
+      files: '*.stories.@(js|jsx|ts|tsx)',
       titlePrefix: 'Packages/UI Web/Components',
     },
     {
@@ -18,78 +23,36 @@ const config: StorybookConfig = {
       files: '**/*.stories.@(js|jsx|ts|tsx)',
       titlePrefix: 'Packages/UI Web/MagicUI',
     },
-    // packages/ui/mobile (React Native Web)
-    {
-      directory: '../packages/ui/mobile/components',
-      files: '**/*.stories.@(js|jsx|ts|tsx)',
-      titlePrefix: 'Packages/UI Mobile/Components',
-    },
-    {
-      directory: '../packages/ui/mobile/layout',
-      files: '**/*.stories.@(js|jsx|ts|tsx)',
-      titlePrefix: 'Packages/UI Mobile/Layout',
-    },
 
     // ============================================
-    // FSD LAYERS (apps/web)
+    // FSD LAYERS
     // ============================================
-    // Shared
-    {
-      directory: '../apps/web/src/shared/ui',
-      files: '**/*.stories.@(js|jsx|ts|tsx)',
-      titlePrefix: 'Shared',
-    },
-    // Entities
-    {
-      directory: '../apps/web/src/entities',
-      files: '**/ui/**/*.stories.@(js|jsx|ts|tsx)',
-      titlePrefix: 'Entities',
-    },
-    // Features
-    {
-      directory: '../apps/web/src/features',
-      files: '**/ui/**/*.stories.@(js|jsx|ts|tsx)',
-      titlePrefix: 'Features',
-    },
-    // Widgets
     {
       directory: '../apps/web/src/widgets',
       files: '**/ui/**/*.stories.@(js|jsx|ts|tsx)',
       titlePrefix: 'Widgets',
     },
-    // Views
     {
-      directory: '../apps/web/src/views',
-      files: '**/ui/**/*.stories.@(js|jsx|ts|tsx)',
-      titlePrefix: 'Views',
+      directory: '../apps/web/src/shared/ui',
+      files: '**/*.stories.@(js|jsx|ts|tsx)',
+      titlePrefix: 'Shared',
     },
+    {
+      directory: '../apps/web/src/entities',
+      files: '**/ui/**/*.stories.@(js|jsx|ts|tsx)',
+      titlePrefix: 'Entities',
+    },
+    {
+      directory: '../apps/web/src/features',
+      files: '**/ui/**/*.stories.@(js|jsx|ts|tsx)',
+      titlePrefix: 'Features',
+    },
+
+    // TODO: Mobile UI (gluestack-ui) - TailwindCSS 4 との互換性問題解決後に有効化
+    // TODO: Views - i18n (@/shared/lib/i18n) 依存の解決後に有効化
   ],
 
-  addons: [
-    '@storybook/addon-docs',
-    '@storybook/addon-themes',
-    {
-      name: '@storybook/addon-react-native-web',
-      options: {
-        modulesToTranspile: [
-          'nativewind',
-          'react-native-css-interop',
-          'react-native-reanimated',
-          '@gluestack-ui/button',
-          '@gluestack-ui/core',
-          '@gluestack-ui/nativewind-utils',
-          '@gluestack-ui/overlay',
-          '@gluestack-ui/toast',
-          '@gluestack-ui/utils',
-        ],
-        babelPresetReactOptions: {
-          jsxImportSource: 'nativewind',
-        },
-        babelPresets: ['nativewind/babel'],
-        babelPlugins: ['react-native-reanimated/plugin'],
-      },
-    },
-  ],
+  addons: ['@storybook/addon-docs', '@storybook/addon-themes'],
 
   typescript: {
     reactDocgen: 'react-docgen',
@@ -97,6 +60,17 @@ const config: StorybookConfig = {
   },
 
   staticDirs: ['../apps/web/public'],
+
+  // Webpack 設定: @/ エイリアスを解決
+  webpackFinal: async (config) => {
+    if (config.resolve) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        '@': resolve(__dirname, '../apps/web/src'),
+      }
+    }
+    return config
+  },
 }
 
 export default config

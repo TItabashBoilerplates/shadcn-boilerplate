@@ -9,6 +9,12 @@ RUN npm install -g bun
 # 開発用（ボリュームマウントで使用）
 FROM base AS dev
 
+# CI=true でインタラクティブプロンプトをスキップ
+# FORCE_COLOR=0 でカラー出力を無効化（TTY問題回避）
+ENV CI=true
+ENV FORCE_COLOR=0
+ENV COLUMNS=120
+
 # bun install はコンテナ起動時に実行
 EXPOSE 6006
-CMD ["sh", "-c", "bun install && bun run storybook -- --host 0.0.0.0"]
+CMD ["sh", "-c", "bun install && bun run storybook -- --host 0.0.0.0 --quiet"]
