@@ -3,6 +3,7 @@
 ## Description
 
 This is a full-stack application boilerplate with a multi-platform frontend and backend services:
+
 - **Frontend**: Next.js 16, shadcn/ui, TailwindCSS 4, Bun
 - **Backend**: FastAPI (Python) with Supabase Edge Functions
 - **Database**: PostgreSQL with Drizzle ORM for schema management and pgvector extension
@@ -11,28 +12,28 @@ This is a full-stack application boilerplate with a multi-platform frontend and 
 
 ### Monorepo Configuration
 
-このプロジェクトは**ルートにpackage.jsonを持たない**独立型モノレポ構成です：
+このプロジェクトは**ルートに package.json を持たない**独立型モノレポ構成です：
 
-- **`drizzle/`**: データベーススキーマ管理（独立パッケージ、Bun管理）
-- **`frontend/`**: Next.js 16モノレポ（Bun workspace、Turbo build system）
-- **`backend-py/`**: Python FastAPI（uv管理、独立）
+- **`drizzle/`**: データベーススキーマ管理（独立パッケージ、Bun 管理）
+- **`frontend/`**: Next.js 16 モノレポ（Bun workspace、Turbo build system）
+- **`backend-py/`**: Python FastAPI（uv 管理、独立）
 
-各ディレクトリが独自の依存関係とnode_modules/を持ち、クリーンに分離されています。
+各ディレクトリが独自の依存関係と node_modules/を持ち、クリーンに分離されています。
 
 ### Package Managers
 
 用途に応じて最適なパッケージマネージャーを使用：
 
-- **Frontend**: Bun 1.2.8（高速、Node.js互換）
-- **Backend Python**: uv（Rust製、高速な依存関係管理）
-- **Drizzle**: Bun（frontendと同様）
+- **Frontend**: Bun 1.2.8（高速、Node.js 互換）
+- **Backend Python**: uv（Rust 製、高速な依存関係管理）
+- **Drizzle**: Bun（frontend と同様）
 - **Edge Functions**: Deno（組み込みパッケージマネージャー）
 
 ### Unified Code Quality
 
 全プロジェクトで統一されたコード品質管理：
 
-- **Frontend & Drizzle**: Biome（ESLint + Prettierの高速な代替）
+- **Frontend & Drizzle**: Biome（ESLint + Prettier の高速な代替）
 - **Backend Python**: Ruff（lint） + MyPy（型チェック）
 - **Edge Functions**: Deno native tools
 - **統合コマンド**: `make lint`, `make format`, `make ci-check`
@@ -49,6 +50,7 @@ By adopting these environments, we can ensure efficient development and maintain
 ## Architecture
 
 ### Frontend Architecture
+
 - **Application**: Next.js 16 with App Router and Turbopack for development
 - **Architecture**: Feature-Sliced Design (FSD) methodology with strict layer organization
 - **UI Framework**: shadcn/ui components built on Radix UI with TailwindCSS 4
@@ -56,16 +58,19 @@ By adopting these environments, we can ensure efficient development and maintain
 - **Build System**: Turbo for monorepo management
 
 ### Backend Architecture
+
 - **Python Backend**: FastAPI application in `backend-py/` using clean architecture patterns
 - **Edge Functions**: Supabase Edge Functions using Deno's native `Deno.serve` API for lightweight serverless functions
 - **Database**: PostgreSQL with **Drizzle ORM** for schema management, includes pgvector extension for embeddings
 - **Infrastructure**: Supabase for auth/database, Docker containerization
 
 #### Configuration Management
+
 - **Supabase Services** (`supabase/config.toml`): Auth, Storage, API settings, service-level configurations
 - **Database Schema** (`drizzle/`): Tables, RLS policies, Realtime publications, functions, triggers managed with Drizzle ORM
 
 ### Key Features
+
 - Multi-client architecture with corporate users, general users, and virtual users
 - Chat system with rooms, messages, and user relationships
 - Vector embeddings for AI/ML features
@@ -148,7 +153,9 @@ To set up the project environment, follow these steps:
 After successfully completing the setup, you can start the application using one of the following commands:
 
 ### Backend Services
+
 - Start backend services with Docker:
+
   ```bash
   make run
   ```
@@ -159,7 +166,9 @@ After successfully completing the setup, you can start the application using one
   ```
 
 ### Frontend Development
+
 - Start web frontend (Next.js):
+
   ```bash
   make frontend
   ```
@@ -232,7 +241,9 @@ make check-functions         # Deno型チェック（全関数自動検出）
 ### Development Tools
 
 #### Other Tools
+
 - Check services status:
+
   ```bash
   make check
   ```
@@ -244,9 +255,10 @@ make check-functions         # Deno型チェック（全関数自動検出）
 
 ### Database Operations
 
-このプロジェクトはDrizzle ORMでデータベーススキーマを管理しています。
+このプロジェクトは Drizzle ORM でデータベーススキーマを管理しています。
 
 **開発環境（ローカル）**:
+
 ```bash
 # マイグレーション生成 + 適用 + 型生成（推奨）
 make migrate-dev
@@ -264,6 +276,7 @@ make drizzle-validate
 ```
 
 **本番環境（リモート）**:
+
 ```bash
 # マイグレーションファイルを適用のみ（型生成は行わない）
 make migrate-deploy
@@ -276,19 +289,23 @@ ENV=production make migrate-deploy
 ```
 
 **コマンドの使い分け**:
-- `make migration` / `make migrate-dev`: ローカル開発用。スキーマ変更→マイグレーション生成→適用→型生成を一括実行
+
+- `make migration` / `make migrate-dev`: ローカル開発用。スキーマ変更 → マイグレーション生成 → 適用 → 型生成を一括実行
 - `make migrate-deploy`: リモート環境用。既存のマイグレーションファイルを適用するのみ
 - `make drizzle-push`: マイグレーションファイルを生成せずにスキーマを直接プッシュ（実験・プロトタイピング用）
 
 詳細は `CLAUDE.md` の「Drizzle Schema Management」セクションを参照してください。
 
 ### Model Generation
+
 - Build Supabase types for frontend:
+
   ```bash
   make build-model-frontend
   ```
 
 - Build types for Edge Functions:
+
   ```bash
   make build-model-functions
   ```
@@ -299,6 +316,7 @@ ENV=production make migrate-deploy
   ```
 
 ### Edge Functions
+
 - Deploy Edge Functions:
   ```bash
   make deploy-functions
@@ -307,6 +325,7 @@ ENV=production make migrate-deploy
 # Development Guidelines
 
 ## Code Quality
+
 - **Frontend**: Biome for linting and formatting (all-in-one toolchain, replaces ESLint + Prettier), TypeScript strict mode
 - **Backend**: Ruff for linting (line length: 88), MyPy for type checking
 - **Edge Functions**: Deno native tools, `npm:` prefix for dependencies (not JSR or HTTP imports)
@@ -315,6 +334,7 @@ ENV=production make migrate-deploy
 - **Build System**: Turbo for efficient monorepo builds
 
 ## Architecture Patterns
+
 - **Frontend**: Feature-Sliced Design (FSD) with strict layer hierarchy (app → pages → widgets → features → entities → shared)
 - **Backend**: Clean architecture with Controllers, Use Cases, Gateways, and Infrastructure
 - **Database**: Multi-client architecture with proper separation of concerns
@@ -335,7 +355,7 @@ The project includes integrations for:
 
 ### AI Coding Assistants
 
-このプロジェクトは、主要なAIコーディングアシスタントに最適化されています：
+このプロジェクトは、主要な AI コーディングアシスタントに最適化されています：
 
 - **[Claude Code](https://claude.com/claude-code)**: `CLAUDE.md` で詳細なガイドラインを提供
 - **[Cursor](https://cursor.com/)**: `.cursorrules` ファイルでプロジェクト固有のルールを定義
@@ -344,7 +364,7 @@ The project includes integrations for:
   - 設定例: `.codex/config.toml.example`
 - **GitHub Copilot**: `AGENTS.md` でプロジェクトコンテキストを提供
 
-各AIアシスタントは、プロジェクトのアーキテクチャ、コーディング規約、ベストプラクティスを自動的に理解します。
+各 AI アシスタントは、プロジェクトのアーキテクチャ、コーディング規約、ベストプラクティスを自動的に理解します。
 
 ## Future Considerations
 
@@ -353,4 +373,6 @@ The following tools are being considered for implementation:
 - **[Resend](https://resend.com/)**: Email delivery service
 - **[Sentry](https://sentry.io/)**: Application monitoring and error tracking
 - **[Stripe](https://stripe.com/)**: Payment processing platform
+- **[Polar.sh](https://polar.sh/)**: Payment processing platform
+- **[One Signal](https://onesignal.com/)**: Push notification
 - **[RevenueCat](https://www.revenuecat.com/)**: Subscription management for mobile apps
