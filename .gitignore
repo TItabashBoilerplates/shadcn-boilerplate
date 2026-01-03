@@ -48,6 +48,9 @@ env/
 # Test coverage
 .coverage
 **.coverage.*
+
+# E2E test results (Maestro)
+e2e-results/maestro/
 htmlcov/
 
 # Metro

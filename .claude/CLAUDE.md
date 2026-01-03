@@ -45,7 +45,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     ├── supabase-test/    # RLS テスト（Frontend）
     ├── python-testing/   # Python単体テスト（外部SDK/TypeError検知）
     ├── i18n/             # next-intl 多言語対応
-    └── langchain/        # LangChain/LangGraph/LangSmith
+    ├── langchain/        # LangChain/LangGraph/LangSmith
+    └── maestro/          # Maestro E2Eテスト
 ```
 
 ## Domain Documentation

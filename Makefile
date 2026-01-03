@@ -15,6 +15,12 @@ init:
 	asdf install
 	# dotenvxをインストール
 	npm install -g @dotenvx/dotenvx;
+	# Maestro CLI をインストール（未インストールの場合のみ）
+	@command -v maestro >/dev/null 2>&1 || { \
+		echo "Installing Maestro CLI..."; \
+		curl -Ls "https://get.maestro.mobile.dev" | bash; \
+		echo "✅ Maestro installed. Add ~/.maestro/bin to your PATH"; \
+	}
 	# .envファイルを作成（Docker Compose用のプロジェクト名設定）
 	@if [ ! -f ".env" ]; then \
 		echo "Creating .env file for Docker Compose..."; \
@@ -499,3 +505,20 @@ storybook-local:
 .PHONY: build-storybook
 build-storybook:
 	cd frontend && bun run build-storybook
+
+# ===== Maestro E2E Testing Commands =====
+
+# E2Eテスト実行（全プラットフォーム）
+.PHONY: e2e
+e2e:
+	cd .maestro && maestro test .
+
+# E2Eテスト実行（Webのみ）
+.PHONY: e2e-web
+e2e-web:
+	cd .maestro && maestro test web/
+
+# E2Eテスト実行（Mobileのみ）
+.PHONY: e2e-mobile
+e2e-mobile:
+	cd .maestro && maestro test mobile/
