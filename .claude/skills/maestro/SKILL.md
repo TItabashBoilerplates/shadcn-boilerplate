@@ -7,6 +7,8 @@ description: Maestro E2Eテストフレームワークガイダンス。フロ�
 
 このプロジェクトは **Maestro** を使用して Web (Next.js) と Mobile (Expo) の E2E テストを実行します。
 
+本ドキュメントでは、Maestro を使った E2E テストの **推奨パターン** と **ベストプラクティス** を解説します。
+
 ## 構成
 
 | 項目 | 場所 |
@@ -215,6 +217,8 @@ MAILPIT_URL=http://localhost:54324
 
 ## Web テストフロー例
 
+以下は OTP 認証フローの参考実装パターンです。
+
 ### 認証フロー
 
 ```yaml
@@ -268,9 +272,10 @@ env:
 - assertVisible: "Dashboard"
 ```
 
-## Mobile テストフロー（テンプレート）
+## Mobile テストフロー
 
-Mobile 認証画面が未実装のため、`wip` タグ付きのテンプレートを提供。
+以下は Mobile 認証フローの参考実装パターンです。
+未実装の機能には `wip` タグを付けて除外できます。
 
 ```yaml
 appId: ${APP_ID}
