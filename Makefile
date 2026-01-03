@@ -70,8 +70,8 @@ run:
 	# make copy-git-config
 	# Supabaseを起動（ENV=localの場合のみ）
 	if [ "${ENV}" = "local" ]; then \
-		npx dotenvx run -f env/backend/${ENV}.env -- supabase start; \
-		npx dotenvx run -f env/backend/${ENV}.env -- supabase seed buckets --local; \
+		npx dotenvx run -f env/backend/${ENV}.env -f env/secrets.env -- supabase start; \
+		npx dotenvx run -f env/backend/${ENV}.env -f env/secrets.env -- supabase seed buckets --local; \
 	fi
 	# Docker Composeでサービスを起動（backend + storybook）
 	if [ "${ENV}" != "local" ]; then \
