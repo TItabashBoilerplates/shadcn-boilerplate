@@ -1,7 +1,8 @@
 {
   "imports": {
     "drizzle-orm": "npm:drizzle-orm@^0.44.7",
-    "drizzle-orm/": "npm:drizzle-orm@^0.44.7/"
+    "drizzle-orm/": "npm:drizzle-orm@^0.44.7/",
+    "postgres": "npm:postgres@^3.4.5"
   },
   "lint": {
     "exclude": ["shared/drizzle/", "shared/types/supabase/"]

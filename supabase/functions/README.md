@@ -26,6 +26,10 @@ supabase/functions/
 │   ├── deno.json             # Function-specific dependencies
 │   └── deno.lock             # Deno lockfile
 ├── shared/                   # Shared code across functions
+│   ├── db/                   # Database connection utilities
+│   │   ├── index.ts          # Export entry point
+│   │   ├── url.ts            # DB URL workaround for Deno bug
+│   │   └── client.ts         # Drizzle client initialization
 │   ├── types/
 │   │   └── supabase/
 │   │       └── schema.ts     # Supabase generated types (693 lines)
@@ -134,7 +138,48 @@ Deno.serve(async (req: Request) => {
 });
 ```
 
-### 3. npm Package Imports
+### 3. Drizzle ORM Direct Database Connection (Transaction Support)
+
+For operations requiring transactions, use the Drizzle ORM with direct database
+connection instead of the Supabase REST API.
+
+**Setup**:
+
+```typescript
+import { createDrizzleClient } from "../shared/db/index.ts";
+import { generalUsers } from "../shared/drizzle/index.ts";
+
+Deno.serve(async (req: Request) => {
+  const db = createDrizzleClient();
+
+  // Simple query
+  const users = await db.select().from(generalUsers);
+
+  // Transaction example
+  await db.transaction(async (tx) => {
+    await tx.insert(generalUsers).values({
+      id: "user-123",
+      displayName: "Alice",
+      // ...
+    });
+    // Additional operations within the same transaction
+  });
+
+  return new Response(JSON.stringify({ users }), {
+    headers: { "Content-Type": "application/json" },
+  });
+});
+```
+
+**Note**: This uses `postgres.js` driver with `prepare: false` option for
+Supabase's Transaction pool mode compatibility.
+
+**Local Development Workaround**: The `getDbUrl()` function automatically
+handles Deno's DNS resolution bug with underscore-containing hostnames
+([#23157](https://github.com/denoland/deno/issues/23157)) by replacing
+`supabase_db_*` with `host.docker.internal:54322`.
+
+### 4. npm Package Imports
 
 Edge Functions use `npm:` prefix to import npm packages (JSR and HTTP imports
 are discouraged).
@@ -407,7 +452,11 @@ Edge Functions access environment variables via `Deno.env.get()`.
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SUPABASE_DB_URL=postgresql://postgres:postgres@db.xxx.supabase.co:5432/postgres
 ```
+
+**Note**: `SUPABASE_DB_URL` is required for Drizzle ORM direct database
+connection. Use "Transaction pooler" connection string from Supabase Dashboard.
 
 ### Setting Environment Variables
 
