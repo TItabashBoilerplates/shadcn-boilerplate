@@ -1,4 +1,5 @@
 import { AuthProvider } from '@workspace/auth'
+import { OneSignalProvider } from '@workspace/onesignal'
 import { QueryProvider } from '@workspace/query'
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
@@ -51,7 +52,9 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <QueryProvider>
           <AuthProvider>
-            <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
+            <OneSignalProvider appId={process.env.NEXT_PUBLIC_ONE_SIGNAL_APP_ID ?? ''}>
+              <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
+            </OneSignalProvider>
           </AuthProvider>
         </QueryProvider>
       </body>
