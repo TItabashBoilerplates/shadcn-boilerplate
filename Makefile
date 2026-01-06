@@ -547,3 +547,36 @@ e2e-web:
 .PHONY: e2e-mobile
 e2e-mobile:
 	cd .maestro && maestro test mobile/
+
+# ===== Supabase Remote Deploy コマンド =====
+# 詳細は scripts/supabase/ を参照
+
+# Supabase 一括デプロイ（リモート環境用）
+.PHONY: deploy-supabase
+deploy-supabase:
+	@./scripts/supabase/deploy.sh
+
+# リモートプロジェクトへのリンク
+.PHONY: supabase-link
+supabase-link:
+	@./scripts/supabase/link.sh
+
+# Config Push（Auth, API設定など）
+.PHONY: deploy-config
+deploy-config:
+	@./scripts/supabase/deploy-config.sh
+
+# Edge Functions 全デプロイ（既存の deploy-functions は個別デプロイ用に残す）
+.PHONY: deploy-functions-all
+deploy-functions-all:
+	@./scripts/supabase/deploy-functions.sh
+
+# Secrets 設定
+.PHONY: deploy-secrets
+deploy-secrets:
+	@./scripts/supabase/deploy-secrets.sh
+
+# Storage Buckets 同期
+.PHONY: deploy-buckets
+deploy-buckets:
+	@./scripts/supabase/deploy-buckets.sh
