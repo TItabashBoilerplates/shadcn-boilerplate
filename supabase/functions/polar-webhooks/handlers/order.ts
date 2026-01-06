@@ -66,10 +66,10 @@ export async function handleOrderRefunded(
 /**
  * Handle order.created event
  */
-export async function handleOrderCreated(
+export function handleOrderCreated(
   _supabase: SupabaseClient,
   data: PolarOrder,
-): Promise<{ success: boolean; message: string }> {
+): { success: boolean; message: string } {
   console.log("[order.created] Order created:", data.id);
   return { success: true, message: "Order created logged" };
 }

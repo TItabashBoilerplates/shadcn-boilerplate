@@ -19,7 +19,7 @@ import type { PolarServer } from '@workspace/polar/types'
  * checkout(productId, userId)
  */
 export const GET = Checkout({
-  accessToken: process.env.POLAR_ACCESS_TOKEN!,
+  accessToken: process.env.POLAR_ACCESS_TOKEN ?? '',
   successUrl: '/checkout/success',
   server: (process.env.POLAR_SERVER || 'sandbox') as PolarServer,
 })

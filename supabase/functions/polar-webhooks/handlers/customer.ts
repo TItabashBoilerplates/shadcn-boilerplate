@@ -37,10 +37,10 @@ export async function handleCustomerCreated(
 /**
  * Handle customer.updated event
  */
-export async function handleCustomerUpdated(
+export function handleCustomerUpdated(
   _supabase: SupabaseClient,
   data: PolarCustomer,
-): Promise<{ success: boolean; message: string }> {
+): { success: boolean; message: string } {
   console.log("[customer.updated] Customer updated:", data.id);
   return { success: true, message: "Customer updated logged" };
 }

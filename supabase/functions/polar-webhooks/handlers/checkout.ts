@@ -42,10 +42,10 @@ export async function handleCheckoutUpdated(
  * Handle checkout.created event
  * Typically used for logging/analytics
  */
-export async function handleCheckoutCreated(
+export function handleCheckoutCreated(
   _supabase: SupabaseClient,
   data: PolarCheckout,
-): Promise<{ success: boolean; message: string }> {
+): { success: boolean; message: string } {
   console.log("[checkout.created] Checkout created:", data.id);
   return { success: true, message: "Checkout created logged" };
 }

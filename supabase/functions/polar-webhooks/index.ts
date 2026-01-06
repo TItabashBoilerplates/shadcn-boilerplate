@@ -1,5 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
-import type { WebhookEventType, WebhookPayload } from "./handlers/types.ts";
+import type {
+  PolarCheckout,
+  PolarCustomer,
+  PolarOrder,
+  PolarSubscription,
+  WebhookEventType,
+  WebhookPayload,
+} from "./handlers/types.ts";
 import {
   handleCheckoutCreated,
   handleCheckoutUpdated,
@@ -169,47 +176,81 @@ Deno.serve(async (req: Request) => {
 
     switch (eventType) {
       case "checkout.created":
-        result = await handleCheckoutCreated(supabase, payload.data);
+        result = handleCheckoutCreated(
+          supabase,
+          payload.data as PolarCheckout,
+        );
         break;
       case "checkout.updated":
-        result = await handleCheckoutUpdated(supabase, payload.data);
+        result = await handleCheckoutUpdated(
+          supabase,
+          payload.data as PolarCheckout,
+        );
         break;
       case "subscription.created":
-        result = await handleSubscriptionCreated(supabase, payload.data);
+        result = await handleSubscriptionCreated(
+          supabase,
+          payload.data as PolarSubscription,
+        );
         break;
       case "subscription.updated":
-        result = await handleSubscriptionUpdated(supabase, payload.data);
+        result = await handleSubscriptionUpdated(
+          supabase,
+          payload.data as PolarSubscription,
+        );
         break;
       case "subscription.canceled":
-        result = await handleSubscriptionCanceled(supabase, payload.data);
+        result = await handleSubscriptionCanceled(
+          supabase,
+          payload.data as PolarSubscription,
+        );
         break;
       case "subscription.revoked":
-        result = await handleSubscriptionRevoked(supabase, payload.data);
+        result = await handleSubscriptionRevoked(
+          supabase,
+          payload.data as PolarSubscription,
+        );
         break;
       case "subscription.active":
-        result = await handleSubscriptionActive(supabase, payload.data);
+        result = await handleSubscriptionActive(
+          supabase,
+          payload.data as PolarSubscription,
+        );
         break;
       case "subscription.uncanceled":
-        result = await handleSubscriptionUncanceled(supabase, payload.data);
+        result = await handleSubscriptionUncanceled(
+          supabase,
+          payload.data as PolarSubscription,
+        );
         break;
       case "order.created":
-        result = await handleOrderCreated(supabase, payload.data);
+        result = handleOrderCreated(supabase, payload.data as PolarOrder);
         break;
       case "order.paid":
         result = await handleOrderPaid(
           supabase,
-          payload.data,
-          payload.data.metadata,
+          payload.data as PolarOrder,
+          (payload.data as PolarOrder & { metadata?: Record<string, unknown> })
+            .metadata,
         );
         break;
       case "order.refunded":
-        result = await handleOrderRefunded(supabase, payload.data);
+        result = await handleOrderRefunded(
+          supabase,
+          payload.data as PolarOrder,
+        );
         break;
       case "customer.created":
-        result = await handleCustomerCreated(supabase, payload.data);
+        result = await handleCustomerCreated(
+          supabase,
+          payload.data as PolarCustomer,
+        );
         break;
       case "customer.updated":
-        result = await handleCustomerUpdated(supabase, payload.data);
+        result = handleCustomerUpdated(
+          supabase,
+          payload.data as PolarCustomer,
+        );
         break;
       default:
         console.log("[webhook] Unhandled event type:", eventType);

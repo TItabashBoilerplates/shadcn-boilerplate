@@ -15,10 +15,10 @@ import type { HandlerResult, WebhookPayload } from "./types.ts";
  * 通知がデバイスに正常に配信されたときに呼び出される。
  * 配信率のトラッキングやアナリティクスに使用。
  */
-export async function handleNotificationDelivered(
+export function handleNotificationDelivered(
   _supabase: SupabaseClient,
   payload: WebhookPayload,
-): Promise<HandlerResult> {
+): HandlerResult {
   console.log("[onesignal-webhook] Notification delivered:", {
     notificationId: payload.notification_id,
     externalUserId: payload.external_user_id,
@@ -47,10 +47,10 @@ export async function handleNotificationDelivered(
  * ユーザーが通知をタップしたときに呼び出される。
  * エンゲージメント率のトラッキングに使用。
  */
-export async function handleNotificationClicked(
+export function handleNotificationClicked(
   _supabase: SupabaseClient,
   payload: WebhookPayload,
-): Promise<HandlerResult> {
+): HandlerResult {
   console.log("[onesignal-webhook] Notification clicked:", {
     notificationId: payload.notification_id,
     externalUserId: payload.external_user_id,
@@ -83,10 +83,10 @@ export async function handleNotificationClicked(
  * ユーザーが通知を開かずに却下したときに呼び出される。
  * 通知の効果測定に使用。
  */
-export async function handleNotificationDismissed(
+export function handleNotificationDismissed(
   _supabase: SupabaseClient,
   payload: WebhookPayload,
-): Promise<HandlerResult> {
+): HandlerResult {
   console.log("[onesignal-webhook] Notification dismissed:", {
     notificationId: payload.notification_id,
     externalUserId: payload.external_user_id,

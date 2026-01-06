@@ -20,7 +20,7 @@ import type { NextRequest } from 'next/server'
  * openPortal(polarCustomerId)
  */
 export const GET = CustomerPortal({
-  accessToken: process.env.POLAR_ACCESS_TOKEN!,
+  accessToken: process.env.POLAR_ACCESS_TOKEN ?? '',
   server: (process.env.POLAR_SERVER || 'sandbox') as PolarServer,
   getCustomerId: async (req: NextRequest) => {
     const customerId = req.nextUrl.searchParams.get('customerId')

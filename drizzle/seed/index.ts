@@ -8,8 +8,8 @@
  *   DATABASE_URL - PostgreSQL connection string (required)
  */
 import { drizzle } from 'drizzle-orm/postgres-js'
-import postgres from 'postgres'
 import { reset, seed } from 'drizzle-seed'
+import postgres from 'postgres'
 import * as schema from '../schema'
 import { seedMasterData } from './master'
 import { refinements } from './random'

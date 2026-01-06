@@ -127,7 +127,7 @@ export function createOneSignalClient() {
      * })
      * ```
      */
-    async sendToUser(
+    sendToUser(
       externalUserId: string,
       options: SendNotificationOptions,
     ): Promise<NotificationResponse> {
@@ -153,7 +153,7 @@ export function createOneSignalClient() {
      * @param options - 通知オプション
      * @returns 通知レスポンス
      */
-    async sendToUsers(
+    sendToUsers(
       externalUserIds: string[],
       options: SendNotificationOptions,
     ): Promise<NotificationResponse> {
@@ -191,7 +191,7 @@ export function createOneSignalClient() {
      * })
      * ```
      */
-    async sendToSegment(
+    sendToSegment(
       segments: string[],
       options: SendNotificationOptions,
     ): Promise<NotificationResponse> {
@@ -212,7 +212,7 @@ export function createOneSignalClient() {
      * @param options - 通知オプション
      * @returns 通知レスポンス
      */
-    async sendToAll(
+    sendToAll(
       options: SendNotificationOptions,
     ): Promise<NotificationResponse> {
       return this.sendToSegment(["Subscribed Users"], options);

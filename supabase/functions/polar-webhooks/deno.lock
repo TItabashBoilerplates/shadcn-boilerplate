@@ -1,8 +1,7 @@
 {
   "version": "4",
   "specifiers": {
-    "npm:@supabase/supabase-js@2": "2.89.0",
-    "npm:drizzle-orm@~0.44.7": "0.44.7"
+    "npm:@supabase/supabase-js@2": "2.89.0"
   },
   "npm": {
     "@supabase/auth-js@2.89.0": {
@@ -63,9 +62,6 @@
       "dependencies": [
         "@types/node"
       ]
-    },
-    "drizzle-orm@0.44.7": {
-      "integrity": "sha512-quIpnYznjU9lHshEOAYLoZ9s3jweleHlZIAWR/jX9gAWNg/JhQ1wj0KGRf7/Zm+obRrYd9GjPVJg790QY9N5AQ=="
     },
     "iceberg-js@0.8.1": {
       "integrity": "sha512-1dhVQZXhcHje7798IVM+xoo/1ZdVfzOMIc8/rgVSijRK38EDqOJoGula9N/8ZI5RD8QTxNQtK/Gozpr+qUqRRA=="

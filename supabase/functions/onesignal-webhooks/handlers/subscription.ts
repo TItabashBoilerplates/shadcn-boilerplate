@@ -14,10 +14,10 @@ import type { HandlerResult, WebhookPayload } from "./types.ts";
  * 新しいデバイスがプッシュ通知を購読したときに呼び出される。
  * ユーザーの通知設定状態の同期に使用。
  */
-export async function handleSubscriptionCreated(
+export function handleSubscriptionCreated(
   _supabase: SupabaseClient,
   payload: WebhookPayload,
-): Promise<HandlerResult> {
+): HandlerResult {
   console.log("[onesignal-webhook] Subscription created:", {
     subscriptionId: payload.subscription_id,
     externalUserId: payload.external_user_id,
@@ -61,10 +61,10 @@ export async function handleSubscriptionCreated(
  * デバイスがプッシュ通知の購読を解除したときに呼び出される。
  * ユーザーの通知設定状態の同期に使用。
  */
-export async function handleSubscriptionDeleted(
+export function handleSubscriptionDeleted(
   _supabase: SupabaseClient,
   payload: WebhookPayload,
-): Promise<HandlerResult> {
+): HandlerResult {
   console.log("[onesignal-webhook] Subscription deleted:", {
     subscriptionId: payload.subscription_id,
     externalUserId: payload.external_user_id,
