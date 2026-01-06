@@ -1,0 +1,3 @@
+# Place avatar seed files here (e.g., sample-1.png, sample-2.png)
+# These files will be uploaded to the avatars bucket when running:
+#   make seed-storage

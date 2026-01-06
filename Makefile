@@ -502,10 +502,56 @@ drizzle-validate:
 
 # ===== その他のコマンド =====
 
+# ===== Seed コマンド =====
+# Database + Storage のシードデータを投入
+# 詳細は .claude/skills/seed/SKILL.md を参照
+
+# DB + Storage 両方
 .PHONY: seed
 seed:
-	@echo "Warning: Seed functionality is currently disabled"
-	@echo "Please implement seed logic if needed"
+	@make seed-check-env
+	@make seed-db
+	@make seed-storage
+
+# DB のみ
+.PHONY: seed-db
+seed-db:
+	@make seed-check-env
+	@echo "Seeding database (${ENV})..."
+	@if [ "${ENV}" = "local" ] || [ -z "${ENV}" ]; then \
+		cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run seed/index.ts; \
+	else \
+		cd drizzle && npx dotenvx run -f ../env/migration/${ENV}.env -- bun run seed/index.ts; \
+	fi
+
+# Storage のみ
+.PHONY: seed-storage
+seed-storage:
+	@make seed-check-env
+	@echo "Seeding storage buckets (${ENV})..."
+	@if [ "${ENV}" = "local" ] || [ -z "${ENV}" ]; then \
+		npx dotenvx run -f env/backend/local.env -- supabase seed buckets --local; \
+	else \
+		npx dotenvx run -f env/backend/${ENV}.env -- supabase seed buckets --linked; \
+	fi
+
+# 環境チェック（production 警告）
+.PHONY: seed-check-env
+seed-check-env:
+	@if [ "${ENV}" = "production" ]; then \
+		echo ""; \
+		echo "WARNING: You are about to seed PRODUCTION!"; \
+		echo ""; \
+		echo "This will:"; \
+		echo "  - Reset and insert test/sample data"; \
+		echo "  - Potentially overwrite existing data"; \
+		echo ""; \
+		read -p "Are you sure you want to continue? [y/N] " confirm; \
+		if [ "$$confirm" != "y" ] && [ "$$confirm" != "Y" ]; then \
+			echo "Aborted."; \
+			exit 1; \
+		fi; \
+	fi
 
 # ロールバックコマンド
 .PHONY: rollback
