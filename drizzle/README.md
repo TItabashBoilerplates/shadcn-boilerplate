@@ -46,8 +46,8 @@ This project manages the following database tables:
 
 1. **organizations** - Corporate organizations
 2. **corporateUsers** (RLS) - Corporate users with row-level security
-3. **generalUsers** (RLS) - General users with authentication
-4. **generalUserProfiles** (RLS) - User profile information
+3. **users** (RLS) - Users with authentication
+4. **userProfiles** (RLS) - User profile information
 5. **addresses** (RLS) - User addresses
 6. **chatRooms** (RLS) - Chat rooms (PRIVATE/GROUP types)
 7. **messages** (RLS + check constraints) - Chat messages
@@ -61,11 +61,11 @@ This project manages the following database tables:
 
 All Row Level Security policies are **co-located with table definitions** in `schema/schema.ts`.
 
-#### Example: generalUsers RLS
+#### Example: users RLS
 
 ```typescript
 // Table definition
-export const generalUsers = pgTable('general_users', {
+export const users = pgTable('users', {
   id: uuid('id').primaryKey(),
   displayName: text('display_name').notNull(),
   accountName: text('account_name').notNull().unique(),
@@ -73,24 +73,24 @@ export const generalUsers = pgTable('general_users', {
 }).enableRLS()
 
 // RLS policies (immediately following table definition)
-export const insertPolicyGeneralUsers = pgPolicy('insert_policy_general_users', {
+export const insertPolicyUsers = pgPolicy('insert_policy_users', {
   for: 'insert',
   to: 'supabase_auth_admin',
   withCheck: sql`true`,
-}).link(generalUsers)
+}).link(users)
 
 export const selectOwnUser = pgPolicy('select_own_user', {
   for: 'select',
   to: ['anon', 'authenticated'],
   using: sql`true`,
-}).link(generalUsers)
+}).link(users)
 
-export const editPolicyGeneralUsers = pgPolicy('edit_policy_general_users', {
+export const editPolicyUsers = pgPolicy('edit_policy_users', {
   for: 'all',
   to: 'authenticated',
   using: sql`(SELECT auth.uid()) = id`,
   withCheck: sql`(SELECT auth.uid()) = id`,
-}).link(generalUsers)
+}).link(users)
 ```
 
 #### RLS Policy Parameters
@@ -113,9 +113,9 @@ export const selectPolicyMessages = pgPolicy('select_policy_messages', {
     EXISTS (
       SELECT 1
       FROM user_chats
-      JOIN general_users ON user_chats.user_id = general_users.id
+      JOIN users ON user_chats.user_id = users.id
       WHERE user_chats.chat_room_id = messages.chat_room_id
-      AND general_users.id = (SELECT auth.uid())
+      AND users.id = (SELECT auth.uid())
     )
   `,
 }).link(messages)
@@ -185,15 +185,15 @@ All tables export both SELECT and INSERT types:
 
 ```typescript
 import type { InferSelectModel, InferInsertModel } from 'drizzle-orm'
-import { generalUsers, chatRooms, messages } from './schema'
+import { users, chatRooms, messages } from './schema'
 
 // SELECT types (existing records)
-export type GeneralUser = InferSelectModel<typeof generalUsers>
+export type User = InferSelectModel<typeof users>
 export type ChatRoom = InferSelectModel<typeof chatRooms>
 export type Message = InferSelectModel<typeof messages>
 
 // INSERT types (new records)
-export type NewGeneralUser = InferInsertModel<typeof generalUsers>
+export type NewUser = InferInsertModel<typeof users>
 export type NewChatRoom = InferInsertModel<typeof chatRooms>
 export type NewMessage = InferInsertModel<typeof messages>
 ```
@@ -201,10 +201,10 @@ export type NewMessage = InferInsertModel<typeof messages>
 ### Usage Example
 
 ```typescript
-import { generalUsers, type GeneralUser, type NewGeneralUser } from '@/drizzle'
+import { users, type User, type NewUser } from '@/drizzle'
 
 // Type-safe insert
-const newUser: NewGeneralUser = {
+const newUser: NewUser = {
   id: crypto.randomUUID(),
   displayName: 'John Doe',
   accountName: 'johndoe',
@@ -212,7 +212,7 @@ const newUser: NewGeneralUser = {
 }
 
 // Type-safe select
-const users: GeneralUser[] = await db.select().from(generalUsers)
+const allUsers: User[] = await db.select().from(users)
 ```
 
 ## Custom SQL Management
@@ -237,7 +237,7 @@ Custom SQL (pgvector extension, triggers, functions) is managed in `drizzle/conf
    ```sql
    CREATE OR REPLACE FUNCTION handle_new_user()
    RETURNS TRIGGER
-   -- Auto-inserts into general_users when auth.users receives new user
+   -- Auto-inserts into users when auth.users receives new user
    ```
 
 4. **Auth hook trigger**
@@ -409,7 +409,7 @@ export const embeddings = pgTable('embeddings', {
   id: integer('id').primaryKey().generatedByDefaultAsIdentity(),
   userId: uuid('user_id')
     .notNull()
-    .references(() => generalUsers.id, { onDelete: 'cascade' }),
+    .references(() => users.id, { onDelete: 'cascade' }),
   content: text('content').notNull(),
   embedding: vector('embedding', { dimensions: 1536 }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true, precision: 3 })
@@ -563,9 +563,9 @@ Usage in Edge Functions:
 
 ```typescript
 import type { InferSelectModel } from 'npm:drizzle-orm'
-import { generalUsers } from '../shared/drizzle/index.ts'
+import { users } from '../shared/drizzle/index.ts'
 
-type User = InferSelectModel<typeof generalUsers>
+type User = InferSelectModel<typeof users>
 ```
 
 ### Backend Python Integration

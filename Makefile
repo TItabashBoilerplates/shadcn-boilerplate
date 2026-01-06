@@ -316,8 +316,33 @@ deploy-functions:
 		npx dotenvx run -f env/backend/${ENV}.env -- bash -c 'supabase functions deploy stripe-checkout --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
 		npx dotenvx run -f env/backend/${ENV}.env -- bash -c 'supabase functions deploy stripe-products --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
 		npx dotenvx run -f env/backend/${ENV}.env -- bash -c 'supabase functions deploy stripe-webhooks --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
+		npx dotenvx run -f env/backend/${ENV}.env -f env/secrets.env -- bash -c 'supabase functions deploy polar-webhooks --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
 	else \
 		echo "Skipping deploy-functions for local environment"; \
+	fi
+
+# ===== Polar.sh Commands =====
+
+# プラン同期（Dry Run）- 変更内容を確認のみ
+.PHONY: polar-sync-dry
+polar-sync-dry:
+	@echo "🔍 Checking plan differences (dry run)..."
+	cd frontend && npx dotenvx run -f ../env/secrets.env -f ../env/frontend/${ENV}.env -- bun run ../scripts/polar/sync.ts --dry-run
+
+# プラン同期（実行）- Polar.sh にプラン定義を同期
+.PHONY: polar-sync
+polar-sync:
+	@echo "🚀 Syncing plans to Polar.sh..."
+	cd frontend && npx dotenvx run -f ../env/secrets.env -f ../env/frontend/${ENV}.env -- bun run ../scripts/polar/sync.ts
+
+# Polar Webhook デプロイ
+.PHONY: deploy-polar-webhooks
+deploy-polar-webhooks:
+	@if [ "${ENV}" != "local" ]; then \
+		echo "🚀 Deploying Polar webhook handler..."; \
+		npx dotenvx run -f env/backend/${ENV}.env -f env/secrets.env -- bash -c 'supabase functions deploy polar-webhooks --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
+	else \
+		echo "⚠️  Skipping deploy for local environment"; \
 	fi
 
 # チェックコマンド

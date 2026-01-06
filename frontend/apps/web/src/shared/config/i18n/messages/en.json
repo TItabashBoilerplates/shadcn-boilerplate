@@ -31,5 +31,33 @@
   "LocaleSwitcher": {
     "label": "Change language",
     "locale": "{locale, select, en {English} ja {日本語} other {Unknown}}"
+  },
+  "CheckoutSuccess": {
+    "title": "Thank you for your purchase!",
+    "description": "Your order has been processed successfully.",
+    "backToHome": "Back to Home"
+  },
+  "Pricing": {
+    "title": "Choose your plan",
+    "description": "Select the plan that best fits your needs.",
+    "perMonth": "/month",
+    "perYear": "/year",
+    "oneTime": "one-time",
+    "subscribe": "Subscribe",
+    "purchase": "Purchase",
+    "currentPlan": "Current Plan",
+    "mostPopular": "Most Popular"
+  },
+  "Subscription": {
+    "title": "Your Subscription",
+    "status": "Status",
+    "active": "Active",
+    "canceled": "Canceled",
+    "pastDue": "Past Due",
+    "trialing": "Trialing",
+    "currentPeriodEnd": "Renews on",
+    "manageSubscription": "Manage Subscription",
+    "noSubscription": "No active subscription",
+    "viewPlans": "View Plans"
   }
 }

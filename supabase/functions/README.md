@@ -114,7 +114,7 @@ Deno.serve(async (req: Request) => {
 
   // Query with Supabase client
   const { data, error } = await supabase
-    .from("general_users")
+    .from("users")
     .select("*")
     .limit(1)
     .single();
@@ -439,7 +439,7 @@ supabase gen types typescript --local > functions/shared/types/supabase/schema.t
 import type { Database } from "../shared/types/supabase/schema.ts";
 
 type Tables = Database["public"]["Tables"];
-type User = Tables["general_users"]["Row"];
+type User = Tables["users"]["Row"];
 ```
 
 ## Environment Variables

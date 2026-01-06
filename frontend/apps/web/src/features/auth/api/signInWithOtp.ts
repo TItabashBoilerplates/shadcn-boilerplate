@@ -33,7 +33,7 @@ export async function signInWithOtp(email: string) {
       email,
       options: {
         // パスワードレス認証のベストプラクティス: OTP受信で所有権を証明
-        // Auth Hookで自動的にgeneral_usersテーブルにユーザー情報を作成
+        // Auth Hookで自動的にusersテーブルにユーザー情報を作成
         shouldCreateUser: true,
       },
     })

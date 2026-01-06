@@ -27,7 +27,7 @@ drizzle/
 ```typescript
 import { pgTable, uuid, text, timestamp } from 'drizzle-orm/pg-core'
 
-export const generalUsers = pgTable('general_users', {
+export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   accountName: text('account_name').notNull().unique(),
   displayName: text('display_name').notNull(),
@@ -49,7 +49,7 @@ import { pgPolicy } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 // Define RLS policies immediately after table
-export const generalUsers = pgTable('general_users', {
+export const users = pgTable('users', {
   // ... column definitions
 }).enableRLS()
 
@@ -58,15 +58,15 @@ export const selectOwnUser = pgPolicy('select_own_user', {
   for: 'select',
   to: ['anon', 'authenticated'],
   using: sql`true`,
-}).link(generalUsers)
+}).link(users)
 
 // Edit policy: Own data only
-export const editPolicyGeneralUsers = pgPolicy('edit_policy_general_users', {
+export const editPolicyUsers = pgPolicy('edit_policy_users', {
   for: 'all',
   to: 'authenticated',
   using: sql`(select auth.uid()) = id`,
   withCheck: sql`(select auth.uid()) = id`,
-}).link(generalUsers)
+}).link(users)
 ```
 
 ### Policy Parameters

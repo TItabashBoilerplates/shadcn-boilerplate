@@ -121,8 +121,8 @@ export * from './api'
 ```typescript
 import type { Tables, Enums } from '@workspace/types/schema'
 
-type User = Tables<'general_users'>
-type UserProfile = Tables<'general_user_profiles'>
+type User = Tables<'users'>
+type UserProfile = Tables<'user_profiles'>
 type UserStatus = Enums<'user_status'>
 ```
 
@@ -261,7 +261,7 @@ import { useSupabaseQuery } from '@workspace/app'
 
 const { data } = useSupabaseQuery({
   queryKey: ['users'],
-  table: 'general_users',
+  table: 'users',
 })
 ```
 

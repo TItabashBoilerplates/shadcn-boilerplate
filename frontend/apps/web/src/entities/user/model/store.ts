@@ -11,12 +11,12 @@ interface UserState {
   authUser: AuthUser | null
 
   /**
-   * ユーザー情報（general_users）
+   * ユーザー情報（users）
    */
   user: User | null
 
   /**
-   * プロフィール情報（general_user_profiles）
+   * プロフィール情報（user_profiles）
    */
   profile: UserProfile | null
 

@@ -2,10 +2,10 @@ import type { Database } from "../shared/types/supabase/schema.ts";
 import { createClient } from "@supabase/supabase-js";
 // Drizzle型の使用例
 import type { InferSelectModel } from "drizzle-orm";
-import { generalUsers } from "../shared/drizzle/index.ts";
+import { users } from "../shared/drizzle/index.ts";
 
 // Drizzle型を推論
-type User = InferSelectModel<typeof generalUsers>;
+type User = InferSelectModel<typeof users>;
 
 console.log("Hello from Deno Functions!");
 
@@ -30,7 +30,7 @@ Deno.serve(async (req: Request) => {
   try {
     if (req.method === "GET") {
       const query = await supabaseClient
-        .from("general_users")
+        .from("users")
         .select("*")
         .limit(1);
 

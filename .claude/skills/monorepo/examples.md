@@ -20,7 +20,7 @@ import type { Tables } from '@workspace/types/schema'
 // FSD レイヤー
 import { UserSettings } from './UserSettings'
 
-type User = Tables<'general_users'>
+type User = Tables<'users'>
 
 export default async function DashboardPage() {
   await cookies() // キャッシュ無効化
@@ -31,7 +31,7 @@ export default async function DashboardPage() {
   if (error || !user) redirect('/login')
 
   const { data: userData } = await supabase
-    .from('general_users')
+    .from('users')
     .select('*')
     .eq('id', user.id)
     .single()
@@ -62,7 +62,7 @@ import type { Tables } from '@workspace/types/schema'
 // FSD レイヤー
 import { useUserStore } from '@/entities/user'
 
-type User = Tables<'general_users'>
+type User = Tables<'users'>
 
 interface UserSettingsProps {
   initialData: User | null
@@ -78,7 +78,7 @@ export function UserSettings({ initialData, userId }: UserSettingsProps) {
   const mutation = useMutation({
     mutationFn: async (newName: string) => {
       const { data, error } = await supabase
-        .from('general_users')
+        .from('users')
         .update({ display_name: newName })
         .eq('id', userId)
         .select()
@@ -223,8 +223,8 @@ export async function signInWithOtp(email: string) {
 // モノレポ共有パッケージから型をインポート
 import type { Tables } from '@workspace/types/schema'
 
-export type User = Tables<'general_users'>
-export type UserProfile = Tables<'general_user_profiles'>
+export type User = Tables<'users'>
+export type UserProfile = Tables<'user_profiles'>
 
 export interface UserWithProfile {
   user: User
@@ -265,7 +265,7 @@ import { useQuery, useMutation, useQueryClient } from '@workspace/query'
 import { createClient } from '@workspace/client-supabase/client'
 import type { Tables } from '@workspace/types/schema'
 
-type User = Tables<'general_users'>
+type User = Tables<'users'>
 
 // Query Keys
 export const userKeys = {
@@ -282,7 +282,7 @@ export function useUser(userId: string) {
     queryKey: userKeys.detail(userId),
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('general_users')
+        .from('users')
         .select('*')
         .eq('id', userId)
         .single()
@@ -301,7 +301,7 @@ export function useUpdateUser() {
   return useMutation({
     mutationFn: async ({ userId, updates }: { userId: string; updates: Partial<User> }) => {
       const { data, error } = await supabase
-        .from('general_users')
+        .from('users')
         .update(updates)
         .eq('id', userId)
         .select()

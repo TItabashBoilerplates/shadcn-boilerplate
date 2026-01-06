@@ -42,7 +42,7 @@ class ChatUseCase:
         Returns:
             Chat response with AI message
         """
-        # 1. Get current user (GeneralUsers)
+        # 1. Get current user (Users)
         current_user = self.current_user_gateway.get_current_user(session)
         if current_user is None:
             msg = "User not authenticated"
@@ -51,7 +51,7 @@ class ChatUseCase:
         # Cast SQLAlchemy UUID to Python uuid.UUID for type checking
         user_uuid = uuid.UUID(str(current_user.id))
 
-        # 2. Get user profile (GeneralUserProfiles)
+        # 2. Get user profile (UserProfiles)
         _user_profile = self.user_profile_gateway.get_or_create(user_uuid, session)
 
         # 3. Get or create chat room (ChatRooms, UserChats)

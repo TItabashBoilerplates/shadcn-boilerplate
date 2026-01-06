@@ -27,7 +27,7 @@ drizzle/
 ```typescript
 import { pgTable, uuid, text, timestamp } from 'drizzle-orm/pg-core'
 
-export const generalUsers = pgTable('general_users', {
+export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   accountName: text('account_name').notNull().unique(),
   displayName: text('display_name').notNull(),
@@ -49,7 +49,7 @@ import { pgPolicy } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 // テーブル定義の直後にRLSポリシーを定義
-export const generalUsers = pgTable('general_users', {
+export const users = pgTable('users', {
   // ... カラム定義
 }).enableRLS()
 
@@ -58,15 +58,15 @@ export const selectOwnUser = pgPolicy('select_own_user', {
   for: 'select',
   to: ['anon', 'authenticated'],
   using: sql`true`,
-}).link(generalUsers)
+}).link(users)
 
 // 編集ポリシー: 自分のデータのみ
-export const editPolicyGeneralUsers = pgPolicy('edit_policy_general_users', {
+export const editPolicyUsers = pgPolicy('edit_policy_users', {
   for: 'all',
   to: 'authenticated',
   using: sql`(select auth.uid()) = id`,
   withCheck: sql`(select auth.uid()) = id`,
-}).link(generalUsers)
+}).link(users)
 ```
 
 ### Supabase 組み込みロールの使用
@@ -162,9 +162,9 @@ make build-model-functions
 ```typescript
 // supabase/functions/example/index.ts
 import type { InferSelectModel } from 'npm:drizzle-orm'
-import { generalUsers } from '../shared/drizzle/index.ts'
+import { users } from '../shared/drizzle/index.ts'
 
-type User = InferSelectModel<typeof generalUsers>
+type User = InferSelectModel<typeof users>
 ```
 
 ## 日時カラムのベストプラクティス

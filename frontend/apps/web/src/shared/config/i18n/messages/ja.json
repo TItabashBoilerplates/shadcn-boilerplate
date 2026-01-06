@@ -31,5 +31,33 @@
   "LocaleSwitcher": {
     "label": "言語を変更",
     "locale": "{locale, select, en {English} ja {日本語} other {Unknown}}"
+  },
+  "CheckoutSuccess": {
+    "title": "ご購入ありがとうございます！",
+    "description": "ご注文は正常に処理されました。",
+    "backToHome": "ホームに戻る"
+  },
+  "Pricing": {
+    "title": "プランを選択",
+    "description": "ニーズに最適なプランをお選びください。",
+    "perMonth": "/月",
+    "perYear": "/年",
+    "oneTime": "買い切り",
+    "subscribe": "購読する",
+    "purchase": "購入する",
+    "currentPlan": "現在のプラン",
+    "mostPopular": "人気No.1"
+  },
+  "Subscription": {
+    "title": "ご契約情報",
+    "status": "ステータス",
+    "active": "有効",
+    "canceled": "解約済み",
+    "pastDue": "支払い遅延",
+    "trialing": "トライアル中",
+    "currentPeriodEnd": "次回更新日",
+    "manageSubscription": "契約を管理",
+    "noSubscription": "有効な契約がありません",
+    "viewPlans": "プランを見る"
   }
 }

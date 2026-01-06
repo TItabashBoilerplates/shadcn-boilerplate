@@ -247,7 +247,7 @@ import { pgTable, uuid, text, pgPolicy } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
 // Table definition
-export const generalUsers = pgTable("general_users", {
+export const users = pgTable("users", {
   id: uuid("id").primaryKey(),
   accountName: text("account_name").notNull().unique(),
   // ... other columns ...
@@ -258,14 +258,14 @@ export const selectOwnUser = pgPolicy("select_own_user", {
   for: "select",
   to: ["anon", "authenticated"],
   using: sql`true`,
-}).link(generalUsers);
+}).link(users);
 
-export const editPolicyGeneralUsers = pgPolicy("edit_policy_general_users", {
+export const editPolicyUsers = pgPolicy("edit_policy_users", {
   for: "all",
   to: "authenticated",
   using: sql`(SELECT auth.uid()) = id`,
   withCheck: sql`(SELECT auth.uid()) = id`,
-}).link(generalUsers);
+}).link(users);
 ```
 
 **Policy Parameters**:

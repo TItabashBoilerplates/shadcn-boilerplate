@@ -33,8 +33,8 @@ async def chat(
     """Chat endpoint that uses all domain models.
 
     This endpoint:
-    - Authenticates user (GeneralUsers)
-    - Gets user profile (GeneralUserProfiles)
+    - Authenticates user (Users)
+    - Gets user profile (UserProfiles)
     - Creates/gets chat room (ChatRooms, UserChats)
     - Saves messages (Messages)
     - Gets/creates virtual user (VirtualUsers, VirtualUserChats)

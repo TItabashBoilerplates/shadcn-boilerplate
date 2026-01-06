@@ -119,7 +119,7 @@ describe('User API - RLS Policy Tests', () => {
 
   beforeEach(async () => {
     await db.query(`
-      INSERT INTO general_users (id, account_name, display_name)
+      INSERT INTO users (id, account_name, display_name)
       VALUES ($1, 'testuser', 'Test User')
     `, [userId])
   })
@@ -202,7 +202,7 @@ describe('User API - RLS Policy Tests', () => {
 
   beforeEach(async () => {
     await db.query(`
-      INSERT INTO general_users (id, account_name, display_name)
+      INSERT INTO users (id, account_name, display_name)
       VALUES ($1, 'user1', 'User One'), ($2, 'user2', 'User Two')
     `, [userId1, userId2])
 

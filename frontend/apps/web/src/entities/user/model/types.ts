@@ -1,14 +1,14 @@
 import type { Tables } from '@workspace/types/schema'
 
 /**
- * Supabase general_users テーブルの型
+ * Supabase users テーブルの型
  */
-export type User = Tables<'general_users'>
+export type User = Tables<'users'>
 
 /**
- * Supabase general_user_profiles テーブルの型
+ * Supabase user_profiles テーブルの型
  */
-export type UserProfile = Tables<'general_user_profiles'>
+export type UserProfile = Tables<'user_profiles'>
 
 /**
  * ユーザーとプロフィールを結合した型

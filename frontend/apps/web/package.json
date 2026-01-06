@@ -12,6 +12,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@polar-sh/nextjs": "^0.9.3",
     "@radix-ui/react-slot": "^1.2.3",
     "@workspace/auth": "workspace:*",
     "@workspace/client-supabase": "workspace:*",

@@ -39,8 +39,8 @@ BEGIN
     generate_cuid()
   );
 
-  -- 新規ユーザーのIDをgeneral_usersテーブルに挿入
-  INSERT INTO public.general_users(id, account_name)
+  -- 新規ユーザーのIDをusersテーブルに挿入
+  INSERT INTO public.users(id, account_name)
   VALUES (NEW.id, account_name_value);
 
   RETURN NEW;

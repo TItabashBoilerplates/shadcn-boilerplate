@@ -200,8 +200,8 @@ src/entities/
 // entities/user/model/types.ts
 import type { Tables } from '@workspace/types/schema'
 
-export type User = Tables<'general_users'>
-export type UserProfile = Tables<'general_user_profiles'>
+export type User = Tables<'users'>
+export type UserProfile = Tables<'user_profiles'>
 
 // entities/user/model/store.ts
 export const useUserStore = create<UserState>((set) => ({
