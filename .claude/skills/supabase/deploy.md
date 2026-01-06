@@ -251,15 +251,21 @@ SUPABASE_PROJECT_REF=abcdefghijklmnop
 
 ### 推奨順序
 
-1. **マイグレーション適用**
-   ```bash
-   ENV=stg make migrate-deploy
-   ```
-
-2. **Supabase リソースデプロイ**
+1. **Supabase プラットフォーム設定**
    ```bash
    ENV=stg make deploy-supabase
    ```
+   - Config（Auth、API設定）
+   - Storage Buckets
+   - Edge Functions
+   - Secrets
+
+2. **DBマイグレーション**
+   ```bash
+   ENV=stg make migrate-deploy
+   ```
+   - テーブル作成・変更
+   - RLSポリシー適用
 
 ### deploy-supabase の内部フロー
 

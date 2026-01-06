@@ -278,14 +278,11 @@ make drizzle-validate
 **本番環境（リモート）**:
 
 ```bash
-# マイグレーションファイルを適用のみ（型生成は行わない）
-make migrate-deploy
-
 # ステージング環境
-ENV=staging make migrate-deploy
+ENV=stg make migrate-deploy
 
 # 本番環境
-ENV=production make migrate-deploy
+ENV=prod make migrate-deploy
 ```
 
 **コマンドの使い分け**:
@@ -317,10 +314,30 @@ ENV=production make migrate-deploy
 
 ### Edge Functions
 
-- Deploy Edge Functions:
+- Deploy single Edge Function:
   ```bash
-  make deploy-functions
+  make deploy-functions FUNCTION=function-name
   ```
+
+### Deployment (Remote)
+
+Supabase リソースをリモート環境（stg/prod）にデプロイ：
+
+```bash
+# 1. Supabase プラットフォーム設定（Config, Buckets, Functions, Secrets）
+ENV=stg make deploy-supabase
+
+# 2. DBマイグレーション
+ENV=stg make migrate-deploy
+```
+
+**deploy-supabase で反映される内容**:
+- Config（Auth設定、API設定） - `supabase config push`
+- Storage Buckets - `supabase seed buckets`
+- Edge Functions（全関数） - `supabase functions deploy`
+- Secrets - `supabase secrets set`
+
+詳細は `.claude/skills/supabase/deploy.md` を参照。
 
 # Development Guidelines
 
