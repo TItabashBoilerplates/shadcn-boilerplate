@@ -593,6 +593,23 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-anon-key
 | Realtime 認証 | [realtime.md](realtime.md) | Private Channel、realtime.messages RLS |
 | デプロイ | [deploy.md](deploy.md) | CLI コマンド、Config Push、Edge Functions |
 | Emailテンプレート | [email-templates.md](email-templates.md) | 多言語対応、config.toml設定、本番反映 |
+| Edge Functions DB | [../drizzle/SKILL.md](../drizzle/SKILL.md) | postgres.js + Drizzle ORM 設定（Deno環境） |
+
+### Edge Functions での DB 直接接続
+
+Edge Functions で PostgreSQL に直接接続する場合は、**必ず `deno.land/x` からの postgres.js を使用**してください：
+
+```json
+{
+  "imports": {
+    "postgres": "https://deno.land/x/postgresjs@v3.4.8/mod.js"
+  }
+}
+```
+
+**IMPORTANT**: `npm:postgres` は Deno 環境で互換性問題が発生するため使用禁止。
+
+→ 詳細は `../.claude/skills/drizzle/SKILL.md` および `../.claude/rules/edge-functions.md` を参照
 
 ---
 

@@ -159,12 +159,47 @@ make build-model-functions
 
 ### Edge Functions での使用
 
+Edge Functions で Drizzle ORM と PostgreSQL を使用する場合：
+
+**deno.json 設定（必須）**:
+```json
+{
+  "imports": {
+    "drizzle-orm": "npm:drizzle-orm@^0.44.7",
+    "drizzle-orm/": "npm:drizzle-orm@^0.44.7/",
+    "postgres": "https://deno.land/x/postgresjs@v3.4.8/mod.js"
+  }
+}
+```
+
+**IMPORTANT**: postgres.js は `deno.land/x` からの最新版 `v3.4.8` を使用すること。`npm:postgres` は Deno 環境で互換性問題が発生する可能性がある。
+
+**型のみ使用する場合**:
 ```typescript
 // supabase/functions/example/index.ts
-import type { InferSelectModel } from 'npm:drizzle-orm'
+import type { InferSelectModel } from 'drizzle-orm'
 import { users } from '../shared/drizzle/index.ts'
 
 type User = InferSelectModel<typeof users>
+```
+
+**クエリ実行する場合**:
+```typescript
+// supabase/functions/shared/db.ts
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
+import * as schema from './drizzle/index.ts'
+
+const connectionString = Deno.env.get('SUPABASE_DB_URL')!
+const client = postgres(connectionString, { prepare: false })
+export const db = drizzle(client, { schema })
+
+// supabase/functions/example/index.ts
+import { db } from '../shared/db.ts'
+import { users } from '../shared/drizzle/index.ts'
+import { eq } from 'drizzle-orm'
+
+const result = await db.select().from(users).where(eq(users.id, userId))
 ```
 
 ## 日時カラムのベストプラクティス

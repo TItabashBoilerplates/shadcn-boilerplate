@@ -81,30 +81,41 @@ export const corsHeaders = { ... }
 
 ## Import Management
 
-**MANDATORY**: Use `npm:` prefix for npm packages.
+**MANDATORY**: Use `npm:` prefix for npm packages, **EXCEPT for postgres.js**.
 
 ```typescript
-// ✅ Good: npm: prefix
+// ✅ Good: npm: prefix for most packages
 import { createClient } from "npm:@supabase/supabase-js@^2"
 import type { InferSelectModel } from "npm:drizzle-orm"
 
-// ❌ Bad: JSR or HTTP imports
+// ✅ Good: deno.land/x for postgres.js (Deno 互換性のため)
+import postgres from "postgres"  // deno.json の import map 経由
+
+// ❌ Bad: JSR imports
 import { createClient } from "jsr:@supabase/supabase-js"
-import { serve } from "https://deno.land/std/http/server.ts"
+
+// ❌ Bad: npm:postgres (Deno 環境で互換性問題あり)
+import postgres from "npm:postgres"
 ```
 
 ## deno.json Configuration
 
-Each function should have a `deno.json` with import map:
+**MANDATORY**: postgres.js は `deno.land/x` から最新版を使用すること。
 
 ```json
 {
   "imports": {
-    "@supabase/supabase-js": "npm:@supabase/supabase-js@^2",
-    "drizzle-orm": "npm:drizzle-orm"
+    "drizzle-orm": "npm:drizzle-orm@^0.44.7",
+    "drizzle-orm/": "npm:drizzle-orm@^0.44.7/",
+    "postgres": "https://deno.land/x/postgresjs@v3.4.8/mod.js"
   }
 }
 ```
+
+**IMPORTANT**:
+- `postgres`: **必ず** `https://deno.land/x/postgresjs@v3.4.8/mod.js` を使用
+- `npm:postgres` は Deno 環境で互換性問題が発生するため**禁止**
+- バージョンは `v3.4.8` を維持（Deno での動作確認済み）
 
 ## Error Handling
 
@@ -130,13 +141,35 @@ catch (error) {
 
 ## Drizzle Schema Usage
 
+**型のみ使用する場合**:
 ```typescript
-import type { InferSelectModel, InferInsertModel } from "npm:drizzle-orm"
+import type { InferSelectModel, InferInsertModel } from "drizzle-orm"
 import { generalUsers } from "../shared/drizzle/index.ts"
 
 type User = InferSelectModel<typeof generalUsers>
 type NewUser = InferInsertModel<typeof generalUsers>
 ```
+
+**クエリ実行する場合（postgres.js + Drizzle）**:
+```typescript
+// shared/db.ts
+import { drizzle } from "drizzle-orm/postgres-js"
+import postgres from "postgres"
+import * as schema from "./drizzle/index.ts"
+
+const connectionString = Deno.env.get("SUPABASE_DB_URL")!
+const client = postgres(connectionString, { prepare: false })
+export const db = drizzle(client, { schema })
+
+// function-a/index.ts
+import { db } from "../shared/db.ts"
+import { generalUsers } from "../shared/drizzle/index.ts"
+import { eq } from "drizzle-orm"
+
+const users = await db.select().from(generalUsers).where(eq(generalUsers.id, userId))
+```
+
+**IMPORTANT**: `postgres()` の引数に `{ prepare: false }` を必ず指定すること（Supabase Pooler との互換性のため）。
 
 ## Response Format
 
