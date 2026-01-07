@@ -592,6 +592,7 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-anon-key
 | RLS パフォーマンス | [rls-advanced.md](rls-advanced.md) | 最適化テクニック、security definer |
 | Realtime 認証 | [realtime.md](realtime.md) | Private Channel、realtime.messages RLS |
 | デプロイ | [deploy.md](deploy.md) | CLI コマンド、Config Push、Edge Functions |
+| Emailテンプレート | [email-templates.md](email-templates.md) | 多言語対応、config.toml設定、本番反映 |
 
 ---
 

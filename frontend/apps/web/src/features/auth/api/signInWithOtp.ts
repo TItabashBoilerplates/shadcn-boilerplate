@@ -6,6 +6,7 @@ import { createServerClient as createClient } from '@/shared/lib/supabase'
  * パスワードレス認証：メールアドレスにOTPを送信
  *
  * @param email - ユーザーのメールアドレス
+ * @param locale - ユーザーのロケール（'en' | 'ja'）- Emailテンプレートの言語切り替えに使用
  * @returns 成功時は success: true、失敗時はエラーメッセージ
  *
  * @example
@@ -15,7 +16,8 @@ import { createServerClient as createClient } from '@/shared/lib/supabase'
  *
  * export async function handleLogin(formData: FormData) {
  *   const email = formData.get('email') as string
- *   const result = await signInWithOtp(email)
+ *   const locale = formData.get('locale') as string
+ *   const result = await signInWithOtp(email, locale)
  *
  *   if ('error' in result) {
  *     return { success: false, message: result.error }
@@ -25,7 +27,7 @@ import { createServerClient as createClient } from '@/shared/lib/supabase'
  * }
  * ```
  */
-export async function signInWithOtp(email: string) {
+export async function signInWithOtp(email: string, locale: string = 'en') {
   try {
     const supabase = await createClient()
 
@@ -35,6 +37,11 @@ export async function signInWithOtp(email: string) {
         // パスワードレス認証のベストプラクティス: OTP受信で所有権を証明
         // Auth Hookで自動的にusersテーブルにユーザー情報を作成
         shouldCreateUser: true,
+        // Emailテンプレートで多言語対応するためにlocaleを設定
+        // テンプレート内で {{ .Data.locale }} として参照可能
+        data: {
+          locale,
+        },
       },
     })
 

@@ -4,6 +4,7 @@ import { Button } from '@workspace/ui/web/components/button'
 import { Input } from '@workspace/ui/web/components/input'
 import { Label } from '@workspace/ui/web/components/label'
 import { Mail } from 'lucide-react'
+import { useLocale } from 'next-intl'
 import { useActionState, useState } from 'react'
 import { signInWithOtp } from '../api'
 import type { AuthFormState, LoginFormProps } from '../model/types'
@@ -26,6 +27,7 @@ import type { AuthFormState, LoginFormProps } from '../model/types'
  * ```
  */
 export function LoginForm({ className }: LoginFormProps) {
+  const locale = useLocale()
   const [email, setEmail] = useState('')
   const [otpSent, setOtpSent] = useState(false)
 
@@ -41,7 +43,8 @@ export function LoginForm({ className }: LoginFormProps) {
       }
 
       try {
-        const result = await signInWithOtp(emailValue)
+        // localeを渡してEmailテンプレートの言語を切り替え
+        const result = await signInWithOtp(emailValue, locale)
 
         if ('error' in result) {
           return {
