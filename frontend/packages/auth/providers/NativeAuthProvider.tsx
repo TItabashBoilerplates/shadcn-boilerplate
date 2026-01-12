@@ -5,9 +5,12 @@
  */
 
 import { createClient } from '@workspace/client-supabase/native'
+import { clientLogger } from '@workspace/logger/client'
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '../store/authStore'
+
+const logger = clientLogger.child({ provider: 'NativeAuthProvider' })
 
 /**
  * NativeAuthProviderのProps
@@ -58,14 +61,16 @@ export function NativeAuthProvider({ children }: NativeAuthProviderProps) {
       .getSession()
       .then(({ data: { session }, error }) => {
         if (error) {
-          console.error('[NativeAuthProvider] Failed to get initial session:', error.message)
+          logger.error('Failed to get initial session', { error: error.message })
           reset()
         } else {
           setAuth(session)
         }
       })
       .catch((error) => {
-        console.error('[NativeAuthProvider] Unexpected error during session fetch:', error)
+        logger.error('Unexpected error during session fetch', {
+          error: error instanceof Error ? error.message : String(error),
+        })
         reset()
       })
       .finally(() => {
@@ -77,13 +82,13 @@ export function NativeAuthProvider({ children }: NativeAuthProviderProps) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
-        console.info('[NativeAuthProvider] User signed out')
+        logger.info('User signed out')
         reset()
         return
       }
 
       if (!session && event === 'TOKEN_REFRESHED') {
-        console.error('[NativeAuthProvider] Token refresh failed, session lost')
+        logger.error('Token refresh failed, session lost')
         reset()
         return
       }

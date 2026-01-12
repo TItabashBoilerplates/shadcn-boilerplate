@@ -1,13 +1,16 @@
 import type { Database } from "../shared/types/supabase/schema.ts";
 import { createClient } from "@supabase/supabase-js";
+import { createFunctionLogger } from "../shared/logger/index.ts";
 // Drizzle型の使用例
 import type { InferSelectModel } from "drizzle-orm";
 import { users } from "../shared/drizzle/index.ts";
 
+const logger = createFunctionLogger("helloworld");
+
 // Drizzle型を推論
 type User = InferSelectModel<typeof users>;
 
-console.log("Hello from Deno Functions!");
+logger.info("Hello from Deno Functions!");
 
 const supabaseClient = createClient<Database>(
   Deno.env.get("SUPABASE_URL") ?? "",
@@ -34,7 +37,7 @@ Deno.serve(async (req: Request) => {
         .select("*")
         .limit(1);
 
-      console.log(query.data);
+      logger.debug("Query result", { data: query.data });
       const generalUser = query.data?.[0];
 
       // Drizzle型を使用して型安全にデータを扱う

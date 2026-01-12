@@ -29,6 +29,7 @@ export default defineConfig({
       '@workspace/auth': path.resolve(__dirname, './packages/auth'),
       '@workspace/types': path.resolve(__dirname, './packages/types'),
       '@workspace/client-supabase': path.resolve(__dirname, './packages/client/supabase'),
+      '@workspace/logger': path.resolve(__dirname, './packages/logger'),
     },
   },
 })

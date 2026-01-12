@@ -7,7 +7,10 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createFunctionLogger } from "../../shared/logger/index.ts";
 import type { HandlerResult, WebhookPayload } from "./types.ts";
+
+const logger = createFunctionLogger("onesignal-webhook");
 
 /**
  * 通知配信完了ハンドラ
@@ -19,7 +22,7 @@ export function handleNotificationDelivered(
   _supabase: SupabaseClient,
   payload: WebhookPayload,
 ): HandlerResult {
-  console.log("[onesignal-webhook] Notification delivered:", {
+  logger.info("Notification delivered", {
     notificationId: payload.notification_id,
     externalUserId: payload.external_user_id,
     occurredAt: payload.occurred_at,
@@ -51,7 +54,7 @@ export function handleNotificationClicked(
   _supabase: SupabaseClient,
   payload: WebhookPayload,
 ): HandlerResult {
-  console.log("[onesignal-webhook] Notification clicked:", {
+  logger.info("Notification clicked", {
     notificationId: payload.notification_id,
     externalUserId: payload.external_user_id,
     actionId: payload.action_id,
@@ -87,7 +90,7 @@ export function handleNotificationDismissed(
   _supabase: SupabaseClient,
   payload: WebhookPayload,
 ): HandlerResult {
-  console.log("[onesignal-webhook] Notification dismissed:", {
+  logger.info("Notification dismissed", {
     notificationId: payload.notification_id,
     externalUserId: payload.external_user_id,
     occurredAt: payload.occurred_at,

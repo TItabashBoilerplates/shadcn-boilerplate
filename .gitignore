@@ -9,7 +9,11 @@ node_modules/
 # Python virtual environments
 .venv/
 venv/
-env/
+
+# Environment files directory
+env/**
+!env/*/
+!env/**/local.env
 
 # =============================================================================
 # Build Outputs

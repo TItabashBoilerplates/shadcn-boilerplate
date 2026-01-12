@@ -1,5 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createFunctionLogger } from "../../shared/logger/index.ts";
 import type { PolarSubscription } from "./types.ts";
+
+const logger = createFunctionLogger("polar-webhook");
 
 /**
  * Handle subscription.created event
@@ -8,12 +11,12 @@ export async function handleSubscriptionCreated(
   supabase: SupabaseClient,
   data: PolarSubscription,
 ): Promise<{ success: boolean; message: string }> {
-  console.log("[subscription.created] Processing:", data.id);
+  logger.info("Processing subscription.created", { subscriptionId: data.id });
 
   // Get user_id from metadata
   const userId = data.metadata?.user_id as string | undefined;
   if (!userId) {
-    console.error("[subscription.created] No user_id in metadata");
+    logger.error("No user_id in metadata", { subscriptionId: data.id });
     return { success: false, message: "No user_id in metadata" };
   }
 
@@ -29,14 +32,14 @@ export async function handleSubscriptionCreated(
   });
 
   if (error) {
-    console.error(
-      "[subscription.created] Failed to create subscription:",
-      error,
-    );
+    logger.error("Failed to create subscription", {
+      subscriptionId: data.id,
+      error: error.message,
+    });
     return { success: false, message: error.message };
   }
 
-  console.log("[subscription.created] Subscription created for user:", userId);
+  logger.info("Subscription created", { subscriptionId: data.id, userId });
   return { success: true, message: "Subscription created successfully" };
 }
 
@@ -47,7 +50,7 @@ export async function handleSubscriptionUpdated(
   supabase: SupabaseClient,
   data: PolarSubscription,
 ): Promise<{ success: boolean; message: string }> {
-  console.log("[subscription.updated] Processing:", data.id);
+  logger.info("Processing subscription.updated", { subscriptionId: data.id });
 
   const { error } = await supabase
     .from("subscriptions")
@@ -61,14 +64,14 @@ export async function handleSubscriptionUpdated(
     .eq("id", data.id);
 
   if (error) {
-    console.error(
-      "[subscription.updated] Failed to update subscription:",
-      error,
-    );
+    logger.error("Failed to update subscription", {
+      subscriptionId: data.id,
+      error: error.message,
+    });
     return { success: false, message: error.message };
   }
 
-  console.log("[subscription.updated] Subscription updated:", data.id);
+  logger.info("Subscription updated", { subscriptionId: data.id });
   return { success: true, message: "Subscription updated successfully" };
 }
 
@@ -79,7 +82,7 @@ export async function handleSubscriptionCanceled(
   supabase: SupabaseClient,
   data: PolarSubscription,
 ): Promise<{ success: boolean; message: string }> {
-  console.log("[subscription.canceled] Processing:", data.id);
+  logger.info("Processing subscription.canceled", { subscriptionId: data.id });
 
   const { error } = await supabase
     .from("subscriptions")
@@ -91,14 +94,14 @@ export async function handleSubscriptionCanceled(
     .eq("id", data.id);
 
   if (error) {
-    console.error(
-      "[subscription.canceled] Failed to cancel subscription:",
-      error,
-    );
+    logger.error("Failed to cancel subscription", {
+      subscriptionId: data.id,
+      error: error.message,
+    });
     return { success: false, message: error.message };
   }
 
-  console.log("[subscription.canceled] Subscription canceled:", data.id);
+  logger.info("Subscription canceled", { subscriptionId: data.id });
   return { success: true, message: "Subscription canceled successfully" };
 }
 
@@ -109,7 +112,7 @@ export async function handleSubscriptionActive(
   supabase: SupabaseClient,
   data: PolarSubscription,
 ): Promise<{ success: boolean; message: string }> {
-  console.log("[subscription.active] Processing:", data.id);
+  logger.info("Processing subscription.active", { subscriptionId: data.id });
 
   const { error } = await supabase
     .from("subscriptions")
@@ -122,14 +125,14 @@ export async function handleSubscriptionActive(
     .eq("id", data.id);
 
   if (error) {
-    console.error(
-      "[subscription.active] Failed to activate subscription:",
-      error,
-    );
+    logger.error("Failed to activate subscription", {
+      subscriptionId: data.id,
+      error: error.message,
+    });
     return { success: false, message: error.message };
   }
 
-  console.log("[subscription.active] Subscription activated:", data.id);
+  logger.info("Subscription activated", { subscriptionId: data.id });
   return { success: true, message: "Subscription activated successfully" };
 }
 
@@ -140,7 +143,7 @@ export async function handleSubscriptionRevoked(
   supabase: SupabaseClient,
   data: PolarSubscription,
 ): Promise<{ success: boolean; message: string }> {
-  console.log("[subscription.revoked] Processing:", data.id);
+  logger.info("Processing subscription.revoked", { subscriptionId: data.id });
 
   const { error } = await supabase
     .from("subscriptions")
@@ -151,14 +154,14 @@ export async function handleSubscriptionRevoked(
     .eq("id", data.id);
 
   if (error) {
-    console.error(
-      "[subscription.revoked] Failed to revoke subscription:",
-      error,
-    );
+    logger.error("Failed to revoke subscription", {
+      subscriptionId: data.id,
+      error: error.message,
+    });
     return { success: false, message: error.message };
   }
 
-  console.log("[subscription.revoked] Subscription revoked:", data.id);
+  logger.info("Subscription revoked", { subscriptionId: data.id });
   return { success: true, message: "Subscription revoked successfully" };
 }
 
@@ -169,7 +172,9 @@ export async function handleSubscriptionUncanceled(
   supabase: SupabaseClient,
   data: PolarSubscription,
 ): Promise<{ success: boolean; message: string }> {
-  console.log("[subscription.uncanceled] Processing:", data.id);
+  logger.info("Processing subscription.uncanceled", {
+    subscriptionId: data.id,
+  });
 
   const { error } = await supabase
     .from("subscriptions")
@@ -181,13 +186,13 @@ export async function handleSubscriptionUncanceled(
     .eq("id", data.id);
 
   if (error) {
-    console.error(
-      "[subscription.uncanceled] Failed to uncancel subscription:",
-      error,
-    );
+    logger.error("Failed to uncancel subscription", {
+      subscriptionId: data.id,
+      error: error.message,
+    });
     return { success: false, message: error.message };
   }
 
-  console.log("[subscription.uncanceled] Subscription uncanceled:", data.id);
+  logger.info("Subscription uncanceled", { subscriptionId: data.id });
   return { success: true, message: "Subscription uncanceled successfully" };
 }

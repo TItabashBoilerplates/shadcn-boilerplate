@@ -7,9 +7,12 @@
  */
 
 import { createClient } from '@workspace/client-supabase/client'
+import { clientLogger } from '@workspace/logger/client'
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { useAuthStore } from '../store/authStore'
+
+const logger = clientLogger.child({ provider: 'AuthProvider' })
 
 /**
  * AuthProviderのProps
@@ -64,7 +67,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       .getSession()
       .then(({ data: { session }, error }) => {
         if (error) {
-          console.error('[AuthProvider] Failed to get initial session:', error.message)
+          logger.error('Failed to get initial session', { error: error.message })
           reset()
           return
         }
@@ -72,7 +75,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setAuth(session)
       })
       .catch((error) => {
-        console.error('[AuthProvider] Unexpected error during session fetch:', error)
+        logger.error('Unexpected error during session fetch', {
+          error: error instanceof Error ? error.message : String(error),
+        })
         reset()
       })
 
@@ -82,14 +87,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } = supabase.auth.onAuthStateChange((event, session) => {
       // サインアウトイベントの処理
       if (event === 'SIGNED_OUT') {
-        console.info('[AuthProvider] User signed out')
+        logger.info('User signed out')
         reset()
         return
       }
 
       // TOKEN_REFRESHED イベントなどでエラーが発生した場合
       if (!session && event === 'TOKEN_REFRESHED') {
-        console.error('[AuthProvider] Token refresh failed, session lost')
+        logger.error('Token refresh failed, session lost')
         reset()
         return
       }

@@ -1,5 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createFunctionLogger } from "../../shared/logger/index.ts";
 import type { PolarCustomer } from "./types.ts";
+
+const logger = createFunctionLogger("polar-webhook");
 
 /**
  * Handle customer.created event
@@ -8,14 +11,14 @@ export async function handleCustomerCreated(
   supabase: SupabaseClient,
   data: PolarCustomer,
 ): Promise<{ success: boolean; message: string }> {
-  console.log("[customer.created] Processing:", data.id);
+  logger.info("Processing customer.created", { customerId: data.id });
 
   // Get user_id from metadata (should be set during checkout creation)
   const userId = data.metadata?.user_id as string | undefined;
   if (!userId) {
-    console.log(
-      "[customer.created] No user_id in metadata, skipping profile update",
-    );
+    logger.info("No user_id in metadata, skipping profile update", {
+      customerId: data.id,
+    });
     return { success: true, message: "Customer created without user_id" };
   }
 
@@ -26,11 +29,14 @@ export async function handleCustomerCreated(
     .eq("user_id", userId);
 
   if (error) {
-    console.error("[customer.created] Failed to update profile:", error);
+    logger.error("Failed to update profile", {
+      customerId: data.id,
+      error: error.message,
+    });
     return { success: false, message: error.message };
   }
 
-  console.log("[customer.created] Updated polar_customer_id for user:", userId);
+  logger.info("Updated polar_customer_id", { customerId: data.id, userId });
   return { success: true, message: "Customer created and profile updated" };
 }
 
@@ -41,6 +47,6 @@ export function handleCustomerUpdated(
   _supabase: SupabaseClient,
   data: PolarCustomer,
 ): { success: boolean; message: string } {
-  console.log("[customer.updated] Customer updated:", data.id);
+  logger.info("Customer updated", { customerId: data.id });
   return { success: true, message: "Customer updated logged" };
 }

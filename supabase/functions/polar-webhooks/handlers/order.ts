@@ -1,5 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createFunctionLogger } from "../../shared/logger/index.ts";
 import type { PolarOrder } from "./types.ts";
+
+const logger = createFunctionLogger("polar-webhook");
 
 /**
  * Handle order.paid event (one-time purchase completed)
@@ -9,12 +12,12 @@ export async function handleOrderPaid(
   data: PolarOrder,
   metadata?: Record<string, unknown>,
 ): Promise<{ success: boolean; message: string }> {
-  console.log("[order.paid] Processing:", data.id);
+  logger.info("Processing order.paid", { orderId: data.id });
 
   // Get user_id from metadata (should be set during checkout creation)
   const userId = metadata?.user_id as string | undefined;
   if (!userId) {
-    console.error("[order.paid] No user_id in metadata");
+    logger.error("No user_id in metadata", { orderId: data.id });
     return { success: false, message: "No user_id in metadata" };
   }
 
@@ -29,11 +32,14 @@ export async function handleOrderPaid(
   });
 
   if (error) {
-    console.error("[order.paid] Failed to create order:", error);
+    logger.error("Failed to create order", {
+      orderId: data.id,
+      error: error.message,
+    });
     return { success: false, message: error.message };
   }
 
-  console.log("[order.paid] Order created for user:", userId);
+  logger.info("Order created", { orderId: data.id, userId });
   return { success: true, message: "Order processed successfully" };
 }
 
@@ -44,7 +50,7 @@ export async function handleOrderRefunded(
   supabase: SupabaseClient,
   data: PolarOrder,
 ): Promise<{ success: boolean; message: string }> {
-  console.log("[order.refunded] Processing:", data.id);
+  logger.info("Processing order.refunded", { orderId: data.id });
 
   const { error } = await supabase
     .from("orders")
@@ -55,11 +61,14 @@ export async function handleOrderRefunded(
     .eq("id", data.id);
 
   if (error) {
-    console.error("[order.refunded] Failed to refund order:", error);
+    logger.error("Failed to refund order", {
+      orderId: data.id,
+      error: error.message,
+    });
     return { success: false, message: error.message };
   }
 
-  console.log("[order.refunded] Order refunded:", data.id);
+  logger.info("Order refunded", { orderId: data.id });
   return { success: true, message: "Order refunded successfully" };
 }
 
@@ -70,6 +79,6 @@ export function handleOrderCreated(
   _supabase: SupabaseClient,
   data: PolarOrder,
 ): { success: boolean; message: string } {
-  console.log("[order.created] Order created:", data.id);
+  logger.info("Order created", { orderId: data.id });
   return { success: true, message: "Order created logged" };
 }

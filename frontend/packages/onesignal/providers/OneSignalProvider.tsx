@@ -24,9 +24,12 @@
  * @module @workspace/onesignal/providers
  */
 
+import { clientLogger } from '@workspace/logger/client'
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import OneSignal from 'react-onesignal'
 import type { OneSignalContextValue, OneSignalProviderProps } from '../types'
+
+const logger = clientLogger.child({ provider: 'OneSignal' })
 
 const OneSignalContext = createContext<OneSignalContextValue | null>(null)
 
@@ -44,7 +47,7 @@ export function OneSignalProvider({ children, appId, safariWebId }: OneSignalPro
     setMounted(true)
 
     if (!appId) {
-      console.warn('[OneSignal] App ID is not provided, skipping initialization')
+      logger.warn('App ID is not provided, skipping initialization')
       return
     }
 
@@ -55,7 +58,7 @@ export function OneSignalProvider({ children, appId, safariWebId }: OneSignalPro
     })
       .then(async () => {
         setIsInitialized(true)
-        console.info('[OneSignal] Initialized successfully')
+        logger.info('Initialized successfully')
 
         // 購読状態を取得
         try {
@@ -63,11 +66,13 @@ export function OneSignalProvider({ children, appId, safariWebId }: OneSignalPro
           setIsSubscribed(Boolean(subscription))
         } catch {
           // 購読状態の取得に失敗しても続行
-          console.warn('[OneSignal] Failed to get subscription status')
+          logger.warn('Failed to get subscription status')
         }
       })
       .catch((err) => {
-        console.error('[OneSignal] Initialization failed:', err)
+        logger.error('Initialization failed', {
+          error: err instanceof Error ? err.message : String(err),
+        })
         setError(err instanceof Error ? err : new Error(String(err)))
       })
   }, [appId, safariWebId])
@@ -75,7 +80,7 @@ export function OneSignalProvider({ children, appId, safariWebId }: OneSignalPro
   // プッシュ通知許可を促す
   const promptPush = useCallback(async () => {
     if (!isInitialized) {
-      console.warn('[OneSignal] SDK not initialized')
+      logger.warn('SDK not initialized')
       return
     }
 
@@ -86,7 +91,9 @@ export function OneSignalProvider({ children, appId, safariWebId }: OneSignalPro
       const subscription = await OneSignal.User?.PushSubscription?.optedIn
       setIsSubscribed(Boolean(subscription))
     } catch (err) {
-      console.error('[OneSignal] Push prompt failed:', err)
+      logger.error('Push prompt failed', {
+        error: err instanceof Error ? err.message : String(err),
+      })
     }
   }, [isInitialized])
 
@@ -94,15 +101,15 @@ export function OneSignalProvider({ children, appId, safariWebId }: OneSignalPro
   const login = useCallback(
     async (externalUserId: string) => {
       if (!isInitialized) {
-        console.warn('[OneSignal] SDK not initialized')
+        logger.warn('SDK not initialized')
         return
       }
 
       try {
         await OneSignal.login(externalUserId)
-        console.info('[OneSignal] User logged in:', externalUserId)
+        logger.info('User logged in', { externalUserId })
       } catch (err) {
-        console.error('[OneSignal] Login failed:', err)
+        logger.error('Login failed', { error: err instanceof Error ? err.message : String(err) })
       }
     },
     [isInitialized]
@@ -111,15 +118,15 @@ export function OneSignalProvider({ children, appId, safariWebId }: OneSignalPro
   // ユーザーログアウト
   const logout = useCallback(async () => {
     if (!isInitialized) {
-      console.warn('[OneSignal] SDK not initialized')
+      logger.warn('SDK not initialized')
       return
     }
 
     try {
       await OneSignal.logout()
-      console.info('[OneSignal] User logged out')
+      logger.info('User logged out')
     } catch (err) {
-      console.error('[OneSignal] Logout failed:', err)
+      logger.error('Logout failed', { error: err instanceof Error ? err.message : String(err) })
     }
   }, [isInitialized])
 

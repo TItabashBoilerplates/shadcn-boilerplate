@@ -21,6 +21,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
+import { createFunctionLogger } from "../shared/logger/index.ts";
 import type {
   HandlerResult,
   WebhookEventType,
@@ -35,6 +36,8 @@ import {
   handleSubscriptionCreated,
   handleSubscriptionDeleted,
 } from "./handlers/subscription.ts";
+
+const logger = createFunctionLogger("onesignal-webhook");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -91,7 +94,7 @@ Deno.serve(async (req: Request) => {
     if (webhookSecret) {
       const isValid = verifyWebhookSecret(req, webhookSecret);
       if (!isValid) {
-        console.error("[onesignal-webhook] Invalid webhook secret");
+        logger.error("Invalid webhook secret");
         return new Response(JSON.stringify({ error: "Invalid secret" }), {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -103,14 +106,14 @@ Deno.serve(async (req: Request) => {
     const payload: WebhookPayload = await req.json();
     const eventType = payload.event as WebhookEventType;
 
-    console.log("[onesignal-webhook] Received event:", eventType);
+    logger.info("Received event", { eventType });
 
     // Supabase クライアント作成
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error("[onesignal-webhook] Supabase configuration missing");
+      logger.error("Supabase configuration missing");
       return new Response(
         JSON.stringify({ error: "Server configuration error" }),
         {
@@ -142,7 +145,7 @@ Deno.serve(async (req: Request) => {
         result = await handleSubscriptionDeleted(supabase, payload);
         break;
       default:
-        console.log("[onesignal-webhook] Unhandled event type:", eventType);
+        logger.info("Unhandled event type", { eventType });
         result = { success: true, message: `Unhandled event: ${eventType}` };
     }
 
@@ -155,7 +158,7 @@ Deno.serve(async (req: Request) => {
     const errorMessage = error instanceof Error
       ? error.message
       : "Unknown error";
-    console.error("[onesignal-webhook] Error:", errorMessage);
+    logger.error("Error processing webhook", { error: errorMessage });
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

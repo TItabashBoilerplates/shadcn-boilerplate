@@ -5,49 +5,238 @@ export type ClientOptions = {
 };
 
 /**
- * ChatRequest
+ * AgentConfigResponse
  *
- * Request model for chat endpoint.
+ * Agent configuration response model.
  */
-export type ChatRequest = {
+export type AgentConfigResponse = {
     /**
-     * Message
+     * Project Id
      */
-    message: string;
+    project_id: string;
     /**
-     * Chat Room Id
+     * Available Providers
      */
-    chat_room_id?: number | null;
+    available_providers: Array<AgentProviderType>;
+    /**
+     * Available Search Modes
+     */
+    available_search_modes: Array<SearchMode>;
+    /**
+     * Entity Types In Project
+     */
+    entity_types_in_project: Array<string>;
+    /**
+     * Total Content Chunks
+     */
+    total_content_chunks: number;
+    /**
+     * Total Entities
+     */
+    total_entities: number;
 };
 
 /**
- * ChatResponse
+ * AgentProviderType
  *
- * Response model for chat endpoint.
+ * LLM provider type.
  */
-export type ChatResponse = {
+export type AgentProviderType = 'anthropic' | 'openai' | 'qwen-oss-32b' | 'gpt-oss-20b' | 'gpt-oss-120b';
+
+/**
+ * AgentQueryResponse
+ *
+ * Agent query response model.
+ */
+export type AgentQueryResponse = {
     /**
-     * Chat Room Id
+     * Answer
+     *
+     * Generated answer from the agent
      */
-    chat_room_id: number;
+    answer: string;
     /**
-     * User Message Id
+     * Sources
+     *
+     * Source documents used for answer generation
      */
-    user_message_id: number;
+    sources?: Array<SourceDocument>;
     /**
-     * Ai Message Id
+     * Entities
+     *
+     * Related entities found
      */
-    ai_message_id: number;
+    entities?: Array<EntityReference>;
     /**
-     * Ai Response
+     * Image Entities
+     *
+     * Image entities found via image search
      */
-    ai_response: string;
+    image_entities?: Array<ImageEntityReference>;
     /**
-     * Virtual User
+     * Search mode that was used
      */
-    virtual_user: {
-        [key: string]: unknown;
-    };
+    search_mode_used: SearchMode;
+    /**
+     * LLM provider that was used
+     */
+    llm_provider_used: AgentProviderType;
+    /**
+     * Processing Time Ms
+     *
+     * Processing time in milliseconds
+     */
+    processing_time_ms: number;
+    /**
+     * Token Usage
+     *
+     * Token usage statistics
+     */
+    token_usage?: {
+        [key: string]: number;
+    } | null;
+};
+
+/**
+ * Body_query_agent_api_projects__project_id__agent_query_post
+ */
+export type BodyQueryAgentApiProjectsProjectIdAgentQueryPost = {
+    /**
+     * Query
+     *
+     * User query
+     */
+    query: string;
+    /**
+     * Search mode
+     */
+    search_mode?: SearchMode;
+    /**
+     * LLM provider
+     */
+    llm_provider?: AgentProviderType;
+    /**
+     * Max Results
+     *
+     * Maximum results
+     */
+    max_results?: number;
+    /**
+     * Volume Filter
+     *
+     * Volume filter
+     */
+    volume_filter?: number | null;
+    /**
+     * Chapter Filter
+     *
+     * Chapter filter
+     */
+    chapter_filter?: number | null;
+    /**
+     * Entity Types
+     *
+     * Comma-separated entity types
+     */
+    entity_types?: string | null;
+    /**
+     * Include Sources
+     *
+     * Include sources in response
+     */
+    include_sources?: boolean;
+    /**
+     * Image
+     *
+     * Optional image for search
+     */
+    image?: Blob | File | null;
+};
+
+/**
+ * CreateJobRequest
+ *
+ * ジョブ作成リクエスト.
+ */
+export type CreateJobRequest = {
+    /**
+     * ジョブタイプ
+     */
+    job_type: JobType;
+    /**
+     * 処理対象タイプ
+     */
+    target_type: JobTargetType;
+    /**
+     * Target Id
+     *
+     * 処理対象ID
+     */
+    target_id: string;
+    /**
+     * ジョブオプション
+     */
+    options?: JobOptions | null;
+};
+
+/**
+ * CreateReviewRequest
+ *
+ * 監修セッション作成リクエスト.
+ */
+export type CreateReviewRequest = {
+    /**
+     * 監修対象タイプ
+     */
+    target_type: ReviewTargetType;
+    /**
+     * Target Path
+     *
+     * 監修対象パス
+     */
+    target_path: string;
+    /**
+     * Title
+     *
+     * セッションタイトル
+     */
+    title?: string | null;
+    /**
+     * 監修オプション
+     */
+    options?: ReviewOptions | null;
+};
+
+/**
+ * EntityReference
+ *
+ * Entity reference from Graph RAG search.
+ */
+export type EntityReference = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Entity Type
+     */
+    entity_type: string;
+    /**
+     * Description
+     */
+    description?: string | null;
+    /**
+     * Primary Image Url
+     */
+    primary_image_url?: string | null;
+    /**
+     * Relevance
+     */
+    relevance: number;
 };
 
 /**
@@ -58,6 +247,404 @@ export type HttpValidationError = {
      * Detail
      */
     detail?: Array<ValidationError>;
+};
+
+/**
+ * ImageEntityReference
+ *
+ * Image entity reference from Graph RAG image search.
+ */
+export type ImageEntityReference = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Entity Type
+     */
+    entity_type: string;
+    /**
+     * Description
+     */
+    description?: string | null;
+    /**
+     * Primary Image Url
+     */
+    primary_image_url?: string | null;
+    /**
+     * Relevance
+     */
+    relevance: number;
+};
+
+/**
+ * JobListResponse
+ *
+ * ジョブ一覧レスポンス.
+ */
+export type JobListResponse = {
+    /**
+     * Jobs
+     */
+    jobs: Array<JobResponse>;
+    /**
+     * Total
+     */
+    total: number;
+    /**
+     * Page
+     */
+    page: number;
+    /**
+     * Per Page
+     */
+    per_page: number;
+};
+
+/**
+ * JobOptions
+ *
+ * ジョブオプション.
+ */
+export type JobOptions = {
+    /**
+     * Pdf Processing Mode
+     *
+     * PDF処理モード: text_first, image_only, hybrid
+     */
+    pdf_processing_mode?: string;
+    /**
+     * Embedding Provider
+     *
+     * 埋め込みプロバイダ: openai-text-embedding-3-small/large, qwen-embedding-oss-8b
+     */
+    embedding_provider?: string;
+    /**
+     * Llm Provider
+     *
+     * LLMプロバイダ: anthropic, openai, local (gpt-oss)
+     */
+    llm_provider?: string;
+    /**
+     * Llm Model
+     *
+     * LLMモデル名（省略時はプロバイダデフォルト）
+     */
+    llm_model?: string | null;
+    /**
+     * Vlm Provider
+     *
+     * VLMプロバイダ: anthropic, openai, gemini, local (gpt-oss multimodal)
+     */
+    vlm_provider?: string;
+    /**
+     * Vlm Model
+     *
+     * VLMモデル名（省略時はプロバイダデフォルト）
+     */
+    vlm_model?: string | null;
+    /**
+     * Chunking Strategy
+     *
+     * チャンキング戦略: recursive, semantic
+     */
+    chunking_strategy?: string;
+    /**
+     * Chunk Size
+     *
+     * チャンクサイズ (トークン数)
+     */
+    chunk_size?: number;
+    /**
+     * Chunk Overlap
+     *
+     * チャンクオーバーラップ (トークン数)
+     */
+    chunk_overlap?: number;
+};
+
+/**
+ * JobResponse
+ *
+ * ジョブレスポンス.
+ */
+export type JobResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Project Id
+     */
+    project_id: string;
+    job_type: JobType;
+    status: JobStatus;
+    target_type: JobTargetType;
+    /**
+     * Target Id
+     */
+    target_id: string;
+    /**
+     * Input Data
+     */
+    input_data: {
+        [key: string]: unknown;
+    };
+    /**
+     * Output Data
+     */
+    output_data?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Error Message
+     */
+    error_message?: string | null;
+    /**
+     * Retry Count
+     */
+    retry_count: number;
+    /**
+     * Max Retries
+     */
+    max_retries: number;
+    /**
+     * Progress Percent
+     */
+    progress_percent: number;
+    /**
+     * Progress Message
+     */
+    progress_message?: string | null;
+    /**
+     * Langgraph Thread Id
+     */
+    langgraph_thread_id?: string | null;
+    /**
+     * Modal Call Id
+     */
+    modal_call_id?: string | null;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Started At
+     */
+    started_at?: string | null;
+    /**
+     * Completed At
+     */
+    completed_at?: string | null;
+    /**
+     * Created By
+     */
+    created_by?: string | null;
+};
+
+/**
+ * JobStatus
+ *
+ * ジョブステータス.
+ */
+export type JobStatus = 'pending' | 'queued' | 'processing' | 'completed' | 'failed' | 'cancelled';
+
+/**
+ * JobTargetType
+ *
+ * ジョブターゲットタイプ.
+ */
+export type JobTargetType = 'volume' | 'chapter' | 'content_block';
+
+/**
+ * JobType
+ *
+ * ジョブタイプ.
+ */
+export type JobType = 'full_pipeline' | 'text_processing' | 'image_processing' | 'embedding_generation' | 'entity_extraction' | 'relation_building';
+
+/**
+ * ReviewOptions
+ *
+ * 監修オプション.
+ */
+export type ReviewOptions = {
+    /**
+     * Confidence Threshold
+     *
+     * 信頼度閾値（この値以上の問題のみ報告）
+     */
+    confidence_threshold?: number;
+    /**
+     * Include Suggestions
+     *
+     * 修正提案を含めるか
+     */
+    include_suggestions?: boolean;
+    /**
+     * Language
+     *
+     * 出力言語: ja, en
+     */
+    language?: string;
+    /**
+     * Enabled Checkers
+     *
+     * 有効にするチェッカー（None=全て）
+     */
+    enabled_checkers?: Array<string> | null;
+};
+
+/**
+ * ReviewSessionResponse
+ *
+ * 監修セッションレスポンス.
+ */
+export type ReviewSessionResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Project Id
+     */
+    project_id: string;
+    /**
+     * Target Type
+     */
+    target_type: string;
+    /**
+     * Target Path
+     */
+    target_path: string;
+    status: ReviewSessionStatus;
+    /**
+     * Total Issues
+     */
+    total_issues: number;
+    /**
+     * Critical Issues
+     */
+    critical_issues: number;
+    /**
+     * Warning Issues
+     */
+    warning_issues: number;
+    /**
+     * Info Issues
+     */
+    info_issues: number;
+    /**
+     * Enabled Checkers
+     */
+    enabled_checkers: Array<string>;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Started At
+     */
+    started_at?: string | null;
+    /**
+     * Completed At
+     */
+    completed_at?: string | null;
+    /**
+     * Title
+     */
+    title?: string | null;
+    /**
+     * Created By
+     */
+    created_by?: string | null;
+    /**
+     * Processing Options
+     */
+    processing_options?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Progress Percent
+     */
+    progress_percent?: number;
+    /**
+     * Progress Message
+     */
+    progress_message?: string | null;
+    /**
+     * Error Message
+     */
+    error_message?: string | null;
+};
+
+/**
+ * ReviewSessionStatus
+ *
+ * 監修セッションステータス.
+ */
+export type ReviewSessionStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+
+/**
+ * ReviewTargetType
+ *
+ * 監修対象タイプ.
+ */
+export type ReviewTargetType = 'storage_path' | 'volume' | 'chapter';
+
+/**
+ * SearchMode
+ *
+ * Search mode for Graph RAG queries.
+ */
+export type SearchMode = 'hybrid' | 'semantic';
+
+/**
+ * SourceDocument
+ *
+ * Source document from Graph RAG search.
+ */
+export type SourceDocument = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Content Type
+     */
+    content_type: string;
+    /**
+     * Text Content
+     */
+    text_content?: string | null;
+    /**
+     * Image Summary
+     */
+    image_summary?: string | null;
+    /**
+     * Image Url
+     */
+    image_url?: string | null;
+    /**
+     * Relevance
+     */
+    relevance: number;
+    /**
+     * Volume Number
+     */
+    volume_number?: number | null;
+    /**
+     * Chapter Number
+     */
+    chapter_number?: number | null;
+    /**
+     * Page Number
+     */
+    page_number?: number | null;
 };
 
 /**
@@ -118,27 +705,233 @@ export type HealthcheckHealthcheckGetResponses = {
 
 export type HealthcheckHealthcheckGetResponse = HealthcheckHealthcheckGetResponses[keyof HealthcheckHealthcheckGetResponses];
 
-export type ChatApiChatPostData = {
-    body: ChatRequest;
-    path?: never;
-    query?: never;
-    url: '/api/chat';
+export type ListJobsApiProjectsProjectIdJobsGetData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: {
+        /**
+         * Status
+         */
+        status?: JobStatus | null;
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Per Page
+         */
+        per_page?: number;
+    };
+    url: '/api/projects/{project_id}/jobs';
 };
 
-export type ChatApiChatPostErrors = {
+export type ListJobsApiProjectsProjectIdJobsGetErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type ChatApiChatPostError = ChatApiChatPostErrors[keyof ChatApiChatPostErrors];
+export type ListJobsApiProjectsProjectIdJobsGetError = ListJobsApiProjectsProjectIdJobsGetErrors[keyof ListJobsApiProjectsProjectIdJobsGetErrors];
 
-export type ChatApiChatPostResponses = {
+export type ListJobsApiProjectsProjectIdJobsGetResponses = {
     /**
      * Successful Response
      */
-    200: ChatResponse;
+    200: JobListResponse;
 };
 
-export type ChatApiChatPostResponse = ChatApiChatPostResponses[keyof ChatApiChatPostResponses];
+export type ListJobsApiProjectsProjectIdJobsGetResponse = ListJobsApiProjectsProjectIdJobsGetResponses[keyof ListJobsApiProjectsProjectIdJobsGetResponses];
+
+export type CreateJobApiProjectsProjectIdJobsPostData = {
+    body: CreateJobRequest;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/projects/{project_id}/jobs';
+};
+
+export type CreateJobApiProjectsProjectIdJobsPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateJobApiProjectsProjectIdJobsPostError = CreateJobApiProjectsProjectIdJobsPostErrors[keyof CreateJobApiProjectsProjectIdJobsPostErrors];
+
+export type CreateJobApiProjectsProjectIdJobsPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: JobResponse;
+};
+
+export type CreateJobApiProjectsProjectIdJobsPostResponse = CreateJobApiProjectsProjectIdJobsPostResponses[keyof CreateJobApiProjectsProjectIdJobsPostResponses];
+
+export type GetJobApiProjectsProjectIdJobsJobIdGetData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+        /**
+         * Job Id
+         */
+        job_id: string;
+    };
+    query?: never;
+    url: '/api/projects/{project_id}/jobs/{job_id}';
+};
+
+export type GetJobApiProjectsProjectIdJobsJobIdGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetJobApiProjectsProjectIdJobsJobIdGetError = GetJobApiProjectsProjectIdJobsJobIdGetErrors[keyof GetJobApiProjectsProjectIdJobsJobIdGetErrors];
+
+export type GetJobApiProjectsProjectIdJobsJobIdGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: JobResponse;
+};
+
+export type GetJobApiProjectsProjectIdJobsJobIdGetResponse = GetJobApiProjectsProjectIdJobsJobIdGetResponses[keyof GetJobApiProjectsProjectIdJobsJobIdGetResponses];
+
+export type CancelJobApiProjectsProjectIdJobsJobIdCancelPostData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+        /**
+         * Job Id
+         */
+        job_id: string;
+    };
+    query?: never;
+    url: '/api/projects/{project_id}/jobs/{job_id}/cancel';
+};
+
+export type CancelJobApiProjectsProjectIdJobsJobIdCancelPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CancelJobApiProjectsProjectIdJobsJobIdCancelPostError = CancelJobApiProjectsProjectIdJobsJobIdCancelPostErrors[keyof CancelJobApiProjectsProjectIdJobsJobIdCancelPostErrors];
+
+export type CancelJobApiProjectsProjectIdJobsJobIdCancelPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: JobResponse;
+};
+
+export type CancelJobApiProjectsProjectIdJobsJobIdCancelPostResponse = CancelJobApiProjectsProjectIdJobsJobIdCancelPostResponses[keyof CancelJobApiProjectsProjectIdJobsJobIdCancelPostResponses];
+
+export type QueryAgentApiProjectsProjectIdAgentQueryPostData = {
+    body: BodyQueryAgentApiProjectsProjectIdAgentQueryPost;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/projects/{project_id}/agent/query';
+};
+
+export type QueryAgentApiProjectsProjectIdAgentQueryPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type QueryAgentApiProjectsProjectIdAgentQueryPostError = QueryAgentApiProjectsProjectIdAgentQueryPostErrors[keyof QueryAgentApiProjectsProjectIdAgentQueryPostErrors];
+
+export type QueryAgentApiProjectsProjectIdAgentQueryPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: AgentQueryResponse;
+};
+
+export type QueryAgentApiProjectsProjectIdAgentQueryPostResponse = QueryAgentApiProjectsProjectIdAgentQueryPostResponses[keyof QueryAgentApiProjectsProjectIdAgentQueryPostResponses];
+
+export type GetAgentConfigApiProjectsProjectIdAgentGetData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/projects/{project_id}/agent';
+};
+
+export type GetAgentConfigApiProjectsProjectIdAgentGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetAgentConfigApiProjectsProjectIdAgentGetError = GetAgentConfigApiProjectsProjectIdAgentGetErrors[keyof GetAgentConfigApiProjectsProjectIdAgentGetErrors];
+
+export type GetAgentConfigApiProjectsProjectIdAgentGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: AgentConfigResponse;
+};
+
+export type GetAgentConfigApiProjectsProjectIdAgentGetResponse = GetAgentConfigApiProjectsProjectIdAgentGetResponses[keyof GetAgentConfigApiProjectsProjectIdAgentGetResponses];
+
+export type CreateReviewSessionApiProjectsProjectIdReviewsPostData = {
+    body: CreateReviewRequest;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/projects/{project_id}/reviews';
+};
+
+export type CreateReviewSessionApiProjectsProjectIdReviewsPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateReviewSessionApiProjectsProjectIdReviewsPostError = CreateReviewSessionApiProjectsProjectIdReviewsPostErrors[keyof CreateReviewSessionApiProjectsProjectIdReviewsPostErrors];
+
+export type CreateReviewSessionApiProjectsProjectIdReviewsPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: ReviewSessionResponse;
+};
+
+export type CreateReviewSessionApiProjectsProjectIdReviewsPostResponse = CreateReviewSessionApiProjectsProjectIdReviewsPostResponses[keyof CreateReviewSessionApiProjectsProjectIdReviewsPostResponses];

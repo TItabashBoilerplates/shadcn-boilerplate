@@ -1,5 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createFunctionLogger } from "../../shared/logger/index.ts";
 import type { PolarCheckout } from "./types.ts";
+
+const logger = createFunctionLogger("polar-webhook");
 
 /**
  * Handle checkout.updated event
@@ -9,17 +12,20 @@ export async function handleCheckoutUpdated(
   supabase: SupabaseClient,
   data: PolarCheckout,
 ): Promise<{ success: boolean; message: string }> {
-  console.log("[checkout.updated] Processing:", data.id);
+  logger.info("Processing checkout.updated", { checkoutId: data.id });
 
   if (data.status !== "succeeded") {
-    console.log("[checkout.updated] Checkout not succeeded, skipping");
+    logger.info("Checkout not succeeded, skipping", {
+      checkoutId: data.id,
+      status: data.status,
+    });
     return { success: true, message: "Checkout not succeeded, skipping" };
   }
 
   // Get user_id from metadata (should be set during checkout creation)
   const userId = data.metadata?.user_id as string | undefined;
   if (!userId) {
-    console.error("[checkout.updated] No user_id in metadata");
+    logger.error("No user_id in metadata", { checkoutId: data.id });
     return { success: false, message: "No user_id in metadata" };
   }
 
@@ -30,11 +36,14 @@ export async function handleCheckoutUpdated(
     .eq("user_id", userId);
 
   if (error) {
-    console.error("[checkout.updated] Failed to update profile:", error);
+    logger.error("Failed to update profile", {
+      checkoutId: data.id,
+      error: error.message,
+    });
     return { success: false, message: error.message };
   }
 
-  console.log("[checkout.updated] Updated polar_customer_id for user:", userId);
+  logger.info("Updated polar_customer_id", { checkoutId: data.id, userId });
   return { success: true, message: "Checkout processed successfully" };
 }
 
@@ -46,6 +55,6 @@ export function handleCheckoutCreated(
   _supabase: SupabaseClient,
   data: PolarCheckout,
 ): { success: boolean; message: string } {
-  console.log("[checkout.created] Checkout created:", data.id);
+  logger.info("Checkout created", { checkoutId: data.id });
   return { success: true, message: "Checkout created logged" };
 }

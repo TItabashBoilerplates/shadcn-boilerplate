@@ -33,11 +33,14 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
+import { createFunctionLogger } from "../shared/logger/index.ts";
 import { createOneSignalClient } from "../shared/onesignal/index.ts";
 import type {
   LocalizedContent,
   PlatformOptions,
 } from "../shared/onesignal/index.ts";
+
+const logger = createFunctionLogger("onesignal-send");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -248,7 +251,7 @@ Deno.serve(async (req: Request) => {
         );
     }
 
-    console.log("[onesignal-send] Notification sent:", {
+    logger.info("Notification sent", {
       type: body.type,
       notificationId: result.id,
       recipients: result.recipients,
@@ -262,7 +265,7 @@ Deno.serve(async (req: Request) => {
     const errorMessage = error instanceof Error
       ? error.message
       : "Unknown error";
-    console.error("[onesignal-send] Error:", errorMessage);
+    logger.error("Error sending notification", { error: errorMessage });
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

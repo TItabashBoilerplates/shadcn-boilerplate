@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { createFunctionLogger } from "../shared/logger/index.ts";
 import type {
   PolarCheckout,
   PolarCustomer,
@@ -7,6 +8,8 @@ import type {
   WebhookEventType,
   WebhookPayload,
 } from "./handlers/types.ts";
+
+const logger = createFunctionLogger("polar-webhook");
 import {
   handleCheckoutCreated,
   handleCheckoutUpdated,
@@ -47,7 +50,7 @@ async function verifyWebhookSignature(
   secret: string,
 ): Promise<boolean> {
   if (!signature || !webhookId || !timestamp) {
-    console.error("[verify] Missing required headers");
+    logger.error("Missing required headers");
     return false;
   }
 
@@ -63,7 +66,7 @@ async function verifyWebhookSignature(
   }
 
   if (signatures.length === 0) {
-    console.error("[verify] No valid v1 signatures found");
+    logger.error("No valid v1 signatures found");
     return false;
   }
 
@@ -113,7 +116,7 @@ Deno.serve(async (req: Request) => {
     // Get webhook secret
     const webhookSecret = Deno.env.get("POLAR_WEBHOOK_SECRET");
     if (!webhookSecret) {
-      console.error("[webhook] POLAR_WEBHOOK_SECRET not configured");
+      logger.error("POLAR_WEBHOOK_SECRET not configured");
       return new Response(
         JSON.stringify({ error: "Webhook secret not configured" }),
         {
@@ -141,7 +144,7 @@ Deno.serve(async (req: Request) => {
     );
 
     if (!isValid) {
-      console.error("[webhook] Invalid signature");
+      logger.error("Invalid signature");
       return new Response(JSON.stringify({ error: "Invalid signature" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -152,14 +155,14 @@ Deno.serve(async (req: Request) => {
     const payload: WebhookPayload = JSON.parse(rawBody);
     const eventType = payload.type as WebhookEventType;
 
-    console.log("[webhook] Received event:", eventType);
+    logger.info("Received event", { eventType });
 
     // Create Supabase client with service role
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!supabaseUrl || !supabaseServiceKey) {
-      console.error("[webhook] Supabase configuration missing");
+      logger.error("Supabase configuration missing");
       return new Response(
         JSON.stringify({ error: "Server configuration error" }),
         {
@@ -253,7 +256,7 @@ Deno.serve(async (req: Request) => {
         );
         break;
       default:
-        console.log("[webhook] Unhandled event type:", eventType);
+        logger.info("Unhandled event type", { eventType });
         result = { success: true, message: `Unhandled event: ${eventType}` };
     }
 
@@ -266,7 +269,7 @@ Deno.serve(async (req: Request) => {
     const errorMessage = error instanceof Error
       ? error.message
       : "Unknown error";
-    console.error("[webhook] Error:", errorMessage);
+    logger.error("Error processing webhook", { error: errorMessage });
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

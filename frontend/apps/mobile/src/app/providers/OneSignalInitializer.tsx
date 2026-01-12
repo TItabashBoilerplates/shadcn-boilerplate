@@ -24,9 +24,12 @@
  * - `EXPO_PUBLIC_ONE_SIGNAL_APP_ID` - OneSignal App ID
  */
 
+import { clientLogger } from '@workspace/logger/client'
 import { useEffect, useRef } from 'react'
 // @ts-expect-error - react-native-onesignal の型定義がない可能性
 import { OneSignal } from 'react-native-onesignal'
+
+const logger = clientLogger.child({ provider: 'OneSignal' })
 
 interface OneSignalInitializerProps {
   /**
@@ -52,7 +55,7 @@ export function OneSignalInitializer({ userId }: OneSignalInitializerProps) {
     const appId = process.env.EXPO_PUBLIC_ONE_SIGNAL_APP_ID
 
     if (!appId) {
-      console.warn('[OneSignal] EXPO_PUBLIC_ONE_SIGNAL_APP_ID is not set, skipping initialization')
+      logger.warn('EXPO_PUBLIC_ONE_SIGNAL_APP_ID is not set, skipping initialization')
       return
     }
 
@@ -64,9 +67,11 @@ export function OneSignalInitializer({ userId }: OneSignalInitializerProps) {
       OneSignal.Notifications.requestPermission(true)
 
       isInitialized.current = true
-      console.info('[OneSignal] Initialized successfully')
+      logger.info('Initialized successfully')
     } catch (error) {
-      console.error('[OneSignal] Initialization failed:', error)
+      logger.error('Initialization failed', {
+        error: error instanceof Error ? error.message : String(error),
+      })
     }
   }, [])
 
@@ -87,14 +92,16 @@ export function OneSignalInitializer({ userId }: OneSignalInitializerProps) {
       if (userId) {
         // ログイン: ユーザー ID を OneSignal に設定
         OneSignal.login(userId)
-        console.info('[OneSignal] User logged in:', userId)
+        logger.info('User logged in', { userId })
       } else {
         // ログアウト: ユーザー ID をクリア
         OneSignal.logout()
-        console.info('[OneSignal] User logged out')
+        logger.info('User logged out')
       }
     } catch (error) {
-      console.error('[OneSignal] User sync failed:', error)
+      logger.error('User sync failed', {
+        error: error instanceof Error ? error.message : String(error),
+      })
     }
   }, [userId])
 

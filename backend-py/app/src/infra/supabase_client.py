@@ -2,14 +2,14 @@
 
 import contextlib
 import os
-from logging import getLogger
 
 from supabase import Client, create_client
 from supabase_auth.types import User
 
 from domain.exceptions import AuthenticationError, ConfigurationError
+from infra.logging import get_logger
 
-logger = getLogger("uvicorn")
+logger = get_logger(__name__)
 
 
 class SupabaseClient:

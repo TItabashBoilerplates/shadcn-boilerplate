@@ -6,7 +6,10 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { createFunctionLogger } from "../../shared/logger/index.ts";
 import type { HandlerResult, WebhookPayload } from "./types.ts";
+
+const logger = createFunctionLogger("onesignal-webhook");
 
 /**
  * 購読開始ハンドラ
@@ -18,7 +21,7 @@ export function handleSubscriptionCreated(
   _supabase: SupabaseClient,
   payload: WebhookPayload,
 ): HandlerResult {
-  console.log("[onesignal-webhook] Subscription created:", {
+  logger.info("Subscription created", {
     subscriptionId: payload.subscription_id,
     externalUserId: payload.external_user_id,
     onesignalId: payload.onesignal_id,
@@ -65,7 +68,7 @@ export function handleSubscriptionDeleted(
   _supabase: SupabaseClient,
   payload: WebhookPayload,
 ): HandlerResult {
-  console.log("[onesignal-webhook] Subscription deleted:", {
+  logger.info("Subscription deleted", {
     subscriptionId: payload.subscription_id,
     externalUserId: payload.external_user_id,
     onesignalId: payload.onesignal_id,

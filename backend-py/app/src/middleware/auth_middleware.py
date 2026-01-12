@@ -1,15 +1,15 @@
-from logging import getLogger
 from typing import NoReturn
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import APIKeyHeader
 from supabase_auth.types import User
 
+from infra.logging import get_logger
 from infra.supabase_client import SupabaseClient
 
 authorization_header = APIKeyHeader(name="Authorization", auto_error=True)
 
-logger = getLogger("uvicorn")
+logger = get_logger(__name__)
 
 
 def _raise_unauthorized(detail: str) -> NoReturn:
