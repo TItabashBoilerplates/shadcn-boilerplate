@@ -106,13 +106,13 @@ def configure_logging() -> None:
     )
 
 
-def get_logger(name: str | None = None) -> Any:
+def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
     """Get a logger instance.
 
     Returns:
         A structlog BoundLogger instance.
     """
-    return structlog.get_logger(name)
+    return structlog.get_logger(name)  # type: ignore[no-any-return]
 
 
 def set_request_context(request_id: str, user_id: str | None = None) -> None:
