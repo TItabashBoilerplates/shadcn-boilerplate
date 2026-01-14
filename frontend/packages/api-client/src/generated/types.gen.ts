@@ -5,704 +5,238 @@ export type ClientOptions = {
 };
 
 /**
- * ApplySkillsRequest
+ * AgentConfigResponse
  *
- * Request body for applying parsed skills.
+ * Agent configuration response model.
  */
-export type ApplySkillsRequest = {
-    /**
-     * Skilllevel
-     *
-     * Override level
-     */
-    skillLevel?: number | null;
-    /**
-     * Yearsofexperience
-     *
-     * Override years
-     */
-    yearsOfExperience?: number | null;
-    /**
-     * Techskills
-     *
-     * Override
-     */
-    techSkills?: Array<TechSkillRequest> | null;
-};
-
-/**
- * AssignEngineerRequest
- *
- * Request body for assigning engineer to project.
- */
-export type AssignEngineerRequest = {
-    /**
-     * Engineerprofileid
-     *
-     * Engineer profile ID
-     */
-    engineerProfileId: string;
-    /**
-     * Role
-     *
-     * Role (lead/frontend/backend/fullstack/mobile/devops/qa/pm)
-     */
-    role?: string;
-};
-
-/**
- * AssignedEngineerResponse
- *
- * Assigned engineer info for API response.
- */
-export type AssignedEngineerResponse = {
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Name
-     */
-    name: string;
-    /**
-     * Skill Level
-     *
-     * 1=Junior to 4=Lead
-     */
-    skill_level: number;
-    /**
-     * Years Of Experience
-     */
-    years_of_experience: number;
-    /**
-     * Hourly Rate
-     */
-    hourly_rate?: number | null;
-};
-
-/**
- * BatchGenerateTasksRequest
- *
- * Request for batch task generation using Supervisor pattern.
- *
- * The Supervisor processes all stories in a project with MECE guarantees,
- * coordinating User Journey and Developer Journey task generation.
- */
-export type BatchGenerateTasksRequest = {
+export type AgentConfigResponse = {
     /**
      * Project Id
-     *
-     * Project ID to generate tasks for
      */
     project_id: string;
     /**
-     * Additional Prompt
-     *
-     * Additional instructions for all tasks
+     * Available Providers
      */
-    additional_prompt?: string | null;
+    available_providers: Array<AgentProviderType>;
     /**
-     * Existing Tasks Option
-     *
-     * How to handle stories with existing tasks: skip, regenerate (intelligent merge), or regenerate_full (delete and recreate)
+     * Available Search Modes
      */
-    existing_tasks_option?: 'skip' | 'regenerate' | 'regenerate_full' | null;
+    available_search_modes: Array<SearchMode>;
     /**
-     * Target Scopes
-     *
-     * Target scopes to filter stories (e.g., ['MVP', 'BETA']). If not provided, all stories are processed.
+     * Entity Types In Project
      */
-    target_scopes?: Array<string> | null;
+    entity_types_in_project: Array<string>;
+    /**
+     * Total Content Chunks
+     */
+    total_content_chunks: number;
+    /**
+     * Total Entities
+     */
+    total_entities: number;
 };
 
 /**
- * Body_upload_skill_sheet_api_engineers__profile_id__skill_sheet_upload_post
- */
-export type BodyUploadSkillSheetApiEngineersProfileIdSkillSheetUploadPost = {
-    /**
-     * File
-     *
-     * PDF skill sheet file
-     */
-    file: Blob | File;
-};
-
-/**
- * CategoryEstimationResponse
+ * AgentProviderType
  *
- * Response for category estimation breakdown.
+ * LLM provider type.
  */
-export type CategoryEstimationResponse = {
+export type AgentProviderType = 'anthropic' | 'openai' | 'qwen-oss-32b' | 'gpt-oss-20b' | 'gpt-oss-120b';
+
+/**
+ * AgentQueryResponse
+ *
+ * Agent query response model.
+ */
+export type AgentQueryResponse = {
     /**
-     * Totalhours
+     * Answer
+     *
+     * Generated answer from the agent
      */
-    totalHours: number;
+    answer: string;
     /**
-     * Taskcount
+     * Sources
+     *
+     * Source documents used for answer generation
      */
-    taskCount: number;
+    sources?: Array<SourceDocument>;
     /**
-     * Totalcost
+     * Entities
+     *
+     * Related entities found
      */
-    totalCost: number;
+    entities?: Array<EntityReference>;
+    /**
+     * Image Entities
+     *
+     * Image entities found via image search
+     */
+    image_entities?: Array<ImageEntityReference>;
+    /**
+     * Search mode that was used
+     */
+    search_mode_used: SearchMode;
+    /**
+     * LLM provider that was used
+     */
+    llm_provider_used: AgentProviderType;
+    /**
+     * Processing Time Ms
+     *
+     * Processing time in milliseconds
+     */
+    processing_time_ms: number;
+    /**
+     * Token Usage
+     *
+     * Token usage statistics
+     */
+    token_usage?: {
+        [key: string]: number;
+    } | null;
 };
 
 /**
- * CreateEngineerRequest
- *
- * Request body for creating engineer profile.
+ * Body_query_agent_api_projects__project_id__agent_query_post
  */
-export type CreateEngineerRequest = {
+export type BodyQueryAgentApiProjectsProjectIdAgentQueryPost = {
     /**
-     * Name
+     * Query
      *
-     * Engineer name
+     * User query
      */
-    name: string;
+    query: string;
     /**
-     * Email
-     *
-     * Engineer email
+     * Search mode
      */
-    email?: string | null;
+    search_mode?: SearchMode;
     /**
-     * Userid
-     *
-     * User ID if linked
+     * LLM provider
      */
-    userId?: string | null;
+    llm_provider?: AgentProviderType;
     /**
-     * Skilllevel
+     * Max Results
      *
-     * Skill level 1-4
+     * Maximum results
      */
-    skillLevel?: number;
+    max_results?: number;
     /**
-     * Yearsofexperience
+     * Volume Filter
      *
-     * Years of experience
+     * Volume filter
      */
-    yearsOfExperience?: number;
+    volume_filter?: number | null;
     /**
-     * Hourlyrate
+     * Chapter Filter
      *
-     * Custom hourly rate
+     * Chapter filter
      */
-    hourlyRate?: number | null;
+    chapter_filter?: number | null;
     /**
-     * Monthlyrate
+     * Entity Types
      *
-     * Custom monthly rate
+     * Comma-separated entity types
      */
-    monthlyRate?: number | null;
+    entity_types?: string | null;
+    /**
+     * Include Sources
+     *
+     * Include sources in response
+     */
+    include_sources?: boolean;
+    /**
+     * Image
+     *
+     * Optional image for search
+     */
+    image?: Blob | File | null;
 };
 
 /**
- * DevTaskResponse
+ * CreateJobRequest
  *
- * Dev task response for API.
+ * ジョブ作成リクエスト.
  */
-export type DevTaskResponse = {
+export type CreateJobRequest = {
+    /**
+     * ジョブタイプ
+     */
+    job_type: JobType;
+    /**
+     * 処理対象タイプ
+     */
+    target_type: JobTargetType;
+    /**
+     * Target Id
+     *
+     * 処理対象ID
+     */
+    target_id: string;
+    /**
+     * ジョブオプション
+     */
+    options?: JobOptions | null;
+};
+
+/**
+ * CreateReviewRequest
+ *
+ * 監修セッション作成リクエスト.
+ */
+export type CreateReviewRequest = {
+    /**
+     * 監修対象タイプ
+     */
+    target_type: ReviewTargetType;
+    /**
+     * Target Path
+     *
+     * 監修対象パス
+     */
+    target_path: string;
+    /**
+     * Title
+     *
+     * セッションタイトル
+     */
+    title?: string | null;
+    /**
+     * 監修オプション
+     */
+    options?: ReviewOptions | null;
+};
+
+/**
+ * EntityReference
+ *
+ * Entity reference from Graph RAG search.
+ */
+export type EntityReference = {
     /**
      * Id
      */
     id: string;
-    /**
-     * Feature Task Id
-     */
-    feature_task_id: string;
-    /**
-     * Title
-     */
-    title: string;
-    /**
-     * Description
-     */
-    description: string;
-    /**
-     * Category
-     */
-    category: string;
-    /**
-     * Technical Notes
-     */
-    technical_notes: string;
-    /**
-     * Scope
-     */
-    scope: string;
-    /**
-     * Priority
-     */
-    priority: string;
-    /**
-     * Status
-     */
-    status: string;
-    /**
-     * Estimate Hours
-     */
-    estimate_hours: number | null;
-    /**
-     * Display Order
-     */
-    display_order: number;
-    /**
-     * Complexity
-     */
-    complexity?: string;
-    /**
-     * Required Skills
-     */
-    required_skills?: Array<string>;
-    /**
-     * Assigned Engineer Id
-     */
-    assigned_engineer_id?: string | null;
-    /**
-     * Assignment Reason
-     */
-    assignment_reason?: string;
-    assigned_engineer?: AssignedEngineerResponse | null;
-};
-
-/**
- * DocumentListItemResponse
- *
- * Document list item for API response.
- */
-export type DocumentListItemResponse = {
-    /**
-     * Documentid
-     */
-    documentId: string;
-    /**
-     * Documenttype
-     */
-    documentType: 'quotation' | 'requirement_specification' | 'design_document';
-    /**
-     * Documentnumber
-     */
-    documentNumber: string;
-    /**
-     * Title
-     */
-    title: string;
-    /**
-     * Status
-     */
-    status: 'draft' | 'generating' | 'completed' | 'error';
-    /**
-     * Currentversion
-     */
-    currentVersion: number;
-    /**
-     * Updatedat
-     */
-    updatedAt: string;
-};
-
-/**
- * DocumentResponse
- *
- * Response for single document.
- */
-export type DocumentResponse = {
-    /**
-     * Documentid
-     */
-    documentId: string;
-    /**
-     * Projectid
-     */
-    projectId: string;
-    /**
-     * Documenttype
-     */
-    documentType: 'quotation' | 'requirement_specification' | 'design_document';
-    /**
-     * Documentnumber
-     */
-    documentNumber: string;
-    /**
-     * Title
-     */
-    title: string;
-    /**
-     * Status
-     */
-    status: 'draft' | 'generating' | 'completed' | 'error';
-    /**
-     * Currentversion
-     */
-    currentVersion: number;
-    /**
-     * Content
-     */
-    content: string;
-    versionInfo: DocumentVersionInfo;
-};
-
-/**
- * DocumentVersionInfo
- *
- * Document version information.
- */
-export type DocumentVersionInfo = {
-    /**
-     * Version
-     *
-     * Version number
-     */
-    version: number;
-    /**
-     * Created At
-     *
-     * Creation timestamp (ISO format)
-     */
-    created_at: string;
-    /**
-     * Created By
-     *
-     * Creator user ID
-     */
-    created_by?: string | null;
-    /**
-     * Change Summary
-     *
-     * Change summary
-     */
-    change_summary?: string | null;
-};
-
-/**
- * DocumentVersionsResponse
- *
- * Response for document versions.
- */
-export type DocumentVersionsResponse = {
-    /**
-     * Documentid
-     */
-    documentId: string;
-    /**
-     * Versions
-     */
-    versions: Array<DocumentVersionInfo>;
-};
-
-/**
- * EngineerProfileResponse
- *
- * Response body for engineer profile.
- */
-export type EngineerProfileResponse = {
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * Organizationid
-     */
-    organizationId: string;
-    /**
-     * Userid
-     */
-    userId: string | null;
     /**
      * Name
      */
     name: string;
     /**
-     * Email
+     * Entity Type
      */
-    email: string | null;
-    /**
-     * Skilllevel
-     */
-    skillLevel: number;
-    /**
-     * Yearsofexperience
-     */
-    yearsOfExperience: number;
-    /**
-     * Hourlyrate
-     */
-    hourlyRate: number | null;
-    /**
-     * Monthlyrate
-     */
-    monthlyRate: number | null;
-    /**
-     * Isverified
-     */
-    isVerified: boolean;
-    /**
-     * Techskills
-     */
-    techSkills: Array<TechSkillRequest>;
-};
-
-/**
- * EstimateProjectRequest
- *
- * Request body for project estimation.
- */
-export type EstimateProjectRequest = {
-    /**
-     * Engineerprofileid
-     *
-     * Default engineer for estimation
-     */
-    engineerProfileId?: string | null;
-};
-
-/**
- * EstimateTaskRequest
- *
- * Request body for task estimation.
- */
-export type EstimateTaskRequest = {
-    /**
-     * Engineerprofileid
-     *
-     * Engineer profile ID for personalized estimation
-     */
-    engineerProfileId?: string | null;
-};
-
-/**
- * EstimationFactors
- *
- * Breakdown of estimation factors.
- */
-export type EstimationFactors = {
-    /**
-     * Skill Factor
-     *
-     * Skill level coefficient
-     */
-    skill_factor: number;
-    /**
-     * Tech Match Factor
-     *
-     * Tech proficiency match coefficient
-     */
-    tech_match_factor: number;
-    /**
-     * Complexity Factor
-     *
-     * Task complexity coefficient
-     */
-    complexity_factor: number;
-    /**
-     * Project Scale Factor
-     *
-     * Project scale coefficient (applied only with vibe coding)
-     */
-    project_scale_factor?: number;
-    /**
-     * Total Factor
-     *
-     * Combined factor (product of all)
-     */
-    total_factor: number;
-    /**
-     * Uses Vibe Coding
-     *
-     * Whether vibe coding mode was used for this estimation
-     */
-    uses_vibe_coding?: boolean;
-};
-
-/**
- * FeatureTaskResponse
- *
- * Feature task response for API with nested dev tasks.
- */
-export type FeatureTaskResponse = {
-    /**
-     * Id
-     */
-    id: string;
-    /**
-     * User Story Id
-     */
-    user_story_id: string;
-    /**
-     * Title
-     */
-    title: string;
+    entity_type: string;
     /**
      * Description
      */
-    description: string;
+    description?: string | null;
     /**
-     * Scope
+     * Primary Image Url
      */
-    scope: string;
+    primary_image_url?: string | null;
     /**
-     * Priority
+     * Relevance
      */
-    priority: string;
-    /**
-     * Status
-     */
-    status: string;
-    /**
-     * Estimate Hours
-     */
-    estimate_hours: number | null;
-    /**
-     * Display Order
-     */
-    display_order: number;
-    /**
-     * Dev Tasks
-     */
-    dev_tasks?: Array<DevTaskResponse>;
-};
-
-/**
- * GenerateDocumentRequest
- *
- * Request body for document generation.
- */
-export type GenerateDocumentRequest = {
-    /**
-     * Documenttype
-     *
-     * Type of document to generate
-     */
-    documentType: 'quotation' | 'requirement_specification' | 'design_document';
-    /**
-     * Scopes
-     *
-     * Scopes to include (e.g., ['MVP', 'Beta']). If None, all scopes.
-     */
-    scopes?: Array<string> | null;
-};
-
-/**
- * GenerateDocumentResponse
- *
- * Response for document generation.
- */
-export type GenerateDocumentResponse = {
-    /**
-     * Documentid
-     */
-    documentId: string;
-    /**
-     * Documentnumber
-     */
-    documentNumber: string;
-    /**
-     * Status
-     */
-    status: 'draft' | 'generating' | 'completed' | 'error';
-    /**
-     * Message
-     */
-    message: string;
-};
-
-/**
- * GenerateQuotationRequest
- *
- * Request body for extended quotation generation.
- */
-export type GenerateQuotationRequest = {
-    /**
-     * Organizationid
-     *
-     * Organization UUID for issuer info
-     */
-    organizationId: string;
-    /**
-     * Quotationtype
-     *
-     * Quotation type: rough or detailed
-     */
-    quotationType: 'rough' | 'detailed';
-    /**
-     * Scopes
-     *
-     * Scopes to include (e.g., ['MVP', 'Beta']). If None, all scopes.
-     */
-    scopes?: Array<string> | null;
-    /**
-     * Clienttype
-     *
-     * Client type: 'company' (法人・団体) or 'individual' (個人)
-     */
-    clientType?: string;
-    /**
-     * Clientcompanyname
-     *
-     * Client company name or individual name
-     */
-    clientCompanyName?: string | null;
-    /**
-     * Clientdepartment
-     *
-     * Client department
-     */
-    clientDepartment?: string | null;
-    /**
-     * Clientcontactname
-     *
-     * Client contact name
-     */
-    clientContactName?: string | null;
-    /**
-     * Showfactordetails
-     *
-     * Whether to show factor details in quotation
-     */
-    showFactorDetails?: boolean;
-    /**
-     * Userprompt
-     *
-     * User prompt for additional instructions
-     */
-    userPrompt?: string | null;
-};
-
-/**
- * GenerateStoryMapRequest
- *
- * Request body for story map generation.
- */
-export type GenerateStoryMapRequest = {
-    /**
-     * Projectid
-     *
-     * Project UUID
-     */
-    projectId: string;
-    /**
-     * Prompt
-     *
-     * User's description for story map
-     */
-    prompt: string;
-};
-
-/**
- * GenerateTasksRequest
- *
- * Request for task generation.
- */
-export type GenerateTasksRequest = {
-    /**
-     * Story Id
-     */
-    story_id: string;
-    /**
-     * Additional Prompt
-     */
-    additional_prompt?: string | null;
+    relevance: number;
 };
 
 /**
@@ -716,504 +250,401 @@ export type HttpValidationError = {
 };
 
 /**
- * ModifyStoryMapRequest
+ * ImageEntityReference
  *
- * Request body for story map modification.
+ * Image entity reference from Graph RAG image search.
  */
-export type ModifyStoryMapRequest = {
-    /**
-     * Projectid
-     *
-     * Project UUID
-     */
-    projectId: string;
-    /**
-     * Message
-     *
-     * User's modification request
-     */
-    message: string;
-};
-
-/**
- * ParsedSkillSheet
- *
- * Result of skill sheet parsing.
- */
-export type ParsedSkillSheet = {
-    /**
-     * Skill Level
-     *
-     * Inferred skill level
-     */
-    skill_level: number;
-    /**
-     * Years Of Experience
-     */
-    years_of_experience: number;
-    /**
-     * Tech Skills
-     */
-    tech_skills?: Array<ParsedTechSkill>;
-    /**
-     * Summary
-     *
-     * Career summary
-     */
-    summary?: string;
-    /**
-     * Hourly Rate
-     *
-     * Hourly rate in yen (extracted or estimated)
-     */
-    hourly_rate?: number | null;
-    /**
-     * Monthly Rate
-     *
-     * Monthly rate in yen (extracted or estimated)
-     */
-    monthly_rate?: number | null;
-    /**
-     * Inferred Role
-     *
-     * Inferred primary role based on skill sheet analysis
-     */
-    inferred_role?: 'lead' | 'frontend' | 'backend' | 'fullstack' | 'mobile' | 'devops' | 'qa' | 'designer' | 'pm';
-};
-
-/**
- * ParsedTechSkill
- *
- * Parsed tech skill from skill sheet.
- */
-export type ParsedTechSkill = {
-    /**
-     * Tech Name
-     */
-    tech_name: string;
-    /**
-     * Proficiency Score
-     */
-    proficiency_score: number;
-    /**
-     * Years Used
-     */
-    years_used: number;
-};
-
-/**
- * ProjectDocumentsResponse
- *
- * Response for project documents list.
- */
-export type ProjectDocumentsResponse = {
-    /**
-     * Projectid
-     */
-    projectId: string;
-    /**
-     * Documents
-     */
-    documents: Array<DocumentListItemResponse>;
-};
-
-/**
- * ProjectEstimationResponse
- *
- * Response body for project estimation.
- */
-export type ProjectEstimationResponse = {
-    /**
-     * Projectid
-     */
-    projectId: string;
-    /**
-     * Totalbaselinehours
-     */
-    totalBaselineHours: number;
-    /**
-     * Totaladjustedhours
-     */
-    totalAdjustedHours: number;
-    /**
-     * Totalestimatedcost
-     */
-    totalEstimatedCost: number;
-    /**
-     * Taskcount
-     */
-    taskCount: number;
-    /**
-     * Averageconfidence
-     */
-    averageConfidence: number;
-    /**
-     * Personmonths
-     */
-    personMonths: number;
-    /**
-     * Taskestimations
-     */
-    taskEstimations: Array<TaskEstimationResponse>;
-    /**
-     * Byscope
-     */
-    byScope: {
-        [key: string]: ScopeEstimationResponse;
-    } | null;
-    /**
-     * Bycategory
-     */
-    byCategory: {
-        [key: string]: CategoryEstimationResponse;
-    } | null;
-};
-
-/**
- * RegenerateTasksRequest
- *
- * Request for task regeneration.
- */
-export type RegenerateTasksRequest = {
-    /**
-     * Story Id
-     */
-    story_id: string;
-    /**
-     * Additional Prompt
-     */
-    additional_prompt?: string | null;
-};
-
-/**
- * ReorderDevTasksRequest
- *
- * Request for reordering dev tasks.
- */
-export type ReorderDevTasksRequest = {
-    /**
-     * Feature Task Id
-     *
-     * Parent feature task ID
-     */
-    feature_task_id: string;
-    /**
-     * Updates
-     *
-     * List of order updates
-     */
-    updates: Array<TaskOrderUpdate>;
-};
-
-/**
- * ReorderFeatureTasksRequest
- *
- * Request for reordering feature tasks.
- */
-export type ReorderFeatureTasksRequest = {
-    /**
-     * Story Id
-     *
-     * User story ID
-     */
-    story_id: string;
-    /**
-     * Updates
-     *
-     * List of order updates
-     */
-    updates: Array<TaskOrderUpdate>;
-};
-
-/**
- * ScopeEstimationResponse
- *
- * Response for scope estimation breakdown.
- */
-export type ScopeEstimationResponse = {
-    /**
-     * Totalhours
-     */
-    totalHours: number;
-    /**
-     * Taskcount
-     */
-    taskCount: number;
-    /**
-     * Totalcost
-     */
-    totalCost: number;
-};
-
-/**
- * SkillSheetUploadResponse
- *
- * Response for skill sheet upload.
- */
-export type SkillSheetUploadResponse = {
+export type ImageEntityReference = {
     /**
      * Id
      */
     id: string;
     /**
-     * Engineer Profile Id
+     * Name
      */
-    engineer_profile_id: string;
+    name: string;
     /**
-     * File Name
+     * Entity Type
      */
-    file_name: string;
+    entity_type: string;
     /**
-     * File Url
+     * Description
      */
-    file_url: string;
+    description?: string | null;
     /**
-     * File Size
+     * Primary Image Url
      */
-    file_size: number;
+    primary_image_url?: string | null;
     /**
-     * Status
+     * Relevance
      */
-    status: 'pending' | 'processing' | 'completed' | 'failed';
-    extracted_data?: ParsedSkillSheet | null;
+    relevance: number;
+};
+
+/**
+ * JobListResponse
+ *
+ * ジョブ一覧レスポンス.
+ */
+export type JobListResponse = {
+    /**
+     * Jobs
+     */
+    jobs: Array<JobResponse>;
+    /**
+     * Total
+     */
+    total: number;
+    /**
+     * Page
+     */
+    page: number;
+    /**
+     * Per Page
+     */
+    per_page: number;
+};
+
+/**
+ * JobOptions
+ *
+ * ジョブオプション.
+ */
+export type JobOptions = {
+    /**
+     * Pdf Processing Mode
+     *
+     * PDF処理モード: text_first, image_only, hybrid
+     */
+    pdf_processing_mode?: string;
+    /**
+     * Embedding Provider
+     *
+     * 埋め込みプロバイダ: openai-text-embedding-3-small/large, qwen-embedding-oss-8b
+     */
+    embedding_provider?: string;
+    /**
+     * Llm Provider
+     *
+     * LLMプロバイダ: anthropic, openai, local (gpt-oss)
+     */
+    llm_provider?: string;
+    /**
+     * Llm Model
+     *
+     * LLMモデル名（省略時はプロバイダデフォルト）
+     */
+    llm_model?: string | null;
+    /**
+     * Vlm Provider
+     *
+     * VLMプロバイダ: anthropic, openai, gemini, local (gpt-oss multimodal)
+     */
+    vlm_provider?: string;
+    /**
+     * Vlm Model
+     *
+     * VLMモデル名（省略時はプロバイダデフォルト）
+     */
+    vlm_model?: string | null;
+    /**
+     * Chunking Strategy
+     *
+     * チャンキング戦略: recursive, semantic
+     */
+    chunking_strategy?: string;
+    /**
+     * Chunk Size
+     *
+     * チャンクサイズ (トークン数)
+     */
+    chunk_size?: number;
+    /**
+     * Chunk Overlap
+     *
+     * チャンクオーバーラップ (トークン数)
+     */
+    chunk_overlap?: number;
+};
+
+/**
+ * JobResponse
+ *
+ * ジョブレスポンス.
+ */
+export type JobResponse = {
+    /**
+     * Id
+     */
+    id: string;
+    /**
+     * Project Id
+     */
+    project_id: string;
+    job_type: JobType;
+    status: JobStatus;
+    target_type: JobTargetType;
+    /**
+     * Target Id
+     */
+    target_id: string;
+    /**
+     * Input Data
+     */
+    input_data: {
+        [key: string]: unknown;
+    };
+    /**
+     * Output Data
+     */
+    output_data?: {
+        [key: string]: unknown;
+    } | null;
     /**
      * Error Message
      */
     error_message?: string | null;
     /**
-     * Processed At
+     * Retry Count
      */
-    processed_at?: string | null;
+    retry_count: number;
+    /**
+     * Max Retries
+     */
+    max_retries: number;
+    /**
+     * Progress Percent
+     */
+    progress_percent: number;
+    /**
+     * Progress Message
+     */
+    progress_message?: string | null;
+    /**
+     * Langgraph Thread Id
+     */
+    langgraph_thread_id?: string | null;
+    /**
+     * Modal Call Id
+     */
+    modal_call_id?: string | null;
     /**
      * Created At
      */
     created_at: string;
+    /**
+     * Started At
+     */
+    started_at?: string | null;
+    /**
+     * Completed At
+     */
+    completed_at?: string | null;
+    /**
+     * Created By
+     */
+    created_by?: string | null;
 };
 
 /**
- * SkillSheetUploadResponseModel
+ * JobStatus
  *
- * Response body for skill sheet upload.
+ * ジョブステータス.
  */
-export type SkillSheetUploadResponseModel = {
+export type JobStatus = 'pending' | 'queued' | 'processing' | 'completed' | 'failed' | 'cancelled';
+
+/**
+ * JobTargetType
+ *
+ * ジョブターゲットタイプ.
+ */
+export type JobTargetType = 'volume' | 'chapter' | 'content_block';
+
+/**
+ * JobType
+ *
+ * ジョブタイプ.
+ */
+export type JobType = 'full_pipeline' | 'text_processing' | 'image_processing' | 'embedding_generation' | 'entity_extraction' | 'relation_building';
+
+/**
+ * ReviewOptions
+ *
+ * 監修オプション.
+ */
+export type ReviewOptions = {
+    /**
+     * Confidence Threshold
+     *
+     * 信頼度閾値（この値以上の問題のみ報告）
+     */
+    confidence_threshold?: number;
+    /**
+     * Include Suggestions
+     *
+     * 修正提案を含めるか
+     */
+    include_suggestions?: boolean;
+    /**
+     * Language
+     *
+     * 出力言語: ja, en
+     */
+    language?: string;
+    /**
+     * Enabled Checkers
+     *
+     * 有効にするチェッカー（None=全て）
+     */
+    enabled_checkers?: Array<string> | null;
+};
+
+/**
+ * ReviewSessionResponse
+ *
+ * 監修セッションレスポンス.
+ */
+export type ReviewSessionResponse = {
     /**
      * Id
      */
     id: string;
     /**
-     * Status
+     * Project Id
      */
-    status: string;
+    project_id: string;
     /**
-     * Fileurl
+     * Target Type
      */
-    fileUrl: string;
-    parsedData: ParsedSkillSheet | null;
+    target_type: string;
     /**
-     * Errormessage
+     * Target Path
      */
-    errorMessage: string | null;
+    target_path: string;
+    status: ReviewSessionStatus;
+    /**
+     * Total Issues
+     */
+    total_issues: number;
+    /**
+     * Critical Issues
+     */
+    critical_issues: number;
+    /**
+     * Warning Issues
+     */
+    warning_issues: number;
+    /**
+     * Info Issues
+     */
+    info_issues: number;
+    /**
+     * Enabled Checkers
+     */
+    enabled_checkers: Array<string>;
+    /**
+     * Created At
+     */
+    created_at: string;
+    /**
+     * Started At
+     */
+    started_at?: string | null;
+    /**
+     * Completed At
+     */
+    completed_at?: string | null;
+    /**
+     * Title
+     */
+    title?: string | null;
+    /**
+     * Created By
+     */
+    created_by?: string | null;
+    /**
+     * Processing Options
+     */
+    processing_options?: {
+        [key: string]: unknown;
+    } | null;
+    /**
+     * Progress Percent
+     */
+    progress_percent?: number;
+    /**
+     * Progress Message
+     */
+    progress_message?: string | null;
+    /**
+     * Error Message
+     */
+    error_message?: string | null;
 };
 
 /**
- * SuggestTechStackRequest
+ * ReviewSessionStatus
  *
- * Request body for tech stack suggestion.
+ * 監修セッションステータス.
  */
-export type SuggestTechStackRequest = {
-    /**
-     * Description
-     *
-     * Product description
-     */
-    description: string;
-    /**
-     * Platforminfo
-     *
-     * Platform info (Web/iOS/Android)
-     */
-    platformInfo?: string;
-    /**
-     * Targetuser
-     *
-     * Target user description
-     */
-    targetUser?: string;
-};
+export type ReviewSessionStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
 
 /**
- * SuggestTechStackResponse
+ * ReviewTargetType
  *
- * Response body for tech stack suggestion.
+ * 監修対象タイプ.
  */
-export type SuggestTechStackResponse = {
-    /**
-     * Tech Stack
-     *
-     * Suggested technology stack
-     */
-    tech_stack: Array<string>;
-};
+export type ReviewTargetType = 'storage_path' | 'volume' | 'chapter';
 
 /**
- * TaskEstimationResponse
+ * SearchMode
  *
- * Response body for task estimation.
+ * Search mode for Graph RAG queries.
  */
-export type TaskEstimationResponse = {
-    /**
-     * Taskid
-     */
-    taskId: string;
-    /**
-     * Tasktitle
-     */
-    taskTitle: string;
-    /**
-     * Baselinehours
-     */
-    baselineHours: number;
-    /**
-     * Adjustedhours
-     */
-    adjustedHours: number;
-    factors: EstimationFactors;
-    /**
-     * Estimatedcost
-     */
-    estimatedCost: number | null;
-    /**
-     * Confidence
-     */
-    confidence: number | null;
-    /**
-     * Engineerprofileid
-     */
-    engineerProfileId: string | null;
-};
+export type SearchMode = 'hybrid' | 'semantic';
 
 /**
- * TaskOrderUpdate
+ * SourceDocument
  *
- * Update for task display order.
+ * Source document from Graph RAG search.
  */
-export type TaskOrderUpdate = {
+export type SourceDocument = {
     /**
-     * Task Id
-     *
-     * Task ID
+     * Id
      */
-    task_id: string;
+    id: string;
     /**
-     * Display Order
-     *
-     * New display order
+     * Content Type
      */
-    display_order: number;
-};
-
-/**
- * TechSkillRequest
- *
- * Request body for a single tech skill.
- */
-export type TechSkillRequest = {
+    content_type: string;
     /**
-     * Techname
-     *
-     * Technology name
+     * Text Content
      */
-    techName: string;
+    text_content?: string | null;
     /**
-     * Proficiencyscore
-     *
-     * Score 0-8
+     * Image Summary
      */
-    proficiencyScore: number;
+    image_summary?: string | null;
     /**
-     * Yearsused
-     *
-     * Years used
+     * Image Url
      */
-    yearsUsed?: number;
-};
-
-/**
- * UpdateDocumentRequest
- *
- * Request body for document update.
- */
-export type UpdateDocumentRequest = {
+    image_url?: string | null;
     /**
-     * Content
-     *
-     * New Markdown content
+     * Relevance
      */
-    content: string;
+    relevance: number;
     /**
-     * Changesummary
-     *
-     * Summary of changes
+     * Volume Number
      */
-    changeSummary?: string | null;
-};
-
-/**
- * UpdateEngineerRequest
- *
- * Request body for updating engineer profile.
- */
-export type UpdateEngineerRequest = {
+    volume_number?: number | null;
     /**
-     * Name
-     *
-     * Engineer name
+     * Chapter Number
      */
-    name?: string | null;
+    chapter_number?: number | null;
     /**
-     * Email
-     *
-     * Engineer email
+     * Page Number
      */
-    email?: string | null;
-    /**
-     * Skilllevel
-     *
-     * Skill level
-     */
-    skillLevel?: number | null;
-    /**
-     * Yearsofexperience
-     *
-     * Years
-     */
-    yearsOfExperience?: number | null;
-    /**
-     * Hourlyrate
-     *
-     * Custom hourly rate
-     */
-    hourlyRate?: number | null;
-    /**
-     * Monthlyrate
-     *
-     * Custom monthly rate
-     */
-    monthlyRate?: number | null;
-};
-
-/**
- * UpdateTechSkillsRequest
- *
- * Request body for updating tech skills.
- */
-export type UpdateTechSkillsRequest = {
-    /**
-     * Skills
-     *
-     * Tech skills list
-     */
-    skills: Array<TechSkillRequest>;
+    page_number?: number | null;
 };
 
 /**
@@ -1234,1096 +665,25 @@ export type ValidationError = {
     type: string;
 };
 
-/**
- * VerifyProfileRequest
- *
- * Request body for verifying profile.
- */
-export type VerifyProfileRequest = {
-    /**
-     * Isverified
-     *
-     * Verification status
-     */
-    isVerified?: boolean;
-};
-
-export type SuggestTechStackApiProjectsSuggestTechStackPostData = {
-    body: SuggestTechStackRequest;
-    path?: never;
-    query?: never;
-    url: '/api/projects/suggest-tech-stack';
-};
-
-export type SuggestTechStackApiProjectsSuggestTechStackPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type SuggestTechStackApiProjectsSuggestTechStackPostError = SuggestTechStackApiProjectsSuggestTechStackPostErrors[keyof SuggestTechStackApiProjectsSuggestTechStackPostErrors];
-
-export type SuggestTechStackApiProjectsSuggestTechStackPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: SuggestTechStackResponse;
-};
-
-export type SuggestTechStackApiProjectsSuggestTechStackPostResponse = SuggestTechStackApiProjectsSuggestTechStackPostResponses[keyof SuggestTechStackApiProjectsSuggestTechStackPostResponses];
-
-export type GenerateStoryMapApiStoryMapGeneratePostData = {
-    body: GenerateStoryMapRequest;
-    path?: never;
-    query?: never;
-    url: '/api/story-map/generate';
-};
-
-export type GenerateStoryMapApiStoryMapGeneratePostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GenerateStoryMapApiStoryMapGeneratePostError = GenerateStoryMapApiStoryMapGeneratePostErrors[keyof GenerateStoryMapApiStoryMapGeneratePostErrors];
-
-export type GenerateStoryMapApiStoryMapGeneratePostResponses = {
-    /**
-     * Successful Response
-     */
-    202: unknown;
-};
-
-export type ModifyStoryMapApiStoryMapModifyPostData = {
-    body: ModifyStoryMapRequest;
-    path?: never;
-    query?: never;
-    url: '/api/story-map/modify';
-};
-
-export type ModifyStoryMapApiStoryMapModifyPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type ModifyStoryMapApiStoryMapModifyPostError = ModifyStoryMapApiStoryMapModifyPostErrors[keyof ModifyStoryMapApiStoryMapModifyPostErrors];
-
-export type ModifyStoryMapApiStoryMapModifyPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
-};
-
-export type GenerateTasksStreamApiTasksGenerateStreamPostData = {
-    body: GenerateTasksRequest;
-    path?: never;
-    query?: never;
-    url: '/api/tasks/generate/stream';
-};
-
-export type GenerateTasksStreamApiTasksGenerateStreamPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GenerateTasksStreamApiTasksGenerateStreamPostError = GenerateTasksStreamApiTasksGenerateStreamPostErrors[keyof GenerateTasksStreamApiTasksGenerateStreamPostErrors];
-
-export type GenerateTasksStreamApiTasksGenerateStreamPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
-};
-
-export type RegenerateTasksStreamApiTasksRegenerateStreamPostData = {
-    body: RegenerateTasksRequest;
-    path?: never;
-    query?: never;
-    url: '/api/tasks/regenerate/stream';
-};
-
-export type RegenerateTasksStreamApiTasksRegenerateStreamPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type RegenerateTasksStreamApiTasksRegenerateStreamPostError = RegenerateTasksStreamApiTasksRegenerateStreamPostErrors[keyof RegenerateTasksStreamApiTasksRegenerateStreamPostErrors];
-
-export type RegenerateTasksStreamApiTasksRegenerateStreamPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
-};
-
-export type RegenerateTasksFullStreamApiTasksRegenerateFullStreamPostData = {
-    body: RegenerateTasksRequest;
-    path?: never;
-    query?: never;
-    url: '/api/tasks/regenerate-full/stream';
-};
-
-export type RegenerateTasksFullStreamApiTasksRegenerateFullStreamPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type RegenerateTasksFullStreamApiTasksRegenerateFullStreamPostError = RegenerateTasksFullStreamApiTasksRegenerateFullStreamPostErrors[keyof RegenerateTasksFullStreamApiTasksRegenerateFullStreamPostErrors];
-
-export type RegenerateTasksFullStreamApiTasksRegenerateFullStreamPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
-};
-
-export type BatchGenerateTasksApiTasksGenerateBatchPostData = {
-    body: BatchGenerateTasksRequest;
-    path?: never;
-    query?: never;
-    url: '/api/tasks/generate/batch';
-};
-
-export type BatchGenerateTasksApiTasksGenerateBatchPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type BatchGenerateTasksApiTasksGenerateBatchPostError = BatchGenerateTasksApiTasksGenerateBatchPostErrors[keyof BatchGenerateTasksApiTasksGenerateBatchPostErrors];
-
-export type BatchGenerateTasksApiTasksGenerateBatchPostResponses = {
-    /**
-     * Successful Response
-     */
-    202: unknown;
-};
-
-export type BatchGenerateTasksStreamApiTasksGenerateBatchStreamPostData = {
-    body: BatchGenerateTasksRequest;
-    path?: never;
-    query?: never;
-    url: '/api/tasks/generate/batch/stream';
-};
-
-export type BatchGenerateTasksStreamApiTasksGenerateBatchStreamPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type BatchGenerateTasksStreamApiTasksGenerateBatchStreamPostError = BatchGenerateTasksStreamApiTasksGenerateBatchStreamPostErrors[keyof BatchGenerateTasksStreamApiTasksGenerateBatchStreamPostErrors];
-
-export type BatchGenerateTasksStreamApiTasksGenerateBatchStreamPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
-};
-
-export type DeleteTasksByStoryApiTasksStoryStoryIdDeleteData = {
+export type RootGetData = {
     body?: never;
-    path: {
-        /**
-         * Story Id
-         */
-        story_id: string;
-    };
-    query?: never;
-    url: '/api/tasks/story/{story_id}';
-};
-
-export type DeleteTasksByStoryApiTasksStoryStoryIdDeleteErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type DeleteTasksByStoryApiTasksStoryStoryIdDeleteError = DeleteTasksByStoryApiTasksStoryStoryIdDeleteErrors[keyof DeleteTasksByStoryApiTasksStoryStoryIdDeleteErrors];
-
-export type DeleteTasksByStoryApiTasksStoryStoryIdDeleteResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
-};
-
-export type GetTasksByStoryApiTasksStoryStoryIdGetData = {
-    body?: never;
-    path: {
-        /**
-         * Story Id
-         */
-        story_id: string;
-    };
-    query?: never;
-    url: '/api/tasks/story/{story_id}';
-};
-
-export type GetTasksByStoryApiTasksStoryStoryIdGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GetTasksByStoryApiTasksStoryStoryIdGetError = GetTasksByStoryApiTasksStoryStoryIdGetErrors[keyof GetTasksByStoryApiTasksStoryStoryIdGetErrors];
-
-export type GetTasksByStoryApiTasksStoryStoryIdGetResponses = {
-    /**
-     * Response Get Tasks By Story Api Tasks Story  Story Id  Get
-     *
-     * Successful Response
-     */
-    200: Array<FeatureTaskResponse>;
-};
-
-export type GetTasksByStoryApiTasksStoryStoryIdGetResponse = GetTasksByStoryApiTasksStoryStoryIdGetResponses[keyof GetTasksByStoryApiTasksStoryStoryIdGetResponses];
-
-export type ReorderFeatureTasksApiTasksFeatureTasksReorderPutData = {
-    body: ReorderFeatureTasksRequest;
     path?: never;
     query?: never;
-    url: '/api/tasks/feature-tasks/reorder';
+    url: '/';
 };
 
-export type ReorderFeatureTasksApiTasksFeatureTasksReorderPutErrors = {
+export type RootGetResponses = {
     /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type ReorderFeatureTasksApiTasksFeatureTasksReorderPutError = ReorderFeatureTasksApiTasksFeatureTasksReorderPutErrors[keyof ReorderFeatureTasksApiTasksFeatureTasksReorderPutErrors];
-
-export type ReorderFeatureTasksApiTasksFeatureTasksReorderPutResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
-};
-
-export type ReorderDevTasksApiTasksDevTasksReorderPutData = {
-    body: ReorderDevTasksRequest;
-    path?: never;
-    query?: never;
-    url: '/api/tasks/dev-tasks/reorder';
-};
-
-export type ReorderDevTasksApiTasksDevTasksReorderPutErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type ReorderDevTasksApiTasksDevTasksReorderPutError = ReorderDevTasksApiTasksDevTasksReorderPutErrors[keyof ReorderDevTasksApiTasksDevTasksReorderPutErrors];
-
-export type ReorderDevTasksApiTasksDevTasksReorderPutResponses = {
-    /**
-     * Successful Response
-     */
-    200: unknown;
-};
-
-export type DeleteEngineerProfileApiEngineersProfileIdDeleteData = {
-    body?: never;
-    path: {
-        /**
-         * Profile Id
-         */
-        profile_id: string;
-    };
-    query?: never;
-    url: '/api/engineers/{profile_id}';
-};
-
-export type DeleteEngineerProfileApiEngineersProfileIdDeleteErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type DeleteEngineerProfileApiEngineersProfileIdDeleteError = DeleteEngineerProfileApiEngineersProfileIdDeleteErrors[keyof DeleteEngineerProfileApiEngineersProfileIdDeleteErrors];
-
-export type DeleteEngineerProfileApiEngineersProfileIdDeleteResponses = {
-    /**
-     * Successful Response
-     */
-    204: void;
-};
-
-export type DeleteEngineerProfileApiEngineersProfileIdDeleteResponse = DeleteEngineerProfileApiEngineersProfileIdDeleteResponses[keyof DeleteEngineerProfileApiEngineersProfileIdDeleteResponses];
-
-export type GetEngineerProfileApiEngineersProfileIdGetData = {
-    body?: never;
-    path: {
-        /**
-         * Profile Id
-         */
-        profile_id: string;
-    };
-    query?: never;
-    url: '/api/engineers/{profile_id}';
-};
-
-export type GetEngineerProfileApiEngineersProfileIdGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GetEngineerProfileApiEngineersProfileIdGetError = GetEngineerProfileApiEngineersProfileIdGetErrors[keyof GetEngineerProfileApiEngineersProfileIdGetErrors];
-
-export type GetEngineerProfileApiEngineersProfileIdGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: EngineerProfileResponse;
-};
-
-export type GetEngineerProfileApiEngineersProfileIdGetResponse = GetEngineerProfileApiEngineersProfileIdGetResponses[keyof GetEngineerProfileApiEngineersProfileIdGetResponses];
-
-export type UpdateEngineerProfileApiEngineersProfileIdPutData = {
-    body: UpdateEngineerRequest;
-    path: {
-        /**
-         * Profile Id
-         */
-        profile_id: string;
-    };
-    query?: never;
-    url: '/api/engineers/{profile_id}';
-};
-
-export type UpdateEngineerProfileApiEngineersProfileIdPutErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type UpdateEngineerProfileApiEngineersProfileIdPutError = UpdateEngineerProfileApiEngineersProfileIdPutErrors[keyof UpdateEngineerProfileApiEngineersProfileIdPutErrors];
-
-export type UpdateEngineerProfileApiEngineersProfileIdPutResponses = {
-    /**
-     * Successful Response
-     */
-    200: EngineerProfileResponse;
-};
-
-export type UpdateEngineerProfileApiEngineersProfileIdPutResponse = UpdateEngineerProfileApiEngineersProfileIdPutResponses[keyof UpdateEngineerProfileApiEngineersProfileIdPutResponses];
-
-export type UpdateTechSkillsApiEngineersProfileIdTechSkillsPutData = {
-    body: UpdateTechSkillsRequest;
-    path: {
-        /**
-         * Profile Id
-         */
-        profile_id: string;
-    };
-    query?: never;
-    url: '/api/engineers/{profile_id}/tech-skills';
-};
-
-export type UpdateTechSkillsApiEngineersProfileIdTechSkillsPutErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type UpdateTechSkillsApiEngineersProfileIdTechSkillsPutError = UpdateTechSkillsApiEngineersProfileIdTechSkillsPutErrors[keyof UpdateTechSkillsApiEngineersProfileIdTechSkillsPutErrors];
-
-export type UpdateTechSkillsApiEngineersProfileIdTechSkillsPutResponses = {
-    /**
-     * Response Update Tech Skills Api Engineers  Profile Id  Tech Skills Put
-     *
-     * Successful Response
-     */
-    200: Array<TechSkillRequest>;
-};
-
-export type UpdateTechSkillsApiEngineersProfileIdTechSkillsPutResponse = UpdateTechSkillsApiEngineersProfileIdTechSkillsPutResponses[keyof UpdateTechSkillsApiEngineersProfileIdTechSkillsPutResponses];
-
-export type VerifyProfileApiEngineersProfileIdVerifyPostData = {
-    body: VerifyProfileRequest;
-    path: {
-        /**
-         * Profile Id
-         */
-        profile_id: string;
-    };
-    query?: never;
-    url: '/api/engineers/{profile_id}/verify';
-};
-
-export type VerifyProfileApiEngineersProfileIdVerifyPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type VerifyProfileApiEngineersProfileIdVerifyPostError = VerifyProfileApiEngineersProfileIdVerifyPostErrors[keyof VerifyProfileApiEngineersProfileIdVerifyPostErrors];
-
-export type VerifyProfileApiEngineersProfileIdVerifyPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: EngineerProfileResponse;
-};
-
-export type VerifyProfileApiEngineersProfileIdVerifyPostResponse = VerifyProfileApiEngineersProfileIdVerifyPostResponses[keyof VerifyProfileApiEngineersProfileIdVerifyPostResponses];
-
-export type UploadSkillSheetApiEngineersProfileIdSkillSheetUploadPostData = {
-    body: BodyUploadSkillSheetApiEngineersProfileIdSkillSheetUploadPost;
-    path: {
-        /**
-         * Profile Id
-         */
-        profile_id: string;
-    };
-    query?: never;
-    url: '/api/engineers/{profile_id}/skill-sheet/upload';
-};
-
-export type UploadSkillSheetApiEngineersProfileIdSkillSheetUploadPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type UploadSkillSheetApiEngineersProfileIdSkillSheetUploadPostError = UploadSkillSheetApiEngineersProfileIdSkillSheetUploadPostErrors[keyof UploadSkillSheetApiEngineersProfileIdSkillSheetUploadPostErrors];
-
-export type UploadSkillSheetApiEngineersProfileIdSkillSheetUploadPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: SkillSheetUploadResponseModel;
-};
-
-export type UploadSkillSheetApiEngineersProfileIdSkillSheetUploadPostResponse = UploadSkillSheetApiEngineersProfileIdSkillSheetUploadPostResponses[keyof UploadSkillSheetApiEngineersProfileIdSkillSheetUploadPostResponses];
-
-export type GetUploadStatusApiEngineersProfileIdSkillSheetUploadIdGetData = {
-    body?: never;
-    path: {
-        /**
-         * Profile Id
-         */
-        profile_id: string;
-        /**
-         * Upload Id
-         */
-        upload_id: string;
-    };
-    query?: never;
-    url: '/api/engineers/{profile_id}/skill-sheet/{upload_id}';
-};
-
-export type GetUploadStatusApiEngineersProfileIdSkillSheetUploadIdGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GetUploadStatusApiEngineersProfileIdSkillSheetUploadIdGetError = GetUploadStatusApiEngineersProfileIdSkillSheetUploadIdGetErrors[keyof GetUploadStatusApiEngineersProfileIdSkillSheetUploadIdGetErrors];
-
-export type GetUploadStatusApiEngineersProfileIdSkillSheetUploadIdGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: SkillSheetUploadResponse;
-};
-
-export type GetUploadStatusApiEngineersProfileIdSkillSheetUploadIdGetResponse = GetUploadStatusApiEngineersProfileIdSkillSheetUploadIdGetResponses[keyof GetUploadStatusApiEngineersProfileIdSkillSheetUploadIdGetResponses];
-
-export type ListSkillSheetUploadsApiEngineersProfileIdSkillSheetGetData = {
-    body?: never;
-    path: {
-        /**
-         * Profile Id
-         */
-        profile_id: string;
-    };
-    query?: never;
-    url: '/api/engineers/{profile_id}/skill-sheet';
-};
-
-export type ListSkillSheetUploadsApiEngineersProfileIdSkillSheetGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type ListSkillSheetUploadsApiEngineersProfileIdSkillSheetGetError = ListSkillSheetUploadsApiEngineersProfileIdSkillSheetGetErrors[keyof ListSkillSheetUploadsApiEngineersProfileIdSkillSheetGetErrors];
-
-export type ListSkillSheetUploadsApiEngineersProfileIdSkillSheetGetResponses = {
-    /**
-     * Response List Skill Sheet Uploads Api Engineers  Profile Id  Skill Sheet Get
-     *
-     * Successful Response
-     */
-    200: Array<SkillSheetUploadResponse>;
-};
-
-export type ListSkillSheetUploadsApiEngineersProfileIdSkillSheetGetResponse = ListSkillSheetUploadsApiEngineersProfileIdSkillSheetGetResponses[keyof ListSkillSheetUploadsApiEngineersProfileIdSkillSheetGetResponses];
-
-export type ApplyParsedSkillsApiEngineersProfileIdSkillSheetUploadIdApplyPostData = {
-    body: ApplySkillsRequest;
-    path: {
-        /**
-         * Profile Id
-         */
-        profile_id: string;
-        /**
-         * Upload Id
-         */
-        upload_id: string;
-    };
-    query?: never;
-    url: '/api/engineers/{profile_id}/skill-sheet/{upload_id}/apply';
-};
-
-export type ApplyParsedSkillsApiEngineersProfileIdSkillSheetUploadIdApplyPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type ApplyParsedSkillsApiEngineersProfileIdSkillSheetUploadIdApplyPostError = ApplyParsedSkillsApiEngineersProfileIdSkillSheetUploadIdApplyPostErrors[keyof ApplyParsedSkillsApiEngineersProfileIdSkillSheetUploadIdApplyPostErrors];
-
-export type ApplyParsedSkillsApiEngineersProfileIdSkillSheetUploadIdApplyPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: EngineerProfileResponse;
-};
-
-export type ApplyParsedSkillsApiEngineersProfileIdSkillSheetUploadIdApplyPostResponse = ApplyParsedSkillsApiEngineersProfileIdSkillSheetUploadIdApplyPostResponses[keyof ApplyParsedSkillsApiEngineersProfileIdSkillSheetUploadIdApplyPostResponses];
-
-export type ListOrganizationEngineersApiOrganizationsOrgIdEngineersGetData = {
-    body?: never;
-    path: {
-        /**
-         * Org Id
-         */
-        org_id: string;
-    };
-    query?: never;
-    url: '/api/organizations/{org_id}/engineers';
-};
-
-export type ListOrganizationEngineersApiOrganizationsOrgIdEngineersGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type ListOrganizationEngineersApiOrganizationsOrgIdEngineersGetError = ListOrganizationEngineersApiOrganizationsOrgIdEngineersGetErrors[keyof ListOrganizationEngineersApiOrganizationsOrgIdEngineersGetErrors];
-
-export type ListOrganizationEngineersApiOrganizationsOrgIdEngineersGetResponses = {
-    /**
-     * Response List Organization Engineers Api Organizations  Org Id  Engineers Get
-     *
-     * Successful Response
-     */
-    200: Array<EngineerProfileResponse>;
-};
-
-export type ListOrganizationEngineersApiOrganizationsOrgIdEngineersGetResponse = ListOrganizationEngineersApiOrganizationsOrgIdEngineersGetResponses[keyof ListOrganizationEngineersApiOrganizationsOrgIdEngineersGetResponses];
-
-export type CreateEngineerProfileApiOrganizationsOrgIdEngineersPostData = {
-    body: CreateEngineerRequest;
-    path: {
-        /**
-         * Org Id
-         */
-        org_id: string;
-    };
-    query?: never;
-    url: '/api/organizations/{org_id}/engineers';
-};
-
-export type CreateEngineerProfileApiOrganizationsOrgIdEngineersPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type CreateEngineerProfileApiOrganizationsOrgIdEngineersPostError = CreateEngineerProfileApiOrganizationsOrgIdEngineersPostErrors[keyof CreateEngineerProfileApiOrganizationsOrgIdEngineersPostErrors];
-
-export type CreateEngineerProfileApiOrganizationsOrgIdEngineersPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: EngineerProfileResponse;
-};
-
-export type CreateEngineerProfileApiOrganizationsOrgIdEngineersPostResponse = CreateEngineerProfileApiOrganizationsOrgIdEngineersPostResponses[keyof CreateEngineerProfileApiOrganizationsOrgIdEngineersPostResponses];
-
-export type ListProjectEngineersApiProjectsProjectIdEngineersGetData = {
-    body?: never;
-    path: {
-        /**
-         * Project Id
-         */
-        project_id: string;
-    };
-    query?: never;
-    url: '/api/projects/{project_id}/engineers';
-};
-
-export type ListProjectEngineersApiProjectsProjectIdEngineersGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type ListProjectEngineersApiProjectsProjectIdEngineersGetError = ListProjectEngineersApiProjectsProjectIdEngineersGetErrors[keyof ListProjectEngineersApiProjectsProjectIdEngineersGetErrors];
-
-export type ListProjectEngineersApiProjectsProjectIdEngineersGetResponses = {
-    /**
-     * Response List Project Engineers Api Projects  Project Id  Engineers Get
-     *
-     * Successful Response
-     */
-    200: Array<{
-        [key: string]: unknown;
-    }>;
-};
-
-export type ListProjectEngineersApiProjectsProjectIdEngineersGetResponse = ListProjectEngineersApiProjectsProjectIdEngineersGetResponses[keyof ListProjectEngineersApiProjectsProjectIdEngineersGetResponses];
-
-export type AssignEngineerToProjectApiProjectsProjectIdEngineersPostData = {
-    body: AssignEngineerRequest;
-    path: {
-        /**
-         * Project Id
-         */
-        project_id: string;
-    };
-    query?: never;
-    url: '/api/projects/{project_id}/engineers';
-};
-
-export type AssignEngineerToProjectApiProjectsProjectIdEngineersPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type AssignEngineerToProjectApiProjectsProjectIdEngineersPostError = AssignEngineerToProjectApiProjectsProjectIdEngineersPostErrors[keyof AssignEngineerToProjectApiProjectsProjectIdEngineersPostErrors];
-
-export type AssignEngineerToProjectApiProjectsProjectIdEngineersPostResponses = {
-    /**
-     * Response Assign Engineer To Project Api Projects  Project Id  Engineers Post
+     * Response Root  Get
      *
      * Successful Response
      */
     200: {
-        [key: string]: unknown;
+        [key: string]: string;
     };
 };
 
-export type AssignEngineerToProjectApiProjectsProjectIdEngineersPostResponse = AssignEngineerToProjectApiProjectsProjectIdEngineersPostResponses[keyof AssignEngineerToProjectApiProjectsProjectIdEngineersPostResponses];
-
-export type RemoveEngineerFromProjectApiProjectsProjectIdEngineersEngineerIdDeleteData = {
-    body?: never;
-    path: {
-        /**
-         * Project Id
-         */
-        project_id: string;
-        /**
-         * Engineer Id
-         */
-        engineer_id: string;
-    };
-    query?: never;
-    url: '/api/projects/{project_id}/engineers/{engineer_id}';
-};
-
-export type RemoveEngineerFromProjectApiProjectsProjectIdEngineersEngineerIdDeleteErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type RemoveEngineerFromProjectApiProjectsProjectIdEngineersEngineerIdDeleteError = RemoveEngineerFromProjectApiProjectsProjectIdEngineersEngineerIdDeleteErrors[keyof RemoveEngineerFromProjectApiProjectsProjectIdEngineersEngineerIdDeleteErrors];
-
-export type RemoveEngineerFromProjectApiProjectsProjectIdEngineersEngineerIdDeleteResponses = {
-    /**
-     * Successful Response
-     */
-    204: void;
-};
-
-export type RemoveEngineerFromProjectApiProjectsProjectIdEngineersEngineerIdDeleteResponse = RemoveEngineerFromProjectApiProjectsProjectIdEngineersEngineerIdDeleteResponses[keyof RemoveEngineerFromProjectApiProjectsProjectIdEngineersEngineerIdDeleteResponses];
-
-export type EstimateTaskApiTasksTaskIdEstimatePostData = {
-    body: EstimateTaskRequest;
-    path: {
-        /**
-         * Task Id
-         */
-        task_id: string;
-    };
-    query?: never;
-    url: '/api/tasks/{task_id}/estimate';
-};
-
-export type EstimateTaskApiTasksTaskIdEstimatePostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type EstimateTaskApiTasksTaskIdEstimatePostError = EstimateTaskApiTasksTaskIdEstimatePostErrors[keyof EstimateTaskApiTasksTaskIdEstimatePostErrors];
-
-export type EstimateTaskApiTasksTaskIdEstimatePostResponses = {
-    /**
-     * Successful Response
-     */
-    200: TaskEstimationResponse;
-};
-
-export type EstimateTaskApiTasksTaskIdEstimatePostResponse = EstimateTaskApiTasksTaskIdEstimatePostResponses[keyof EstimateTaskApiTasksTaskIdEstimatePostResponses];
-
-export type EstimateProjectApiProjectsProjectIdEstimatePostData = {
-    body: EstimateProjectRequest;
-    path: {
-        /**
-         * Project Id
-         */
-        project_id: string;
-    };
-    query?: never;
-    url: '/api/projects/{project_id}/estimate';
-};
-
-export type EstimateProjectApiProjectsProjectIdEstimatePostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type EstimateProjectApiProjectsProjectIdEstimatePostError = EstimateProjectApiProjectsProjectIdEstimatePostErrors[keyof EstimateProjectApiProjectsProjectIdEstimatePostErrors];
-
-export type EstimateProjectApiProjectsProjectIdEstimatePostResponses = {
-    /**
-     * Successful Response
-     */
-    200: ProjectEstimationResponse;
-};
-
-export type EstimateProjectApiProjectsProjectIdEstimatePostResponse = EstimateProjectApiProjectsProjectIdEstimatePostResponses[keyof EstimateProjectApiProjectsProjectIdEstimatePostResponses];
-
-export type GetEstimationReportApiProjectsProjectIdEstimationReportGetData = {
-    body?: never;
-    path: {
-        /**
-         * Project Id
-         */
-        project_id: string;
-    };
-    query?: never;
-    url: '/api/projects/{project_id}/estimation-report';
-};
-
-export type GetEstimationReportApiProjectsProjectIdEstimationReportGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GetEstimationReportApiProjectsProjectIdEstimationReportGetError = GetEstimationReportApiProjectsProjectIdEstimationReportGetErrors[keyof GetEstimationReportApiProjectsProjectIdEstimationReportGetErrors];
-
-export type GetEstimationReportApiProjectsProjectIdEstimationReportGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: ProjectEstimationResponse;
-};
-
-export type GetEstimationReportApiProjectsProjectIdEstimationReportGetResponse = GetEstimationReportApiProjectsProjectIdEstimationReportGetResponses[keyof GetEstimationReportApiProjectsProjectIdEstimationReportGetResponses];
-
-export type GenerateDocumentApiProjectsProjectIdDocumentsGeneratePostData = {
-    body: GenerateDocumentRequest;
-    path: {
-        /**
-         * Project Id
-         */
-        project_id: string;
-    };
-    query?: never;
-    url: '/api/projects/{project_id}/documents/generate';
-};
-
-export type GenerateDocumentApiProjectsProjectIdDocumentsGeneratePostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GenerateDocumentApiProjectsProjectIdDocumentsGeneratePostError = GenerateDocumentApiProjectsProjectIdDocumentsGeneratePostErrors[keyof GenerateDocumentApiProjectsProjectIdDocumentsGeneratePostErrors];
-
-export type GenerateDocumentApiProjectsProjectIdDocumentsGeneratePostResponses = {
-    /**
-     * Successful Response
-     */
-    200: GenerateDocumentResponse;
-};
-
-export type GenerateDocumentApiProjectsProjectIdDocumentsGeneratePostResponse = GenerateDocumentApiProjectsProjectIdDocumentsGeneratePostResponses[keyof GenerateDocumentApiProjectsProjectIdDocumentsGeneratePostResponses];
-
-export type GenerateQuotationApiProjectsProjectIdDocumentsGenerateQuotationPostData = {
-    body: GenerateQuotationRequest;
-    path: {
-        /**
-         * Project Id
-         */
-        project_id: string;
-    };
-    query?: never;
-    url: '/api/projects/{project_id}/documents/generate-quotation';
-};
-
-export type GenerateQuotationApiProjectsProjectIdDocumentsGenerateQuotationPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GenerateQuotationApiProjectsProjectIdDocumentsGenerateQuotationPostError = GenerateQuotationApiProjectsProjectIdDocumentsGenerateQuotationPostErrors[keyof GenerateQuotationApiProjectsProjectIdDocumentsGenerateQuotationPostErrors];
-
-export type GenerateQuotationApiProjectsProjectIdDocumentsGenerateQuotationPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: GenerateDocumentResponse;
-};
-
-export type GenerateQuotationApiProjectsProjectIdDocumentsGenerateQuotationPostResponse = GenerateQuotationApiProjectsProjectIdDocumentsGenerateQuotationPostResponses[keyof GenerateQuotationApiProjectsProjectIdDocumentsGenerateQuotationPostResponses];
-
-export type RegenerateDocumentApiDocumentsDocumentIdRegeneratePostData = {
-    body?: never;
-    path: {
-        /**
-         * Document Id
-         */
-        document_id: string;
-    };
-    query?: never;
-    url: '/api/documents/{document_id}/regenerate';
-};
-
-export type RegenerateDocumentApiDocumentsDocumentIdRegeneratePostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type RegenerateDocumentApiDocumentsDocumentIdRegeneratePostError = RegenerateDocumentApiDocumentsDocumentIdRegeneratePostErrors[keyof RegenerateDocumentApiDocumentsDocumentIdRegeneratePostErrors];
-
-export type RegenerateDocumentApiDocumentsDocumentIdRegeneratePostResponses = {
-    /**
-     * Successful Response
-     */
-    200: GenerateDocumentResponse;
-};
-
-export type RegenerateDocumentApiDocumentsDocumentIdRegeneratePostResponse = RegenerateDocumentApiDocumentsDocumentIdRegeneratePostResponses[keyof RegenerateDocumentApiDocumentsDocumentIdRegeneratePostResponses];
-
-export type GetProjectDocumentsApiProjectsProjectIdDocumentsGetData = {
-    body?: never;
-    path: {
-        /**
-         * Project Id
-         */
-        project_id: string;
-    };
-    query?: never;
-    url: '/api/projects/{project_id}/documents';
-};
-
-export type GetProjectDocumentsApiProjectsProjectIdDocumentsGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GetProjectDocumentsApiProjectsProjectIdDocumentsGetError = GetProjectDocumentsApiProjectsProjectIdDocumentsGetErrors[keyof GetProjectDocumentsApiProjectsProjectIdDocumentsGetErrors];
-
-export type GetProjectDocumentsApiProjectsProjectIdDocumentsGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: ProjectDocumentsResponse;
-};
-
-export type GetProjectDocumentsApiProjectsProjectIdDocumentsGetResponse = GetProjectDocumentsApiProjectsProjectIdDocumentsGetResponses[keyof GetProjectDocumentsApiProjectsProjectIdDocumentsGetResponses];
-
-export type GetDocumentByTypeApiProjectsProjectIdDocumentsDocumentTypeGetData = {
-    body?: never;
-    path: {
-        /**
-         * Project Id
-         */
-        project_id: string;
-        /**
-         * Document Type
-         */
-        document_type: 'quotation' | 'requirement_specification' | 'design_document';
-    };
-    query?: never;
-    url: '/api/projects/{project_id}/documents/{document_type}';
-};
-
-export type GetDocumentByTypeApiProjectsProjectIdDocumentsDocumentTypeGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GetDocumentByTypeApiProjectsProjectIdDocumentsDocumentTypeGetError = GetDocumentByTypeApiProjectsProjectIdDocumentsDocumentTypeGetErrors[keyof GetDocumentByTypeApiProjectsProjectIdDocumentsDocumentTypeGetErrors];
-
-export type GetDocumentByTypeApiProjectsProjectIdDocumentsDocumentTypeGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: DocumentResponse;
-};
-
-export type GetDocumentByTypeApiProjectsProjectIdDocumentsDocumentTypeGetResponse = GetDocumentByTypeApiProjectsProjectIdDocumentsDocumentTypeGetResponses[keyof GetDocumentByTypeApiProjectsProjectIdDocumentsDocumentTypeGetResponses];
-
-export type GetDocumentApiDocumentsDocumentIdGetData = {
-    body?: never;
-    path: {
-        /**
-         * Document Id
-         */
-        document_id: string;
-    };
-    query?: {
-        /**
-         * Version
-         */
-        version?: number | null;
-    };
-    url: '/api/documents/{document_id}';
-};
-
-export type GetDocumentApiDocumentsDocumentIdGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GetDocumentApiDocumentsDocumentIdGetError = GetDocumentApiDocumentsDocumentIdGetErrors[keyof GetDocumentApiDocumentsDocumentIdGetErrors];
-
-export type GetDocumentApiDocumentsDocumentIdGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: DocumentResponse;
-};
-
-export type GetDocumentApiDocumentsDocumentIdGetResponse = GetDocumentApiDocumentsDocumentIdGetResponses[keyof GetDocumentApiDocumentsDocumentIdGetResponses];
-
-export type UpdateDocumentApiDocumentsDocumentIdPutData = {
-    body: UpdateDocumentRequest;
-    path: {
-        /**
-         * Document Id
-         */
-        document_id: string;
-    };
-    query?: never;
-    url: '/api/documents/{document_id}';
-};
-
-export type UpdateDocumentApiDocumentsDocumentIdPutErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type UpdateDocumentApiDocumentsDocumentIdPutError = UpdateDocumentApiDocumentsDocumentIdPutErrors[keyof UpdateDocumentApiDocumentsDocumentIdPutErrors];
-
-export type UpdateDocumentApiDocumentsDocumentIdPutResponses = {
-    /**
-     * Successful Response
-     */
-    200: DocumentResponse;
-};
-
-export type UpdateDocumentApiDocumentsDocumentIdPutResponse = UpdateDocumentApiDocumentsDocumentIdPutResponses[keyof UpdateDocumentApiDocumentsDocumentIdPutResponses];
-
-export type GetDocumentVersionsApiDocumentsDocumentIdVersionsGetData = {
-    body?: never;
-    path: {
-        /**
-         * Document Id
-         */
-        document_id: string;
-    };
-    query?: never;
-    url: '/api/documents/{document_id}/versions';
-};
-
-export type GetDocumentVersionsApiDocumentsDocumentIdVersionsGetErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type GetDocumentVersionsApiDocumentsDocumentIdVersionsGetError = GetDocumentVersionsApiDocumentsDocumentIdVersionsGetErrors[keyof GetDocumentVersionsApiDocumentsDocumentIdVersionsGetErrors];
-
-export type GetDocumentVersionsApiDocumentsDocumentIdVersionsGetResponses = {
-    /**
-     * Successful Response
-     */
-    200: DocumentVersionsResponse;
-};
-
-export type GetDocumentVersionsApiDocumentsDocumentIdVersionsGetResponse = GetDocumentVersionsApiDocumentsDocumentIdVersionsGetResponses[keyof GetDocumentVersionsApiDocumentsDocumentIdVersionsGetResponses];
+export type RootGetResponse = RootGetResponses[keyof RootGetResponses];
 
 export type HealthcheckHealthcheckGetData = {
     body?: never;
@@ -2344,3 +704,234 @@ export type HealthcheckHealthcheckGetResponses = {
 };
 
 export type HealthcheckHealthcheckGetResponse = HealthcheckHealthcheckGetResponses[keyof HealthcheckHealthcheckGetResponses];
+
+export type ListJobsApiProjectsProjectIdJobsGetData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: {
+        /**
+         * Status
+         */
+        status?: JobStatus | null;
+        /**
+         * Page
+         */
+        page?: number;
+        /**
+         * Per Page
+         */
+        per_page?: number;
+    };
+    url: '/api/projects/{project_id}/jobs';
+};
+
+export type ListJobsApiProjectsProjectIdJobsGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ListJobsApiProjectsProjectIdJobsGetError = ListJobsApiProjectsProjectIdJobsGetErrors[keyof ListJobsApiProjectsProjectIdJobsGetErrors];
+
+export type ListJobsApiProjectsProjectIdJobsGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: JobListResponse;
+};
+
+export type ListJobsApiProjectsProjectIdJobsGetResponse = ListJobsApiProjectsProjectIdJobsGetResponses[keyof ListJobsApiProjectsProjectIdJobsGetResponses];
+
+export type CreateJobApiProjectsProjectIdJobsPostData = {
+    body: CreateJobRequest;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/projects/{project_id}/jobs';
+};
+
+export type CreateJobApiProjectsProjectIdJobsPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateJobApiProjectsProjectIdJobsPostError = CreateJobApiProjectsProjectIdJobsPostErrors[keyof CreateJobApiProjectsProjectIdJobsPostErrors];
+
+export type CreateJobApiProjectsProjectIdJobsPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: JobResponse;
+};
+
+export type CreateJobApiProjectsProjectIdJobsPostResponse = CreateJobApiProjectsProjectIdJobsPostResponses[keyof CreateJobApiProjectsProjectIdJobsPostResponses];
+
+export type GetJobApiProjectsProjectIdJobsJobIdGetData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+        /**
+         * Job Id
+         */
+        job_id: string;
+    };
+    query?: never;
+    url: '/api/projects/{project_id}/jobs/{job_id}';
+};
+
+export type GetJobApiProjectsProjectIdJobsJobIdGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetJobApiProjectsProjectIdJobsJobIdGetError = GetJobApiProjectsProjectIdJobsJobIdGetErrors[keyof GetJobApiProjectsProjectIdJobsJobIdGetErrors];
+
+export type GetJobApiProjectsProjectIdJobsJobIdGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: JobResponse;
+};
+
+export type GetJobApiProjectsProjectIdJobsJobIdGetResponse = GetJobApiProjectsProjectIdJobsJobIdGetResponses[keyof GetJobApiProjectsProjectIdJobsJobIdGetResponses];
+
+export type CancelJobApiProjectsProjectIdJobsJobIdCancelPostData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+        /**
+         * Job Id
+         */
+        job_id: string;
+    };
+    query?: never;
+    url: '/api/projects/{project_id}/jobs/{job_id}/cancel';
+};
+
+export type CancelJobApiProjectsProjectIdJobsJobIdCancelPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CancelJobApiProjectsProjectIdJobsJobIdCancelPostError = CancelJobApiProjectsProjectIdJobsJobIdCancelPostErrors[keyof CancelJobApiProjectsProjectIdJobsJobIdCancelPostErrors];
+
+export type CancelJobApiProjectsProjectIdJobsJobIdCancelPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: JobResponse;
+};
+
+export type CancelJobApiProjectsProjectIdJobsJobIdCancelPostResponse = CancelJobApiProjectsProjectIdJobsJobIdCancelPostResponses[keyof CancelJobApiProjectsProjectIdJobsJobIdCancelPostResponses];
+
+export type QueryAgentApiProjectsProjectIdAgentQueryPostData = {
+    body: BodyQueryAgentApiProjectsProjectIdAgentQueryPost;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/projects/{project_id}/agent/query';
+};
+
+export type QueryAgentApiProjectsProjectIdAgentQueryPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type QueryAgentApiProjectsProjectIdAgentQueryPostError = QueryAgentApiProjectsProjectIdAgentQueryPostErrors[keyof QueryAgentApiProjectsProjectIdAgentQueryPostErrors];
+
+export type QueryAgentApiProjectsProjectIdAgentQueryPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: AgentQueryResponse;
+};
+
+export type QueryAgentApiProjectsProjectIdAgentQueryPostResponse = QueryAgentApiProjectsProjectIdAgentQueryPostResponses[keyof QueryAgentApiProjectsProjectIdAgentQueryPostResponses];
+
+export type GetAgentConfigApiProjectsProjectIdAgentGetData = {
+    body?: never;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/projects/{project_id}/agent';
+};
+
+export type GetAgentConfigApiProjectsProjectIdAgentGetErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type GetAgentConfigApiProjectsProjectIdAgentGetError = GetAgentConfigApiProjectsProjectIdAgentGetErrors[keyof GetAgentConfigApiProjectsProjectIdAgentGetErrors];
+
+export type GetAgentConfigApiProjectsProjectIdAgentGetResponses = {
+    /**
+     * Successful Response
+     */
+    200: AgentConfigResponse;
+};
+
+export type GetAgentConfigApiProjectsProjectIdAgentGetResponse = GetAgentConfigApiProjectsProjectIdAgentGetResponses[keyof GetAgentConfigApiProjectsProjectIdAgentGetResponses];
+
+export type CreateReviewSessionApiProjectsProjectIdReviewsPostData = {
+    body: CreateReviewRequest;
+    path: {
+        /**
+         * Project Id
+         */
+        project_id: string;
+    };
+    query?: never;
+    url: '/api/projects/{project_id}/reviews';
+};
+
+export type CreateReviewSessionApiProjectsProjectIdReviewsPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type CreateReviewSessionApiProjectsProjectIdReviewsPostError = CreateReviewSessionApiProjectsProjectIdReviewsPostErrors[keyof CreateReviewSessionApiProjectsProjectIdReviewsPostErrors];
+
+export type CreateReviewSessionApiProjectsProjectIdReviewsPostResponses = {
+    /**
+     * Successful Response
+     */
+    201: ReviewSessionResponse;
+};
+
+export type CreateReviewSessionApiProjectsProjectIdReviewsPostResponse = CreateReviewSessionApiProjectsProjectIdReviewsPostResponses[keyof CreateReviewSessionApiProjectsProjectIdReviewsPostResponses];

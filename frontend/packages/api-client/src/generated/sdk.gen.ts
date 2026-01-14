@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { ApplyParsedSkillsApiEngineersProfileIdSkillSheetUploadIdApplyPostData, ApplyParsedSkillsApiEngineersProfileIdSkillSheetUploadIdApplyPostErrors, ApplyParsedSkillsApiEngineersProfileIdSkillSheetUploadIdApplyPostResponses, AssignEngineerToProjectApiProjectsProjectIdEngineersPostData, AssignEngineerToProjectApiProjectsProjectIdEngineersPostErrors, AssignEngineerToProjectApiProjectsProjectIdEngineersPostResponses, BatchGenerateTasksApiTasksGenerateBatchPostData, BatchGenerateTasksApiTasksGenerateBatchPostErrors, BatchGenerateTasksApiTasksGenerateBatchPostResponses, BatchGenerateTasksStreamApiTasksGenerateBatchStreamPostData, BatchGenerateTasksStreamApiTasksGenerateBatchStreamPostErrors, BatchGenerateTasksStreamApiTasksGenerateBatchStreamPostResponses, CreateEngineerProfileApiOrganizationsOrgIdEngineersPostData, CreateEngineerProfileApiOrganizationsOrgIdEngineersPostErrors, CreateEngineerProfileApiOrganizationsOrgIdEngineersPostResponses, DeleteEngineerProfileApiEngineersProfileIdDeleteData, DeleteEngineerProfileApiEngineersProfileIdDeleteErrors, DeleteEngineerProfileApiEngineersProfileIdDeleteResponses, DeleteTasksByStoryApiTasksStoryStoryIdDeleteData, DeleteTasksByStoryApiTasksStoryStoryIdDeleteErrors, DeleteTasksByStoryApiTasksStoryStoryIdDeleteResponses, EstimateProjectApiProjectsProjectIdEstimatePostData, EstimateProjectApiProjectsProjectIdEstimatePostErrors, EstimateProjectApiProjectsProjectIdEstimatePostResponses, EstimateTaskApiTasksTaskIdEstimatePostData, EstimateTaskApiTasksTaskIdEstimatePostErrors, EstimateTaskApiTasksTaskIdEstimatePostResponses, GenerateDocumentApiProjectsProjectIdDocumentsGeneratePostData, GenerateDocumentApiProjectsProjectIdDocumentsGeneratePostErrors, GenerateDocumentApiProjectsProjectIdDocumentsGeneratePostResponses, GenerateQuotationApiProjectsProjectIdDocumentsGenerateQuotationPostData, GenerateQuotationApiProjectsProjectIdDocumentsGenerateQuotationPostErrors, GenerateQuotationApiProjectsProjectIdDocumentsGenerateQuotationPostResponses, GenerateStoryMapApiStoryMapGeneratePostData, GenerateStoryMapApiStoryMapGeneratePostErrors, GenerateStoryMapApiStoryMapGeneratePostResponses, GenerateTasksStreamApiTasksGenerateStreamPostData, GenerateTasksStreamApiTasksGenerateStreamPostErrors, GenerateTasksStreamApiTasksGenerateStreamPostResponses, GetDocumentApiDocumentsDocumentIdGetData, GetDocumentApiDocumentsDocumentIdGetErrors, GetDocumentApiDocumentsDocumentIdGetResponses, GetDocumentByTypeApiProjectsProjectIdDocumentsDocumentTypeGetData, GetDocumentByTypeApiProjectsProjectIdDocumentsDocumentTypeGetErrors, GetDocumentByTypeApiProjectsProjectIdDocumentsDocumentTypeGetResponses, GetDocumentVersionsApiDocumentsDocumentIdVersionsGetData, GetDocumentVersionsApiDocumentsDocumentIdVersionsGetErrors, GetDocumentVersionsApiDocumentsDocumentIdVersionsGetResponses, GetEngineerProfileApiEngineersProfileIdGetData, GetEngineerProfileApiEngineersProfileIdGetErrors, GetEngineerProfileApiEngineersProfileIdGetResponses, GetEstimationReportApiProjectsProjectIdEstimationReportGetData, GetEstimationReportApiProjectsProjectIdEstimationReportGetErrors, GetEstimationReportApiProjectsProjectIdEstimationReportGetResponses, GetProjectDocumentsApiProjectsProjectIdDocumentsGetData, GetProjectDocumentsApiProjectsProjectIdDocumentsGetErrors, GetProjectDocumentsApiProjectsProjectIdDocumentsGetResponses, GetTasksByStoryApiTasksStoryStoryIdGetData, GetTasksByStoryApiTasksStoryStoryIdGetErrors, GetTasksByStoryApiTasksStoryStoryIdGetResponses, GetUploadStatusApiEngineersProfileIdSkillSheetUploadIdGetData, GetUploadStatusApiEngineersProfileIdSkillSheetUploadIdGetErrors, GetUploadStatusApiEngineersProfileIdSkillSheetUploadIdGetResponses, HealthcheckHealthcheckGetData, HealthcheckHealthcheckGetResponses, ListOrganizationEngineersApiOrganizationsOrgIdEngineersGetData, ListOrganizationEngineersApiOrganizationsOrgIdEngineersGetErrors, ListOrganizationEngineersApiOrganizationsOrgIdEngineersGetResponses, ListProjectEngineersApiProjectsProjectIdEngineersGetData, ListProjectEngineersApiProjectsProjectIdEngineersGetErrors, ListProjectEngineersApiProjectsProjectIdEngineersGetResponses, ListSkillSheetUploadsApiEngineersProfileIdSkillSheetGetData, ListSkillSheetUploadsApiEngineersProfileIdSkillSheetGetErrors, ListSkillSheetUploadsApiEngineersProfileIdSkillSheetGetResponses, ModifyStoryMapApiStoryMapModifyPostData, ModifyStoryMapApiStoryMapModifyPostErrors, ModifyStoryMapApiStoryMapModifyPostResponses, RegenerateDocumentApiDocumentsDocumentIdRegeneratePostData, RegenerateDocumentApiDocumentsDocumentIdRegeneratePostErrors, RegenerateDocumentApiDocumentsDocumentIdRegeneratePostResponses, RegenerateTasksFullStreamApiTasksRegenerateFullStreamPostData, RegenerateTasksFullStreamApiTasksRegenerateFullStreamPostErrors, RegenerateTasksFullStreamApiTasksRegenerateFullStreamPostResponses, RegenerateTasksStreamApiTasksRegenerateStreamPostData, RegenerateTasksStreamApiTasksRegenerateStreamPostErrors, RegenerateTasksStreamApiTasksRegenerateStreamPostResponses, RemoveEngineerFromProjectApiProjectsProjectIdEngineersEngineerIdDeleteData, RemoveEngineerFromProjectApiProjectsProjectIdEngineersEngineerIdDeleteErrors, RemoveEngineerFromProjectApiProjectsProjectIdEngineersEngineerIdDeleteResponses, ReorderDevTasksApiTasksDevTasksReorderPutData, ReorderDevTasksApiTasksDevTasksReorderPutErrors, ReorderDevTasksApiTasksDevTasksReorderPutResponses, ReorderFeatureTasksApiTasksFeatureTasksReorderPutData, ReorderFeatureTasksApiTasksFeatureTasksReorderPutErrors, ReorderFeatureTasksApiTasksFeatureTasksReorderPutResponses, SuggestTechStackApiProjectsSuggestTechStackPostData, SuggestTechStackApiProjectsSuggestTechStackPostErrors, SuggestTechStackApiProjectsSuggestTechStackPostResponses, UpdateDocumentApiDocumentsDocumentIdPutData, UpdateDocumentApiDocumentsDocumentIdPutErrors, UpdateDocumentApiDocumentsDocumentIdPutResponses, UpdateEngineerProfileApiEngineersProfileIdPutData, UpdateEngineerProfileApiEngineersProfileIdPutErrors, UpdateEngineerProfileApiEngineersProfileIdPutResponses, UpdateTechSkillsApiEngineersProfileIdTechSkillsPutData, UpdateTechSkillsApiEngineersProfileIdTechSkillsPutErrors, UpdateTechSkillsApiEngineersProfileIdTechSkillsPutResponses, UploadSkillSheetApiEngineersProfileIdSkillSheetUploadPostData, UploadSkillSheetApiEngineersProfileIdSkillSheetUploadPostErrors, UploadSkillSheetApiEngineersProfileIdSkillSheetUploadPostResponses, VerifyProfileApiEngineersProfileIdVerifyPostData, VerifyProfileApiEngineersProfileIdVerifyPostErrors, VerifyProfileApiEngineersProfileIdVerifyPostResponses } from './types.gen';
+import type { CancelJobApiProjectsProjectIdJobsJobIdCancelPostData, CancelJobApiProjectsProjectIdJobsJobIdCancelPostErrors, CancelJobApiProjectsProjectIdJobsJobIdCancelPostResponses, CreateJobApiProjectsProjectIdJobsPostData, CreateJobApiProjectsProjectIdJobsPostErrors, CreateJobApiProjectsProjectIdJobsPostResponses, CreateReviewSessionApiProjectsProjectIdReviewsPostData, CreateReviewSessionApiProjectsProjectIdReviewsPostErrors, CreateReviewSessionApiProjectsProjectIdReviewsPostResponses, GetAgentConfigApiProjectsProjectIdAgentGetData, GetAgentConfigApiProjectsProjectIdAgentGetErrors, GetAgentConfigApiProjectsProjectIdAgentGetResponses, GetJobApiProjectsProjectIdJobsJobIdGetData, GetJobApiProjectsProjectIdJobsJobIdGetErrors, GetJobApiProjectsProjectIdJobsJobIdGetResponses, HealthcheckHealthcheckGetData, HealthcheckHealthcheckGetResponses, ListJobsApiProjectsProjectIdJobsGetData, ListJobsApiProjectsProjectIdJobsGetErrors, ListJobsApiProjectsProjectIdJobsGetResponses, QueryAgentApiProjectsProjectIdAgentQueryPostData, QueryAgentApiProjectsProjectIdAgentQueryPostErrors, QueryAgentApiProjectsProjectIdAgentQueryPostResponses, RootGetData, RootGetResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -19,258 +19,61 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 };
 
 /**
- * Suggest Tech Stack
- *
- * Suggest technology stack based on project description.
- *
- * Uses LLM to analyze project requirements and suggest appropriate technologies.
- *
- * Args:
- * request: Project information for suggestion.
- * current_user: Authenticated user from JWT.
- *
- * Returns:
- * SuggestTechStackResponse with suggested tech stack.
+ * Root
  */
-export const suggestTechStackApiProjectsSuggestTechStackPost = <ThrowOnError extends boolean = false>(options: Options<SuggestTechStackApiProjectsSuggestTechStackPostData, ThrowOnError>) => (options.client ?? client).post<SuggestTechStackApiProjectsSuggestTechStackPostResponses, SuggestTechStackApiProjectsSuggestTechStackPostErrors, ThrowOnError>({
+export const rootGet = <ThrowOnError extends boolean = false>(options?: Options<RootGetData, ThrowOnError>) => (options?.client ?? client).get<RootGetResponses, unknown, ThrowOnError>({
     security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/projects/suggest-tech-stack',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Generate Story Map
- *
- * Start story map generation asynchronously.
- *
- * Returns 202 Accepted immediately and runs generation in background.
- * Use Supabase Realtime to monitor project.generation_status for completion.
- *
- * Args:
- * request: Generation request with project ID and prompt.
- * current_user: Authenticated user from JWT.
- * session: Database session.
- * background_tasks: FastAPI background tasks.
- *
- * Returns:
- * JSONResponse with 202 status and project ID.
- */
-export const generateStoryMapApiStoryMapGeneratePost = <ThrowOnError extends boolean = false>(options: Options<GenerateStoryMapApiStoryMapGeneratePostData, ThrowOnError>) => (options.client ?? client).post<GenerateStoryMapApiStoryMapGeneratePostResponses, GenerateStoryMapApiStoryMapGeneratePostErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/story-map/generate',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Modify Story Map
- *
- * Modify an existing story map with SSE streaming.
- *
- * Args:
- * request: Modification request with project ID and user message.
- * current_user: Authenticated user from JWT.
- * session: Database session.
- *
- * Returns:
- * StreamingResponse with SSE events.
- */
-export const modifyStoryMapApiStoryMapModifyPost = <ThrowOnError extends boolean = false>(options: Options<ModifyStoryMapApiStoryMapModifyPostData, ThrowOnError>) => (options.client ?? client).post<ModifyStoryMapApiStoryMapModifyPostResponses, ModifyStoryMapApiStoryMapModifyPostErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/story-map/modify',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Generate Tasks Stream
- *
- * Generate tasks for a user story with SSE streaming.
- *
- * Args:
- * request: The generation request with story_id and optional prompt.
- * _current_user: The authenticated user.
- * session: Database session.
- *
- * Returns:
- * StreamingResponse with SSE events.
- */
-export const generateTasksStreamApiTasksGenerateStreamPost = <ThrowOnError extends boolean = false>(options: Options<GenerateTasksStreamApiTasksGenerateStreamPostData, ThrowOnError>) => (options.client ?? client).post<GenerateTasksStreamApiTasksGenerateStreamPostResponses, GenerateTasksStreamApiTasksGenerateStreamPostErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/tasks/generate/stream',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Regenerate Tasks Stream
- *
- * Regenerate tasks with intelligent merge using SSE streaming.
- *
- * Args:
- * request: The regeneration request with story_id and optional prompt.
- * _current_user: The authenticated user.
- * session: Database session.
- *
- * Returns:
- * StreamingResponse with SSE events.
- */
-export const regenerateTasksStreamApiTasksRegenerateStreamPost = <ThrowOnError extends boolean = false>(options: Options<RegenerateTasksStreamApiTasksRegenerateStreamPostData, ThrowOnError>) => (options.client ?? client).post<RegenerateTasksStreamApiTasksRegenerateStreamPostResponses, RegenerateTasksStreamApiTasksRegenerateStreamPostErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/tasks/regenerate/stream',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Regenerate Tasks Full Stream
- *
- * Delete all existing tasks and regenerate from scratch with SSE streaming.
- *
- * Args:
- * request: The regeneration request with story_id and optional prompt.
- * _current_user: The authenticated user.
- * session: Database session.
- *
- * Returns:
- * StreamingResponse with SSE events.
- */
-export const regenerateTasksFullStreamApiTasksRegenerateFullStreamPost = <ThrowOnError extends boolean = false>(options: Options<RegenerateTasksFullStreamApiTasksRegenerateFullStreamPostData, ThrowOnError>) => (options.client ?? client).post<RegenerateTasksFullStreamApiTasksRegenerateFullStreamPostResponses, RegenerateTasksFullStreamApiTasksRegenerateFullStreamPostErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/tasks/regenerate-full/stream',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Batch Generate Tasks
- *
- * Start batch task generation for a project (async with DB progress updates).
- *
- * Uses the LangGraph Supervisor to coordinate User Journey and Developer Journey
- * task generation with MECE (Mutually Exclusive, Collectively Exhaustive) guarantees.
- *
- * Progress is tracked via Supabase Realtime by monitoring the projects table.
- * Returns immediately with 202 Accepted while processing continues in background.
- *
- * Args:
- * request: The batch generation request with project_id.
- * background_tasks: FastAPI background tasks.
- * _current_user: The authenticated user.
- * session: Database session.
- *
- * Returns:
- * 202 Accepted response with status.
- */
-export const batchGenerateTasksApiTasksGenerateBatchPost = <ThrowOnError extends boolean = false>(options: Options<BatchGenerateTasksApiTasksGenerateBatchPostData, ThrowOnError>) => (options.client ?? client).post<BatchGenerateTasksApiTasksGenerateBatchPostResponses, BatchGenerateTasksApiTasksGenerateBatchPostErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/tasks/generate/batch',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Batch Generate Tasks Stream
- *
- * [DEPRECATED] Batch generate tasks with SSE streaming.
- *
- * Note: This endpoint is deprecated. Use POST /generate/batch instead,
- * which uses Supabase Realtime for progress tracking.
- *
- * Args:
- * request: The batch generation request with project_id.
- * _current_user: The authenticated user.
- * session: Database session.
- *
- * Returns:
- * StreamingResponse with SSE events for progress tracking.
- */
-export const batchGenerateTasksStreamApiTasksGenerateBatchStreamPost = <ThrowOnError extends boolean = false>(options: Options<BatchGenerateTasksStreamApiTasksGenerateBatchStreamPostData, ThrowOnError>) => (options.client ?? client).post<BatchGenerateTasksStreamApiTasksGenerateBatchStreamPostResponses, BatchGenerateTasksStreamApiTasksGenerateBatchStreamPostErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/tasks/generate/batch/stream',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Delete Tasks By Story
- *
- * Delete all tasks for a user story.
- *
- * Args:
- * story_id: The user story UUID.
- * _current_user: The authenticated user.
- * session: Database session.
- *
- * Returns:
- * Success response with deletion counts.
- */
-export const deleteTasksByStoryApiTasksStoryStoryIdDelete = <ThrowOnError extends boolean = false>(options: Options<DeleteTasksByStoryApiTasksStoryStoryIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteTasksByStoryApiTasksStoryStoryIdDeleteResponses, DeleteTasksByStoryApiTasksStoryStoryIdDeleteErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/tasks/story/{story_id}',
+    url: '/',
     ...options
 });
 
 /**
- * Get Tasks By Story
+ * Healthcheck
+ */
+export const healthcheckHealthcheckGet = <ThrowOnError extends boolean = false>(options?: Options<HealthcheckHealthcheckGetData, ThrowOnError>) => (options?.client ?? client).get<HealthcheckHealthcheckGetResponses, unknown, ThrowOnError>({ url: '/healthcheck', ...options });
+
+/**
+ * List Jobs
  *
- * Get all tasks for a user story.
+ * List jobs for a project.
  *
  * Args:
- * story_id: The user story UUID.
- * _current_user: The authenticated user.
- * session: Database session.
+ * project_id: Project ID
+ * _current_user: Authenticated user (used for auth)
+ * session: Database session
+ * status_filter: Optional status filter
+ * page: Page number (1-indexed)
+ * per_page: Items per page
  *
  * Returns:
- * List of feature tasks with nested dev tasks.
+ * Paginated job list
  */
-export const getTasksByStoryApiTasksStoryStoryIdGet = <ThrowOnError extends boolean = false>(options: Options<GetTasksByStoryApiTasksStoryStoryIdGetData, ThrowOnError>) => (options.client ?? client).get<GetTasksByStoryApiTasksStoryStoryIdGetResponses, GetTasksByStoryApiTasksStoryStoryIdGetErrors, ThrowOnError>({
+export const listJobsApiProjectsProjectIdJobsGet = <ThrowOnError extends boolean = false>(options: Options<ListJobsApiProjectsProjectIdJobsGetData, ThrowOnError>) => (options.client ?? client).get<ListJobsApiProjectsProjectIdJobsGetResponses, ListJobsApiProjectsProjectIdJobsGetErrors, ThrowOnError>({
     security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/tasks/story/{story_id}',
+    url: '/api/projects/{project_id}/jobs',
     ...options
 });
 
 /**
- * Reorder Feature Tasks
+ * Create Job
  *
- * Reorder feature tasks within a story.
+ * Create a new processing job and start it.
  *
  * Args:
- * request: The reorder request with story_id and task order updates.
- * _current_user: The authenticated user.
- * session: Database session.
+ * project_id: Project ID
+ * request: Job creation request
+ * current_user: Authenticated user
+ * session: Database session
  *
  * Returns:
- * Success response.
+ * Created job response
+ *
+ * Raises:
+ * HTTPException: If job dispatch fails
  */
-export const reorderFeatureTasksApiTasksFeatureTasksReorderPut = <ThrowOnError extends boolean = false>(options: Options<ReorderFeatureTasksApiTasksFeatureTasksReorderPutData, ThrowOnError>) => (options.client ?? client).put<ReorderFeatureTasksApiTasksFeatureTasksReorderPutResponses, ReorderFeatureTasksApiTasksFeatureTasksReorderPutErrors, ThrowOnError>({
+export const createJobApiProjectsProjectIdJobsPost = <ThrowOnError extends boolean = false>(options: Options<CreateJobApiProjectsProjectIdJobsPostData, ThrowOnError>) => (options.client ?? client).post<CreateJobApiProjectsProjectIdJobsPostResponses, CreateJobApiProjectsProjectIdJobsPostErrors, ThrowOnError>({
     security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/tasks/feature-tasks/reorder',
+    url: '/api/projects/{project_id}/jobs',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -279,106 +82,75 @@ export const reorderFeatureTasksApiTasksFeatureTasksReorderPut = <ThrowOnError e
 });
 
 /**
- * Reorder Dev Tasks
+ * Get Job
  *
- * Reorder dev tasks within a feature task.
+ * Get a specific job.
  *
  * Args:
- * request: The reorder request with feature_task_id and task order updates.
- * _current_user: The authenticated user.
- * session: Database session.
+ * project_id: Project ID
+ * job_id: Job ID
+ * _current_user: Authenticated user (used for auth)
+ * session: Database session
  *
  * Returns:
- * Success response.
- */
-export const reorderDevTasksApiTasksDevTasksReorderPut = <ThrowOnError extends boolean = false>(options: Options<ReorderDevTasksApiTasksDevTasksReorderPutData, ThrowOnError>) => (options.client ?? client).put<ReorderDevTasksApiTasksDevTasksReorderPutResponses, ReorderDevTasksApiTasksDevTasksReorderPutErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/tasks/dev-tasks/reorder',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Delete Engineer Profile
+ * Job response
  *
- * Delete engineer profile.
+ * Raises:
+ * HTTPException: If job not found or doesn't belong to project
  */
-export const deleteEngineerProfileApiEngineersProfileIdDelete = <ThrowOnError extends boolean = false>(options: Options<DeleteEngineerProfileApiEngineersProfileIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<DeleteEngineerProfileApiEngineersProfileIdDeleteResponses, DeleteEngineerProfileApiEngineersProfileIdDeleteErrors, ThrowOnError>({
+export const getJobApiProjectsProjectIdJobsJobIdGet = <ThrowOnError extends boolean = false>(options: Options<GetJobApiProjectsProjectIdJobsJobIdGetData, ThrowOnError>) => (options.client ?? client).get<GetJobApiProjectsProjectIdJobsJobIdGetResponses, GetJobApiProjectsProjectIdJobsJobIdGetErrors, ThrowOnError>({
     security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/engineers/{profile_id}',
+    url: '/api/projects/{project_id}/jobs/{job_id}',
     ...options
 });
 
 /**
- * Get Engineer Profile
+ * Cancel Job
  *
- * Get engineer profile by ID.
+ * Cancel a processing job.
+ *
+ * Args:
+ * project_id: Project ID
+ * job_id: Job ID
+ * _current_user: Authenticated user (used for auth)
+ * session: Database session
+ *
+ * Returns:
+ * Updated job response
+ *
+ * Raises:
+ * HTTPException: If job not found or cannot be cancelled
  */
-export const getEngineerProfileApiEngineersProfileIdGet = <ThrowOnError extends boolean = false>(options: Options<GetEngineerProfileApiEngineersProfileIdGetData, ThrowOnError>) => (options.client ?? client).get<GetEngineerProfileApiEngineersProfileIdGetResponses, GetEngineerProfileApiEngineersProfileIdGetErrors, ThrowOnError>({
+export const cancelJobApiProjectsProjectIdJobsJobIdCancelPost = <ThrowOnError extends boolean = false>(options: Options<CancelJobApiProjectsProjectIdJobsJobIdCancelPostData, ThrowOnError>) => (options.client ?? client).post<CancelJobApiProjectsProjectIdJobsJobIdCancelPostResponses, CancelJobApiProjectsProjectIdJobsJobIdCancelPostErrors, ThrowOnError>({
     security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/engineers/{profile_id}',
+    url: '/api/projects/{project_id}/jobs/{job_id}/cancel',
     ...options
 });
 
 /**
- * Update Engineer Profile
+ * Query Agent
  *
- * Update engineer profile.
+ * Query the Graph RAG agent with optional image.
+ *
+ * Args:
+ * project_id: Project ID
+ * query: User query text (required)
+ * search_mode: Search mode (hybrid or semantic)
+ * llm_provider: LLM provider to use
+ * max_results: Maximum number of results
+ * volume_filter: Optional volume filter
+ * chapter_filter: Optional chapter filter
+ * entity_types: Optional comma-separated entity types
+ * include_sources: Whether to include sources
+ * image: Optional image file for image-based search
+ *
+ * Returns:
+ * Agent query response with answer, sources, and image entities
  */
-export const updateEngineerProfileApiEngineersProfileIdPut = <ThrowOnError extends boolean = false>(options: Options<UpdateEngineerProfileApiEngineersProfileIdPutData, ThrowOnError>) => (options.client ?? client).put<UpdateEngineerProfileApiEngineersProfileIdPutResponses, UpdateEngineerProfileApiEngineersProfileIdPutErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/engineers/{profile_id}',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Update Tech Skills
- *
- * Update engineer's tech skills.
- */
-export const updateTechSkillsApiEngineersProfileIdTechSkillsPut = <ThrowOnError extends boolean = false>(options: Options<UpdateTechSkillsApiEngineersProfileIdTechSkillsPutData, ThrowOnError>) => (options.client ?? client).put<UpdateTechSkillsApiEngineersProfileIdTechSkillsPutResponses, UpdateTechSkillsApiEngineersProfileIdTechSkillsPutErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/engineers/{profile_id}/tech-skills',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Verify Profile
- *
- * Verify or unverify engineer profile (manager action).
- */
-export const verifyProfileApiEngineersProfileIdVerifyPost = <ThrowOnError extends boolean = false>(options: Options<VerifyProfileApiEngineersProfileIdVerifyPostData, ThrowOnError>) => (options.client ?? client).post<VerifyProfileApiEngineersProfileIdVerifyPostResponses, VerifyProfileApiEngineersProfileIdVerifyPostErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/engineers/{profile_id}/verify',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Upload Skill Sheet
- *
- * Upload and parse skill sheet PDF.
- *
- * The PDF is uploaded to storage and parsed by multimodal LLM.
- */
-export const uploadSkillSheetApiEngineersProfileIdSkillSheetUploadPost = <ThrowOnError extends boolean = false>(options: Options<UploadSkillSheetApiEngineersProfileIdSkillSheetUploadPostData, ThrowOnError>) => (options.client ?? client).post<UploadSkillSheetApiEngineersProfileIdSkillSheetUploadPostResponses, UploadSkillSheetApiEngineersProfileIdSkillSheetUploadPostErrors, ThrowOnError>({
+export const queryAgentApiProjectsProjectIdAgentQueryPost = <ThrowOnError extends boolean = false>(options: Options<QueryAgentApiProjectsProjectIdAgentQueryPostData, ThrowOnError>) => (options.client ?? client).post<QueryAgentApiProjectsProjectIdAgentQueryPostResponses, QueryAgentApiProjectsProjectIdAgentQueryPostErrors, ThrowOnError>({
     ...formDataBodySerializer,
     security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/engineers/{profile_id}/skill-sheet/upload',
+    url: '/api/projects/{project_id}/agent/query',
     ...options,
     headers: {
         'Content-Type': null,
@@ -387,386 +159,51 @@ export const uploadSkillSheetApiEngineersProfileIdSkillSheetUploadPost = <ThrowO
 });
 
 /**
- * Get Upload Status
+ * Get Agent Config
  *
- * Get skill sheet upload status and parsed data.
+ * Get agent configuration and project statistics.
+ *
+ * Args:
+ * project_id: Project ID
+ * _current_user: Authenticated user
+ * _session: Database session
+ *
+ * Returns:
+ * Agent configuration and statistics
  */
-export const getUploadStatusApiEngineersProfileIdSkillSheetUploadIdGet = <ThrowOnError extends boolean = false>(options: Options<GetUploadStatusApiEngineersProfileIdSkillSheetUploadIdGetData, ThrowOnError>) => (options.client ?? client).get<GetUploadStatusApiEngineersProfileIdSkillSheetUploadIdGetResponses, GetUploadStatusApiEngineersProfileIdSkillSheetUploadIdGetErrors, ThrowOnError>({
+export const getAgentConfigApiProjectsProjectIdAgentGet = <ThrowOnError extends boolean = false>(options: Options<GetAgentConfigApiProjectsProjectIdAgentGetData, ThrowOnError>) => (options.client ?? client).get<GetAgentConfigApiProjectsProjectIdAgentGetResponses, GetAgentConfigApiProjectsProjectIdAgentGetErrors, ThrowOnError>({
     security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/engineers/{profile_id}/skill-sheet/{upload_id}',
+    url: '/api/projects/{project_id}/agent',
     ...options
 });
 
 /**
- * List Skill Sheet Uploads
+ * Create a review session
  *
- * List all skill sheet uploads for an engineer.
+ * Create a new content review session.
+ *
+ * This endpoint:
+ * 1. Creates a review session in the database
+ * 2. Spawns a Modal pipeline to process the review
+ * 3. Returns the session immediately (processing continues in background)
+ *
+ * The review pipeline will:
+ * - Fetch the target content from Storage
+ * - Extract entities from the content
+ * - Compare against canonical data in Vespa
+ * - Detect inconsistencies using enabled checkers
+ * - Save detected issues to the database
+ *
+ * Check session status and issues via Supabase directly:
+ * - `supabase.from('review_sessions').select('*').eq('id', sessionId)`
+ * - `supabase.from('review_issues').select('*').eq('session_id', sessionId)`
  */
-export const listSkillSheetUploadsApiEngineersProfileIdSkillSheetGet = <ThrowOnError extends boolean = false>(options: Options<ListSkillSheetUploadsApiEngineersProfileIdSkillSheetGetData, ThrowOnError>) => (options.client ?? client).get<ListSkillSheetUploadsApiEngineersProfileIdSkillSheetGetResponses, ListSkillSheetUploadsApiEngineersProfileIdSkillSheetGetErrors, ThrowOnError>({
+export const createReviewSessionApiProjectsProjectIdReviewsPost = <ThrowOnError extends boolean = false>(options: Options<CreateReviewSessionApiProjectsProjectIdReviewsPostData, ThrowOnError>) => (options.client ?? client).post<CreateReviewSessionApiProjectsProjectIdReviewsPostResponses, CreateReviewSessionApiProjectsProjectIdReviewsPostErrors, ThrowOnError>({
     security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/engineers/{profile_id}/skill-sheet',
-    ...options
-});
-
-/**
- * Apply Parsed Skills
- *
- * Apply parsed skills to engineer profile.
- *
- * User can optionally override parsed values before applying.
- */
-export const applyParsedSkillsApiEngineersProfileIdSkillSheetUploadIdApplyPost = <ThrowOnError extends boolean = false>(options: Options<ApplyParsedSkillsApiEngineersProfileIdSkillSheetUploadIdApplyPostData, ThrowOnError>) => (options.client ?? client).post<ApplyParsedSkillsApiEngineersProfileIdSkillSheetUploadIdApplyPostResponses, ApplyParsedSkillsApiEngineersProfileIdSkillSheetUploadIdApplyPostErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/engineers/{profile_id}/skill-sheet/{upload_id}/apply',
+    url: '/api/projects/{project_id}/reviews',
     ...options,
     headers: {
         'Content-Type': 'application/json',
         ...options.headers
     }
 });
-
-/**
- * List Organization Engineers
- *
- * List all engineers in an organization.
- */
-export const listOrganizationEngineersApiOrganizationsOrgIdEngineersGet = <ThrowOnError extends boolean = false>(options: Options<ListOrganizationEngineersApiOrganizationsOrgIdEngineersGetData, ThrowOnError>) => (options.client ?? client).get<ListOrganizationEngineersApiOrganizationsOrgIdEngineersGetResponses, ListOrganizationEngineersApiOrganizationsOrgIdEngineersGetErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/organizations/{org_id}/engineers',
-    ...options
-});
-
-/**
- * Create Engineer Profile
- *
- * Create a new engineer profile in the organization.
- */
-export const createEngineerProfileApiOrganizationsOrgIdEngineersPost = <ThrowOnError extends boolean = false>(options: Options<CreateEngineerProfileApiOrganizationsOrgIdEngineersPostData, ThrowOnError>) => (options.client ?? client).post<CreateEngineerProfileApiOrganizationsOrgIdEngineersPostResponses, CreateEngineerProfileApiOrganizationsOrgIdEngineersPostErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/organizations/{org_id}/engineers',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * List Project Engineers
- *
- * List all engineers assigned to a project.
- */
-export const listProjectEngineersApiProjectsProjectIdEngineersGet = <ThrowOnError extends boolean = false>(options: Options<ListProjectEngineersApiProjectsProjectIdEngineersGetData, ThrowOnError>) => (options.client ?? client).get<ListProjectEngineersApiProjectsProjectIdEngineersGetResponses, ListProjectEngineersApiProjectsProjectIdEngineersGetErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/projects/{project_id}/engineers',
-    ...options
-});
-
-/**
- * Assign Engineer To Project
- *
- * Assign an engineer to a project.
- */
-export const assignEngineerToProjectApiProjectsProjectIdEngineersPost = <ThrowOnError extends boolean = false>(options: Options<AssignEngineerToProjectApiProjectsProjectIdEngineersPostData, ThrowOnError>) => (options.client ?? client).post<AssignEngineerToProjectApiProjectsProjectIdEngineersPostResponses, AssignEngineerToProjectApiProjectsProjectIdEngineersPostErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/projects/{project_id}/engineers',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Remove Engineer From Project
- *
- * Remove an engineer from a project.
- */
-export const removeEngineerFromProjectApiProjectsProjectIdEngineersEngineerIdDelete = <ThrowOnError extends boolean = false>(options: Options<RemoveEngineerFromProjectApiProjectsProjectIdEngineersEngineerIdDeleteData, ThrowOnError>) => (options.client ?? client).delete<RemoveEngineerFromProjectApiProjectsProjectIdEngineersEngineerIdDeleteResponses, RemoveEngineerFromProjectApiProjectsProjectIdEngineersEngineerIdDeleteErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/projects/{project_id}/engineers/{engineer_id}',
-    ...options
-});
-
-/**
- * Estimate Task
- *
- * Estimate work hours for a single task.
- *
- * Calculates estimation based on:
- * - Task complexity (LLM evaluated)
- * - Engineer skill level (if provided)
- * - Tech stack match between project and engineer
- *
- * Args:
- * task_id: Task UUID to estimate.
- * request: Optional engineer profile for personalized estimation.
- * _current_user: Authenticated user.
- * session: Database session.
- *
- * Returns:
- * Task estimation with factors breakdown.
- */
-export const estimateTaskApiTasksTaskIdEstimatePost = <ThrowOnError extends boolean = false>(options: Options<EstimateTaskApiTasksTaskIdEstimatePostData, ThrowOnError>) => (options.client ?? client).post<EstimateTaskApiTasksTaskIdEstimatePostResponses, EstimateTaskApiTasksTaskIdEstimatePostErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/tasks/{task_id}/estimate',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Estimate Project
- *
- * Estimate work hours for entire project.
- *
- * Aggregates estimations for all tasks in the project.
- *
- * Args:
- * project_id: Project UUID to estimate.
- * request: Estimation options.
- * _current_user: Authenticated user.
- * session: Database session.
- *
- * Returns:
- * Project estimation summary with per-task breakdown.
- */
-export const estimateProjectApiProjectsProjectIdEstimatePost = <ThrowOnError extends boolean = false>(options: Options<EstimateProjectApiProjectsProjectIdEstimatePostData, ThrowOnError>) => (options.client ?? client).post<EstimateProjectApiProjectsProjectIdEstimatePostResponses, EstimateProjectApiProjectsProjectIdEstimatePostErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/projects/{project_id}/estimate',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Get Estimation Report
- *
- * Get estimation report for a project.
- *
- * Returns cached or calculates new estimation for the project.
- *
- * Args:
- * project_id: Project UUID.
- * _current_user: Authenticated user.
- * session: Database session.
- *
- * Returns:
- * Project estimation report.
- */
-export const getEstimationReportApiProjectsProjectIdEstimationReportGet = <ThrowOnError extends boolean = false>(options: Options<GetEstimationReportApiProjectsProjectIdEstimationReportGetData, ThrowOnError>) => (options.client ?? client).get<GetEstimationReportApiProjectsProjectIdEstimationReportGetResponses, GetEstimationReportApiProjectsProjectIdEstimationReportGetErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/projects/{project_id}/estimation-report',
-    ...options
-});
-
-/**
- * Generate Document
- *
- * Generate a new document for a project.
- *
- * Uses AI to generate document content based on project information,
- * story map data, and estimation data (for quotations).
- *
- * Args:
- * project_id: Project UUID.
- * request: Document type to generate.
- * current_user: Authenticated user.
- * session: Database session.
- *
- * Returns:
- * Generated document info with ID and status.
- *
- * Raises:
- * HTTPException: If project not found or validation fails.
- */
-export const generateDocumentApiProjectsProjectIdDocumentsGeneratePost = <ThrowOnError extends boolean = false>(options: Options<GenerateDocumentApiProjectsProjectIdDocumentsGeneratePostData, ThrowOnError>) => (options.client ?? client).post<GenerateDocumentApiProjectsProjectIdDocumentsGeneratePostResponses, GenerateDocumentApiProjectsProjectIdDocumentsGeneratePostErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/projects/{project_id}/documents/generate',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Generate Quotation
- *
- * Generate a quotation with extended options.
- *
- * Uses AI to generate quotation content with client info, factor details,
- * and custom instructions.
- *
- * Args:
- * project_id: Project UUID.
- * request: Quotation generation options.
- * current_user: Authenticated user.
- * session: Database session.
- *
- * Returns:
- * Generated quotation info with ID and status.
- *
- * Raises:
- * HTTPException: If project not found or validation fails.
- */
-export const generateQuotationApiProjectsProjectIdDocumentsGenerateQuotationPost = <ThrowOnError extends boolean = false>(options: Options<GenerateQuotationApiProjectsProjectIdDocumentsGenerateQuotationPostData, ThrowOnError>) => (options.client ?? client).post<GenerateQuotationApiProjectsProjectIdDocumentsGenerateQuotationPostResponses, GenerateQuotationApiProjectsProjectIdDocumentsGenerateQuotationPostErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/projects/{project_id}/documents/generate-quotation',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Regenerate Document
- *
- * Regenerate an existing document.
- *
- * Creates a new version with AI-generated content.
- *
- * Args:
- * document_id: Document UUID.
- * current_user: Authenticated user.
- * session: Database session.
- *
- * Returns:
- * Updated document info with new status.
- *
- * Raises:
- * HTTPException: If document not found or generation fails.
- */
-export const regenerateDocumentApiDocumentsDocumentIdRegeneratePost = <ThrowOnError extends boolean = false>(options: Options<RegenerateDocumentApiDocumentsDocumentIdRegeneratePostData, ThrowOnError>) => (options.client ?? client).post<RegenerateDocumentApiDocumentsDocumentIdRegeneratePostResponses, RegenerateDocumentApiDocumentsDocumentIdRegeneratePostErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/documents/{document_id}/regenerate',
-    ...options
-});
-
-/**
- * Get Project Documents
- *
- * Get all documents for a project.
- *
- * Args:
- * project_id: Project UUID.
- * _current_user: Authenticated user.
- * session: Database session.
- *
- * Returns:
- * List of documents for the project.
- */
-export const getProjectDocumentsApiProjectsProjectIdDocumentsGet = <ThrowOnError extends boolean = false>(options: Options<GetProjectDocumentsApiProjectsProjectIdDocumentsGetData, ThrowOnError>) => (options.client ?? client).get<GetProjectDocumentsApiProjectsProjectIdDocumentsGetResponses, GetProjectDocumentsApiProjectsProjectIdDocumentsGetErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/projects/{project_id}/documents',
-    ...options
-});
-
-/**
- * Get Document By Type
- *
- * Get latest document by project and type.
- *
- * Args:
- * project_id: Project UUID.
- * document_type: Type of document to retrieve.
- * _current_user: Authenticated user.
- * session: Database session.
- *
- * Returns:
- * Latest document of the specified type.
- *
- * Raises:
- * HTTPException: If document not found.
- */
-export const getDocumentByTypeApiProjectsProjectIdDocumentsDocumentTypeGet = <ThrowOnError extends boolean = false>(options: Options<GetDocumentByTypeApiProjectsProjectIdDocumentsDocumentTypeGetData, ThrowOnError>) => (options.client ?? client).get<GetDocumentByTypeApiProjectsProjectIdDocumentsDocumentTypeGetResponses, GetDocumentByTypeApiProjectsProjectIdDocumentsDocumentTypeGetErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/projects/{project_id}/documents/{document_type}',
-    ...options
-});
-
-/**
- * Get Document
- *
- * Get document by ID.
- *
- * Args:
- * document_id: Document UUID.
- * version: Optional specific version (defaults to current).
- * _current_user: Authenticated user.
- * session: Database session.
- *
- * Returns:
- * Document with content.
- *
- * Raises:
- * HTTPException: If document not found.
- */
-export const getDocumentApiDocumentsDocumentIdGet = <ThrowOnError extends boolean = false>(options: Options<GetDocumentApiDocumentsDocumentIdGetData, ThrowOnError>) => (options.client ?? client).get<GetDocumentApiDocumentsDocumentIdGetResponses, GetDocumentApiDocumentsDocumentIdGetErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/documents/{document_id}',
-    ...options
-});
-
-/**
- * Update Document
- *
- * Update document content.
- *
- * Creates a new version with the provided content.
- *
- * Args:
- * document_id: Document UUID.
- * request: New content and optional change summary.
- * current_user: Authenticated user.
- * session: Database session.
- *
- * Returns:
- * Updated document.
- *
- * Raises:
- * HTTPException: If document not found.
- */
-export const updateDocumentApiDocumentsDocumentIdPut = <ThrowOnError extends boolean = false>(options: Options<UpdateDocumentApiDocumentsDocumentIdPutData, ThrowOnError>) => (options.client ?? client).put<UpdateDocumentApiDocumentsDocumentIdPutResponses, UpdateDocumentApiDocumentsDocumentIdPutErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/documents/{document_id}',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});
-
-/**
- * Get Document Versions
- *
- * Get all versions of a document.
- *
- * Args:
- * document_id: Document UUID.
- * _current_user: Authenticated user.
- * session: Database session.
- *
- * Returns:
- * List of document versions.
- *
- * Raises:
- * HTTPException: If document not found.
- */
-export const getDocumentVersionsApiDocumentsDocumentIdVersionsGet = <ThrowOnError extends boolean = false>(options: Options<GetDocumentVersionsApiDocumentsDocumentIdVersionsGetData, ThrowOnError>) => (options.client ?? client).get<GetDocumentVersionsApiDocumentsDocumentIdVersionsGetResponses, GetDocumentVersionsApiDocumentsDocumentIdVersionsGetErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/documents/{document_id}/versions',
-    ...options
-});
-
-/**
- * Healthcheck
- *
- * Health check endpoint.
- */
-export const healthcheckHealthcheckGet = <ThrowOnError extends boolean = false>(options?: Options<HealthcheckHealthcheckGetData, ThrowOnError>) => (options?.client ?? client).get<HealthcheckHealthcheckGetResponses, unknown, ThrowOnError>({ url: '/healthcheck', ...options });
