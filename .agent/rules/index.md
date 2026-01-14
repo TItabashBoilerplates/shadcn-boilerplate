@@ -65,13 +65,23 @@ This directory contains guidelines for Antigravity Agent when working in this re
     - RLS policy testing requirements
     - CI/CD integration
 
+11. **[UI Testing Policy](./ui-testing.md)** ⚠️ **MUST READ**
+    - UI コンポーネントは Storybook で品質担保
+    - 単体テスト不要な対象範囲
+    - Storybook 必須要件
+
+12. **[Clean Code Policy](./clean-code.md)** ⚠️ **MUST READ**
+    - 後方互換コードの扱い（原則：保持しない）
+    - 重複コードの禁止
+    - 未使用コードの削除
+
 ### Environment Configuration
 
-11. **[Environment Configuration](./environment.md)**
+13. **[Environment Configuration](./environment.md)**
     - Environment variable management
     - dotenvx usage
 
-12. **[Special Notes](./special-notes.md)**
+14. **[Special Notes](./special-notes.md)**
     - Type generation
     - AI/ML features
     - Authentication
@@ -94,5 +104,7 @@ For detailed information, refer to the following documentation:
 2. **Use Makefile commands** - Do not execute tools directly
 3. **Database migrations require manual approval** - No automatic execution
 4. **Test-Driven Development (TDD) is mandatory** - Write tests before implementation
-5. **Use supabase-test for Supabase API testing** - Test all RLS policies
-6. **Use TailwindCSS CSS variables** - No hardcoded colors
+5. **UI components use Storybook, not unit tests** - See `ui-testing.md`
+6. **Use supabase-test for Supabase API testing** - Test all RLS policies
+7. **Clean Code Policy** - No backward compatibility, no duplication, no unused code
+8. **Use TailwindCSS CSS variables** - No hardcoded colors

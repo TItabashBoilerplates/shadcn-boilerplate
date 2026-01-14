@@ -4,6 +4,18 @@
 
 **MANDATORY**: All frontend development MUST follow Test-Driven Development (TDD) practices.
 
+### UI Components Exception
+
+**UI コンポーネントは単体テスト不要。代わりに Storybook で品質担保。**
+
+詳細は **[UI Testing Policy](./ui-testing.md)** を参照。
+
+| 対象 | テスト方法 |
+|------|-----------|
+| UI コンポーネント | Storybook（単体テスト不要） |
+| ビジネスロジック | 単体テスト（TDD 必須） |
+| API / データ取得 | 単体テスト（TDD 必須） |
+
 ### TDD Principles
 
 1. **Red**: Write a failing test first

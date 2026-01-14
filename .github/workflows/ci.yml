@@ -27,7 +27,7 @@ jobs:
       - name: Setup Deno
         uses: denoland/setup-deno@v2
         with:
-          deno-version: "2.5.6"
+          deno-version: "2.1.4"
 
       - name: Install Frontend dependencies
         run: |
@@ -77,7 +77,7 @@ jobs:
       - name: Setup Deno
         uses: denoland/setup-deno@v2
         with:
-          deno-version: "2.5.6"
+          deno-version: "2.1.4"
 
       - name: Install Frontend dependencies
         run: |
