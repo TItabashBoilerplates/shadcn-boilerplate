@@ -4,39 +4,74 @@
 
 This is a full-stack application boilerplate with a multi-platform frontend and backend services:
 
-- **Frontend**: Next.js 16, shadcn/ui, TailwindCSS 4, Bun
-- **Backend**: FastAPI (Python) with Supabase Edge Functions
+- **Frontend (Web)**: Next.js 16, React 19, shadcn/ui, TailwindCSS 4, Bun
+- **Frontend (Mobile)**: Expo 55, React Native 0.82, gluestack-ui, NativeWind 5
+- **Backend**: FastAPI (Python) with Supabase Edge Functions (Deno)
 - **Database**: PostgreSQL with Drizzle ORM for schema management and pgvector extension
+
+## Tech Stack
+
+| Layer                 | Technology                                       |
+| --------------------- | ------------------------------------------------ |
+| **Frontend (Web)**    | Next.js 16, React 19, TypeScript, Bun            |
+| **Frontend (Mobile)** | Expo 55, React Native 0.82, TypeScript           |
+| **UI (Web)**          | shadcn/ui, MagicUI, Radix UI, TailwindCSS 4      |
+| **UI (Mobile)**       | gluestack-ui, NativeWind 5, TailwindCSS 4        |
+| **State**             | TanStack Query v5 (server), Zustand (global)     |
+| **Architecture**      | Feature Sliced Design (FSD)                      |
+| **i18n**              | next-intl (en, ja)                               |
+| **Backend**           | FastAPI (Python), Supabase Edge Functions (Deno) |
+| **Database**          | PostgreSQL, Drizzle ORM, pgvector                |
+| **Auth**              | Supabase Auth                                    |
 
 ## Project Structure Highlights
 
 ### Monorepo Configuration
 
-このプロジェクトは**ルートに package.json を持たない**独立型モノレポ構成です：
+This project uses an **independent monorepo structure without a root package.json**:
 
-- **`drizzle/`**: データベーススキーマ管理（独立パッケージ、Bun 管理）
-- **`frontend/`**: Next.js 16 モノレポ（Bun workspace、Turbo build system）
-- **`backend-py/`**: Python FastAPI（uv 管理、独立）
+- **`drizzle/`**: Database schema management (independent package, Bun)
+- **`frontend/`**: Next.js 16 + Expo monorepo (Bun workspace, Turbo build system)
+- **`backend-py/`**: Python FastAPI (uv, independent)
 
-各ディレクトリが独自の依存関係と node_modules/を持ち、クリーンに分離されています。
+Each directory has its own dependencies and node_modules/, cleanly separated.
 
 ### Package Managers
 
-用途に応じて最適なパッケージマネージャーを使用：
+Using optimal package managers for each component:
 
-- **Frontend**: Bun 1.2.8（高速、Node.js 互換）
-- **Backend Python**: uv（Rust 製、高速な依存関係管理）
-- **Drizzle**: Bun（frontend と同様）
-- **Edge Functions**: Deno（組み込みパッケージマネージャー）
+- **Frontend**: Bun 1.2.8 (fast, Node.js compatible)
+- **Backend Python**: uv (Rust-based, fast dependency management)
+- **Drizzle**: Bun (same as frontend)
+- **Edge Functions**: Deno 2.5.6 (built-in package manager)
+
+### Frontend Packages
+
+The frontend monorepo (`frontend/packages/`) contains the following shared packages:
+
+| Package | Description |
+|---------|-------------|
+| `@workspace/ui-web` | shadcn/ui + MagicUI components for web |
+| `@workspace/ui-mobile` | gluestack-ui components for mobile |
+| `@workspace/types` | Supabase types (auto-generated) |
+| `@workspace/api-client` | Backend API client (Hey API + TanStack Query) |
+| `@workspace/auth` | Authentication utilities |
+| `@workspace/tokens` | Design tokens (colors, spacing) |
+| `@workspace/query` | TanStack Query configuration |
+| `@workspace/client` | Supabase client (@supabase/ssr) |
+| `@workspace/logger` | Logging (Pino) |
+| `@workspace/polar` | Polar.sh payment integration |
+| `@workspace/onesignal` | OneSignal push notifications |
+| `@workspace/utils` | Utility functions |
 
 ### Unified Code Quality
 
-全プロジェクトで統一されたコード品質管理：
+Unified code quality management across all projects:
 
-- **Frontend & Drizzle**: Biome（ESLint + Prettier の高速な代替）
-- **Backend Python**: Ruff（lint） + MyPy（型チェック）
+- **Frontend & Drizzle**: Biome (fast ESLint + Prettier alternative)
+- **Backend Python**: Ruff (lint) + MyPy (type check)
 - **Edge Functions**: Deno native tools
-- **統合コマンド**: `make lint`, `make format`, `make ci-check`
+- **Unified Commands**: `make lint`, `make format`, `make ci-check`
 
 ## Development Environment
 
@@ -51,9 +86,11 @@ By adopting these environments, we can ensure efficient development and maintain
 
 ### Frontend Architecture
 
-- **Application**: Next.js 16 with App Router and Turbopack for development
+- **Web Application**: Next.js 16 with App Router and Turbopack for development
+- **Mobile Application**: Expo 55 with React Native 0.82 and Expo Router
 - **Architecture**: Feature-Sliced Design (FSD) methodology with strict layer organization
-- **UI Framework**: shadcn/ui components built on Radix UI with TailwindCSS 4
+- **UI Framework (Web)**: shadcn/ui + MagicUI components built on Radix UI with TailwindCSS 4
+- **UI Framework (Mobile)**: gluestack-ui components with NativeWind 5 (TailwindCSS for React Native)
 - **Tech Stack**: React 19, TypeScript, Bun package manager
 - **Build System**: Turbo for monorepo management
 
@@ -165,7 +202,7 @@ After successfully completing the setup, you can start the application using one
   make stop
   ```
 
-### Frontend Development
+### Frontend Development (Web)
 
 - Start web frontend (Next.js):
 
@@ -179,63 +216,74 @@ After successfully completing the setup, you can start the application using one
   bun run dev    # Next.js development server with Turbopack
   bun run build  # Build production application
   bun run start  # Start production server
-  bun run lint   # Run ESLint
+  bun run lint   # Run Biome lint
+  ```
+
+### Frontend Development (Mobile)
+
+- Start mobile frontend (Expo):
+
+  ```bash
+  cd frontend/apps/mobile
+  bun run start    # Start Expo development server
+  bun run ios      # Start iOS simulator
+  bun run android  # Start Android emulator
   ```
 
 ## Additional Commands
 
 ### Code Quality Management
 
-このプロジェクトでは、全コンポーネント（Frontend, Drizzle, Backend Python, Edge Functions）で統一されたコード品質管理を実現しています。
+This project implements unified code quality management across all components (Frontend, Drizzle, Backend Python, Edge Functions).
 
-#### Unified Commands (推奨)
+#### Unified Commands (Recommended)
 
-全プロジェクトを一括で管理するコマンド：
+Commands to manage all projects at once:
 
 ```bash
-make lint           # 全プロジェクトのlint（自動修正）
-make format         # 全プロジェクトのformat（自動修正）
-make format-check   # 全プロジェクトのformatチェック（CI用、修正なし）
-make type-check     # 全プロジェクトの型チェック
-make ci-check       # CI用の全チェック（lint + format + type-check）
+make lint           # Lint all projects (auto-fix)
+make format         # Format all projects (auto-fix)
+make format-check   # Format check all projects (CI, no fix)
+make type-check     # Type check all projects
+make ci-check       # CI checks (lint + format + type-check)
 ```
 
 #### Frontend Specific (Biome)
 
 ```bash
-make lint-frontend           # Biome lint（自動修正）
-make lint-frontend-ci        # Biome lint（CI用、修正なし）
-make format-frontend         # Biome format（自動修正）
-make format-frontend-check   # Biome formatチェック（チェックのみ）
-make type-check-frontend     # TypeScript型チェック
+make lint-frontend           # Biome lint (auto-fix)
+make lint-frontend-ci        # Biome lint (CI, no fix)
+make format-frontend         # Biome format (auto-fix)
+make format-frontend-check   # Biome format check
+make type-check-frontend     # TypeScript type check
 ```
 
 #### Drizzle Specific (Biome)
 
 ```bash
-make lint-drizzle            # Biome lint（自動修正）
-make lint-drizzle-ci         # Biome lint（CI用、修正なし）
-make format-drizzle          # Biome format（自動修正）
-make format-drizzle-check    # Biome formatチェック（チェックのみ）
+make lint-drizzle            # Biome lint (auto-fix)
+make lint-drizzle-ci         # Biome lint (CI, no fix)
+make format-drizzle          # Biome format (auto-fix)
+make format-drizzle-check    # Biome format check
 ```
 
 #### Backend Python Specific (Ruff + MyPy)
 
 ```bash
-make lint-backend-py         # Ruff lint（自動修正）
-make lint-backend-py-ci      # Ruff lint（CI用、修正なし）
-make format-backend-py       # Ruff format（自動修正）
-make format-backend-py-check # Ruff formatチェック（チェックのみ）
-make type-check-backend-py   # MyPy型チェック（strict mode）
+make lint-backend-py         # Ruff lint (auto-fix)
+make lint-backend-py-ci      # Ruff lint (CI, no fix)
+make format-backend-py       # Ruff format (auto-fix)
+make format-backend-py-check # Ruff format check
+make type-check-backend-py   # MyPy type check (strict mode)
 ```
 
 #### Edge Functions Specific (Deno)
 
 ```bash
 make lint-functions          # Deno lint
-make format-functions        # Deno format（自動修正）
-make format-functions-check  # Deno formatチェック（チェックのみ）
-make check-functions         # Deno型チェック（全関数自動検出）
+make format-functions        # Deno format (auto-fix)
+make format-functions-check  # Deno format check
+make check-functions         # Deno type check (all functions auto-detected)
 ```
 
 ### Development Tools
@@ -255,43 +303,43 @@ make check-functions         # Deno型チェック（全関数自動検出）
 
 ### Database Operations
 
-このプロジェクトは Drizzle ORM でデータベーススキーマを管理しています。
+This project manages database schema with Drizzle ORM.
 
-**開発環境（ローカル）**:
+**Development (Local)**:
 
 ```bash
-# マイグレーション生成 + 適用 + 型生成（推奨）
+# Generate + Apply migration + Generate types (recommended)
 make migrate-dev
-# または短縮形
+# Or shorthand
 make migration
 
-# スキーマを直接DBにプッシュ（プロトタイピング用）
+# Push schema directly to DB (for prototyping)
 make drizzle-push
 
-# Drizzle Studio起動（GUI）
+# Start Drizzle Studio (GUI)
 make drizzle-studio
 
-# スキーマ検証
+# Validate schema
 make drizzle-validate
 ```
 
-**本番環境（リモート）**:
+**Production (Remote)**:
 
 ```bash
-# ステージング環境
+# Staging environment
 ENV=stg make migrate-deploy
 
-# 本番環境
+# Production environment
 ENV=prod make migrate-deploy
 ```
 
-**コマンドの使い分け**:
+**Command Usage**:
 
-- `make migration` / `make migrate-dev`: ローカル開発用。スキーマ変更 → マイグレーション生成 → 適用 → 型生成を一括実行
-- `make migrate-deploy`: リモート環境用。既存のマイグレーションファイルを適用するのみ
-- `make drizzle-push`: マイグレーションファイルを生成せずにスキーマを直接プッシュ（実験・プロトタイピング用）
+- `make migration` / `make migrate-dev`: For local development. Schema changes → Generate migration → Apply → Generate types in one go
+- `make migrate-deploy`: For remote environments. Only apply existing migration files
+- `make drizzle-push`: Push schema directly without generating migration files (for experimentation/prototyping)
 
-詳細は `CLAUDE.md` の「Drizzle Schema Management」セクションを参照してください。
+For details, see the "Drizzle Schema Management" section in `CLAUDE.md`.
 
 ### Model Generation
 
@@ -321,23 +369,23 @@ ENV=prod make migrate-deploy
 
 ### Deployment (Remote)
 
-Supabase リソースをリモート環境（stg/prod）にデプロイ：
+Deploy Supabase resources to remote environments (stg/prod):
 
 ```bash
-# 1. Supabase プラットフォーム設定（Config, Buckets, Functions, Secrets）
+# 1. Supabase platform settings (Config, Buckets, Functions, Secrets)
 ENV=stg make deploy-supabase
 
-# 2. DBマイグレーション
+# 2. DB migration
 ENV=stg make migrate-deploy
 ```
 
-**deploy-supabase で反映される内容**:
-- Config（Auth設定、API設定） - `supabase config push`
+**What deploy-supabase applies**:
+- Config (Auth settings, API settings) - `supabase config push`
 - Storage Buckets - `supabase seed buckets`
-- Edge Functions（全関数） - `supabase functions deploy`
+- Edge Functions (all functions) - `supabase functions deploy`
 - Secrets - `supabase secrets set`
 
-詳細は `.claude/skills/supabase/deploy.md` を参照。
+For details, see `.claude/skills/supabase/deploy.md`.
 
 # Development Guidelines
 
@@ -346,7 +394,8 @@ ENV=stg make migrate-deploy
 - **Frontend**: Biome for linting and formatting (all-in-one toolchain, replaces ESLint + Prettier), TypeScript strict mode
 - **Backend**: Ruff for linting (line length: 88), MyPy for type checking
 - **Edge Functions**: Deno native tools, `npm:` prefix for dependencies (not JSR or HTTP imports)
-- **UI Design**: shadcn/ui components (Radix UI) with TailwindCSS 4 and CSS variables
+- **UI Design (Web)**: shadcn/ui + MagicUI components (Radix UI) with TailwindCSS 4 and CSS variables
+- **UI Design (Mobile)**: gluestack-ui components with NativeWind 5
 - **Package Manager**: Bun for fast dependency management
 - **Build System**: Turbo for efficient monorepo builds
 
@@ -361,27 +410,36 @@ ENV=stg make migrate-deploy
 The project includes integrations for:
 
 - **[Next.js 16](https://nextjs.org/)**: React framework with App Router and Turbopack
-- **[shadcn/ui](https://ui.shadcn.com/)**: UI component library built on Radix UI
+- **[Expo 55](https://expo.dev/)**: React Native development platform
+- **[shadcn/ui](https://ui.shadcn.com/)**: UI component library built on Radix UI (Web)
+- **[MagicUI](https://magicui.design/)**: Animated UI components (Web)
+- **[gluestack-ui](https://gluestack.io/)**: UI component library (Mobile)
+- **[NativeWind 5](https://www.nativewind.dev/)**: TailwindCSS for React Native
 - **[TailwindCSS 4](https://tailwindcss.com/)**: Utility-first CSS framework
+- **[TanStack Query v5](https://tanstack.com/query)**: Server state management
+- **[Zustand](https://zustand-demo.pmnd.rs/)**: Global state management
+- **[next-intl](https://next-intl-docs.vercel.app/)**: Internationalization (en, ja)
 - **[Supabase](https://supabase.com/)**: Authentication, database, and Edge Functions
 - **[Drizzle ORM](https://orm.drizzle.team/)**: TypeScript ORM with declarative schema management
 - **[FastAPI](https://fastapi.tiangolo.com/)**: Python backend framework
 - **[Bun](https://bun.sh/)**: Fast package manager and JavaScript runtime
 - **[Turbo](https://turbo.build/)**: High-performance build system for monorepos
 - **[Docker](https://docker.com/)**: Containerization for consistent development environments
+- **[Polar.sh](https://polar.sh/)**: Payment and subscription management
+- **[OneSignal](https://onesignal.com/)**: Push notification service
 
 ### AI Coding Assistants
 
-このプロジェクトは、主要な AI コーディングアシスタントに最適化されています：
+This project is optimized for major AI coding assistants:
 
-- **[Claude Code](https://claude.com/claude-code)**: `CLAUDE.md` で詳細なガイドラインを提供
-- **[Cursor](https://cursor.com/)**: `.cursorrules` ファイルでプロジェクト固有のルールを定義
-- **[OpenAI Codex](https://openai.com/codex)**: `AGENTS.md` を自動検出し、`gpt-5-codex` モデルを使用
-  - セットアップガイド: `docs/codex-setup.md`
-  - 設定例: `.codex/config.toml.example`
-- **GitHub Copilot**: `AGENTS.md` でプロジェクトコンテキストを提供
+- **[Claude Code](https://claude.com/claude-code)**: Provides detailed guidelines via `CLAUDE.md`
+- **[Cursor](https://cursor.com/)**: Defines project-specific rules via `.cursorrules` file
+- **[OpenAI Codex](https://openai.com/codex)**: Auto-detects `AGENTS.md`, uses `gpt-5-codex` model
+  - Setup guide: `docs/codex-setup.md`
+  - Config example: `.codex/config.toml.example`
+- **GitHub Copilot**: Provides project context via `AGENTS.md`
 
-各 AI アシスタントは、プロジェクトのアーキテクチャ、コーディング規約、ベストプラクティスを自動的に理解します。
+Each AI assistant automatically understands the project's architecture, coding conventions, and best practices.
 
 ## Future Considerations
 
@@ -390,6 +448,4 @@ The following tools are being considered for implementation:
 - **[Resend](https://resend.com/)**: Email delivery service
 - **[Sentry](https://sentry.io/)**: Application monitoring and error tracking
 - **[Stripe](https://stripe.com/)**: Payment processing platform
-- **[Polar.sh](https://polar.sh/)**: Payment processing platform
-- **[One Signal](https://onesignal.com/)**: Push notification
 - **[RevenueCat](https://www.revenuecat.com/)**: Subscription management for mobile apps
