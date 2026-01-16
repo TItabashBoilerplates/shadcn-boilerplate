@@ -17,63 +17,63 @@ class TestGetLogLevel:
         """Default log level should be INFO when LOG_LEVEL is not set."""
         with patch.dict(os.environ, {}, clear=True):
             os.environ.pop("LOG_LEVEL", None)
-            from infra.logging import get_log_level
+            from util.logging import get_log_level
 
             # Re-import to get fresh value
             import importlib
 
-            import infra.logging
+            import util.logging
 
-            importlib.reload(infra.logging)
-            assert infra.logging.get_log_level() == logging.INFO
+            importlib.reload(util.logging)
+            assert util.logging.get_log_level() == logging.INFO
 
     def test_debug_level(self):
         """LOG_LEVEL=DEBUG should return DEBUG level."""
         with patch.dict(os.environ, {"LOG_LEVEL": "DEBUG"}):
-            from infra.logging import get_log_level
+            from util.logging import get_log_level
 
             import importlib
 
-            import infra.logging
+            import util.logging
 
-            importlib.reload(infra.logging)
-            assert infra.logging.get_log_level() == logging.DEBUG
+            importlib.reload(util.logging)
+            assert util.logging.get_log_level() == logging.DEBUG
 
     def test_warning_level(self):
         """LOG_LEVEL=WARNING should return WARNING level."""
         with patch.dict(os.environ, {"LOG_LEVEL": "WARNING"}):
-            from infra.logging import get_log_level
+            from util.logging import get_log_level
 
             import importlib
 
-            import infra.logging
+            import util.logging
 
-            importlib.reload(infra.logging)
-            assert infra.logging.get_log_level() == logging.WARNING
+            importlib.reload(util.logging)
+            assert util.logging.get_log_level() == logging.WARNING
 
     def test_case_insensitive(self):
         """LOG_LEVEL should be case insensitive."""
         with patch.dict(os.environ, {"LOG_LEVEL": "error"}):
-            from infra.logging import get_log_level
+            from util.logging import get_log_level
 
             import importlib
 
-            import infra.logging
+            import util.logging
 
-            importlib.reload(infra.logging)
-            assert infra.logging.get_log_level() == logging.ERROR
+            importlib.reload(util.logging)
+            assert util.logging.get_log_level() == logging.ERROR
 
     def test_invalid_level_defaults_to_info(self):
         """Invalid LOG_LEVEL should default to INFO."""
         with patch.dict(os.environ, {"LOG_LEVEL": "INVALID"}):
-            from infra.logging import get_log_level
+            from util.logging import get_log_level
 
             import importlib
 
-            import infra.logging
+            import util.logging
 
-            importlib.reload(infra.logging)
-            assert infra.logging.get_log_level() == logging.INFO
+            importlib.reload(util.logging)
+            assert util.logging.get_log_level() == logging.INFO
 
 
 class TestIsDevelopment:
@@ -88,10 +88,10 @@ class TestIsDevelopment:
             os.environ.pop("LOG_FORMAT", None)
             import importlib
 
-            import infra.logging
+            import util.logging
 
-            importlib.reload(infra.logging)
-            assert infra.logging.is_development() is True
+            importlib.reload(util.logging)
+            assert util.logging.is_development() is True
 
     def test_log_format_pretty_returns_true(self):
         """When LOG_FORMAT=pretty, should return True."""
@@ -101,10 +101,10 @@ class TestIsDevelopment:
         ):
             import importlib
 
-            import infra.logging
+            import util.logging
 
-            importlib.reload(infra.logging)
-            assert infra.logging.is_development() is True
+            importlib.reload(util.logging)
+            assert util.logging.is_development() is True
 
     def test_non_tty_and_json_format_returns_false(self):
         """When not TTY and LOG_FORMAT=json, should return False."""
@@ -114,10 +114,10 @@ class TestIsDevelopment:
         ):
             import importlib
 
-            import infra.logging
+            import util.logging
 
-            importlib.reload(infra.logging)
-            assert infra.logging.is_development() is False
+            importlib.reload(util.logging)
+            assert util.logging.is_development() is False
 
 
 class TestRequestContext:
@@ -125,7 +125,7 @@ class TestRequestContext:
 
     def test_set_and_get_request_context(self):
         """Should set and retrieve request context."""
-        from infra.logging import (
+        from util.logging import (
             clear_request_context,
             request_id_var,
             set_request_context,
@@ -143,7 +143,7 @@ class TestRequestContext:
 
     def test_set_request_context_without_user_id(self):
         """Should set request context without user_id."""
-        from infra.logging import (
+        from util.logging import (
             clear_request_context,
             request_id_var,
             set_request_context,
@@ -161,7 +161,7 @@ class TestRequestContext:
 
     def test_clear_request_context(self):
         """Should clear all request context."""
-        from infra.logging import (
+        from util.logging import (
             clear_request_context,
             request_id_var,
             set_request_context,
@@ -182,7 +182,7 @@ class TestAddRequestContext:
         """Should add request_id to event dict when set."""
         from typing import Any
 
-        from infra.logging import (
+        from util.logging import (
             add_request_context,
             clear_request_context,
             request_id_var,
@@ -201,7 +201,7 @@ class TestAddRequestContext:
         """Should add user_id to event dict when set."""
         from typing import Any
 
-        from infra.logging import (
+        from util.logging import (
             add_request_context,
             clear_request_context,
             request_id_var,
@@ -222,7 +222,7 @@ class TestAddRequestContext:
         """Should not add fields when context is not set."""
         from typing import Any
 
-        from infra.logging import add_request_context, clear_request_context
+        from util.logging import add_request_context, clear_request_context
 
         clear_request_context()
 
@@ -238,7 +238,7 @@ class TestGetLogger:
 
     def test_returns_bound_logger(self):
         """Should return a structlog BoundLogger."""
-        from infra.logging import configure_logging, get_logger
+        from util.logging import configure_logging, get_logger
 
         configure_logging()
         logger = get_logger("test.module")
@@ -252,7 +252,7 @@ class TestGetLogger:
 
     def test_logger_with_no_name(self):
         """Should return logger without name."""
-        from infra.logging import configure_logging, get_logger
+        from util.logging import configure_logging, get_logger
 
         configure_logging()
         logger = get_logger()
@@ -265,7 +265,7 @@ class TestConfigureLogging:
 
     def test_configures_structlog(self):
         """Should configure structlog without errors."""
-        from infra.logging import configure_logging
+        from util.logging import configure_logging
 
         # Should not raise any exceptions
         configure_logging()
@@ -284,10 +284,10 @@ class TestConfigureLogging:
             os.environ.pop("LOG_FORMAT", None)
             import importlib
 
-            import infra.logging
+            import util.logging
 
-            importlib.reload(infra.logging)
-            infra.logging.configure_logging()
+            importlib.reload(util.logging)
+            util.logging.configure_logging()
 
             config = structlog.get_config()
             # Last processor should be ConsoleRenderer in dev mode
@@ -302,10 +302,10 @@ class TestConfigureLogging:
         ):
             import importlib
 
-            import infra.logging
+            import util.logging
 
-            importlib.reload(infra.logging)
-            infra.logging.configure_logging()
+            importlib.reload(util.logging)
+            util.logging.configure_logging()
 
             config = structlog.get_config()
             # Last processor should be JSONRenderer in prod mode

@@ -7,7 +7,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from infra.logging import configure_logging, request_id_var, user_id_var
+from util.logging import configure_logging, request_id_var, user_id_var
 from middleware.logging_middleware import LoggingMiddleware
 
 
@@ -60,7 +60,7 @@ class TestLoggingMiddleware:
 
     def test_clears_context_after_request(self, client):
         """Should clear request context after request completes."""
-        from infra.logging import clear_request_context
+        from util.logging import clear_request_context
 
         clear_request_context()
 
@@ -73,7 +73,7 @@ class TestLoggingMiddleware:
 
     def test_clears_context_after_error(self, client):
         """Should clear request context even when error occurs."""
-        from infra.logging import clear_request_context
+        from util.logging import clear_request_context
 
         clear_request_context()
 
@@ -89,10 +89,10 @@ class TestLoggingMiddleware:
         with patch.dict(os.environ, {"LOG_FORMAT": "pretty"}):
             import importlib
 
-            import infra.logging
+            import util.logging
 
-            importlib.reload(infra.logging)
-            infra.logging.configure_logging()
+            importlib.reload(util.logging)
+            util.logging.configure_logging()
 
             response = client.get("/test")
             assert response.status_code == 200

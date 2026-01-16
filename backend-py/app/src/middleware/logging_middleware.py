@@ -7,7 +7,7 @@ from collections.abc import Awaitable, Callable
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from infra.logging import clear_request_context, get_logger, set_request_context
+from util.logging import clear_request_context, get_logger, set_request_context
 
 logger = get_logger(__name__)
 

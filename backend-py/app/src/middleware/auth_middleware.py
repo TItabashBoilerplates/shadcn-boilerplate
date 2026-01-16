@@ -4,8 +4,8 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import APIKeyHeader
 from supabase_auth.types import User
 
-from infra.logging import get_logger
 from infra.supabase_client import SupabaseClient
+from util.logging import get_logger
 
 authorization_header = APIKeyHeader(name="Authorization", auto_error=True)
 

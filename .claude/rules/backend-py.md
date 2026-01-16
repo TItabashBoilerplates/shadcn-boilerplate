@@ -18,8 +18,9 @@ backend-py/app/src/
 ├── usecase/          # Business logic
 ├── gateway/          # Data access interfaces
 ├── domain/           # Entities, models (sqlacodegen generated)
-├── infra/            # External dependencies (DB, API, Supabase)
-└── middleware/       # Auth, CORS, logging
+├── infra/            # External system connections (DB, API, Supabase)
+├── util/             # Cross-cutting utilities (logging, etc.)
+└── middleware/       # Auth, CORS, request processing
 ```
 
 ## Responsibility Separation
@@ -27,7 +28,8 @@ backend-py/app/src/
 - **Controllers**: HTTP layer only, no business logic
 - **Use Cases**: Business logic, orchestration
 - **Gateways**: Data access abstraction (interface definitions)
-- **Infrastructure**: Gateway implementations, external system integration
+- **Infrastructure**: External system connections (DB, Supabase, external APIs)
+- **Util**: Cross-cutting utilities (logging configuration, etc.)
 - **Domain**: Entities, Value Objects
 
 ## DRY Principle (MANDATORY)
@@ -40,8 +42,10 @@ backend-py/app/src/
 |------|---------|-----|
 | **エンティティ・型定義** | `domain/entity/` | models.py, types |
 | **Gateway インターフェース** | `gateway/` | 抽象化されたデータアクセス |
-| **共通ユーティリティ** | `infra/` or `domain/service/` | 再利用可能なロジック |
-| **ミドルウェア** | `middleware/` | 認証、ロギング |
+| **ドメインサービス** | `domain/service/` | ビジネスロジック |
+| **横断的ユーティリティ** | `util/` | logging設定など |
+| **外部システム接続** | `infra/` | DB, Supabase, 外部API |
+| **ミドルウェア** | `middleware/` | 認証、リクエスト処理 |
 
 ### 禁止事項
 
@@ -84,7 +88,8 @@ from src.infra.supabase_client import SupabaseClient
 1. **既存の Gateway に同様の操作があるか？** → あれば再利用
 2. **他の UseCase でも使う可能性があるか？** → Gateway に実装
 3. **ドメインロジックが重複していないか？** → Domain Service に共通化
-4. **インフラ接続が重複していないか？** → infra/ に一元化
+4. **外部システム接続が重複していないか？** → infra/ に一元化
+5. **横断的ユーティリティが重複していないか？** → util/ に一元化
 
 ## Code Style
 

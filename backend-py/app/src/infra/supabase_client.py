@@ -7,7 +7,7 @@ from supabase import Client, create_client
 from supabase_auth.types import User
 
 from domain.exceptions import AuthenticationError, ConfigurationError
-from infra.logging import get_logger
+from util.logging import get_logger
 
 logger = get_logger(__name__)
 
