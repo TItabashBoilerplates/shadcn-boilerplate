@@ -45,6 +45,18 @@ Using optimal package managers for each component:
 - **Drizzle**: Bun (same as frontend)
 - **Edge Functions**: Deno 2.5.6 (built-in package manager)
 
+### ni Commands (Package Manager Abstraction)
+
+このプロジェクトでは [ni](https://github.com/antfu-collective/ni) を使用してパッケージマネージャーを抽象化しています。内部では Bun が使用されますが、コマンドは `ni`/`nr`/`nlx` を使用してください。
+
+| ni              | Bun equivalent       | 説明                           |
+| --------------- | -------------------- | ------------------------------ |
+| `ni`            | `bun install`        | 依存関係をインストール         |
+| `ni package`    | `bun add package`    | パッケージを追加               |
+| `ni -D package` | `bun add -d package` | 開発依存として追加             |
+| `nr script`     | `bun run script`     | package.json のスクリプト実行  |
+| `nlx command`   | `bunx command`       | パッケージを一時的に実行       |
+
 ### Frontend Packages
 
 The frontend monorepo (`frontend/packages/`) contains the following shared packages:
@@ -151,7 +163,7 @@ To set up the project environment, follow these steps:
    5. Log in to Supabase CLI and initialize Supabase
    6. Start Supabase local development environment
    7. Copy `env/secrets.env.example` to `env/secrets.env` (if not exists)
-   8. Install frontend dependencies with Bun
+   8. Install frontend dependencies with ni (uses Bun internally)
    9. Run initial database migration and type generation
 
 2. **Environment Variable Setup**:
@@ -213,10 +225,10 @@ After successfully completing the setup, you can start the application using one
 - Or directly inside `frontend/` directory:
   ```bash
   cd frontend
-  bun run dev    # Next.js development server with Turbopack
-  bun run build  # Build production application
-  bun run start  # Start production server
-  bun run lint   # Run Biome lint
+  nr dev    # Next.js development server with Turbopack
+  nr build  # Build production application
+  nr start  # Start production server
+  nr lint   # Run Biome lint
   ```
 
 ### Frontend Development (Mobile)
@@ -225,9 +237,9 @@ After successfully completing the setup, you can start the application using one
 
   ```bash
   cd frontend/apps/mobile
-  bun run start    # Start Expo development server
-  bun run ios      # Start iOS simulator
-  bun run android  # Start Android emulator
+  nr start    # Start Expo development server
+  nr ios      # Start iOS simulator
+  nr android  # Start Android emulator
   ```
 
 ## Additional Commands
@@ -396,7 +408,7 @@ For details, see `.claude/skills/supabase/deploy.md`.
 - **Edge Functions**: Deno native tools, `npm:` prefix for dependencies (not JSR or HTTP imports)
 - **UI Design (Web)**: shadcn/ui + MagicUI components (Radix UI) with TailwindCSS 4 and CSS variables
 - **UI Design (Mobile)**: gluestack-ui components with NativeWind 5
-- **Package Manager**: Bun for fast dependency management
+- **Package Manager**: [ni](https://github.com/antfu-collective/ni) (abstraction layer using Bun internally)
 - **Build System**: Turbo for efficient monorepo builds
 
 ## Architecture Patterns

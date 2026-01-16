@@ -139,13 +139,28 @@ env/
 
 ### ni Commands (Package Manager Abstraction)
 
-| ni              | Bun equivalent       |
-| --------------- | -------------------- |
-| `ni`            | `bun install`        |
-| `ni package`    | `bun add package`    |
-| `ni -D package` | `bun add -d package` |
-| `nr script`     | `bun run script`     |
-| `nlx command`   | `bunx command`       |
+このプロジェクトでは [ni](https://github.com/antfu-collective/ni) を使用してパッケージマネージャーを抽象化しています。
+
+| ni              | Bun equivalent       | 説明                           |
+| --------------- | -------------------- | ------------------------------ |
+| `ni`            | `bun install`        | 依存関係をインストール         |
+| `ni package`    | `bun add package`    | パッケージを追加               |
+| `ni -D package` | `bun add -d package` | 開発依存として追加             |
+| `nr script`     | `bun run script`     | package.json のスクリプト実行  |
+| `nlx command`   | `bunx command`       | パッケージを一時的に実行       |
+
+**重要**: `nr` コマンドは package.json の scripts を実行する際に使用します。
+
+```bash
+# 例: frontend/apps/web/ で開発サーバーを起動
+cd frontend/apps/web && nr dev
+
+# 例: テストを実行
+nr test
+
+# 例: ビルドを実行
+nr build
+```
 
 ---
 
