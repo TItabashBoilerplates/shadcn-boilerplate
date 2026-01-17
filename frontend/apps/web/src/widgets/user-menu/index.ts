@@ -1,5 +1,5 @@
 /**
- * User Menu Feature Public API
+ * User Menu Widget Public API
  */
 
 export { UserMenu } from './ui/UserMenu'

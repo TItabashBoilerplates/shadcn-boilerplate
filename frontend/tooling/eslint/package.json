@@ -3,9 +3,14 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "main": "base.js",
+  "exports": {
+    ".": "./index.js",
+    "./fsd": "./fsd.js",
+    "./next": "./base.js"
+  },
   "dependencies": {
     "@eslint/eslintrc": "^3",
-    "eslint-config-next": "^16.0.0"
+    "eslint-config-next": "^16.0.0",
+    "eslint-plugin-boundaries": "^5.3.1"
   }
 }

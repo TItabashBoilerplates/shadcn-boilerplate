@@ -151,6 +151,13 @@ lint-frontend:
 lint-frontend-ci:
 	cd frontend && nr lint:ci
 
+# FSD境界チェック（Web + Mobile）
+.PHONY: lint-fsd
+lint-fsd:
+	@echo "🔍 Running FSD boundary checks..."
+	cd frontend/apps/web && nr lint:fsd
+	cd frontend/apps/mobile && nr lint:fsd
+
 # Biome format（自動修正）
 .PHONY: format-frontend
 format-frontend:

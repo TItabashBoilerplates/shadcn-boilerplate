@@ -186,6 +186,12 @@ export type CreateJobRequest = {
  */
 export type CreateReviewRequest = {
     /**
+     * Target Id
+     *
+     * 監修対象ID（review_targets.id）
+     */
+    target_id?: string | null;
+    /**
      * 監修対象タイプ
      */
     target_type: ReviewTargetType;
@@ -311,6 +317,10 @@ export type JobListResponse = {
  * ジョブオプション.
  */
 export type JobOptions = {
+    /**
+     * パイプラインエンジン: cocoindex, llamaindex
+     */
+    pipeline_engine?: PipelineEngine;
     /**
      * Pdf Processing Mode
      *
@@ -468,6 +478,13 @@ export type JobTargetType = 'volume' | 'chapter' | 'content_block';
 export type JobType = 'full_pipeline' | 'text_processing' | 'image_processing' | 'embedding_generation' | 'entity_extraction' | 'relation_building';
 
 /**
+ * PipelineEngine
+ *
+ * パイプラインエンジン.
+ */
+export type PipelineEngine = 'cocoindex' | 'llamaindex';
+
+/**
  * ReviewOptions
  *
  * 監修オプション.
@@ -513,6 +530,10 @@ export type ReviewSessionResponse = {
      * Project Id
      */
     project_id: string;
+    /**
+     * Target Id
+     */
+    target_id?: string | null;
     /**
      * Target Type
      */

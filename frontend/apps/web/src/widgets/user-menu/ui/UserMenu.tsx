@@ -3,7 +3,7 @@
 /**
  * ユーザーメニューコンポーネント
  *
- * @module features/user-menu/ui/UserMenu
+ * @module widgets/user-menu/ui/UserMenu
  */
 
 import { Avatar, AvatarFallback } from '@workspace/ui/web/components/avatar'
