@@ -25,6 +25,12 @@
         "mcp"
       ]
     },
+    "maestro": {
+      "command": "maestro",
+      "args": [
+        "mcp"
+      ]
+    },
     "supabase": {
       "type": "http",
       "url": "http://localhost:54321/mcp",
