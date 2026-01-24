@@ -39,6 +39,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     ├── supabase/         # Supabase 認証・RLS
     ├── drizzle/          # Drizzle ORM スキーマ
     ├── datetime/         # 日時処理
+    ├── debugging/        # デバッグ手順（コンテナログ・Supabase）
     ├── shadcn-ui/        # shadcn/ui + TailwindCSS (Web)
     ├── gluestack/        # gluestack-ui + NativeWind (Mobile)
     ├── storybook/        # Storybook 10 コンポーネントカタログ
