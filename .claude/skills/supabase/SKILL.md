@@ -588,6 +588,7 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-anon-key
 | トピック | ファイル | 内容 |
 |---------|---------|------|
 | クライアント設定 | [client-setup.md](client-setup.md) | @supabase/ssr、Cookie 管理、Middleware |
+| OAuth 認証 | [auth.md](auth.md) | GitHub/Google OAuth、PKCE フロー、コールバック実装 |
 | ストレージ | [storage.md](storage.md) | バケット設計、パスプレフィックス、RLS |
 | RLS パフォーマンス | [rls-advanced.md](rls-advanced.md) | 最適化テクニック、security definer |
 | Realtime 認証 | [realtime.md](realtime.md) | Private Channel、realtime.messages RLS |
