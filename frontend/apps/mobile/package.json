@@ -28,7 +28,7 @@
     "expo-image": "3.1.0-canary-20251210-1f163e3",
     "expo-linking": "8.0.11-canary-20251210-1f163e3",
     "expo-localization": "^17.0.8",
-    "expo-router": "7.0.0-canary-20251210-1f163e3",
+    "expo-router": "7.0.0-canary-20251223-b83b31e",
     "expo-splash-screen": "31.0.13-canary-20251210-1f163e3",
     "expo-status-bar": "3.0.10-canary-20251210-1f163e3",
     "expo-symbols": "1.1.0-canary-20251210-1f163e3",
