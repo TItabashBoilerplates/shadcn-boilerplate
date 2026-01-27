@@ -17,7 +17,7 @@
     "format-check": "biome format ."
   },
   "dependencies": {
-    "drizzle-orm": "^0.44.7",
+    "drizzle-orm": "^0.45.1",
     "drizzle-seed": "^0.3.1",
     "postgres": "^3.4.7"
   },
