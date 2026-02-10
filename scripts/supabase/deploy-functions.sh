@@ -13,5 +13,5 @@ fi
 
 echo "📦 Deploying Edge Functions..."
 cd "$PROJECT_ROOT"
-npx dotenvx run -f "env/backend/${ENV}.env" -f "env/secrets.env" -- \
+dotenvx run -f "env/backend/${ENV}.env" -f "env/secrets.env" -- \
     bash -c 'supabase functions deploy --project-ref $SUPABASE_PROJECT_REF'

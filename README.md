@@ -127,75 +127,117 @@ By adopting these environments, we can ensure efficient development and maintain
 
 ## Requirements
 
-Ensure the following are installed:
-
-- [Docker](https://www.docker.com/)
-- [asdf](https://asdf-vm.com/)
-- [Supabase CLI](https://supabase.com/)
+- [Docker Desktop](https://www.docker.com/)
+- [devenv](https://devenv.sh/getting-started/) (Nix ベースの開発環境)
+- [direnv](https://direnv.net/) + シェルフック設定
 - Make
 
-The following tools will be automatically installed via asdf during `make init`:
+### devenv が提供するツール
 
-- **Node.js 22.9.0** (managed via asdf) - for frontend and Drizzle
-- **Python 3.12.9** (managed via asdf) - for backend development
-- **Deno 2.5.6** (managed via asdf) - for Edge Functions
-- **Bun 1.2.8** (installed via asdf nodejs plugin) - for frontend package management
+以下のツールは devenv が自動で管理するため、個別インストールは不要です:
 
-asdf plugins (nodejs, python, deno) will be automatically added during initialization.
+| ツール | 用途 |
+|--------|------|
+| Node.js 22 | Frontend, Drizzle |
+| Python 3.13 | Backend |
+| Deno | Edge Functions |
+| Bun | Frontend パッケージ管理 |
+| uv | Python パッケージ管理 |
+| Supabase CLI | データベース・認証 |
+| dotenvx | 環境変数管理 |
+| ni / nr / nlx | パッケージマネージャー抽象化 |
+| Maestro | E2E テスト |
 
 ## Setup
 
-To set up the project environment, follow these steps:
+### 1. devenv + direnv のインストール
 
-1. **Initialize the Project**:
-   Run the following command to initialize the project:
+```bash
+# Nix をインストール (未インストールの場合)
+curl -sSfL https://install.determinate.systems/nix | sh -s -- install
 
-   ```bash
-   make init
-   ```
+# devenv をインストール
+nix-env --install --attr devenv -f https://github.com/NixOS/nixpkgs/tarball/nixpkgs-unstable
 
-   This command will automatically perform the following steps:
+# direnv をインストール
+brew install direnv
+```
 
-   1. Add asdf plugins (nodejs, python, deno) if not already added
-   2. Install tools via asdf based on `.tool-versions`
-   3. Install dotenvx globally for environment variable management
-   4. Create `.env` file for Docker Compose (PROJECT_NAME configuration)
-   5. Log in to Supabase CLI and initialize Supabase
-   6. Start Supabase local development environment
-   7. Copy `env/secrets.env.example` to `env/secrets.env` (if not exists)
-   8. Install frontend dependencies with ni (uses Bun internally)
-   9. Run initial database migration and type generation
+シェルフックを `~/.zshrc` に追加:
 
-2. **Environment Variable Setup**:
+```bash
+eval "$(direnv hook zsh)"
+```
 
-   Environment variables are organized by component in the `env/` directory:
+ターミナルを再起動してください。
 
-   ```
-   env/
-   ├── backend/local.env         # Backend service (Supabase URL, etc.)
-   ├── frontend/local.env        # Frontend (Next.js environment variables)
-   ├── migration/local.env       # Database migration (DATABASE_URL)
-   ├── secrets.env               # Secrets (.gitignore, created from example)
-   └── secrets.env.example       # Template for secrets
-   ```
+### 2. Nix バイナリキャッシュの設定 (推奨)
 
-   After `make init`, open `env/secrets.env` and update the necessary environment variables:
+ビルド済みパッケージをダウンロードできるようにするため、trusted-users を設定します。
+未設定でも動作しますが、初回の `devenv shell` が大幅に遅くなります。
 
-   ```
-   SUPABASE_URL=your_supabase_project_id
-   SUPABASE_ANON_KEY=your_supabase_api_key
-   # Other necessary environment variables
-   ```
+```bash
+sudo sh -c 'echo "trusted-users = root $(whoami)" >> /etc/nix/nix.conf'
+sudo launchctl kickstart -k system/org.nixos.nix-daemon
+```
 
-   Note: `secrets.env` contains sensitive information and is git-ignored.
+### 3. 開発環境のアクティベート
 
-3. **Database Setup**:
-   The initial migration is performed as part of the `make init` command. If you need to run migrations separately, use:
+プロジェクトディレクトリに `cd` するだけで、direnv が自動的に devenv 環境をアクティベートします:
 
-   ```bash
-   make migration      # Alias for migrate-dev
-   make migrate-dev    # Generate + Apply migrations + Generate types (local only)
-   ```
+```bash
+cd shadcn-boilerplate
+# direnv: loading .envrc
+# direnv: using devenv
+# ✓ Building shell in 250ms
+# devenv: Node v22.22.0, Python 3.13.11, Deno 2.6.6, Bun 1.2.7, uv 0.9.28
+```
+
+初回のみ Nix ビルドが走るため数分かかります。2回目以降は数百ミリ秒です。
+ディレクトリを離れると自動的にディアクティベートされます。`exit` は不要です。
+
+> **Note**: direnv を使わない場合は `devenv shell` で手動アクティベートできます。
+
+### 4. プロジェクトの初期化
+
+```bash
+make init
+```
+
+以下が自動的に実行されます:
+
+1. Docker / devenv のインストール確認
+2. `.env` ファイル作成 (Docker Compose 用)
+3. Supabase CLI ログイン・初期化・起動
+4. `env/secrets.env` のテンプレートコピー
+5. Frontend 依存関係のインストール
+6. direnv の有効化 (`direnv allow`)
+
+### 5. 環境変数の設定
+
+環境変数はコンポーネント別に `env/` ディレクトリで管理しています:
+
+```
+env/
+├── backend/local.env         # Backend (Supabase URL 等)
+├── frontend/local.env        # Frontend (Next.js)
+├── migration/local.env       # Database migration (DATABASE_URL)
+├── secrets.env               # シークレット (.gitignore)
+└── secrets.env.example       # テンプレート
+```
+
+`make init` 後に `env/secrets.env` を編集してください:
+
+```
+SUPABASE_URL=your_supabase_project_id
+SUPABASE_ANON_KEY=your_supabase_api_key
+```
+
+### 6. データベースセットアップ
+
+```bash
+make migrate-dev    # マイグレーション生成 + 適用 + 型生成
+```
 
 ## Execution
 

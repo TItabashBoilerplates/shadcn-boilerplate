@@ -3,40 +3,56 @@
 # ANSIカラーコード
 RED='\033[0;31m'
 GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
 NO_COLOR='\033[0m'
 
 # エラー追跡変数
 ERROR=0
 
-# コマンドの存在をチェックし、バージョンを表示またはインストールする関数
-check_and_install() {
-    local command=$1
-    # shellcheck disable=SC2034
-    local install_command=$2
+# 必須コマンドのチェック
+check_required() {
+    local cmd=$1
+    local hint=$2
 
-    # コマンドが存在するか確認
-    if command -v "$command" &>/dev/null; then
-        echo "${GREEN}$command is already installed.${NO_COLOR}"
-        # バージョン情報を表示
-        $command --version
+    if command -v "$cmd" &>/dev/null; then
+        echo -e "${GREEN}✔ $cmd${NO_COLOR}"
     else
-        echo "${RED}$command is not installed.${NO_COLOR}"
-        # エラーを示す
+        echo -e "${RED}✖ $cmd is not installed.${NO_COLOR}"
+        [ -n "$hint" ] && echo "  → $hint"
         ERROR=1
-        # インストールコマンドのプレースホルダー（コメントアウト）
-        # echo "Installing $command..."
-        # 実際のインストールコマンドを実行するには以下の行のコメントを解除し、適切なコマンドに置き換えてください
-        # eval "$install_command"
     fi
 }
 
-# 各コマンドのチェックとインストール
-check_and_install "docker" "brew install docker"
-check_and_install "supabase" "brew install supabase-cli"
-check_and_install "asdf" "brew install asdf"
-check_and_install "ni" "npm install -g @antfu/ni"
-# エラーチェック
+# 推奨コマンドのチェック（なくてもエラーにしない）
+check_recommended() {
+    local cmd=$1
+    local hint=$2
+
+    if command -v "$cmd" &>/dev/null; then
+        echo -e "${GREEN}✔ $cmd${NO_COLOR}"
+    else
+        echo -e "${YELLOW}⚠ $cmd is not installed (recommended).${NO_COLOR}"
+        [ -n "$hint" ] && echo "  → $hint"
+    fi
+}
+
+echo "Checking prerequisites..."
+echo ""
+
+# 必須: Docker Desktop（devenv 外で別途必要）
+check_required "docker" "Install Docker Desktop: https://www.docker.com/"
+
+# 必須: devenv（Nix ベースの開発環境）
+check_required "devenv" "Install: https://devenv.sh/getting-started/"
+
+# 推奨: direnv（devenv shell の自動アクティベーション）
+check_recommended "direnv" "Install: brew install direnv && add 'eval \"\$(direnv hook zsh)\"' to ~/.zshrc"
+
+echo ""
+
 if [ $ERROR -eq 1 ]; then
-    echo "${RED}Error: One or more packages are not installed.${NO_COLOR}"
+    echo -e "${RED}Error: Required tools are missing. Install them and try again.${NO_COLOR}"
     exit 1
 fi
+
+echo -e "${GREEN}All required tools are installed.${NO_COLOR}"

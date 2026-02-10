@@ -36,7 +36,7 @@ docker ps -a
 
 ```bash
 # Supabase の状態確認
-npx dotenvx run -f env/backend/local.env -- supabase status
+dotenvx run -f env/backend/local.env -- supabase status
 ```
 
 ---
@@ -196,7 +196,7 @@ docker logs -f storybook
 
 ```bash
 # Supabase サービス状態
-npx dotenvx run -f env/backend/local.env -- supabase status
+dotenvx run -f env/backend/local.env -- supabase status
 ```
 
 ### 再起動
@@ -213,7 +213,7 @@ make run
 
 ```bash
 # ローカル DB を完全リセット（データ消失注意）
-npx dotenvx run -f env/backend/local.env -- supabase db reset
+dotenvx run -f env/backend/local.env -- supabase db reset
 
 # マイグレーション再適用
 make migrate-deploy
@@ -307,7 +307,7 @@ make run
 make drizzle-validate
 
 # マイグレーション状態確認
-cd drizzle && npx dotenvx run -f ../env/migration/local.env -- nr check
+cd drizzle && dotenvx run -f ../env/migration/local.env -- nr check
 ```
 
 ---

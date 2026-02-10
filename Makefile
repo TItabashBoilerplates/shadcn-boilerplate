@@ -2,25 +2,39 @@
 PLATFORM=web
 ENV=local
 
+# ===== devenv 環境チェック =====
+# devenv shell / direnv が有効でなければ即座にエラー終了
+.PHONY: _devenv
+_devenv:
+	@test -n "$$DEVENV_ROOT" || { \
+		echo "❌ Error: devenv shell is not active."; \
+		echo "   Run 'devenv shell' or 'direnv allow' first."; \
+		exit 1; \
+	}
+
+# devenv が必要なターゲット（devenv shell 外では実行不可）
+init run frontend stop check: _devenv
+mobile mobile-ios mobile-android mobile-web: _devenv
+type-check-mobile build-mobile-ios build-mobile-android: _devenv
+build-frontend lint-frontend lint-frontend-ci lint-fsd: _devenv
+format-frontend format-frontend-check type-check-frontend: _devenv
+format-functions format-functions-check lint-functions check-functions: _devenv
+lint-drizzle lint-drizzle-ci format-drizzle format-drizzle-check: _devenv
+lint-backend-py lint-backend-py-ci format-backend-py format-backend-py-check: _devenv
+type-check-backend-py lint format format-check type-check ci-check: _devenv
+deploy-functions polar-sync-dry polar-sync deploy-polar-webhooks: _devenv
+build-model-frontend build-model-backend build-model-functions build-model: _devenv
+migrate-dev migrate-deploy drizzle-push drizzle-studio drizzle-validate: _devenv
+seed seed-db seed-storage: _devenv
+storybook-local build-storybook: _devenv
+e2e e2e-web e2e-mobile: _devenv
+deploy-supabase supabase-link deploy-config deploy-functions-all deploy-secrets deploy-buckets: _devenv
+
 # 初期化コマンド
 .PHONY: init
 init:
 	# 必要なツールがインストールされているかチェック
 	sh ./bin/check_install.sh
-	# asdfプラグインを追加（既に追加済みの場合はスキップ）
-	asdf plugin add nodejs https://github.com/asdf-vm/asdf-nodejs.git 2>/dev/null || true
-	asdf plugin add python https://github.com/asdf-community/asdf-python.git 2>/dev/null || true
-	asdf plugin add deno https://github.com/asdf-community/asdf-deno.git 2>/dev/null || true
-	# asdfをインストール
-	asdf install
-	# dotenvxをインストール
-	npm install -g @dotenvx/dotenvx;
-	# Maestro CLI をインストール（未インストールの場合のみ）
-	@command -v maestro >/dev/null 2>&1 || { \
-		echo "Installing Maestro CLI..."; \
-		curl -Ls "https://get.maestro.mobile.dev" | bash; \
-		echo "✅ Maestro installed. Add ~/.maestro/bin to your PATH"; \
-	}
 	# .envファイルを作成（Docker Compose用のプロジェクト名設定）
 	@if [ ! -f ".env" ]; then \
 		echo "Creating .env file for Docker Compose..."; \
@@ -42,17 +56,22 @@ init:
 		fi \
 	fi
 	# Supabaseにログイン
-	npx dotenvx run -f env/backend/${ENV}.env -- supabase login
+	dotenvx run -f env/backend/${ENV}.env -- supabase login
 	# Supabaseを初期化
-	yes 'N' | npx dotenvx run -f env/backend/${ENV}.env -- supabase init --force
+	yes 'N' | dotenvx run -f env/backend/${ENV}.env -- supabase init --force
 	# Supabaseを起動（dotenvxで環境変数を読み込む）
-	npx dotenvx run -f env/backend/${ENV}.env -- supabase start
+	dotenvx run -f env/backend/${ENV}.env -- supabase start
 	# シークレットの設定がなければコピー
 	if [ ! -f "env/secrets.env" ]; then \
 		cp env/secrets.env.example env/secrets.env; \
 	fi
-	# フロントエンドとバックエンドの依存関係もインストール
+	# フロントエンドの依存関係をインストール
 	cd frontend && ni
+	# direnv を有効化（次回以降 cd で自動アクティベーション）
+	@if command -v direnv >/dev/null 2>&1; then \
+		direnv allow; \
+		echo "✅ direnv enabled (auto-activation on cd)"; \
+	fi
 	@echo ""
 	@echo "✅ Initial setup complete!"
 	@echo ""
@@ -70,43 +89,43 @@ run:
 	# make copy-git-config
 	# Supabaseを起動（ENV=localの場合のみ）
 	if [ "${ENV}" = "local" ]; then \
-		npx dotenvx run -f env/backend/${ENV}.env -f env/secrets.env -- supabase start; \
-		npx dotenvx run -f env/backend/${ENV}.env -f env/secrets.env -- supabase seed buckets --local; \
+		dotenvx run -f env/backend/${ENV}.env -f env/secrets.env -- supabase start; \
+		dotenvx run -f env/backend/${ENV}.env -f env/secrets.env -- supabase seed buckets --local; \
 	fi
 	# Docker Composeでサービスを起動（backend + storybook）
 	if [ "${ENV}" != "local" ]; then \
 		export ENV=${ENV}; \
 	fi
 	export PROJECT_NAME=$$(basename $$(pwd))
-	docker-compose -f ./docker-compose.backend.yaml -f ./docker-compose.frontend.yaml up -d --force-recreate
+	docker compose -f ./docker-compose.backend.yaml -f ./docker-compose.frontend.yaml up -d --force-recreate
 
 
 # ローカル環境でのフロントエンド起動コマンド
 .PHONY: frontend
 frontend:
-	cd frontend && npx dotenvx run -f ../env/frontend/${ENV}.env -- nr dev
+	cd frontend && dotenvx run -f ../env/frontend/${ENV}.env -- nr dev
 
 # ===== Mobile (Expo) コマンド =====
 
 # Mobile開発サーバー起動（全プラットフォーム選択可能）
 .PHONY: mobile
 mobile:
-	cd frontend/apps/mobile && npx dotenvx run -f ../../../env/frontend/${ENV}.env -- nlx expo start
+	cd frontend/apps/mobile && dotenvx run -f ../../../env/frontend/${ENV}.env -- nlx expo start
 
 # Mobile開発サーバー起動（iOS）
 .PHONY: mobile-ios
 mobile-ios:
-	cd frontend/apps/mobile && npx dotenvx run -f ../../../env/frontend/${ENV}.env -- nlx expo start --ios
+	cd frontend/apps/mobile && dotenvx run -f ../../../env/frontend/${ENV}.env -- nlx expo start --ios
 
 # Mobile開発サーバー起動（Android）
 .PHONY: mobile-android
 mobile-android:
-	cd frontend/apps/mobile && npx dotenvx run -f ../../../env/frontend/${ENV}.env -- nlx expo start --android
+	cd frontend/apps/mobile && dotenvx run -f ../../../env/frontend/${ENV}.env -- nlx expo start --android
 
 # Mobile開発サーバー起動（Web）
 .PHONY: mobile-web
 mobile-web:
-	cd frontend/apps/mobile && npx dotenvx run -f ../../../env/frontend/${ENV}.env -- nlx expo start --web
+	cd frontend/apps/mobile && dotenvx run -f ../../../env/frontend/${ENV}.env -- nlx expo start --web
 
 # Mobile型チェック
 .PHONY: type-check-mobile
@@ -116,11 +135,11 @@ type-check-mobile:
 # Mobileビルド（EASを使用）
 .PHONY: build-mobile-ios
 build-mobile-ios:
-	cd frontend/apps/mobile && npx dotenvx run -f ../../../env/frontend/${ENV}.env -- nlx eas build --platform ios
+	cd frontend/apps/mobile && dotenvx run -f ../../../env/frontend/${ENV}.env -- nlx eas build --platform ios
 
 .PHONY: build-mobile-android
 build-mobile-android:
-	cd frontend/apps/mobile && npx dotenvx run -f ../../../env/frontend/${ENV}.env -- nlx eas build --platform android
+	cd frontend/apps/mobile && dotenvx run -f ../../../env/frontend/${ENV}.env -- nlx eas build --platform android
 
 # ローカル環境での停止コマンド
 .PHONY: stop
@@ -128,10 +147,10 @@ stop:
 	if [ "${ENV}" != "local" ]; then \
 		export ENV=${ENV}; \
 	fi
-	docker-compose -f ./docker-compose.backend.yaml -f ./docker-compose.frontend.yaml down
+	docker compose -f ./docker-compose.backend.yaml -f ./docker-compose.frontend.yaml down
 	# Supabaseを停止（ENV=localの場合のみ）
 	if [ "${ENV}" = "local" ]; then \
-		npx dotenvx run -f env/backend/${ENV}.env -- supabase stop; \
+		dotenvx run -f env/backend/${ENV}.env -- supabase stop; \
 	fi
 
 # フロントエンドビルドコマンド
@@ -319,11 +338,11 @@ ci-check:
 deploy-functions:
 	# ENV=localの場合はスキップ、それ以外はproject-refを指定してデプロイ
 	if [ "${ENV}" != "local" ]; then \
-		npx dotenvx run -f env/backend/${ENV}.env -- bash -c 'supabase functions deploy watermark --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
-		npx dotenvx run -f env/backend/${ENV}.env -- bash -c 'supabase functions deploy stripe-checkout --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
-		npx dotenvx run -f env/backend/${ENV}.env -- bash -c 'supabase functions deploy stripe-products --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
-		npx dotenvx run -f env/backend/${ENV}.env -- bash -c 'supabase functions deploy stripe-webhooks --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
-		npx dotenvx run -f env/backend/${ENV}.env -f env/secrets.env -- bash -c 'supabase functions deploy polar-webhooks --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
+		dotenvx run -f env/backend/${ENV}.env -- bash -c 'supabase functions deploy watermark --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
+		dotenvx run -f env/backend/${ENV}.env -- bash -c 'supabase functions deploy stripe-checkout --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
+		dotenvx run -f env/backend/${ENV}.env -- bash -c 'supabase functions deploy stripe-products --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
+		dotenvx run -f env/backend/${ENV}.env -- bash -c 'supabase functions deploy stripe-webhooks --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
+		dotenvx run -f env/backend/${ENV}.env -f env/secrets.env -- bash -c 'supabase functions deploy polar-webhooks --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
 	else \
 		echo "Skipping deploy-functions for local environment"; \
 	fi
@@ -334,20 +353,20 @@ deploy-functions:
 .PHONY: polar-sync-dry
 polar-sync-dry:
 	@echo "🔍 Checking plan differences (dry run)..."
-	cd frontend && npx dotenvx run -f ../env/secrets.env -f ../env/frontend/${ENV}.env -- bun run ../scripts/polar/sync.ts --dry-run
+	cd frontend && dotenvx run -f ../env/secrets.env -f ../env/frontend/${ENV}.env -- bun run ../scripts/polar/sync.ts --dry-run
 
 # プラン同期（実行）- Polar.sh にプラン定義を同期
 .PHONY: polar-sync
 polar-sync:
 	@echo "🚀 Syncing plans to Polar.sh..."
-	cd frontend && npx dotenvx run -f ../env/secrets.env -f ../env/frontend/${ENV}.env -- bun run ../scripts/polar/sync.ts
+	cd frontend && dotenvx run -f ../env/secrets.env -f ../env/frontend/${ENV}.env -- bun run ../scripts/polar/sync.ts
 
 # Polar Webhook デプロイ
 .PHONY: deploy-polar-webhooks
 deploy-polar-webhooks:
 	@if [ "${ENV}" != "local" ]; then \
 		echo "🚀 Deploying Polar webhook handler..."; \
-		npx dotenvx run -f env/backend/${ENV}.env -f env/secrets.env -- bash -c 'supabase functions deploy polar-webhooks --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
+		dotenvx run -f env/backend/${ENV}.env -f env/secrets.env -- bash -c 'supabase functions deploy polar-webhooks --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
 	else \
 		echo "⚠️  Skipping deploy for local environment"; \
 	fi
@@ -357,10 +376,10 @@ deploy-polar-webhooks:
 check:
 	# Supabaseを起動（ENV=localの場合のみ）
 	if [ "${ENV}" = "local" ]; then \
-		npx dotenvx run -f env/backend/${ENV}.env -- supabase start; \
+		dotenvx run -f env/backend/${ENV}.env -- supabase start; \
 	fi
 	# バックエンドサービスの状態確認
-	docker-compose -f ./docker-compose.backend.yaml ps
+	docker compose -f ./docker-compose.backend.yaml ps
 
 # 共通の.git設定のファイルをコピー
 # プリコミットなども
@@ -373,19 +392,19 @@ copy-git-config:
 build-model-frontend:
 	# ENV=localの場合のみ実行
 	if [ "${ENV}" = "local" ]; then \
-		npx dotenvx run -f env/backend/${ENV}.env -- supabase start; \
+		dotenvx run -f env/backend/${ENV}.env -- supabase start; \
 		mkdir -p "./frontend/packages/types"; \
 		supabase gen types typescript --local > "./frontend/packages/types/schema.ts"; \
 		echo "🔧 Generating backend API client (Hey API)..."; \
-		cd frontend && npx dotenvx run -f ../env/frontend/${ENV}.env -- bun run --filter @workspace/api-client generate || echo "⚠️  Backend API client generation skipped (backend not running)"; \
+		cd frontend && dotenvx run -f ../env/frontend/${ENV}.env -- bun run --filter @workspace/api-client generate || echo "⚠️  Backend API client generation skipped (backend not running)"; \
 	fi
 
 .PHONY: build-model-backend
 build-model-backend:
 	# ENV=localの場合のみ実行
 	if [ "${ENV}" = "local" ]; then \
-		npx dotenvx run -f env/backend/${ENV}.env -- supabase start; \
-		docker-compose -f ./docker-compose.backend.yaml restart; \
+		dotenvx run -f env/backend/${ENV}.env -- supabase start; \
+		docker compose -f ./docker-compose.backend.yaml restart; \
 	fi
 
 # Edge functionsのモデルをビルド
@@ -393,7 +412,7 @@ build-model-backend:
 build-model-functions:
 	# ENV=localの場合のみ実行
 	if [ "${ENV}" = "local" ]; then \
-		npx dotenvx run -f env/backend/${ENV}.env -- supabase start; \
+		dotenvx run -f env/backend/${ENV}.env -- supabase start; \
 		mkdir -p ./supabase/functions/shared/types/supabase; \
 		supabase gen types typescript --local > ./supabase/functions/shared/types/supabase/schema.ts; \
 		mkdir -p ./supabase/functions/shared/drizzle && cp -r ./drizzle/schema/* ./supabase/functions/shared/drizzle/; \
@@ -427,19 +446,19 @@ migrate-dev:
 	@echo "🚀 Running migrate-dev (generate + apply + build-model)..."
 	@echo ""
 	# Supabaseを起動
-	npx dotenvx run -f env/backend/local.env -- supabase start
+	dotenvx run -f env/backend/local.env -- supabase start
 	# Pre-migration SQL適用（extensions等）
 	@echo "🔧 Applying pre-migration SQL (extensions)..."
-	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- nr migrate:pre
+	cd drizzle && dotenvx run -f ../env/migration/local.env -- nr migrate:pre
 	# マイグレーションを生成
 	@echo "📝 Generating migration..."
-	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- nr generate
+	cd drizzle && dotenvx run -f ../env/migration/local.env -- nr generate
 	# マイグレーションを適用
 	@echo "✅ Applying migration to local database..."
-	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- nr migrate
+	cd drizzle && dotenvx run -f ../env/migration/local.env -- nr migrate
 	# Post-migration SQL適用（functions/triggers等）
 	@echo "🔧 Applying post-migration SQL (functions, triggers)..."
-	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- nr migrate:post
+	cd drizzle && dotenvx run -f ../env/migration/local.env -- nr migrate:post
 	# モデル生成
 	@echo "🔧 Generating database types..."
 	make build-model
@@ -454,29 +473,29 @@ migrate-deploy:
 	@echo ""
 	# Supabaseを起動（ENV=localの場合のみ）
 	if [ "${ENV}" = "local" ] || [ -z "${ENV}" ]; then \
-		npx dotenvx run -f env/backend/local.env -- supabase start; \
+		dotenvx run -f env/backend/local.env -- supabase start; \
 	fi
 	# Pre-migration SQL適用（extensions等）
 	@echo "🔧 Applying pre-migration SQL (extensions)..."
 	@if [ -z "${ENV}" ] || [ "${ENV}" = "local" ]; then \
-		cd drizzle && npx dotenvx run -f ../env/migration/local.env -- nr migrate:pre; \
+		cd drizzle && dotenvx run -f ../env/migration/local.env -- nr migrate:pre; \
 	else \
-		cd drizzle && npx dotenvx run -f ../env/migration/${ENV}.env -- nr migrate:pre; \
+		cd drizzle && dotenvx run -f ../env/migration/${ENV}.env -- nr migrate:pre; \
 	fi
 	# マイグレーションを適用
 	@if [ -z "${ENV}" ] || [ "${ENV}" = "local" ]; then \
 		echo "📍 Deploying to: local"; \
-		cd drizzle && npx dotenvx run -f ../env/migration/local.env -- nr migrate; \
+		cd drizzle && dotenvx run -f ../env/migration/local.env -- nr migrate; \
 	else \
 		echo "📍 Deploying to: ${ENV}"; \
-		cd drizzle && npx dotenvx run -f ../env/migration/${ENV}.env -- nr migrate; \
+		cd drizzle && dotenvx run -f ../env/migration/${ENV}.env -- nr migrate; \
 	fi
 	# Post-migration SQL適用（functions/triggers等）
 	@echo "🔧 Applying post-migration SQL (functions, triggers)..."
 	@if [ -z "${ENV}" ] || [ "${ENV}" = "local" ]; then \
-		cd drizzle && npx dotenvx run -f ../env/migration/local.env -- nr migrate:post; \
+		cd drizzle && dotenvx run -f ../env/migration/local.env -- nr migrate:post; \
 	else \
-		cd drizzle && npx dotenvx run -f ../env/migration/${ENV}.env -- nr migrate:post; \
+		cd drizzle && dotenvx run -f ../env/migration/${ENV}.env -- nr migrate:post; \
 	fi
 	# モデル生成（ローカルのみ）
 	@if [ -z "${ENV}" ] || [ "${ENV}" = "local" ]; then \
@@ -493,19 +512,19 @@ migration: migrate-dev
 .PHONY: drizzle-push
 drizzle-push:
 	@echo "🚀 Pushing schema to database..."
-	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- nr push
+	cd drizzle && dotenvx run -f ../env/migration/local.env -- nr push
 
 # Drizzle Studio起動（GUIでDBを操作）
 .PHONY: drizzle-studio
 drizzle-studio:
 	@echo "🎨 Starting Drizzle Studio..."
-	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- nr studio
+	cd drizzle && dotenvx run -f ../env/migration/local.env -- nr studio
 
 # スキーマ検証（Drizzleベース）
 .PHONY: drizzle-validate
 drizzle-validate:
 	@echo "✅ Validating Drizzle schema..."
-	cd drizzle && npx dotenvx run -f ../env/migration/local.env -- nr check
+	cd drizzle && dotenvx run -f ../env/migration/local.env -- nr check
 
 # ===== その他のコマンド =====
 
@@ -526,9 +545,9 @@ seed-db:
 	@make seed-check-env
 	@echo "Seeding database (${ENV})..."
 	@if [ "${ENV}" = "local" ] || [ -z "${ENV}" ]; then \
-		cd drizzle && npx dotenvx run -f ../env/migration/local.env -- bun run seed/index.ts; \
+		cd drizzle && dotenvx run -f ../env/migration/local.env -- bun run seed/index.ts; \
 	else \
-		cd drizzle && npx dotenvx run -f ../env/migration/${ENV}.env -- bun run seed/index.ts; \
+		cd drizzle && dotenvx run -f ../env/migration/${ENV}.env -- bun run seed/index.ts; \
 	fi
 
 # Storage のみ
@@ -537,9 +556,9 @@ seed-storage:
 	@make seed-check-env
 	@echo "Seeding storage buckets (${ENV})..."
 	@if [ "${ENV}" = "local" ] || [ -z "${ENV}" ]; then \
-		npx dotenvx run -f env/backend/local.env -- supabase seed buckets --local; \
+		dotenvx run -f env/backend/local.env -- supabase seed buckets --local; \
 	else \
-		npx dotenvx run -f env/backend/${ENV}.env -- supabase seed buckets --linked; \
+		dotenvx run -f env/backend/${ENV}.env -- supabase seed buckets --linked; \
 	fi
 
 # 環境チェック（production 警告）

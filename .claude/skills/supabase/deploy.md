@@ -114,25 +114,25 @@ env/
 
 ```bash
 # 基本的な使い方
-npx dotenvx run -f env/backend/${ENV}.env -- <command>
+dotenvx run -f env/backend/${ENV}.env -- <command>
 
 # 複数ファイルを指定（後のファイルが優先）
-npx dotenvx run -f env/backend/${ENV}.env -f env/secrets.env -- <command>
+dotenvx run -f env/backend/${ENV}.env -f env/secrets.env -- <command>
 ```
 
 ### スクリプト内での使用例
 
 ```bash
 # scripts/supabase/link.sh
-npx dotenvx run -f "env/backend/${ENV}.env" -- \
+dotenvx run -f "env/backend/${ENV}.env" -- \
     bash -c 'supabase link --project-ref $SUPABASE_PROJECT_REF'
 
 # scripts/supabase/deploy-functions.sh
-npx dotenvx run -f "env/backend/${ENV}.env" -f "env/secrets.env" -- \
+dotenvx run -f "env/backend/${ENV}.env" -f "env/secrets.env" -- \
     bash -c 'supabase functions deploy --project-ref $SUPABASE_PROJECT_REF'
 
 # scripts/supabase/deploy-secrets.sh
-npx dotenvx run -f "env/backend/${ENV}.env" -- \
+dotenvx run -f "env/backend/${ENV}.env" -- \
     bash -c 'supabase secrets set --env-file env/backend/${ENV}.env --project-ref $SUPABASE_PROJECT_REF'
 ```
 

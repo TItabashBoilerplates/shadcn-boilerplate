@@ -6,17 +6,20 @@ shadcn-boilerplateへのコントリビューションに興味を持ってい�
 
 ### 必要な環境
 
-- [Docker](https://www.docker.com/)
-- [asdf](https://asdf-vm.com/)
-- [Supabase CLI](https://supabase.com/)
+- [Docker Desktop](https://www.docker.com/)
+- [devenv](https://devenv.sh/getting-started/) (Nix ベースの開発環境)
+- [direnv](https://direnv.net/) + シェルフック設定 (`eval "$(direnv hook zsh)"`)
 - Make
+
+詳細なインストール手順は [README.md の Setup](README.md#setup) を参照してください。
 
 ### セットアップ手順
 
-1. リポジトリをクローン
+1. リポジトリをクローン（`cd` すると direnv が自動で devenv 環境をアクティベート）
    ```bash
    git clone https://github.com/[your-org]/shadcn-boilerplate.git
    cd shadcn-boilerplate
+   # direnv: loading .envrc → devenv 環境が自動アクティベート
    ```
 
 2. 初期セットアップを実行

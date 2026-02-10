@@ -133,3 +133,11 @@ supabase/.temp/**
 .codex/config.toml
 
 .serena/**
+
+# devenv
+.devenv/
+.devenv.flake.nix
+devenv.local.nix
+devenv.local.yaml
+.direnv/
+.pre-commit-config.yaml
