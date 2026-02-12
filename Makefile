@@ -16,12 +16,15 @@ _devenv:
 init run frontend stop check: _devenv
 mobile mobile-ios mobile-android mobile-web: _devenv
 type-check-mobile build-mobile-ios build-mobile-android: _devenv
-build-frontend lint-frontend lint-frontend-ci lint-fsd: _devenv
+build-frontend lint-frontend lint-fsd: _devenv
 format-frontend format-frontend-check type-check-frontend: _devenv
 format-functions format-functions-check lint-functions check-functions: _devenv
-lint-drizzle lint-drizzle-ci format-drizzle format-drizzle-check: _devenv
-lint-backend-py lint-backend-py-ci format-backend-py format-backend-py-check: _devenv
+lint-drizzle format-drizzle format-drizzle-check: _devenv
+lint-backend-py format-backend-py format-backend-py-check: _devenv
 type-check-backend-py lint format format-check type-check ci-check: _devenv
+# pre-commit hook から呼ばれる -ci ターゲット（$DEVENV_ROOT が伝播しないため _devenv 不要）
+# devenv が git-hooks をインストールするため、hook 実行時はツールが PATH 上に存在する
+lint-frontend-ci lint-drizzle-ci lint-backend-py-ci:
 deploy-functions polar-sync-dry polar-sync deploy-polar-webhooks: _devenv
 build-model-frontend build-model-backend build-model-functions build-model: _devenv
 migrate-dev migrate-deploy drizzle-push drizzle-studio drizzle-validate: _devenv
