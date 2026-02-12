@@ -15,21 +15,14 @@ Check if Python is installed:
 python3 --version || python --version
 ```
 
-If Python is not installed, install it based on user's OS:
+If Python is not installed, it is provided by devenv (Nix):
 
-**macOS:**
 ```bash
-brew install python3
-```
-
-**Ubuntu/Debian:**
-```bash
-sudo apt update && sudo apt install python3
-```
-
-**Windows:**
-```powershell
-winget install Python.Python.3.12
+# Python 3.13 is managed by devenv.nix
+# Activate the devenv shell:
+devenv shell
+# Or use direnv (auto-activates on cd):
+direnv allow
 ```
 
 ---
