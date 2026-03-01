@@ -10,7 +10,6 @@
 | `frontend/packages/api-client/src/generated/` | Hey API (@hey-api/openapi-ts) | `make build-model-frontend` |
 | `supabase/functions/shared/types/supabase/schema.ts` | Supabase CLI | `make build-model-functions` |
 | `supabase/functions/shared/drizzle/` | Copy from `drizzle/schema/` | `make build-model-functions` |
-| `backend-py/app/src/domain/entity/models.py` | sqlacodegen | Docker container startup |
 
 ## Generation Mechanism
 
@@ -38,16 +37,6 @@ cd frontend && bun run --filter @workspace/api-client generate
 - `types.gen.ts` - TypeScript type definitions
 - `sdk.gen.ts` - SDK functions (getHealthcheck, postApiChat, etc.)
 - `@tanstack/react-query` hooks (if plugin enabled)
-
-### Backend Python Models
-
-**Automatically generated on container startup** via `docker-compose.backend.yaml`:
-
-```bash
-uv run sqlacodegen "$DIRECT_URL" --generator sqlmodels --options nojoined --outfile src/domain/entity/models.py
-```
-
-This runs every time `make run` or `docker-compose up` is executed.
 
 ## Prohibited Actions
 
@@ -78,7 +67,7 @@ When you need to change data models:
 1. **Edit Drizzle schema**: `drizzle/schema/*.ts`
 2. **Request migration**: Ask user to run `make migrate-dev`
 3. **Types auto-regenerate**: `make build-model` is included in `migrate-dev`
-4. **Backend models auto-regenerate**: Restart container with `make run`
+4. **Backend models auto-regenerate**: Restart backend with `make stop && make run`
 
 ## Why This Policy Exists
 

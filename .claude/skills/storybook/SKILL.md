@@ -1,36 +1,32 @@
 ---
 name: storybook
-description: Storybook Docker 環境でのコンポーネント開発ガイダンス。Story ファイルの作成、FSD 構成に合わせたサイドバー構造、Next.js モック、Lucide React アイコン、HMR 設定についての質問に使用。UIコンポーネントのカタログ管理の実装支援を提供。
+description: Storybook ローカル環境でのコンポーネント開発ガイダンス。Story ファイルの作成、FSD 構成に合わせたサイドバー構造、Next.js モック、Lucide React アイコン、HMR 設定についての質問に使用。UIコンポーネントのカタログ管理の実装支援を提供。
 ---
 
 # Storybook スキル
 
-このプロジェクトは **Storybook 10 + Vite** を Docker 上で実行し、packages と apps の UI コンポーネントを一元管理しています。
+このプロジェクトは **Storybook 10 + Vite** をローカルプロセスで実行し、packages と apps の UI コンポーネントを一元管理しています。
 
 ## 構成
 
 | 項目           | 場所                                |
 | -------------- | ----------------------------------- |
 | Storybook 設定 | `frontend/.storybook/`              |
-| Docker 設定    | `docker-compose.frontend.yaml`      |
-| Dockerfile     | `frontend/docker/Dockerfile`        |
 | CSS            | `frontend/.storybook/storybook.css` |
 
 ## 起動方法
 
-**MANDATORY**: Storybook は基本的に **Docker コンテナ上で実行**する。
+Storybook は `make frontend` で Next.js と同時にバックグラウンドで起動します。
 
 ```bash
-# Docker での起動（必須）
-docker-compose -f docker-compose.frontend.yaml up --build
+# Storybook + Next.js を同時起動（推奨）
+make frontend
 
-# または Makefile 経由
-make storybook
+# Storybook 単独起動
+make storybook-local
 ```
 
 ブラウザで `http://localhost:6006` にアクセス。
-
-> **Note**: ローカル実行（`cd frontend && bun run storybook`）は Docker が使用できない特殊な状況でのみ使用。
 
 ## Story ファイルの配置
 
@@ -385,54 +381,12 @@ import { Trophy, Flag, TrendingUp } from "lucide-react";
 
 アイコンマッピングは `packages/ui/web/components/icon/icon.tsx` で管理。
 
-## Docker 設定
-
-### docker-compose.frontend.yaml
-
-```yaml
-services:
-  storybook:
-    container_name: storybook
-    build:
-      context: ./frontend/docker
-      dockerfile: Dockerfile
-    ports:
-      - 6006:6006
-    volumes:
-      - ./frontend:/app
-      - storybook-node-modules:/app/node_modules
-    environment:
-      - CHOKIDAR_USEPOLLING=true # HMR 有効化
-      - WATCHPACK_POLLING=true # HMR 有効化
-    tty: true
-    working_dir: /app
-
-volumes:
-  storybook-node-modules:
-```
-
-### Dockerfile
-
-```dockerfile
-FROM oven/bun:1.2-alpine
-
-WORKDIR /app
-
-RUN apk add --no-cache git
-
-EXPOSE 6006
-
-# CI モードではなく通常モードで起動（HMR 有効）
-CMD ["sh", "-c", "bun install && bun run storybook"]
-```
-
 ## HMR（Hot Module Replacement）
 
 ### 有効化の条件
 
-1. `environment` に `CHOKIDAR_USEPOLLING=true` と `WATCHPACK_POLLING=true` を設定
-2. `CI=true` 環境変数を設定しない
-3. `storybook:ci` ではなく `storybook` スクリプトを使用
+1. `CI=true` 環境変数を設定しない
+2. `storybook:ci` ではなく `storybook` スクリプトを使用
 
 ### 確認方法
 
@@ -828,30 +782,19 @@ const preview: Preview = {
 **重要**: Story 追加・変更後は **ビルドチェックを実行する**。UI でのデバッグは非効率。
 
 ```bash
-# ビルドチェック（推奨）
-docker exec storybook bun run build-storybook
-
-# ローカル実行
+# ビルドチェック
+make build-storybook
+# または
 cd frontend && bun run build-storybook
 ```
 
 ビルドエラーがあれば、詳細なエラーメッセージがターミナルに表示される。
 
-**開発中の確認方法**:
-
-```bash
-# Docker ログでリアルタイム確認
-docker logs storybook -f
-
-# 直近のエラー確認
-docker logs storybook --tail 100
-```
-
 **キャッシュクリアが必要な場合**:
 
 ```bash
-docker exec storybook rm -rf node_modules/.cache/storybook node_modules/.vite
-docker restart storybook
+cd frontend && rm -rf node_modules/.cache/storybook node_modules/.vite
+make storybook-local
 ```
 
 ---
@@ -925,6 +868,6 @@ export const MobileView: Story = { ... }  // これは不要
 
 ### ビルドチェック
 
-- [ ] Story 追加・変更後は `docker exec storybook bun run build-storybook` でビルドチェック
-- [ ] 設定変更後は `docker exec storybook rm -rf node_modules/.cache/storybook node_modules/.vite && docker restart storybook` でキャッシュクリア
-- [ ] 開発中のエラー確認は `docker logs storybook -f` でリアルタイム監視
+- [ ] Story 追加・変更後は `make build-storybook` でビルドチェック
+- [ ] 設定変更後は `cd frontend && rm -rf node_modules/.cache/storybook node_modules/.vite` でキャッシュクリア後に再起動
+- [ ] 開発中のエラー確認は `make frontend` のターミナルログでリアルタイム監視

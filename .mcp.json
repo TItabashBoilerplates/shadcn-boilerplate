@@ -42,6 +42,10 @@
     "supabase-prod": {
       "type": "http",
       "url": "https://mcp.supabase.com/mcp?project_ref=<PROJECT_REF>&read_only=true"
+    },
+    "process-compose": {
+      "type": "sse",
+      "url": "http://localhost:8090/sse"
     }
   }
 }

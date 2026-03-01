@@ -2,7 +2,7 @@ from uuid import UUID
 
 from sqlmodel import Session, select
 
-from domain.entity.models import ChatRooms, UserChats
+from domain.entity import ChatRooms, UserChats
 
 
 class ChatRoomGateway:

@@ -52,26 +52,6 @@ direnv-allow:
 init:
 	# 必要なツールがインストールされているかチェック
 	sh ./bin/check_install.sh
-	# .envファイルを作成（Docker Compose用のプロジェクト名設定）
-	@if [ ! -f ".env" ]; then \
-		echo "Creating .env file for Docker Compose..."; \
-		echo "PROJECT_NAME=$$(basename $$(pwd))" > .env; \
-		echo "✅ Created .env with PROJECT_NAME=$$(basename $$(pwd))"; \
-	else \
-		echo "ℹ️  .env file already exists, skipping creation"; \
-	fi
-	# env/backend/local.envのshadcn-boilerplateをプロジェクト名に置き換え
-	@if [ -f "env/backend/${ENV}.env" ]; then \
-		PROJECT_NAME=$$(basename $$(pwd)); \
-		if grep -q "shadcn-boilerplate" "env/backend/${ENV}.env"; then \
-			echo "Updating env/backend/${ENV}.env with PROJECT_NAME=$$PROJECT_NAME..."; \
-			sed -i.bak "s/shadcn-boilerplate/$$PROJECT_NAME/g" "env/backend/${ENV}.env"; \
-			rm -f "env/backend/${ENV}.env.bak"; \
-			echo "✅ Updated env/backend/${ENV}.env"; \
-		else \
-			echo "ℹ️  env/backend/${ENV}.env already updated or no shadcn-boilerplate found"; \
-		fi \
-	fi
 	# Supabaseにログイン
 	dotenvx run -f env/backend/${ENV}.env -- supabase login
 	# Supabaseを初期化
@@ -94,32 +74,30 @@ init:
 	@echo ""
 	@echo "📝 Next steps:"
 	@echo "  1. Run 'make migrate-dev' to generate and apply initial database migrations"
-	@echo "  2. Run 'make run' to start backend services"
-	@echo "  3. Run 'make frontend' to start frontend development server"
+	@echo "  2. Run 'make run' to start Supabase + backend (blocks in TUI)"
+	@echo "  3. Run 'make frontend' to start Storybook + Next.js dev server (new terminal)"
 	@echo ""
 	@echo "Woo-hoo! Everything's ready to roll!"
 
 # ローカル環境での起動コマンド
 .PHONY: run
 run:
-	# # 共通の.git設定のファイルをコピー
-	# make copy-git-config
 	# Supabaseを起動（ENV=localの場合のみ）
 	if [ "${ENV}" = "local" ]; then \
 		dotenvx run -f env/backend/${ENV}.env -f env/secrets.env -- supabase start; \
 		dotenvx run -f env/backend/${ENV}.env -f env/secrets.env -- supabase seed buckets --local; \
 	fi
-	# Docker Composeでサービスを起動（backend + storybook）
-	if [ "${ENV}" != "local" ]; then \
-		export ENV=${ENV}; \
-	fi
-	export PROJECT_NAME=$$(basename $$(pwd))
-	docker compose -f ./docker-compose.backend.yaml -f ./docker-compose.frontend.yaml up -d --force-recreate
+	# 既存プロセスを停止してから起動（二重起動防止）
+	process-compose down 2>/dev/null || true
+	# 全サービスを起動（TUI でログを表示）
+	devenv up
 
-
-# ローカル環境でのフロントエンド起動コマンド
+# ローカル環境でのフロントエンド起動コマンド（Storybook + Next.js）
 .PHONY: frontend
 frontend:
+	# Storybookをバックグラウンドで起動
+	cd frontend && bun run storybook -- --quiet &
+	# Next.js 開発サーバーを起動（フォアグラウンド）
 	cd frontend && dotenvx run -f ../env/frontend/${ENV}.env -- nr dev
 
 # ===== Mobile (Expo) コマンド =====
@@ -161,14 +139,13 @@ build-mobile-android:
 # ローカル環境での停止コマンド
 .PHONY: stop
 stop:
-	if [ "${ENV}" != "local" ]; then \
-		export ENV=${ENV}; \
-	fi
-	docker compose -f ./docker-compose.backend.yaml -f ./docker-compose.frontend.yaml down
+	# backend-py を停止
+	process-compose down 2>/dev/null || true
 	# Supabaseを停止（ENV=localの場合のみ）
 	if [ "${ENV}" = "local" ]; then \
 		dotenvx run -f env/backend/${ENV}.env -- supabase stop; \
 	fi
+	@echo "✅ All services stopped."
 
 # フロントエンドビルドコマンド
 .PHONY: build-frontend
@@ -388,15 +365,13 @@ deploy-polar-webhooks:
 		echo "⚠️  Skipping deploy for local environment"; \
 	fi
 
-# チェックコマンド
+# チェックコマンド（サービス稼働状況の確認）
 .PHONY: check
 check:
-	# Supabaseを起動（ENV=localの場合のみ）
-	if [ "${ENV}" = "local" ]; then \
-		dotenvx run -f env/backend/${ENV}.env -- supabase start; \
-	fi
-	# バックエンドサービスの状態確認
-	docker compose -f ./docker-compose.backend.yaml ps
+	# Supabase の稼働状況を確認
+	dotenvx run -f env/backend/${ENV}.env -- supabase status
+	@echo ""
+	@echo "💡 All services status: run 'make run' and check the TUI."
 
 # 共通の.git設定のファイルをコピー
 # プリコミットなども
@@ -418,11 +393,8 @@ build-model-frontend:
 
 .PHONY: build-model-backend
 build-model-backend:
-	# ENV=localの場合のみ実行
-	if [ "${ENV}" = "local" ]; then \
-		dotenvx run -f env/backend/${ENV}.env -- supabase start; \
-		docker compose -f ./docker-compose.backend.yaml restart; \
-	fi
+	@echo "💡 Backend models (backend-py/app/src/domain/entity/models.py) are manually maintained."
+	@echo "   Edit directly when the database schema changes."
 
 # Edge functionsのモデルをビルド
 .PHONY: build-model-functions
@@ -605,12 +577,13 @@ rollback:
 
 # ===== Storybook コマンド =====
 
-# Storybook起動（Docker - 推奨）
+# Storybook起動（make frontend に統合済み - 推奨）
 .PHONY: storybook
 storybook:
-	docker compose -f docker-compose.frontend.yaml up --build
+	@echo "💡 Storybook is started automatically with 'make frontend'."
+	@echo "   For standalone launch, use 'make storybook-local'."
 
-# Storybook起動（ローカル - Dockerが使えない場合のみ）
+# Storybook起動（ローカル直接起動）
 .PHONY: storybook-local
 storybook-local:
 	cd frontend && bun run storybook

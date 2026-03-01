@@ -2,7 +2,7 @@ from uuid import UUID
 
 from sqlmodel import Session, select
 
-from domain.entity.models import Users
+from domain.entity import Users
 from domain.exceptions import AuthenticationError
 from infra.supabase_client import SupabaseClient
 

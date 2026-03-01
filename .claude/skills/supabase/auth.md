@@ -307,7 +307,7 @@ const { data, error } = await supabase.auth.signInWithOAuth({
 Supabase の設定（`config.toml`）を変更したら、再起動が必要です：
 
 ```bash
-make stop && make run
+make stop && make run  # Supabase + backend-py を再起動
 ```
 
 ### デバッグ方法

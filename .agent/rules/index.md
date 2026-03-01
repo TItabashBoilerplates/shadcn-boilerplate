@@ -75,9 +75,16 @@ This directory contains guidelines for Antigravity Agent when working in this re
     - 重複コードの禁止
     - 未使用コードの削除
 
+### Debugging
+
+13. **[Debugging Policy](./debugging.md)** ⚠️ **MUST READ**
+    - process-compose MCP ツール最優先（get-process-status / get-process-logs / restart-process / start-process）
+    - MCP が使えない場合のみ CLI にフォールバック
+    - Supabase は Docker ログで確認
+
 ### Environment Configuration
 
-13. **[Environment Configuration](./environment.md)**
+14. **[Environment Configuration](./environment.md)**
     - Environment variable management
     - dotenvx usage
 
@@ -108,3 +115,4 @@ For detailed information, refer to the following documentation:
 6. **Use supabase-test for Supabase API testing** - Test all RLS policies
 7. **Clean Code Policy** - No backward compatibility, no duplication, no unused code
 8. **Use TailwindCSS CSS variables** - No hardcoded colors
+9. **Debugging via process-compose MCP** - Use MCP tools first for log/status/restart

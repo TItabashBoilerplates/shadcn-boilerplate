@@ -111,7 +111,7 @@ By adopting these environments, we can ensure efficient development and maintain
 - **Python Backend**: FastAPI application in `backend-py/` using clean architecture patterns
 - **Edge Functions**: Supabase Edge Functions using Deno's native `Deno.serve` API for lightweight serverless functions
 - **Database**: PostgreSQL with **Drizzle ORM** for schema management, includes pgvector extension for embeddings
-- **Infrastructure**: Supabase for auth/database, Docker containerization
+- **Infrastructure**: Supabase for auth/database (Docker), FastAPI managed via devenv processes (process-compose)
 
 #### Configuration Management
 
@@ -127,7 +127,7 @@ By adopting these environments, we can ensure efficient development and maintain
 
 ## Requirements
 
-- [Docker Desktop](https://www.docker.com/)
+- [Docker Desktop](https://www.docker.com/) (Supabase ローカル環境用)
 - [devenv](https://devenv.sh/getting-started/) (Nix ベースの開発環境)
 - [direnv](https://direnv.net/) + シェルフック設定
 - Make
@@ -223,11 +223,10 @@ make init
 以下が自動的に実行されます:
 
 1. Docker / devenv のインストール確認
-2. `.env` ファイル作成 (Docker Compose 用)
-3. Supabase CLI ログイン・初期化・起動
-4. `env/secrets.env` のテンプレートコピー
-5. Frontend 依存関係のインストール
-6. direnv の有効化 (`direnv allow`)
+2. Supabase CLI ログイン・初期化・起動
+3. `env/secrets.env` のテンプレートコピー
+4. Frontend 依存関係のインストール
+5. direnv の有効化 (`direnv allow`)
 
 ### 5. 環境変数の設定
 
@@ -259,26 +258,25 @@ make migrate-dev    # マイグレーション生成 + 適用 + 型生成
 
 After successfully completing the setup, you can start the application using one of the following commands:
 
-### Backend Services
+### All Services (Recommended)
 
-- Start backend services with Docker:
+`make run` starts all services in a single TUI — Supabase, FastAPI backend, Storybook, and Next.js:
 
-  ```bash
-  make run
-  ```
+```bash
+make run    # Start all services (TUI shows live logs for each process)
+make stop   # Stop all services (run in a separate terminal)
+```
 
-- Stop all services:
-  ```bash
-  make stop
-  ```
+The TUI shows logs for each process (`backend`, `storybook`, `web`) in real time.
+Press Ctrl+C to exit the TUI; then run `make stop` to stop Supabase.
 
-### Frontend Development (Web)
+### Frontend Only
 
-- Start web frontend (Next.js):
+Start only the frontend (Storybook + Next.js), without backend:
 
-  ```bash
-  make frontend
-  ```
+```bash
+make frontend
+```
 
 - Or directly inside `frontend/` directory:
   ```bash
@@ -288,6 +286,39 @@ After successfully completing the setup, you can start the application using one
   nr start  # Start production server
   nr lint   # Run Biome lint
   ```
+
+### Adding a New Service to `make run`
+
+All services are managed as [devenv processes](https://devenv.sh/processes/) (process-compose).
+To add a new service to `make run`, add a process entry to `devenv.nix`:
+
+```nix
+# devenv.nix
+processes = {
+  # Existing processes: backend, storybook, web ...
+
+  # Add your new service here
+  my-service = {
+    exec = ''
+      cd "$DEVENV_ROOT/path/to/service"
+      dotenvx run \
+        -f "$DEVENV_ROOT/env/frontend/local.env" \
+        -- nr dev
+    '';
+    process-compose = {
+      readiness_probe = {
+        http_get = { host = "127.0.0.1"; port = 4001; path = "/"; };
+        initial_delay_seconds = 10;
+        period_seconds = 3;
+        timeout_seconds = 2;
+        failure_threshold = 20;
+      };
+    };
+  };
+};
+```
+
+After editing `devenv.nix`, run `make run` to start all services including the new one.
 
 ### Frontend Development (Mobile)
 
@@ -494,7 +525,8 @@ The project includes integrations for:
 - **[FastAPI](https://fastapi.tiangolo.com/)**: Python backend framework
 - **[Bun](https://bun.sh/)**: Fast package manager and JavaScript runtime
 - **[Turbo](https://turbo.build/)**: High-performance build system for monorepos
-- **[Docker](https://docker.com/)**: Containerization for consistent development environments
+- **[Docker](https://docker.com/)**: Used for Supabase local environment
+- **[devenv](https://devenv.sh/)**: Nix-based development environment with process management (replaces Docker for backend/frontend services)
 - **[Polar.sh](https://polar.sh/)**: Payment and subscription management
 - **[OneSignal](https://onesignal.com/)**: Push notification service
 

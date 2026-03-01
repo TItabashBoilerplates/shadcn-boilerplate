@@ -11,22 +11,12 @@ ignore_missing_imports = true
 install_types = true
 non_interactive = true
 
-# Auto-generated files should be excluded from type checking
-[[tool.mypy.overrides]]
-module = "domain.entity.models"
-ignore_errors = true
-
 [tool.ruff]
 # Same as Black.
 line-length = 88
 
 # Assume Python 3.11.
 target-version = "py312"
-
-# Exclude auto-generated files
-exclude = [
-    "src/domain/entity/models.py",
-]
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -39,6 +29,7 @@ ignore = [
     "PD011",  # pandas use of dot values
     "B008",
     "COM812", # conflicts with formatter
+    "TC",     # flake8-type-checking: pydantic/SQLModel evaluate annotations at runtime
 ]
 unfixable = [
     "F401",   # unused import
@@ -85,7 +76,6 @@ dependencies = [
 
     # SQLModel & Database
     "sqlmodel",
-    "sqlacodegen>=3.1.1",
     "psycopg2-binary",
 
     # Autogen

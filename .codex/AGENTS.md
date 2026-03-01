@@ -61,6 +61,19 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 | **DateTime** | UTC保存、Frontend変換 |
 | **Clean Code** | 後方互換禁止、重複禁止 |
 | **UI Testing** | UI は Storybook、単体テスト不要 |
+| **Debugging** | ログ確認・再起動は process-compose MCP 最優先 |
+
+### Debugging — process-compose MCP（MANDATORY）
+
+フロントエンド・バックエンドのデバッグは **process-compose MCP ツールを最優先**で使用する。
+MCP サーバーは port 8090 (SSE) で常時稼働。詳細は `.codex/skills/debugging/SKILL.md` を参照。
+
+| ツール | 用途 | 引数 |
+|--------|------|------|
+| `get-process-status` | 全サービス死活確認 | なし |
+| `get-process-logs` | ログ取得 | `process_name` (backend/storybook/web), `lines` |
+| `restart-process` | プロセス再起動 | `process_name` |
+| `start-process` | プロセス起動 | `process_name` |
 
 ---
 
@@ -157,3 +170,4 @@ env/
 | `i18n/` | next-intl 多言語対応 |
 | `langchain/` | LangChain/LangGraph/LangSmith |
 | `maestro/` | Maestro E2Eテスト |
+| `debugging/` | デバッグ手順（process-compose MCP 優先） |

@@ -371,7 +371,7 @@ platform:
 
 ### OTP が取得できない
 
-1. Supabase が起動しているか確認: `make run`
+1. Supabase・backend-py が起動しているか確認: `make run`
 2. Mailpit UI でメールを確認: `http://localhost:54324`
 3. `MAX_RETRIES` を増やす
 4. メールボックス名（@ より前）が正しいか確認

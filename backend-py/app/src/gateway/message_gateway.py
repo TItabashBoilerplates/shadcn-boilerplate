@@ -2,7 +2,7 @@ from uuid import UUID
 
 from sqlmodel import Session, select
 
-from domain.entity.models import Messages
+from domain.entity import Messages
 
 
 class MessageGateway:

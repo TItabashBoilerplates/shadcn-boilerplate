@@ -61,6 +61,7 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 | **DateTime** | UTC保存、Frontend変換 | `date-time-handling.md` |
 | **Clean Code** | 後方互換禁止、重複禁止 | `clean-code.md` |
 | **UI Testing** | UI は Storybook、単体テスト不要 | `ui-testing.md` |
+| **Debugging** | ログ確認・再起動は process-compose MCP 最優先 | `debugging.md` |
 
 ---
 
@@ -147,3 +148,4 @@ env/
 - `testing.md` - テスト方針（TDD）
 - `clean-code.md` - クリーンコード
 - `ui-testing.md` - UIテスト（Storybook）
+- `debugging.md` - デバッグ（process-compose MCP 優先）

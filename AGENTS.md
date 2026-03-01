@@ -181,6 +181,26 @@ const { data } = supabase.storage
 
 ---
 
+## Debugging (MANDATORY)
+
+フロントエンド・バックエンドのデバッグは **process-compose MCP ツールを最優先**で使用する。
+MCP サーバーは port 8090 (SSE) で常時稼働。
+
+| ツール | 用途 | 引数 |
+|--------|------|------|
+| `get-process-status` | 全サービス死活確認 | なし |
+| `get-process-logs` | ログ取得 | `process_name` (backend/storybook/web), `lines` |
+| `restart-process` | プロセス再起動 | `process_name` |
+| `start-process` | プロセス起動 | `process_name` |
+
+CLI フォールバック（MCP が使えない場合のみ）:
+```bash
+process-compose logs --tail 100 backend
+make stop && make run
+```
+
+---
+
 ## Skills
 
 Detailed guidance available in `.codex/skills/`:
@@ -192,3 +212,4 @@ Detailed guidance available in `.codex/skills/`:
 - `datetime/` - DateTime handling patterns
 - `i18n/` - next-intl internationalization
 - `shadcn-ui/` - shadcn/ui + TailwindCSS
+- `debugging/` - デバッグ手順（process-compose MCP 優先）

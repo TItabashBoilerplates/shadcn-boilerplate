@@ -28,6 +28,7 @@ globs: []
 | Supabase-First | `@supabase-first` - supabase-js優先 |
 | i18n | `@i18n` - 多言語対応必須 |
 | DateTime | `@datetime` - UTC保存、Frontend変換 |
+| Debugging | `@debugging` - ログ確認・再起動は process-compose MCP 最優先 |
 
 ## Commands
 

@@ -4,8 +4,8 @@ import uuid
 
 from sqlmodel import Session, select
 
+from domain.entity import VirtualUserChats, VirtualUserProfiles
 from domain.entity.chat import ChatRequest, ChatResponse
-from domain.entity.models import VirtualUserChats, VirtualUserProfiles
 from gateway.chat_room_gateway import ChatRoomGateway
 from gateway.current_user_gateway import CurrentUserGateway
 from gateway.embeddings_gateway import EmbeddingsGateway

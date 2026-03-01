@@ -2,7 +2,7 @@
 
 from sqlmodel import Session, func, select
 
-from domain.entity.models import Embeddings
+from domain.entity import Embeddings
 
 
 class EmbeddingsGateway:

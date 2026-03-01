@@ -39,7 +39,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     ├── supabase/         # Supabase 認証・RLS
     ├── drizzle/          # Drizzle ORM スキーマ
     ├── datetime/         # 日時処理
-    ├── debugging/        # デバッグ手順（コンテナログ・Supabase）
+    ├── debugging/        # デバッグ手順（process-compose MCP 優先・Supabase）
     ├── shadcn-ui/        # shadcn/ui + TailwindCSS (Web)
     ├── gluestack/        # gluestack-ui + NativeWind (Mobile)
     ├── storybook/        # Storybook 10 コンポーネントカタログ
@@ -91,6 +91,15 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 
 **MANDATORY**: コードは常にクリーンな状態を維持。後方互換コード・重複コード・未使用コードは残さない（明示的な指示がある場合を除く）。詳細は `.claude/rules/clean-code.md` を参照。
 
+**MANDATORY**: フロントエンド・バックエンドのデバッグ（ログ確認・状態確認・プロセス再起動）は **process-compose MCP ツールを最優先**で使用する。CLI にフォールバックするのは MCP が利用不可の場合のみ。詳細は `.claude/skills/debugging/SKILL.md` を参照。
+
+| MCP ツール | 用途 |
+|-----------|------|
+| `get-process-status` | 全サービス死活確認 |
+| `get-process-logs` | プロセスログ取得（引数: process_name, lines） |
+| `restart-process` | プロセス再起動（引数: process_name） |
+| `start-process` | プロセス起動（引数: process_name） |
+
 ### Package Management
 
 | Component                                 | Package Manager |
@@ -112,9 +121,9 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 make init                    # Full project initialization
 
 # Services
-make run                     # Start backend (Docker)
-make frontend                # Start frontend dev server
-make stop                    # Stop all services
+make run                     # Start Supabase + backend-py (devenv, background)
+make frontend                # Start Storybook + Next.js dev server
+make stop                    # Stop all services (backend-py + Supabase)
 
 # Quality
 make lint                    # Lint all
