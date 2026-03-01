@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { ChatApiChatPostData, ChatApiChatPostErrors, ChatApiChatPostResponses, HealthcheckHealthcheckGetData, HealthcheckHealthcheckGetResponses, RootGetData, RootGetResponses } from './types.gen';
+import type { HealthcheckHealthcheckGetData, HealthcheckHealthcheckGetResponses, RootGetData, RootGetResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -31,28 +31,3 @@ export const rootGet = <ThrowOnError extends boolean = false>(options?: Options<
  * Healthcheck
  */
 export const healthcheckHealthcheckGet = <ThrowOnError extends boolean = false>(options?: Options<HealthcheckHealthcheckGetData, ThrowOnError>) => (options?.client ?? client).get<HealthcheckHealthcheckGetResponses, unknown, ThrowOnError>({ url: '/healthcheck', ...options });
-
-/**
- * Chat
- *
- * Chat endpoint that uses all domain models.
- *
- * This endpoint:
- * - Authenticates user (Users)
- * - Gets user profile (UserProfiles)
- * - Creates/gets chat room (ChatRooms, UserChats)
- * - Saves messages (Messages)
- * - Gets/creates virtual user (VirtualUsers, VirtualUserChats)
- * - Gets virtual user profile (VirtualUserProfiles)
- * - Searches embeddings (Embeddings)
- * - Calls OpenAI API
- */
-export const chatApiChatPost = <ThrowOnError extends boolean = false>(options: Options<ChatApiChatPostData, ThrowOnError>) => (options.client ?? client).post<ChatApiChatPostResponses, ChatApiChatPostErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/chat',
-    ...options,
-    headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-    }
-});

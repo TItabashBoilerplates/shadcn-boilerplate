@@ -4,80 +4,6 @@ export type ClientOptions = {
     baseUrl: 'http://127.0.0.1:4040' | (string & {});
 };
 
-/**
- * ChatRequest
- *
- * Request model for chat endpoint.
- */
-export type ChatRequest = {
-    /**
-     * Message
-     */
-    message: string;
-    /**
-     * Chat Room Id
-     */
-    chat_room_id?: number | null;
-};
-
-/**
- * ChatResponse
- *
- * Response model for chat endpoint.
- */
-export type ChatResponse = {
-    /**
-     * Chat Room Id
-     */
-    chat_room_id: number;
-    /**
-     * User Message Id
-     */
-    user_message_id: number;
-    /**
-     * Ai Message Id
-     */
-    ai_message_id: number;
-    /**
-     * Ai Response
-     */
-    ai_response: string;
-    /**
-     * Virtual User
-     */
-    virtual_user: {
-        [key: string]: unknown;
-    };
-};
-
-/**
- * HTTPValidationError
- */
-export type HttpValidationError = {
-    /**
-     * Detail
-     */
-    detail?: Array<ValidationError>;
-};
-
-/**
- * ValidationError
- */
-export type ValidationError = {
-    /**
-     * Location
-     */
-    loc: Array<string | number>;
-    /**
-     * Message
-     */
-    msg: string;
-    /**
-     * Error Type
-     */
-    type: string;
-};
-
 export type RootGetData = {
     body?: never;
     path?: never;
@@ -117,28 +43,3 @@ export type HealthcheckHealthcheckGetResponses = {
 };
 
 export type HealthcheckHealthcheckGetResponse = HealthcheckHealthcheckGetResponses[keyof HealthcheckHealthcheckGetResponses];
-
-export type ChatApiChatPostData = {
-    body: ChatRequest;
-    path?: never;
-    query?: never;
-    url: '/api/chat';
-};
-
-export type ChatApiChatPostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type ChatApiChatPostError = ChatApiChatPostErrors[keyof ChatApiChatPostErrors];
-
-export type ChatApiChatPostResponses = {
-    /**
-     * Successful Response
-     */
-    200: ChatResponse;
-};
-
-export type ChatApiChatPostResponse = ChatApiChatPostResponses[keyof ChatApiChatPostResponses];
