@@ -65,12 +65,14 @@ in
         "get-process-status" = {
           command = ''bash -c 'echo "=== backend (4040) ===" && (curl -sf --max-time 3 http://localhost:4040/healthcheck && echo OK) || echo FAIL; echo "=== storybook (6006) ===" && (curl -sf --max-time 3 http://localhost:6006/ >/dev/null && echo OK) || echo FAIL; echo "=== web (3000) ===" && (curl -sf --max-time 3 http://localhost:3000/ >/dev/null && echo OK) || echo FAIL; echo "=== supabase (54321) ===" && (curl -sf --max-time 3 http://localhost:54321/health >/dev/null && echo OK) || echo FAIL' '';
           disabled = true;
+          namespace = "mcp";
           mcp = { type = "tool"; };
         };
         # 指定プロセスのログ取得（ログファイル直接読み取り、port 8080 不使用）
         "get-process-logs" = {
           command = ''bash -c 'LOGFILE="/Users/tknr/Development/shadcn-boilerplate/.devenv/state/process-compose/process-compose.log"; S=$(mktemp /tmp/pc.XXXXXX.py); printf "import sys,json\nfor l in sys.stdin:\n l=l.strip()\n if not l:continue\n try:print(json.loads(l).get(\"message\",\"\"))\n except:pass\n" > "$S"; grep -a "\"process\":\"@{process_name}\"" "$LOGFILE" 2>/dev/null | tail -n @{lines} | python3 "$S" 2>/dev/null; rm -f "$S"' '';
           disabled = true;
+          namespace = "mcp";
           mcp = {
             type = "tool";
             arguments = [
@@ -93,6 +95,7 @@ in
         "restart-process" = {
           command = ''bash -c 'curl -sf --max-time 10 -X POST "http://localhost:8080/process/restart/@{process_name}" >/tmp/pc-restart-result 2>&1 & sleep 2; cat /tmp/pc-restart-result 2>/dev/null && echo "Restart requested for @{process_name}" || echo "Restart sent (check process-compose TUI)"' '';
           disabled = true;
+          namespace = "mcp";
           mcp = {
             type = "tool";
             arguments = [
@@ -109,6 +112,7 @@ in
         "start-process" = {
           command = ''bash -c 'curl -sf --max-time 10 -X POST "http://localhost:8080/process/start/@{process_name}" >/tmp/pc-start-result 2>&1 & sleep 2; cat /tmp/pc-start-result 2>/dev/null && echo "Start requested for @{process_name}" || echo "Start sent (check process-compose TUI)"' '';
           disabled = true;
+          namespace = "mcp";
           mcp = {
             type = "tool";
             arguments = [

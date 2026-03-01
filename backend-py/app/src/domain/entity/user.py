@@ -13,12 +13,9 @@ from sqlmodel import Field, Relationship, SQLModel
 from domain.entity._column_types import ts_now
 
 if TYPE_CHECKING:
-    from domain.entity.message import Messages
     from domain.entity.order import Orders
     from domain.entity.subscription import Subscriptions
-    from domain.entity.user_chat import UserChats
     from domain.entity.user_profile import UserProfiles
-    from domain.entity.virtual_user import VirtualUsers
 
 
 class Users(SQLModel, table=True):
@@ -39,9 +36,6 @@ class Users(SQLModel, table=True):
 
     orders: list[Orders] = Relationship(back_populates="user")
     subscriptions: list[Subscriptions] = Relationship(back_populates="user")
-    user_chats: list[UserChats] = Relationship(back_populates="user")
     user_profiles: UserProfiles | None = Relationship(
         sa_relationship_kwargs={"uselist": False}, back_populates="user"
     )
-    virtual_users: list[VirtualUsers] = Relationship(back_populates="owner")
-    messages: list[Messages] = Relationship(back_populates="sender")

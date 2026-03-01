@@ -18,7 +18,6 @@ from sqlalchemy.sql import text
 from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
-    from domain.entity.address import Addresses
     from domain.entity.user import Users
 
 
@@ -60,6 +59,3 @@ class UserProfiles(SQLModel, table=True):
     )
 
     user: Users | None = Relationship(back_populates="user_profiles")
-    addresses: Addresses | None = Relationship(
-        sa_relationship_kwargs={"uselist": False}, back_populates="profile"
-    )
