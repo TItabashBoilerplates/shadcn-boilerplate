@@ -156,8 +156,10 @@ By adopting these environments, we can ensure efficient development and maintain
 # Nix をインストール (未インストールの場合)
 curl -sSfL https://install.determinate.systems/nix | sh -s -- install
 
-# devenv をインストール
+# devenv をインストール（どちらか一方）
 nix-env --install --attr devenv -f https://github.com/NixOS/nixpkgs/tarball/nixpkgs-unstable
+# または
+nix profile install nixpkgs#devenv
 
 # direnv をインストール
 brew install direnv
@@ -169,7 +171,11 @@ brew install direnv
 eval "$(direnv hook zsh)"
 ```
 
-ターミナルを再起動してください。
+設定を反映:
+
+```bash
+source ~/.zshrc
+```
 
 ### 2. Nix バイナリキャッシュの設定 (推奨)
 
@@ -181,9 +187,18 @@ sudo sh -c 'echo "trusted-users = root $(whoami)" >> /etc/nix/nix.conf'
 sudo launchctl kickstart -k system/org.nixos.nix-daemon
 ```
 
-### 3. 開発環境のアクティベート
+### 3. 開発環境のアクティベート（初回のみ `direnv allow` が必要）
 
-プロジェクトディレクトリに `cd` するだけで、direnv が自動的に devenv 環境をアクティベートします:
+direnv はセキュリティ上の理由から、初回のみ手動で `.envrc` を信頼することを宣言する必要があります:
+
+```bash
+cd shadcn-boilerplate
+direnv allow
+# または
+make direnv-allow
+```
+
+これ以降は `cd` するだけで自動的に devenv 環境がアクティベートされます:
 
 ```bash
 cd shadcn-boilerplate
@@ -193,8 +208,9 @@ cd shadcn-boilerplate
 # devenv: Node v22.22.0, Python 3.13.11, Deno 2.6.6, Bun 1.2.7, uv 0.9.28
 ```
 
-初回のみ Nix ビルドが走るため数分かかります。2回目以降は数百ミリ秒です。
-ディレクトリを離れると自動的にディアクティベートされます。`exit` は不要です。
+- 初回のみ Nix ビルドが走るため数分かかります。2回目以降は数百ミリ秒です
+- ディレクトリを離れると自動的にディアクティベートされます（`exit` は不要）
+- `.envrc` の内容が変わった場合のみ、再度 `direnv allow` が必要になります
 
 > **Note**: direnv を使わない場合は `devenv shell` で手動アクティベートできます。
 

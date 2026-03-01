@@ -33,6 +33,20 @@ storybook-local build-storybook: _devenv
 e2e e2e-web e2e-mobile: _devenv
 deploy-supabase supabase-link deploy-config deploy-functions-all deploy-secrets deploy-buckets: _devenv
 
+# direnv を有効化（初回セットアップ時）
+# _devenv チェック不要 - devenv shell なしで実行可能（make init の前提条件）
+# セキュリティ上の理由から direnv は初回のみ手動で allow が必要
+.PHONY: direnv-allow
+direnv-allow:
+	@if command -v direnv >/dev/null 2>&1; then \
+		direnv allow; \
+		echo "✅ direnv enabled. 次回から 'cd' するだけで devenv が自動起動します。"; \
+	else \
+		echo "❌ direnv not found. Install with: brew install direnv"; \
+		echo "   Then add to ~/.zshrc: eval \"\$$(direnv hook zsh)\""; \
+		exit 1; \
+	fi
+
 # 初期化コマンド
 .PHONY: init
 init:
