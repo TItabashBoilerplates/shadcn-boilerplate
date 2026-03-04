@@ -10,6 +10,11 @@ node_modules/
 .venv/
 venv/
 
+# Environment files
+.env
+.env.*
+!.env.example
+
 # Environment files directory
 env/**
 !env/*/
