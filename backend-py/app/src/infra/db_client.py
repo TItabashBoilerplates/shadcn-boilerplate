@@ -10,9 +10,9 @@ from collections.abc import Generator
 from sqlmodel import Session, create_engine
 
 # 環境変数からデータベースURLを取得
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("POSTGRES_URL")
 if not DATABASE_URL:
-    msg = "DATABASE_URL environment variable is not set"
+    msg = "POSTGRES_URL environment variable is not set"
     raise ValueError(msg)
 
 engine = create_engine(
