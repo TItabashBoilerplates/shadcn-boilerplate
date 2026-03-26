@@ -1,0 +1,10 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "backend-py/docker/Dockerfile.release"
+watchPatterns = ["backend-py/**"]
+
+[deploy]
+healthcheckPath = "/healthcheck"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
