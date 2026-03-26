@@ -410,49 +410,25 @@ def test_health_check(client):
     assert response.json() == {"status": "ok"}
 ```
 
-## Docker Configuration
+## Container / Deploy
 
-### Development Dockerfile
+### Railway (Production)
 
-```dockerfile
-FROM python:3.13-slim-bookworm
+Railpack（ゼロコンフィグビルダー）を使用。Dockerfile 不要。
 
-# Install uv
-RUN pip install uv
-
-# Set working directory
-WORKDIR /service/app
-
-# Copy dependencies
-COPY pyproject.toml uv.lock ./
-
-# Install dependencies
-RUN uv sync
-
-# Copy application
-COPY . .
-
-# Run server
-CMD ["uvicorn", "src.app:app", "--host", "0.0.0.0", "--port", "8000"]
+```toml
+# railway.toml
+[build]
+builder = "RAILPACK"
 ```
 
-### Production Dockerfile (Multi-stage)
+### devenv dockerTools (Other platforms)
 
-```dockerfile
-# Builder stage
-FROM python:3.13-slim-bookworm AS builder
-RUN pip install uv
-WORKDIR /service/app
-COPY pyproject.toml uv.lock ./
-RUN uv sync --no-dev
+Railpack 以外のプラットフォームにデプロイする場合は、devenv のコンテナ機能を使用：
 
-# Production stage
-FROM python:3.12-slim-bookworm
-WORKDIR /service/app
-COPY --from=builder /service/app/.venv ./.venv
-COPY . .
-USER appuser
-CMD ["uvicorn", "src.app:app", "--host", "0.0.0.0", "--port", "8000"]
+```bash
+devenv container build backend
+devenv container copy backend    # レジストリにプッシュ
 ```
 
 ## Environment Variables

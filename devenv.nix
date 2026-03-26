@@ -1,4 +1,4 @@
-{ pkgs, inputs, ... }:
+{ pkgs, inputs, config, lib, ... }:
 
 let
   # process-compose v1.94.0+ (MCP サーバー機能を含む)
@@ -14,15 +14,17 @@ in
   dotenv.disableHint = true;
 
   packages = [
-    pkgs.supabase-cli
-    pkgs.ni
-    pkgs.maestro
     # backend-py のシステム依存（C 拡張・音声ビデオライブラリ）
     pkgs.gcc
     pkgs.gnumake
     pkgs.libedit
     pkgs.libopus
     pkgs.libvpx
+  ] ++ lib.optionals (!config.container.isBuilding) [
+    # 開発専用ツール（コンテナビルド時は除外）
+    pkgs.supabase-cli
+    pkgs.ni
+    pkgs.maestro
   ];
 
   languages.javascript = {
@@ -206,6 +208,15 @@ in
       };
     };
 
+  };
+
+  # OCI コンテナイメージ（devenv container build backend で生成）
+  # Railway は Railpack を使用するため、通常は不要。
+  # Railpack 以外のプラットフォームにデプロイする場合に使用する。
+  containers."backend" = {
+    name = "backend-py";
+    version = "latest";
+    startupCommand = config.processes.backend.exec;
   };
 
   # devenv scripts（devenv profile の bin/ に配置され、PATH で優先される）
