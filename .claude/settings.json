@@ -16,7 +16,16 @@
       "Bash(cat:*)",
       "mcp__supabase",
       "mcp__shadcn",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(make lint*)",
+      "Bash(make format*)",
+      "Bash(make type-check*)",
+      "Bash(make test*)",
+      "Bash(make ci-check*)",
+      "Bash(make check*)",
+      "Bash(make build-frontend*)",
+      "Bash(make build-model*)",
+      "Bash(make build-storybook*)"
     ],
     "deny": [
       "Bash(make migrate-dev:*)",
