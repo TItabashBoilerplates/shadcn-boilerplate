@@ -415,12 +415,28 @@ def test_health_check(client):
 ### Railway (Production)
 
 Railpack（ゼロコンフィグビルダー）を使用。Dockerfile 不要。
+Railway のサービス設定で Root Directory を `backend-py` に指定すること。
 
 ```toml
-# railway.toml
+# backend-py/railway.toml
 [build]
 builder = "RAILPACK"
 ```
+
+#### railpack.json によるカスタマイズ
+
+通常はゼロコンフィグで動作するため `railpack.json` は空（スキーマのみ）で問題ない。
+以下のケースで設定を追加する：
+
+| ケース | 設定例 |
+|--------|--------|
+| システムパッケージが必要（libpq, ffmpeg 等） | `"buildAptPackages": ["libpq-dev"]`, `"deploy": { "aptPackages": ["libpq5"] }` |
+| スタートコマンドのカスタマイズ（ワーカー数等） | `"deploy": { "startCommand": "..." }` |
+| ビルドステップの追加（DB migration 等） | `"steps": { "build": { "commands": ["...", "uv run alembic upgrade head"] } }` |
+| ビルド時シークレットが必要 | `"secrets": ["DATABASE_URL"]` |
+| ファイナルイメージの最小化 | `"steps": { "install": { "deployOutputs": ["/app/**"] } }` |
+
+> 参考: https://railpack.com/config/file/
 
 ### devenv dockerTools (Other platforms)
 
