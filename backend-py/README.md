@@ -415,10 +415,10 @@ def test_health_check(client):
 ### Railway (Production)
 
 Railpack（ゼロコンフィグビルダー）を使用。Dockerfile 不要。
-Railway のサービス設定で Root Directory を `backend-py` に指定すること。
+Railway のサービス設定で Root Directory を `backend-py/app` に指定すること。
 
 ```toml
-# backend-py/railway.toml
+# backend-py/app/railway.toml
 [build]
 builder = "RAILPACK"
 ```
