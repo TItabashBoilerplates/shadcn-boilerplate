@@ -224,7 +224,7 @@ make init
 
 1. Docker / devenv のインストール確認
 2. Supabase CLI ログイン・初期化・起動
-3. `env/secrets.env` のテンプレートコピー
+3. `env/.env.secrets` のテンプレートコピー
 4. Frontend 依存関係のインストール
 5. direnv の有効化 (`direnv allow`)
 
@@ -234,14 +234,14 @@ make init
 
 ```
 env/
-├── backend/local.env         # Backend (Supabase URL 等)
-├── frontend/local.env        # Frontend (Next.js)
-├── migration/local.env       # Database migration (DATABASE_URL)
-├── secrets.env               # シークレット (.gitignore)
-└── secrets.env.example       # テンプレート
+├── backend/.env.local         # Backend (Supabase URL 等)
+├── frontend/.env.local        # Frontend (Next.js)
+├── migration/.env.local       # Database migration (DATABASE_URL)
+├── .env.secrets               # シークレット (.gitignore)
+└── .env.secrets.example       # テンプレート
 ```
 
-`make init` 後に `env/secrets.env` を編集してください:
+`make init` 後に `env/.env.secrets` を編集してください:
 
 ```
 SUPABASE_URL=your_supabase_project_id
@@ -302,7 +302,7 @@ processes = {
     exec = ''
       cd "$DEVENV_ROOT/path/to/service"
       dotenvx run \
-        -f "$DEVENV_ROOT/env/frontend/local.env" \
+        -f "$DEVENV_ROOT/env/frontend/.env.local" \
         -- nr dev
     '';
     process-compose = {

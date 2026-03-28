@@ -207,7 +207,7 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 MAILPIT_URL=http://localhost:54324
 ```
 
-> **Note**: `SUPABASE_SERVICE_ROLE_KEY` は `env/backend/local.env` から取得。
+> **Note**: `SUPABASE_SERVICE_ROLE_KEY` は `env/backend/.env.local` から取得。
 
 ### クリーンアップの仕組み
 

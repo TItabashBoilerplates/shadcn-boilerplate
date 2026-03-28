@@ -105,11 +105,11 @@ make build-model             # Generate types only
 
 ```
 env/
-├── backend/local.env         # Backend service
-├── frontend/local.env        # Frontend (Next.js)
-├── migration/local.env       # Database migration
-├── secrets.env               # Secrets (.gitignore)
-└── secrets.env.example       # Template
+├── backend/.env.local         # Backend service
+├── frontend/.env.local        # Frontend (Next.js)
+├── migration/.env.local       # Database migration
+├── .env.secrets               # Secrets (.gitignore)
+└── .env.secrets.example       # Template
 ```
 
 ---

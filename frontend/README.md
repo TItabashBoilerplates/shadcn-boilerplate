@@ -393,7 +393,7 @@ bun add -D <package-name>
 
 ## Environment Variables
 
-Frontend environment variables are managed in `env/frontend/local.env`.
+Frontend environment variables are managed in `env/frontend/.env.local`.
 
 ### Required Variables
 

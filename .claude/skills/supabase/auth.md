@@ -43,7 +43,7 @@ Supabase Auth の OAuth は PKCE（Proof Key for Code Exchange）フローを使
 ### 環境変数の設定
 
 ```bash
-# env/secrets.env
+# env/.env.secrets
 SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENT_ID=your_client_id
 SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET=your_client_secret
 ```

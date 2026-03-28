@@ -29,8 +29,8 @@ shadcn-boilerplateへのコントリビューションに興味を持ってい�
 
 3. 環境変数を設定
    ```bash
-   # env/secrets.env を編集して必要な環境変数を設定
-   vi env/secrets.env
+   # env/.env.secrets を編集して必要な環境変数を設定
+   vi env/.env.secrets
    ```
 
 4. バックエンドとフロントエンドを起動

@@ -181,7 +181,7 @@ function MyComponent() {
 
 ## Environment Variables
 
-Set in `env/frontend/local.env`:
+Set in `env/frontend/.env.local`:
 
 ```env
 EXPO_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321

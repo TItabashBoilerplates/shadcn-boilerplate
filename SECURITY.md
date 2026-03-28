@@ -38,7 +38,7 @@
 
 ### 環境変数の管理
 
-- `env/secrets.env`ファイルを**絶対に**コミットしないでください
+- `env/.env.secrets`ファイルを**絶対に**コミットしないでください
 - 本番環境では環境変数を安全に管理してください（AWS Secrets Manager, HashiCorp Vault等）
 
 ### 認証・認可

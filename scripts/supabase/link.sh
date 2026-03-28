@@ -13,5 +13,5 @@ fi
 
 echo "🔗 Linking to remote project..."
 cd "$PROJECT_ROOT"
-dotenvx run -f "env/backend/${ENV}.env" -- \
+dotenvx run -f "env/backend/.env.${ENV}" -- \
     bash -c 'supabase link --project-ref $SUPABASE_PROJECT_REF'

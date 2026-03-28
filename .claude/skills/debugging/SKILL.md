@@ -70,7 +70,7 @@ MCP ツール `get-process-status` を呼び出す。
 devenv up
 
 # Supabase の状態確認
-dotenvx run -f env/backend/local.env -- supabase status
+dotenvx run -f env/backend/.env.local -- supabase status
 ```
 
 ---
@@ -215,7 +215,7 @@ make build-frontend
 
 ```bash
 # 状態確認
-dotenvx run -f env/backend/local.env -- supabase status
+dotenvx run -f env/backend/.env.local -- supabase status
 
 # 停止 → 起動（Supabase + backend-py）
 make stop
@@ -226,7 +226,7 @@ make run
 
 ```bash
 # ローカル DB を完全リセット（データ消失注意）
-dotenvx run -f env/backend/local.env -- supabase db reset
+dotenvx run -f env/backend/.env.local -- supabase db reset
 
 # マイグレーション再適用
 make migrate-deploy
@@ -304,7 +304,7 @@ kill -9 <PID>
 make drizzle-validate
 
 # マイグレーション状態確認
-cd drizzle && dotenvx run -f ../env/migration/local.env -- nr check
+cd drizzle && dotenvx run -f ../env/migration/.env.local -- nr check
 ```
 
 ---
@@ -314,7 +314,7 @@ cd drizzle && dotenvx run -f ../env/migration/local.env -- nr check
 ### Backend Python
 
 ```bash
-# env/backend/local.env で設定
+# env/backend/.env.local で設定
 LOG_LEVEL=debug    # debug, info, warn, error
 LOG_FORMAT=pretty  # pretty（開発）, json（本番）
 ```
@@ -322,7 +322,7 @@ LOG_FORMAT=pretty  # pretty（開発）, json（本番）
 ### Frontend
 
 ```bash
-# env/frontend/local.env で設定
+# env/frontend/.env.local で設定
 NEXT_PUBLIC_LOG_LEVEL=debug  # debug, info, warn, error
 ```
 

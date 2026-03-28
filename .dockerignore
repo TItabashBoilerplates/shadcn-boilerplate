@@ -15,7 +15,7 @@ frontend/
 .DS_Store
 
 # Environment & secrets
-env/secrets.env
+env/.env.secrets
 *.env.local
 
 # Documentation

@@ -84,29 +84,29 @@ scripts/supabase/
 ```
 env/
 ├── backend/
-│   ├── local.env      # ローカル開発用（Backend, Edge Functions）
-│   ├── stg.env        # Staging環境用
-│   └── prod.env       # Production環境用
+│   ├── .env.local      # ローカル開発用（Backend, Edge Functions）
+│   ├── .env.stg        # Staging環境用
+│   └── .env.prod       # Production環境用
 ├── frontend/
-│   ├── local.env      # ローカル開発用（Next.js）
-│   ├── stg.env        # Staging環境用
-│   └── prod.env       # Production環境用
+│   ├── .env.local      # ローカル開発用（Next.js）
+│   ├── .env.stg        # Staging環境用
+│   └── .env.prod       # Production環境用
 ├── migration/
-│   ├── local.env      # ローカル開発用（Drizzle）
-│   ├── stg.env        # Staging環境用
-│   └── prod.env       # Production環境用
-├── secrets.env        # 機密情報（.gitignore対象）
-└── secrets.env.example # secrets.env のテンプレート
+│   ├── .env.local      # ローカル開発用（Drizzle）
+│   ├── .env.stg        # Staging環境用
+│   └── .env.prod       # Production環境用
+├── .env.secrets        # 機密情報（.gitignore対象）
+└── .env.secrets.example # .env.secrets のテンプレート
 ```
 
 ### 各ファイルの役割
 
 | ファイル | 用途 | Git管理 |
 |---------|------|---------|
-| `backend/{ENV}.env` | Supabase URL、Project Ref、API設定 | ✅ |
-| `frontend/local.env` | Next.js 用 NEXT_PUBLIC_* 変数 | ✅ |
-| `migration/local.env` | DATABASE_URL（Drizzle接続） | ✅ |
-| `secrets.env` | APIキー、OAuth シークレット等 | ❌ |
+| `backend/.env.{ENV}` | Supabase URL、Project Ref、API設定 | ✅ |
+| `frontend/.env.local` | Next.js 用 NEXT_PUBLIC_* 変数 | ✅ |
+| `migration/.env.local` | DATABASE_URL（Drizzle接続） | ✅ |
+| `.env.secrets` | APIキー、OAuth シークレット等 | ❌ |
 
 ### dotenvx による環境変数注入
 
@@ -114,32 +114,32 @@ env/
 
 ```bash
 # 基本的な使い方
-dotenvx run -f env/backend/${ENV}.env -- <command>
+dotenvx run -f env/backend/.env.${ENV} -- <command>
 
 # 複数ファイルを指定（後のファイルが優先）
-dotenvx run -f env/backend/${ENV}.env -f env/secrets.env -- <command>
+dotenvx run -f env/backend/.env.${ENV} -f env/.env.secrets -- <command>
 ```
 
 ### スクリプト内での使用例
 
 ```bash
 # scripts/supabase/link.sh
-dotenvx run -f "env/backend/${ENV}.env" -- \
+dotenvx run -f "env/backend/.env.${ENV}" -- \
     bash -c 'supabase link --project-ref $SUPABASE_PROJECT_REF'
 
 # scripts/supabase/deploy-functions.sh
-dotenvx run -f "env/backend/${ENV}.env" -f "env/secrets.env" -- \
+dotenvx run -f "env/backend/.env.${ENV}" -f "env/.env.secrets" -- \
     bash -c 'supabase functions deploy --project-ref $SUPABASE_PROJECT_REF'
 
 # scripts/supabase/deploy-secrets.sh
-dotenvx run -f "env/backend/${ENV}.env" -- \
-    bash -c 'supabase secrets set --env-file env/backend/${ENV}.env --project-ref $SUPABASE_PROJECT_REF'
+dotenvx run -f "env/backend/.env.${ENV}" -- \
+    bash -c 'supabase secrets set --env-file env/backend/.env.${ENV} --project-ref $SUPABASE_PROJECT_REF'
 ```
 
 ### なぜ dotenvx を使うか
 
-1. **ENV による環境切り替え**: `env/backend/${ENV}.env` で stg/prod を動的に選択
-2. **シークレット分離**: `secrets.env` を別ファイルで管理し、Git から除外
+1. **ENV による環境切り替え**: `env/backend/.env.${ENV}` で stg/prod を動的に選択
+2. **シークレット分離**: `.env.secrets` を別ファイルで管理し、Git から除外
 3. **複数ファイル合成**: `-f` フラグで複数の .env ファイルをマージ
 4. **コマンド実行**: `--` 以降のコマンドに環境変数を注入
 
@@ -147,7 +147,7 @@ dotenvx run -f "env/backend/${ENV}.env" -- \
 
 ## 必要な環境変数
 
-### env/backend/{ENV}.env
+### env/backend/.env.{ENV}
 
 ```bash
 # Supabase プロジェクト設定
@@ -159,14 +159,14 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 SUPABASE_PROJECT_REF=abcdefghijklmnop
 ```
 
-### env/migration/{ENV}.env
+### env/migration/.env.{ENV}
 
 ```bash
 # Drizzle マイグレーション用（直接接続）
 DATABASE_URL=postgresql://postgres:password@db.xxx.supabase.co:5432/postgres
 ```
 
-### env/secrets.env
+### env/.env.secrets
 
 ```bash
 # Edge Functions で使用するシークレット
@@ -186,15 +186,15 @@ ANTHROPIC_API_KEY=sk-ant-xxx
 
 ```bash
 # Staging 環境（backend, frontend, migration すべて）
-cp env/backend/local.env env/backend/stg.env
-cp env/frontend/local.env env/frontend/stg.env
-cp env/migration/local.env env/migration/stg.env
+cp env/backend/.env.local env/backend/.env.stg
+cp env/frontend/.env.local env/frontend/.env.stg
+cp env/migration/.env.local env/migration/.env.stg
 # 各ファイルを Staging 用に編集
 
 # Production 環境
-cp env/backend/local.env env/backend/prod.env
-cp env/frontend/local.env env/frontend/prod.env
-cp env/migration/local.env env/migration/prod.env
+cp env/backend/.env.local env/backend/.env.prod
+cp env/frontend/.env.local env/frontend/.env.prod
+cp env/migration/.env.local env/migration/.env.prod
 # 各ファイルを Production 用に編集
 ```
 
@@ -241,7 +241,7 @@ Supabase ダッシュボードの Project Settings → General から取得
 ### 3. 環境変数の設定
 
 ```bash
-# env/backend/stg.env
+# env/backend/.env.stg
 SUPABASE_PROJECT_REF=abcdefghijklmnop
 ```
 
@@ -303,7 +303,7 @@ supabase link --project-ref xxx --password "your-db-password"
 
 1. `supabase login` が完了しているか確認
 2. `SUPABASE_PROJECT_REF` が正しいか確認
-3. `env/secrets.env` が存在するか確認
+3. `env/.env.secrets` が存在するか確認
 
 ---
 

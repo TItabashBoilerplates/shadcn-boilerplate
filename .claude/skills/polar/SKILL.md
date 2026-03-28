@@ -58,7 +58,7 @@ scripts/polar/
 
 ## 環境変数
 
-### env/secrets.env
+### env/.env.secrets
 
 ```env
 POLAR_ACCESS_TOKEN=       # Polar.sh Organization Access Token
@@ -66,7 +66,7 @@ POLAR_WEBHOOK_SECRET=     # Webhook署名検証用シークレット
 POLAR_ORGANIZATION_ID=    # 組織ID
 ```
 
-### env/frontend/local.env
+### env/frontend/.env.local
 
 ```env
 POLAR_SERVER=sandbox      # sandbox | production

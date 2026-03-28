@@ -140,8 +140,8 @@ in
         cd "$DEVENV_ROOT/backend-py/app"
         export PYTHONPATH="$DEVENV_ROOT/backend-py/app/src''${PYTHONPATH:+:$PYTHONPATH}"
         dotenvx run \
-          -f "$DEVENV_ROOT/env/backend/local.env" \
-          -f "$DEVENV_ROOT/env/secrets.env" \
+          -f "$DEVENV_ROOT/env/backend/.env.local" \
+          -f "$DEVENV_ROOT/env/.env.secrets" \
           -- bash -c '
             uv sync --group dev &&
             exec uv run uvicorn app:app \
@@ -190,7 +190,7 @@ in
       exec = ''
         cd "$DEVENV_ROOT/frontend"
         dotenvx run \
-          -f "$DEVENV_ROOT/env/frontend/local.env" \
+          -f "$DEVENV_ROOT/env/frontend/.env.local" \
           -- nr dev
       '';
       process-compose = {

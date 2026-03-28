@@ -14,10 +14,10 @@ fi
 echo "🔐 Setting Secrets..."
 cd "$PROJECT_ROOT"
 
-# Apply env/backend/{ENV}.env
-dotenvx run -f "env/backend/${ENV}.env" -- \
-    bash -c 'supabase secrets set --env-file env/backend/${ENV}.env --project-ref $SUPABASE_PROJECT_REF'
+# Apply env/backend/.env.{ENV}
+dotenvx run -f "env/backend/.env.${ENV}" -- \
+    bash -c 'supabase secrets set --env-file env/backend/.env.${ENV} --project-ref $SUPABASE_PROJECT_REF'
 
-# Apply env/secrets.env
-dotenvx run -f "env/backend/${ENV}.env" -- \
-    bash -c 'supabase secrets set --env-file env/secrets.env --project-ref $SUPABASE_PROJECT_REF'
+# Apply env/.env.secrets
+dotenvx run -f "env/backend/.env.${ENV}" -- \
+    bash -c 'supabase secrets set --env-file env/.env.secrets --project-ref $SUPABASE_PROJECT_REF'

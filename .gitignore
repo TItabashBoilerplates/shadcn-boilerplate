@@ -18,8 +18,8 @@ venv/
 # Environment files directory
 env/**
 !env/*/
-!env/**/local.env
-!env/**/*.env.example
+!env/**/.env.local
+!env/.env.secrets.example
 
 # =============================================================================
 # Build Outputs

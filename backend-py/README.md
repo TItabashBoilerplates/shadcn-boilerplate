@@ -449,7 +449,7 @@ devenv container copy backend    # レジストリにプッシュ
 
 ## Environment Variables
 
-Backend environment variables are managed in `env/backend/local.env`.
+Backend environment variables are managed in `env/backend/.env.local`.
 
 ### Required Variables
 
