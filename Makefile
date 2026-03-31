@@ -77,6 +77,10 @@ init:
 	fi
 	# フロントエンドの依存関係をインストール
 	cd frontend && ni
+	# Drizzleの依存関係をインストール
+	cd drizzle && ni
+	# バックエンドの依存関係をインストール
+	cd backend-py && uv sync
 	# direnv を有効化（次回以降 cd で自動アクティベーション）
 	@if command -v direnv >/dev/null 2>&1; then \
 		direnv allow; \
