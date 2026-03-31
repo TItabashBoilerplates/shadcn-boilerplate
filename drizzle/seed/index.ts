@@ -5,7 +5,7 @@
  *   bun run seed/index.ts
  *
  * Environment:
- *   DATABASE_URL - PostgreSQL connection string (required)
+ *   POSTGRES_URL - PostgreSQL connection string (required)
  */
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { reset, seed } from 'drizzle-seed'
@@ -18,9 +18,9 @@ import { refinements } from './random'
 const SEED_NUMBER = 12345
 
 async function main() {
-  const databaseUrl = process.env.DATABASE_URL
+  const databaseUrl = process.env.POSTGRES_URL
   if (!databaseUrl) {
-    console.error('DATABASE_URL is required')
+    console.error('POSTGRES_URL is required')
     process.exit(1)
   }
 

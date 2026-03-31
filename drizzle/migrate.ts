@@ -17,7 +17,7 @@
  *   bun run migrate.ts post-migration  # マイグレーション後に実行
  *
  * 環境変数:
- *   DATABASE_URL - PostgreSQL接続文字列（必須）
+ *   POSTGRES_URL - PostgreSQL接続文字列（必須）
  */
 
 import { existsSync, readdirSync } from 'node:fs'
@@ -47,10 +47,10 @@ function isValidPhase(phase: string): phase is Phase {
 }
 
 async function executeSqlFiles(configDir: string, phase: Phase): Promise<void> {
-  const databaseUrl = Bun.env.DATABASE_URL
+  const databaseUrl = Bun.env.POSTGRES_URL
 
   if (!databaseUrl) {
-    console.error('❌ Error: DATABASE_URL environment variable is required')
+    console.error('❌ Error: POSTGRES_URL environment variable is required')
     process.exit(1)
   }
 
