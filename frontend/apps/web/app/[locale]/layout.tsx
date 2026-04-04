@@ -7,7 +7,7 @@ import { notFound } from 'next/navigation'
 import { hasLocale, NextIntlClientProvider } from 'next-intl'
 import { getMessages, setRequestLocale } from 'next-intl/server'
 import { routing } from '@/shared/config/i18n'
-import '@/app/styles/globals.css'
+import '@workspace/ui/web/styles/globals.css'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',

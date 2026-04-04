@@ -3,15 +3,17 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "main": "./components/index.ts",
-  "types": "./components/index.ts",
+  "main": "./src/components/index.ts",
+  "types": "./src/components/index.ts",
   "exports": {
-    ".": "./components/index.ts",
-    "./components": "./components/index.ts",
-    "./components/*": "./components/*.tsx",
-    "./magicui": "./magicui/index.ts",
-    "./magicui/*": "./magicui/*.tsx",
-    "./lib/*": "./lib/*.ts"
+    ".": "./src/components/index.ts",
+    "./components": "./src/components/index.ts",
+    "./components/*": "./src/components/*.tsx",
+    "./magicui": "./src/magicui/index.ts",
+    "./magicui/*": "./src/magicui/*.tsx",
+    "./lib/*": "./src/lib/*.ts",
+    "./hooks/*": "./src/hooks/*.ts",
+    "./styles/globals.css": "./src/styles/globals.css"
   },
   "scripts": {
     "type-check": "tsc --noEmit"

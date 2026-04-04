@@ -46,7 +46,15 @@
       },
       "style": {
         "recommended": true,
-        "useImportType": "error"
+        "useImportType": "error",
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "@workspace/ui/web/components": "Use individual component imports (e.g., @workspace/ui/web/components/button) instead of barrel imports."
+            }
+          }
+        }
       },
       "suspicious": {
         "recommended": true,

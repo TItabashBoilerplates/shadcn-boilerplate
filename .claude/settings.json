@@ -75,7 +75,7 @@
     ]
   },
   "sandbox": {
-    "enabled": true,
+    "enabled": false,
     "allowUnsandboxedCommands": false,
     "filesystem": {
       "allowWrite": ["/tmp"]
