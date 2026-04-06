@@ -47,9 +47,13 @@ export const colors = {
 } as const
 
 export const borderRadius = {
+  '4xl': 'calc(var(--radius) * 2.6)',
+  '3xl': 'calc(var(--radius) * 2.2)',
+  '2xl': 'calc(var(--radius) * 1.8)',
+  xl: 'calc(var(--radius) * 1.4)',
   lg: 'var(--radius)',
-  md: 'calc(var(--radius) - 2px)',
-  sm: 'calc(var(--radius) - 4px)',
+  md: 'calc(var(--radius) * 0.8)',
+  sm: 'calc(var(--radius) * 0.6)',
 } as const
 
 export const themeExtend = {
