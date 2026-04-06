@@ -3,8 +3,8 @@
 import { type DefaultError, queryOptions, type UseMutationOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { calculateRetroactiveApiRoyaltyCalculateRetroactivePost, calculateRoyaltyApiRoyaltyCalculatePost, distributeWaterfallApiCommitteeCommitteeIdDistributePost, exportAccountingApiAccountingExportPost, generateStatementsApiStatementGeneratePost, getComplianceDashboardApiComplianceDashboardGet, getSharedApprovalApiSharedApprovalTokenGet, healthcheckHealthcheckGet, type Options, resolveDateMathApiRightsWindowResolvePost, rootGet, runComplianceCheckApiComplianceCheckPost, searchAvailsApiAvailsSearchPost } from '../sdk.gen';
-import type { CalculateRetroactiveApiRoyaltyCalculateRetroactivePostData, CalculateRetroactiveApiRoyaltyCalculateRetroactivePostError, CalculateRetroactiveApiRoyaltyCalculateRetroactivePostResponse, CalculateRoyaltyApiRoyaltyCalculatePostData, CalculateRoyaltyApiRoyaltyCalculatePostError, CalculateRoyaltyApiRoyaltyCalculatePostResponse, DistributeWaterfallApiCommitteeCommitteeIdDistributePostData, DistributeWaterfallApiCommitteeCommitteeIdDistributePostError, DistributeWaterfallApiCommitteeCommitteeIdDistributePostResponse, ExportAccountingApiAccountingExportPostData, ExportAccountingApiAccountingExportPostError, ExportAccountingApiAccountingExportPostResponse, GenerateStatementsApiStatementGeneratePostData, GenerateStatementsApiStatementGeneratePostError, GenerateStatementsApiStatementGeneratePostResponse, GetComplianceDashboardApiComplianceDashboardGetData, GetComplianceDashboardApiComplianceDashboardGetResponse, GetSharedApprovalApiSharedApprovalTokenGetData, GetSharedApprovalApiSharedApprovalTokenGetError, GetSharedApprovalApiSharedApprovalTokenGetResponse, HealthcheckHealthcheckGetData, HealthcheckHealthcheckGetResponse, ResolveDateMathApiRightsWindowResolvePostData, ResolveDateMathApiRightsWindowResolvePostError, ResolveDateMathApiRightsWindowResolvePostResponse, RootGetData, RootGetResponse, RunComplianceCheckApiComplianceCheckPostData, RunComplianceCheckApiComplianceCheckPostError, RunComplianceCheckApiComplianceCheckPostResponse, SearchAvailsApiAvailsSearchPostData, SearchAvailsApiAvailsSearchPostError, SearchAvailsApiAvailsSearchPostResponse } from '../types.gen';
+import { anomalyDetectApiAiOrderAnomalyDetectPost, chatApiAiChatPost, checkInvoiceApiAiInvoiceCheckPost, demandForecastApiAiInventoryDemandForecastPost, generateEmbeddingApiAiProductGenerateEmbeddingPost, generateFromImageApiAiProductGenerateFromImagePost, generateLinesheetApiAiLinesheetGeneratePost, healthcheckHealthcheckGet, mapColumnsApiAiCsvMapColumnsPost, negotiationDraftApiAiPricingNegotiationDraftPost, type Options, orderBriefingApiAiOrderBriefingPost, personalizeLinesheetApiAiLinesheetPersonalizePost, recommendRateApiAiPricingRecommendRatePost, rewriteToneApiAiContentRewriteTonePost, rootGet, smartAlertsApiAiInventorySmartAlertsPost } from '../sdk.gen';
+import type { AnomalyDetectApiAiOrderAnomalyDetectPostData, AnomalyDetectApiAiOrderAnomalyDetectPostError, AnomalyDetectApiAiOrderAnomalyDetectPostResponse, ChatApiAiChatPostData, ChatApiAiChatPostError, CheckInvoiceApiAiInvoiceCheckPostData, CheckInvoiceApiAiInvoiceCheckPostError, CheckInvoiceApiAiInvoiceCheckPostResponse, DemandForecastApiAiInventoryDemandForecastPostData, DemandForecastApiAiInventoryDemandForecastPostError, DemandForecastApiAiInventoryDemandForecastPostResponse, GenerateEmbeddingApiAiProductGenerateEmbeddingPostData, GenerateEmbeddingApiAiProductGenerateEmbeddingPostError, GenerateEmbeddingApiAiProductGenerateEmbeddingPostResponse, GenerateFromImageApiAiProductGenerateFromImagePostData, GenerateFromImageApiAiProductGenerateFromImagePostError, GenerateFromImageApiAiProductGenerateFromImagePostResponse, GenerateLinesheetApiAiLinesheetGeneratePostData, GenerateLinesheetApiAiLinesheetGeneratePostError, GenerateLinesheetApiAiLinesheetGeneratePostResponse, HealthcheckHealthcheckGetData, HealthcheckHealthcheckGetResponse, MapColumnsApiAiCsvMapColumnsPostData, MapColumnsApiAiCsvMapColumnsPostError, MapColumnsApiAiCsvMapColumnsPostResponse, NegotiationDraftApiAiPricingNegotiationDraftPostData, NegotiationDraftApiAiPricingNegotiationDraftPostError, NegotiationDraftApiAiPricingNegotiationDraftPostResponse, OrderBriefingApiAiOrderBriefingPostData, OrderBriefingApiAiOrderBriefingPostError, OrderBriefingApiAiOrderBriefingPostResponse, PersonalizeLinesheetApiAiLinesheetPersonalizePostData, PersonalizeLinesheetApiAiLinesheetPersonalizePostError, PersonalizeLinesheetApiAiLinesheetPersonalizePostResponse, RecommendRateApiAiPricingRecommendRatePostData, RecommendRateApiAiPricingRecommendRatePostError, RecommendRateApiAiPricingRecommendRatePostResponse, RewriteToneApiAiContentRewriteTonePostData, RewriteToneApiAiContentRewriteTonePostError, RewriteToneApiAiContentRewriteTonePostResponse, RootGetData, RootGetResponse, SmartAlertsApiAiInventorySmartAlertsPostData, SmartAlertsApiAiInventorySmartAlertsPostError, SmartAlertsApiAiInventorySmartAlertsPostResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -76,14 +76,14 @@ export const healthcheckHealthcheckGetOptions = (options?: Options<HealthcheckHe
 });
 
 /**
- * Search Avails
+ * Generate From Image
  *
- * 7次元Avails検索.
+ * Generate product info from an image using Claude Vision.
  */
-export const searchAvailsApiAvailsSearchPostMutation = (options?: Partial<Options<SearchAvailsApiAvailsSearchPostData>>): UseMutationOptions<SearchAvailsApiAvailsSearchPostResponse, SearchAvailsApiAvailsSearchPostError, Options<SearchAvailsApiAvailsSearchPostData>> => {
-    const mutationOptions: UseMutationOptions<SearchAvailsApiAvailsSearchPostResponse, SearchAvailsApiAvailsSearchPostError, Options<SearchAvailsApiAvailsSearchPostData>> = {
+export const generateFromImageApiAiProductGenerateFromImagePostMutation = (options?: Partial<Options<GenerateFromImageApiAiProductGenerateFromImagePostData>>): UseMutationOptions<GenerateFromImageApiAiProductGenerateFromImagePostResponse, GenerateFromImageApiAiProductGenerateFromImagePostError, Options<GenerateFromImageApiAiProductGenerateFromImagePostData>> => {
+    const mutationOptions: UseMutationOptions<GenerateFromImageApiAiProductGenerateFromImagePostResponse, GenerateFromImageApiAiProductGenerateFromImagePostError, Options<GenerateFromImageApiAiProductGenerateFromImagePostData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await searchAvailsApiAvailsSearchPost({
+            const { data } = await generateFromImageApiAiProductGenerateFromImagePost({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -95,14 +95,14 @@ export const searchAvailsApiAvailsSearchPostMutation = (options?: Partial<Option
 };
 
 /**
- * Resolve Date Math
+ * Generate Embedding
  *
- * DateMath式を解決して具体日付を返す.
+ * Generate embedding vector for a product.
  */
-export const resolveDateMathApiRightsWindowResolvePostMutation = (options?: Partial<Options<ResolveDateMathApiRightsWindowResolvePostData>>): UseMutationOptions<ResolveDateMathApiRightsWindowResolvePostResponse, ResolveDateMathApiRightsWindowResolvePostError, Options<ResolveDateMathApiRightsWindowResolvePostData>> => {
-    const mutationOptions: UseMutationOptions<ResolveDateMathApiRightsWindowResolvePostResponse, ResolveDateMathApiRightsWindowResolvePostError, Options<ResolveDateMathApiRightsWindowResolvePostData>> = {
+export const generateEmbeddingApiAiProductGenerateEmbeddingPostMutation = (options?: Partial<Options<GenerateEmbeddingApiAiProductGenerateEmbeddingPostData>>): UseMutationOptions<GenerateEmbeddingApiAiProductGenerateEmbeddingPostResponse, GenerateEmbeddingApiAiProductGenerateEmbeddingPostError, Options<GenerateEmbeddingApiAiProductGenerateEmbeddingPostData>> => {
+    const mutationOptions: UseMutationOptions<GenerateEmbeddingApiAiProductGenerateEmbeddingPostResponse, GenerateEmbeddingApiAiProductGenerateEmbeddingPostError, Options<GenerateEmbeddingApiAiProductGenerateEmbeddingPostData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await resolveDateMathApiRightsWindowResolvePost({
+            const { data } = await generateEmbeddingApiAiProductGenerateEmbeddingPost({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -114,14 +114,14 @@ export const resolveDateMathApiRightsWindowResolvePostMutation = (options?: Part
 };
 
 /**
- * Calculate Royalty
+ * Map Columns
  *
- * ロイヤリティ計算実行(非同期).
+ * Auto-map CSV columns to system fields using AI.
  */
-export const calculateRoyaltyApiRoyaltyCalculatePostMutation = (options?: Partial<Options<CalculateRoyaltyApiRoyaltyCalculatePostData>>): UseMutationOptions<CalculateRoyaltyApiRoyaltyCalculatePostResponse, CalculateRoyaltyApiRoyaltyCalculatePostError, Options<CalculateRoyaltyApiRoyaltyCalculatePostData>> => {
-    const mutationOptions: UseMutationOptions<CalculateRoyaltyApiRoyaltyCalculatePostResponse, CalculateRoyaltyApiRoyaltyCalculatePostError, Options<CalculateRoyaltyApiRoyaltyCalculatePostData>> = {
+export const mapColumnsApiAiCsvMapColumnsPostMutation = (options?: Partial<Options<MapColumnsApiAiCsvMapColumnsPostData>>): UseMutationOptions<MapColumnsApiAiCsvMapColumnsPostResponse, MapColumnsApiAiCsvMapColumnsPostError, Options<MapColumnsApiAiCsvMapColumnsPostData>> => {
+    const mutationOptions: UseMutationOptions<MapColumnsApiAiCsvMapColumnsPostResponse, MapColumnsApiAiCsvMapColumnsPostError, Options<MapColumnsApiAiCsvMapColumnsPostData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await calculateRoyaltyApiRoyaltyCalculatePost({
+            const { data } = await mapColumnsApiAiCsvMapColumnsPost({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -133,14 +133,14 @@ export const calculateRoyaltyApiRoyaltyCalculatePostMutation = (options?: Partia
 };
 
 /**
- * Calculate Retroactive
+ * Generate Linesheet
  *
- * 遡及再計算実行.
+ * Generate linesheet from natural language instruction.
  */
-export const calculateRetroactiveApiRoyaltyCalculateRetroactivePostMutation = (options?: Partial<Options<CalculateRetroactiveApiRoyaltyCalculateRetroactivePostData>>): UseMutationOptions<CalculateRetroactiveApiRoyaltyCalculateRetroactivePostResponse, CalculateRetroactiveApiRoyaltyCalculateRetroactivePostError, Options<CalculateRetroactiveApiRoyaltyCalculateRetroactivePostData>> => {
-    const mutationOptions: UseMutationOptions<CalculateRetroactiveApiRoyaltyCalculateRetroactivePostResponse, CalculateRetroactiveApiRoyaltyCalculateRetroactivePostError, Options<CalculateRetroactiveApiRoyaltyCalculateRetroactivePostData>> = {
+export const generateLinesheetApiAiLinesheetGeneratePostMutation = (options?: Partial<Options<GenerateLinesheetApiAiLinesheetGeneratePostData>>): UseMutationOptions<GenerateLinesheetApiAiLinesheetGeneratePostResponse, GenerateLinesheetApiAiLinesheetGeneratePostError, Options<GenerateLinesheetApiAiLinesheetGeneratePostData>> => {
+    const mutationOptions: UseMutationOptions<GenerateLinesheetApiAiLinesheetGeneratePostResponse, GenerateLinesheetApiAiLinesheetGeneratePostError, Options<GenerateLinesheetApiAiLinesheetGeneratePostData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await calculateRetroactiveApiRoyaltyCalculateRetroactivePost({
+            const { data } = await generateLinesheetApiAiLinesheetGeneratePost({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -152,14 +152,14 @@ export const calculateRetroactiveApiRoyaltyCalculateRetroactivePostMutation = (o
 };
 
 /**
- * Distribute Waterfall
+ * Personalize Linesheet
  *
- * ウォーターフォール分配実行.
+ * Personalize linesheet for a specific buyer.
  */
-export const distributeWaterfallApiCommitteeCommitteeIdDistributePostMutation = (options?: Partial<Options<DistributeWaterfallApiCommitteeCommitteeIdDistributePostData>>): UseMutationOptions<DistributeWaterfallApiCommitteeCommitteeIdDistributePostResponse, DistributeWaterfallApiCommitteeCommitteeIdDistributePostError, Options<DistributeWaterfallApiCommitteeCommitteeIdDistributePostData>> => {
-    const mutationOptions: UseMutationOptions<DistributeWaterfallApiCommitteeCommitteeIdDistributePostResponse, DistributeWaterfallApiCommitteeCommitteeIdDistributePostError, Options<DistributeWaterfallApiCommitteeCommitteeIdDistributePostData>> = {
+export const personalizeLinesheetApiAiLinesheetPersonalizePostMutation = (options?: Partial<Options<PersonalizeLinesheetApiAiLinesheetPersonalizePostData>>): UseMutationOptions<PersonalizeLinesheetApiAiLinesheetPersonalizePostResponse, PersonalizeLinesheetApiAiLinesheetPersonalizePostError, Options<PersonalizeLinesheetApiAiLinesheetPersonalizePostData>> => {
+    const mutationOptions: UseMutationOptions<PersonalizeLinesheetApiAiLinesheetPersonalizePostResponse, PersonalizeLinesheetApiAiLinesheetPersonalizePostError, Options<PersonalizeLinesheetApiAiLinesheetPersonalizePostData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await distributeWaterfallApiCommitteeCommitteeIdDistributePost({
+            const { data } = await personalizeLinesheetApiAiLinesheetPersonalizePost({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -171,53 +171,14 @@ export const distributeWaterfallApiCommitteeCommitteeIdDistributePostMutation = 
 };
 
 /**
- * Run Compliance Check
+ * Chat
  *
- * コンプライアンスチェック実行.
+ * Buyer AI chat with RAG-based product knowledge (SSE streaming).
  */
-export const runComplianceCheckApiComplianceCheckPostMutation = (options?: Partial<Options<RunComplianceCheckApiComplianceCheckPostData>>): UseMutationOptions<RunComplianceCheckApiComplianceCheckPostResponse, RunComplianceCheckApiComplianceCheckPostError, Options<RunComplianceCheckApiComplianceCheckPostData>> => {
-    const mutationOptions: UseMutationOptions<RunComplianceCheckApiComplianceCheckPostResponse, RunComplianceCheckApiComplianceCheckPostError, Options<RunComplianceCheckApiComplianceCheckPostData>> = {
+export const chatApiAiChatPostMutation = (options?: Partial<Options<ChatApiAiChatPostData>>): UseMutationOptions<unknown, ChatApiAiChatPostError, Options<ChatApiAiChatPostData>> => {
+    const mutationOptions: UseMutationOptions<unknown, ChatApiAiChatPostError, Options<ChatApiAiChatPostData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await runComplianceCheckApiComplianceCheckPost({
-                ...options,
-                ...fnOptions,
-                throwOnError: true
-            });
-            return data;
-        }
-    };
-    return mutationOptions;
-};
-
-export const getComplianceDashboardApiComplianceDashboardGetQueryKey = (options?: Options<GetComplianceDashboardApiComplianceDashboardGetData>) => createQueryKey('getComplianceDashboardApiComplianceDashboardGet', options);
-
-/**
- * Get Compliance Dashboard
- *
- * コンプライアンス違反サマリー取得.
- */
-export const getComplianceDashboardApiComplianceDashboardGetOptions = (options?: Options<GetComplianceDashboardApiComplianceDashboardGetData>) => queryOptions<GetComplianceDashboardApiComplianceDashboardGetResponse, DefaultError, GetComplianceDashboardApiComplianceDashboardGetResponse, ReturnType<typeof getComplianceDashboardApiComplianceDashboardGetQueryKey>>({
-    queryFn: async ({ queryKey, signal }) => {
-        const { data } = await getComplianceDashboardApiComplianceDashboardGet({
-            ...options,
-            ...queryKey[0],
-            signal,
-            throwOnError: true
-        });
-        return data;
-    },
-    queryKey: getComplianceDashboardApiComplianceDashboardGetQueryKey(options)
-});
-
-/**
- * Generate Statements
- *
- * ステートメント一括生成(非同期).
- */
-export const generateStatementsApiStatementGeneratePostMutation = (options?: Partial<Options<GenerateStatementsApiStatementGeneratePostData>>): UseMutationOptions<GenerateStatementsApiStatementGeneratePostResponse, GenerateStatementsApiStatementGeneratePostError, Options<GenerateStatementsApiStatementGeneratePostData>> => {
-    const mutationOptions: UseMutationOptions<GenerateStatementsApiStatementGeneratePostResponse, GenerateStatementsApiStatementGeneratePostError, Options<GenerateStatementsApiStatementGeneratePostData>> = {
-        mutationFn: async (fnOptions) => {
-            const { data } = await generateStatementsApiStatementGeneratePost({
+            const { data } = await chatApiAiChatPost({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -229,14 +190,14 @@ export const generateStatementsApiStatementGeneratePostMutation = (options?: Par
 };
 
 /**
- * Export Accounting
+ * Order Briefing
  *
- * 会計CSV出力.
+ * Generate daily order briefing with AI.
  */
-export const exportAccountingApiAccountingExportPostMutation = (options?: Partial<Options<ExportAccountingApiAccountingExportPostData>>): UseMutationOptions<ExportAccountingApiAccountingExportPostResponse, ExportAccountingApiAccountingExportPostError, Options<ExportAccountingApiAccountingExportPostData>> => {
-    const mutationOptions: UseMutationOptions<ExportAccountingApiAccountingExportPostResponse, ExportAccountingApiAccountingExportPostError, Options<ExportAccountingApiAccountingExportPostData>> = {
+export const orderBriefingApiAiOrderBriefingPostMutation = (options?: Partial<Options<OrderBriefingApiAiOrderBriefingPostData>>): UseMutationOptions<OrderBriefingApiAiOrderBriefingPostResponse, OrderBriefingApiAiOrderBriefingPostError, Options<OrderBriefingApiAiOrderBriefingPostData>> => {
+    const mutationOptions: UseMutationOptions<OrderBriefingApiAiOrderBriefingPostResponse, OrderBriefingApiAiOrderBriefingPostError, Options<OrderBriefingApiAiOrderBriefingPostData>> = {
         mutationFn: async (fnOptions) => {
-            const { data } = await exportAccountingApiAccountingExportPost({
+            const { data } = await orderBriefingApiAiOrderBriefingPost({
                 ...options,
                 ...fnOptions,
                 throwOnError: true
@@ -247,22 +208,135 @@ export const exportAccountingApiAccountingExportPostMutation = (options?: Partia
     return mutationOptions;
 };
 
-export const getSharedApprovalApiSharedApprovalTokenGetQueryKey = (options: Options<GetSharedApprovalApiSharedApprovalTokenGetData>) => createQueryKey('getSharedApprovalApiSharedApprovalTokenGet', options);
+/**
+ * Anomaly Detect
+ *
+ * Detect order anomalies with AI.
+ */
+export const anomalyDetectApiAiOrderAnomalyDetectPostMutation = (options?: Partial<Options<AnomalyDetectApiAiOrderAnomalyDetectPostData>>): UseMutationOptions<AnomalyDetectApiAiOrderAnomalyDetectPostResponse, AnomalyDetectApiAiOrderAnomalyDetectPostError, Options<AnomalyDetectApiAiOrderAnomalyDetectPostData>> => {
+    const mutationOptions: UseMutationOptions<AnomalyDetectApiAiOrderAnomalyDetectPostResponse, AnomalyDetectApiAiOrderAnomalyDetectPostError, Options<AnomalyDetectApiAiOrderAnomalyDetectPostData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await anomalyDetectApiAiOrderAnomalyDetectPost({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
 
 /**
- * Get Shared Approval
+ * Check Invoice
  *
- * 外部共有リンク経由の承認結果閲覧(認証不要).
+ * AI double-check for invoice accuracy.
  */
-export const getSharedApprovalApiSharedApprovalTokenGetOptions = (options: Options<GetSharedApprovalApiSharedApprovalTokenGetData>) => queryOptions<GetSharedApprovalApiSharedApprovalTokenGetResponse, GetSharedApprovalApiSharedApprovalTokenGetError, GetSharedApprovalApiSharedApprovalTokenGetResponse, ReturnType<typeof getSharedApprovalApiSharedApprovalTokenGetQueryKey>>({
-    queryFn: async ({ queryKey, signal }) => {
-        const { data } = await getSharedApprovalApiSharedApprovalTokenGet({
-            ...options,
-            ...queryKey[0],
-            signal,
-            throwOnError: true
-        });
-        return data;
-    },
-    queryKey: getSharedApprovalApiSharedApprovalTokenGetQueryKey(options)
-});
+export const checkInvoiceApiAiInvoiceCheckPostMutation = (options?: Partial<Options<CheckInvoiceApiAiInvoiceCheckPostData>>): UseMutationOptions<CheckInvoiceApiAiInvoiceCheckPostResponse, CheckInvoiceApiAiInvoiceCheckPostError, Options<CheckInvoiceApiAiInvoiceCheckPostData>> => {
+    const mutationOptions: UseMutationOptions<CheckInvoiceApiAiInvoiceCheckPostResponse, CheckInvoiceApiAiInvoiceCheckPostError, Options<CheckInvoiceApiAiInvoiceCheckPostData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await checkInvoiceApiAiInvoiceCheckPost({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Recommend Rate
+ *
+ * AI wholesale rate recommendation.
+ */
+export const recommendRateApiAiPricingRecommendRatePostMutation = (options?: Partial<Options<RecommendRateApiAiPricingRecommendRatePostData>>): UseMutationOptions<RecommendRateApiAiPricingRecommendRatePostResponse, RecommendRateApiAiPricingRecommendRatePostError, Options<RecommendRateApiAiPricingRecommendRatePostData>> => {
+    const mutationOptions: UseMutationOptions<RecommendRateApiAiPricingRecommendRatePostResponse, RecommendRateApiAiPricingRecommendRatePostError, Options<RecommendRateApiAiPricingRecommendRatePostData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await recommendRateApiAiPricingRecommendRatePost({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Negotiation Draft
+ *
+ * Generate negotiation draft with AI.
+ */
+export const negotiationDraftApiAiPricingNegotiationDraftPostMutation = (options?: Partial<Options<NegotiationDraftApiAiPricingNegotiationDraftPostData>>): UseMutationOptions<NegotiationDraftApiAiPricingNegotiationDraftPostResponse, NegotiationDraftApiAiPricingNegotiationDraftPostError, Options<NegotiationDraftApiAiPricingNegotiationDraftPostData>> => {
+    const mutationOptions: UseMutationOptions<NegotiationDraftApiAiPricingNegotiationDraftPostResponse, NegotiationDraftApiAiPricingNegotiationDraftPostError, Options<NegotiationDraftApiAiPricingNegotiationDraftPostData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await negotiationDraftApiAiPricingNegotiationDraftPost({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Demand Forecast
+ *
+ * AI demand forecast for inventory planning.
+ */
+export const demandForecastApiAiInventoryDemandForecastPostMutation = (options?: Partial<Options<DemandForecastApiAiInventoryDemandForecastPostData>>): UseMutationOptions<DemandForecastApiAiInventoryDemandForecastPostResponse, DemandForecastApiAiInventoryDemandForecastPostError, Options<DemandForecastApiAiInventoryDemandForecastPostData>> => {
+    const mutationOptions: UseMutationOptions<DemandForecastApiAiInventoryDemandForecastPostResponse, DemandForecastApiAiInventoryDemandForecastPostError, Options<DemandForecastApiAiInventoryDemandForecastPostData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await demandForecastApiAiInventoryDemandForecastPost({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Smart Alerts
+ *
+ * Generate smart inventory alerts.
+ */
+export const smartAlertsApiAiInventorySmartAlertsPostMutation = (options?: Partial<Options<SmartAlertsApiAiInventorySmartAlertsPostData>>): UseMutationOptions<SmartAlertsApiAiInventorySmartAlertsPostResponse, SmartAlertsApiAiInventorySmartAlertsPostError, Options<SmartAlertsApiAiInventorySmartAlertsPostData>> => {
+    const mutationOptions: UseMutationOptions<SmartAlertsApiAiInventorySmartAlertsPostResponse, SmartAlertsApiAiInventorySmartAlertsPostError, Options<SmartAlertsApiAiInventorySmartAlertsPostData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await smartAlertsApiAiInventorySmartAlertsPost({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};
+
+/**
+ * Rewrite Tone
+ *
+ * Rewrite text to match brand tone.
+ */
+export const rewriteToneApiAiContentRewriteTonePostMutation = (options?: Partial<Options<RewriteToneApiAiContentRewriteTonePostData>>): UseMutationOptions<RewriteToneApiAiContentRewriteTonePostResponse, RewriteToneApiAiContentRewriteTonePostError, Options<RewriteToneApiAiContentRewriteTonePostData>> => {
+    const mutationOptions: UseMutationOptions<RewriteToneApiAiContentRewriteTonePostResponse, RewriteToneApiAiContentRewriteTonePostError, Options<RewriteToneApiAiContentRewriteTonePostData>> = {
+        mutationFn: async (fnOptions) => {
+            const { data } = await rewriteToneApiAiContentRewriteTonePost({
+                ...options,
+                ...fnOptions,
+                throwOnError: true
+            });
+            return data;
+        }
+    };
+    return mutationOptions;
+};

@@ -5,327 +5,275 @@ export type ClientOptions = {
 };
 
 /**
- * AccountingExportRequest
+ * AnomalyDetectRequest
  *
- * 会計CSV出力リクエスト.
- *
- * organization_id はJWTから取得(リクエストパラメータ禁止).
+ * Request for order anomaly detection.
  */
-export type AccountingExportRequest = {
+export type AnomalyDetectRequest = {
     /**
-     * Template
+     * Org Id
      */
-    template: string;
+    org_id: string;
     /**
-     * Export Type
+     * Brand Id
      */
-    export_type: string;
+    brand_id: string;
     /**
-     * Period Start
+     * Order Id
      */
-    period_start: string;
-    /**
-     * Period End
-     */
-    period_end: string;
-    /**
-     * Deal Ids
-     */
-    deal_ids?: Array<string> | null;
-    /**
-     * Account Mapping Overrides
-     */
-    account_mapping_overrides?: {
-        [key: string]: unknown;
-    } | null;
+    order_id?: string | null;
 };
 
 /**
- * AccountingExportResponse
+ * AnomalyDetectResponse
  *
- * 会計CSV出力レスポンス.
+ * Anomaly detection results.
  */
-export type AccountingExportResponse = {
+export type AnomalyDetectResponse = {
     /**
-     * Status
+     * Anomalies
      */
-    status?: string;
+    anomalies: Array<AnomalyItem>;
     /**
-     * File Path
+     * Checked Count
      */
-    file_path?: string;
+    checked_count: number;
 };
 
 /**
- * AvailsSearchRequest
+ * AnomalyItem
  *
- * Avails検索リクエスト.
+ * Single anomaly detection result.
  */
-export type AvailsSearchRequest = {
+export type AnomalyItem = {
     /**
-     * Catalog Item Id
+     * Order Id
      */
-    catalog_item_id: string;
+    order_id: string;
     /**
-     * Territories
+     * Anomaly Type
      */
-    territories: Array<string>;
+    anomaly_type: string;
     /**
-     * Languages
+     * Description
      */
-    languages: Array<string>;
-    /**
-     * Media Types
-     */
-    media_types: Array<string>;
-    /**
-     * Channels
-     */
-    channels: Array<string>;
-    /**
-     * Date From
-     */
-    date_from: string;
-    /**
-     * Date To
-     */
-    date_to: string;
-    /**
-     * Exclusivity
-     */
-    exclusivity?: string;
-};
-
-/**
- * AvailsSearchResponse
- *
- * Avails検索レスポンス.
- */
-export type AvailsSearchResponse = {
-    /**
-     * Available Territories
-     */
-    available_territories: Array<string>;
-    /**
-     * Available Media Types
-     */
-    available_media_types: Array<string>;
-    /**
-     * Conflicts
-     */
-    conflicts: Array<ConflictDetail>;
-    /**
-     * Suggestions
-     */
-    suggestions: Array<string>;
-};
-
-/**
- * ComplianceCheckRequest
- *
- * コンプライアンスチェックリクエスト.
- *
- * organization_id はJWTから取得(リクエストパラメータ禁止).
- */
-export type ComplianceCheckRequest = {
-    /**
-     * Check Types
-     */
-    check_types?: Array<string> | null;
-    /**
-     * Deal Ids
-     */
-    deal_ids?: Array<string> | null;
-};
-
-/**
- * ComplianceCheckResponse
- *
- * コンプライアンスチェックレスポンス.
- */
-export type ComplianceCheckResponse = {
-    /**
-     * Total Checks
-     */
-    total_checks: number;
-    /**
-     * Violations
-     */
-    violations: number;
-    /**
-     * Warnings
-     */
-    warnings: number;
-    /**
-     * Results
-     */
-    results: Array<ComplianceCheckResult>;
-};
-
-/**
- * ComplianceCheckResult
- *
- * コンプライアンスチェック結果.
- */
-export type ComplianceCheckResult = {
-    /**
-     * Check Type
-     */
-    check_type: string;
+    description: string;
     /**
      * Severity
+     *
+     * low, medium, high
      */
     severity: string;
-    /**
-     * Deal Id
-     */
-    deal_id?: string | null;
-    /**
-     * Statement Id
-     */
-    statement_id?: string | null;
-    /**
-     * Rule Description
-     */
-    rule_description: string;
-    /**
-     * Detail
-     */
-    detail: string;
-    /**
-     * Context
-     */
-    context: {
-        [key: string]: unknown;
-    };
 };
 
 /**
- * ComplianceDashboardResponse
+ * BriefingRequest
  *
- * コンプライアンスダッシュボード.
+ * Request for daily order briefing.
  */
-export type ComplianceDashboardResponse = {
+export type BriefingRequest = {
     /**
-     * Total Open
+     * Org Id
      */
-    total_open: number;
+    org_id: string;
     /**
-     * Violations Open
+     * Brand Id
      */
-    violations_open: number;
-    /**
-     * Warnings Open
-     */
-    warnings_open: number;
-    /**
-     * By Type
-     */
-    by_type: {
-        [key: string]: number;
-    };
-    /**
-     * Recent
-     */
-    recent: Array<ComplianceCheckResult>;
+    brand_id: string;
 };
 
 /**
- * ConflictDetail
+ * BriefingResponse
  *
- * 競合詳細 — controller層でdeal_name/licensee_nameを付与.
+ * AI-generated daily briefing.
  */
-export type ConflictDetail = {
+export type BriefingResponse = {
     /**
-     * Rights Grant Id
+     * Summary
      */
-    rights_grant_id: string;
+    summary: string;
     /**
-     * Deal Name
+     * Total Orders
      */
-    deal_name?: string;
+    total_orders: number;
     /**
-     * Licensee Name
+     * Total Amount
      */
-    licensee_name?: string;
+    total_amount: number;
     /**
-     * Conflict Type
+     * Highlights
      */
-    conflict_type: string;
+    highlights: Array<string>;
     /**
-     * Overlapping Territories
+     * Anomalies
      */
-    overlapping_territories: Array<string>;
+    anomalies: Array<string>;
+};
+
+/**
+ * CSVMappingRequest
+ *
+ * Request for CSV column auto-mapping.
+ */
+export type CsvMappingRequest = {
     /**
-     * Overlapping Period
+     * Column Names
+     *
+     * CSV header column names
      */
-    overlapping_period: {
+    column_names: Array<string>;
+    /**
+     * Sample Rows
+     *
+     * Sample data rows (max 5)
+     */
+    sample_rows: Array<{
         [key: string]: string;
-    };
+    }>;
+    /**
+     * Org Id
+     */
+    org_id: string;
 };
 
 /**
- * DistributeRequest
+ * CSVMappingResponse
  *
- * ウォーターフォール分配リクエスト.
+ * AI-generated column mapping result.
  */
-export type DistributeRequest = {
+export type CsvMappingResponse = {
     /**
-     * Run Id
+     * Mappings
      */
-    run_id: string;
+    mappings: Array<ColumnMapping>;
     /**
-     * Gross Revenue
+     * Unmapped Columns
      */
-    gross_revenue: number | string;
+    unmapped_columns: Array<string>;
 };
 
 /**
- * DistributeResponse
+ * ChatRequest
  *
- * ウォーターフォール分配レスポンス.
+ * Request for buyer AI chat.
  */
-export type DistributeResponse = {
+export type ChatRequest = {
     /**
-     * Committee Id
+     * Linesheet Id
      */
-    committee_id: string;
+    linesheet_id: string;
     /**
-     * Distribution Steps
+     * Message
      */
-    distribution_steps: Array<DistributionStep>;
+    message: string;
     /**
-     * Total Distributed
+     * Session Id
      */
-    total_distributed: string;
+    session_id: string;
+    /**
+     * Locale
+     */
+    locale?: string;
 };
 
 /**
- * DistributionStep
+ * ColumnMapping
  *
- * 分配ステップの結果.
+ * Single column mapping result.
  */
-export type DistributionStep = {
+export type ColumnMapping = {
     /**
-     * Step Order
+     * Source Column
      */
-    step_order: number;
+    source_column: string;
     /**
-     * Step Type
+     * Target Field
      */
-    step_type: string;
+    target_field: string;
     /**
-     * Amount Before
+     * Confidence
      */
-    amount_before: string;
+    confidence: number;
+};
+
+/**
+ * DemandForecastRequest
+ *
+ * Request for AI demand forecast.
+ */
+export type DemandForecastRequest = {
     /**
-     * Amount After
+     * Org Id
      */
-    amount_after: string;
+    org_id: string;
     /**
-     * Member Allocations
+     * Brand Id
      */
-    member_allocations: Array<MemberAllocation>;
+    brand_id: string;
+    /**
+     * Product Id
+     */
+    product_id?: string | null;
+    /**
+     * Forecast Days
+     */
+    forecast_days?: number;
+};
+
+/**
+ * DemandForecastResponse
+ *
+ * AI demand forecast results.
+ */
+export type DemandForecastResponse = {
+    /**
+     * Forecasts
+     */
+    forecasts: Array<SkuForecast>;
+    /**
+     * Explanation
+     */
+    explanation: string;
+    /**
+     * Model Accuracy
+     */
+    model_accuracy: number;
+};
+
+/**
+ * EmbeddingRequest
+ *
+ * Request for generating product embedding.
+ */
+export type EmbeddingRequest = {
+    /**
+     * Product Id
+     */
+    product_id: string;
+    /**
+     * Org Id
+     */
+    org_id: string;
+};
+
+/**
+ * EmbeddingResponse
+ *
+ * Response for embedding generation.
+ */
+export type EmbeddingResponse = {
+    /**
+     * Product Id
+     */
+    product_id: string;
+    /**
+     * Dimensions
+     */
+    dimensions: number;
+    /**
+     * Success
+     */
+    success: boolean;
 };
 
 /**
@@ -339,190 +287,447 @@ export type HttpValidationError = {
 };
 
 /**
- * MemberAllocation
+ * InvoiceCheckItem
  *
- * メンバーへの配分結果.
+ * Single check result.
  */
-export type MemberAllocation = {
+export type InvoiceCheckItem = {
     /**
-     * Member Id
+     * Check Type
      */
-    member_id: string;
-    /**
-     * Contact Id
-     */
-    contact_id: string;
-    /**
-     * Allocated Amount
-     */
-    allocated_amount: string;
-};
-
-/**
- * ResolveRequest
- *
- * DateMath式解決リクエスト.
- */
-export type ResolveRequest = {
-    /**
-     * Rule Id
-     */
-    rule_id: string;
-    /**
-     * Context
-     */
-    context?: {
-        [key: string]: string;
-    };
-};
-
-/**
- * ResolveResponse
- *
- * DateMath式解決レスポンス.
- */
-export type ResolveResponse = {
-    /**
-     * Resolved Date
-     */
-    resolved_date: string;
-    /**
-     * Rule Id
-     */
-    rule_id: string;
-};
-
-/**
- * RetroactiveCalcRequest
- *
- * 遡及再計算リクエスト.
- *
- * organization_id はJWTから取得(リクエストパラメータ禁止).
- */
-export type RetroactiveCalcRequest = {
-    /**
-     * Deal Id
-     */
-    deal_id: string;
-    /**
-     * Amendment Id
-     */
-    amendment_id?: string | null;
-    /**
-     * Retroactive From
-     */
-    retroactive_from: string;
-    /**
-     * Retroactive To
-     */
-    retroactive_to: string;
-    /**
-     * Reason
-     */
-    reason: string;
-};
-
-/**
- * RoyaltyCalcRequest
- *
- * ロイヤリティ計算リクエスト.
- *
- * organization_id はJWTの app_metadata.current_organization_id から取得.
- * リクエストパラメータでの受け取りは禁止(クロステナント攻撃防止).
- */
-export type RoyaltyCalcRequest = {
-    /**
-     * Period Start
-     */
-    period_start: string;
-    /**
-     * Period End
-     */
-    period_end: string;
-    /**
-     * Deal Ids
-     */
-    deal_ids?: Array<string> | null;
-};
-
-/**
- * RoyaltyCalcRunResponse
- *
- * ロイヤリティ計算実行レスポンス(非同期).
- */
-export type RoyaltyCalcRunResponse = {
-    /**
-     * Run Id
-     */
-    run_id: string;
+    check_type: string;
     /**
      * Status
-     */
-    status?: string;
-};
-
-/**
- * SharedApprovalResponse
- *
- * 外部共有リンク経由の承認結果.
- */
-export type SharedApprovalResponse = {
-    /**
-     * Request Id
-     */
-    request_id: string;
-    /**
-     * Status
+     *
+     * pass, warning, error
      */
     status: string;
+    /**
+     * Message
+     */
+    message: string;
+};
+
+/**
+ * InvoiceCheckRequest
+ *
+ * Request for AI invoice double-check.
+ */
+export type InvoiceCheckRequest = {
+    /**
+     * Invoice Id
+     */
+    invoice_id: string;
+    /**
+     * Brand Id
+     */
+    brand_id: string;
+};
+
+/**
+ * InvoiceCheckResponse
+ *
+ * AI invoice check results.
+ */
+export type InvoiceCheckResponse = {
+    /**
+     * Checks
+     */
+    checks: Array<InvoiceCheckItem>;
+    /**
+     * Overall Status
+     *
+     * pass, warning, error
+     */
+    overall_status: string;
+    /**
+     * Summary
+     */
+    summary: string;
+};
+
+/**
+ * LinesheetGenerateRequest
+ *
+ * Request for AI linesheet generation.
+ */
+export type LinesheetGenerateRequest = {
+    /**
+     * Brand Id
+     */
+    brand_id: string;
+    /**
+     * Prompt
+     *
+     * Natural language instruction
+     */
+    prompt: string;
+    /**
+     * Collection Id
+     */
+    collection_id?: string | null;
+    /**
+     * Locale
+     */
+    locale?: string;
+};
+
+/**
+ * LinesheetGenerateResponse
+ *
+ * AI-generated linesheet structure.
+ */
+export type LinesheetGenerateResponse = {
     /**
      * Title
      */
     title: string;
     /**
-     * Comments
+     * Product Ids
      */
-    comments: Array<{
-        [key: string]: unknown;
+    product_ids: Array<string>;
+    /**
+     * Sections
+     */
+    sections: Array<{
+        [key: string]: string | Array<string>;
     }>;
+    /**
+     * Explanation
+     */
+    explanation: string;
 };
 
 /**
- * StatementGenRequest
+ * NegotiationDraftRequest
  *
- * ステートメント生成リクエスト.
- *
- * organization_id はJWTから取得(リクエストパラメータ禁止).
+ * Request for negotiation draft generation.
  */
-export type StatementGenRequest = {
+export type NegotiationDraftRequest = {
     /**
-     * Run Id
+     * Brand Id
      */
-    run_id: string;
+    brand_id: string;
     /**
-     * Statement Types
+     * Buyer Id
      */
-    statement_types: Array<string>;
+    buyer_id: string;
     /**
-     * Deal Ids
+     * Context
+     *
+     * Negotiation context or buyer request
      */
-    deal_ids?: Array<string> | null;
+    context: string;
+    /**
+     * Locale
+     */
+    locale?: string;
 };
 
 /**
- * StatementGenResponse
+ * NegotiationDraftResponse
  *
- * ステートメント生成レスポンス(非同期).
+ * AI-generated negotiation draft.
  */
-export type StatementGenResponse = {
+export type NegotiationDraftResponse = {
     /**
-     * Statement Ids
+     * Draft
      */
-    statement_ids: Array<string>;
+    draft: string;
     /**
-     * Status
+     * Key Points
      */
-    status?: string;
+    key_points: Array<string>;
+    /**
+     * Suggested Rate
+     */
+    suggested_rate?: number | null;
+};
+
+/**
+ * PersonalizeRequest
+ *
+ * Request for buyer-specific personalization.
+ */
+export type PersonalizeRequest = {
+    /**
+     * Linesheet Id
+     */
+    linesheet_id: string;
+    /**
+     * Buyer Id
+     */
+    buyer_id: string;
+    /**
+     * Brand Id
+     */
+    brand_id: string;
+};
+
+/**
+ * PersonalizeResponse
+ *
+ * Personalized linesheet recommendations.
+ */
+export type PersonalizeResponse = {
+    /**
+     * Recommended Product Ids
+     */
+    recommended_product_ids: Array<string>;
+    /**
+     * Explanation
+     */
+    explanation: string;
+    /**
+     * Confidence
+     */
+    confidence: number;
+};
+
+/**
+ * ProductAIResponse
+ *
+ * AI-generated product information.
+ */
+export type ProductAiResponse = {
+    /**
+     * Name
+     */
+    name: string;
+    /**
+     * Description
+     */
+    description: string;
+    /**
+     * Category
+     */
+    category: string;
+    /**
+     * Tags
+     */
+    tags: Array<string>;
+    /**
+     * Colors
+     */
+    colors: Array<string>;
+    /**
+     * Materials
+     */
+    materials: Array<string>;
+    /**
+     * Silhouette
+     */
+    silhouette?: string | null;
+    /**
+     * Suggested Retail Price
+     */
+    suggested_retail_price?: number | null;
+    /**
+     * Confidence Score
+     */
+    confidence_score: number;
+};
+
+/**
+ * ProductImageRequest
+ *
+ * Request for generating product info from image.
+ */
+export type ProductImageRequest = {
+    /**
+     * Image Url
+     *
+     * Supabase Storage signed URL
+     */
+    image_url: string;
+    /**
+     * Org Id
+     *
+     * Organization UUID
+     */
+    org_id: string;
+    /**
+     * Locale
+     *
+     * Output locale: en or ja
+     */
+    locale?: string;
+};
+
+/**
+ * RateRecommendRequest
+ *
+ * Request for wholesale rate recommendation.
+ */
+export type RateRecommendRequest = {
+    /**
+     * Brand Id
+     */
+    brand_id: string;
+    /**
+     * Buyer Id
+     */
+    buyer_id: string;
+};
+
+/**
+ * RateRecommendResponse
+ *
+ * AI rate recommendation result.
+ */
+export type RateRecommendResponse = {
+    /**
+     * Recommended Rate
+     */
+    recommended_rate: number;
+    /**
+     * Current Rate
+     */
+    current_rate?: number | null;
+    /**
+     * Reasoning
+     */
+    reasoning: string;
+    /**
+     * Comparable Buyers
+     */
+    comparable_buyers: Array<string>;
+};
+
+/**
+ * SKUForecast
+ *
+ * Forecast for a single SKU.
+ */
+export type SkuForecast = {
+    /**
+     * Variant Id
+     */
+    variant_id: string;
+    /**
+     * Sku Code
+     */
+    sku_code: string;
+    /**
+     * Predicted Demand
+     */
+    predicted_demand: number;
+    /**
+     * Confidence Lower
+     */
+    confidence_lower: number;
+    /**
+     * Confidence Upper
+     */
+    confidence_upper: number;
+};
+
+/**
+ * SmartAlert
+ *
+ * Single smart alert.
+ */
+export type SmartAlert = {
+    /**
+     * Alert Type
+     *
+     * low_stock, overstock, trend_change, seasonal
+     */
+    alert_type: string;
+    /**
+     * Severity
+     *
+     * info, warning, critical
+     */
+    severity: string;
+    /**
+     * Variant Id
+     */
+    variant_id?: string | null;
+    /**
+     * Product Name
+     */
+    product_name: string;
+    /**
+     * Message
+     */
+    message: string;
+    /**
+     * Recommended Action
+     */
+    recommended_action: string;
+};
+
+/**
+ * SmartAlertsRequest
+ *
+ * Request for smart inventory alerts.
+ */
+export type SmartAlertsRequest = {
+    /**
+     * Org Id
+     */
+    org_id: string;
+    /**
+     * Brand Id
+     */
+    brand_id: string;
+};
+
+/**
+ * SmartAlertsResponse
+ *
+ * Smart alerts results.
+ */
+export type SmartAlertsResponse = {
+    /**
+     * Alerts
+     */
+    alerts: Array<SmartAlert>;
+    /**
+     * Summary
+     */
+    summary: string;
+};
+
+/**
+ * ToneRewriteRequest
+ *
+ * Request for brand tone rewrite.
+ */
+export type ToneRewriteRequest = {
+    /**
+     * Brand Id
+     */
+    brand_id: string;
+    /**
+     * Text
+     */
+    text: string;
+    /**
+     * Locale
+     */
+    locale?: string;
+};
+
+/**
+ * ToneRewriteResponse
+ *
+ * AI rewritten text.
+ */
+export type ToneRewriteResponse = {
+    /**
+     * Rewritten Text
+     */
+    rewritten_text: string;
+    /**
+     * Changes Made
+     */
+    changes_made: Array<string>;
+    /**
+     * Tone Consistency Score
+     */
+    tone_consistency_score: number;
 };
 
 /**
@@ -583,253 +788,350 @@ export type HealthcheckHealthcheckGetResponses = {
 
 export type HealthcheckHealthcheckGetResponse = HealthcheckHealthcheckGetResponses[keyof HealthcheckHealthcheckGetResponses];
 
-export type SearchAvailsApiAvailsSearchPostData = {
-    body: AvailsSearchRequest;
+export type GenerateFromImageApiAiProductGenerateFromImagePostData = {
+    body: ProductImageRequest;
     path?: never;
     query?: never;
-    url: '/api/avails/search';
+    url: '/api/ai/product/generate-from-image';
 };
 
-export type SearchAvailsApiAvailsSearchPostErrors = {
+export type GenerateFromImageApiAiProductGenerateFromImagePostErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type SearchAvailsApiAvailsSearchPostError = SearchAvailsApiAvailsSearchPostErrors[keyof SearchAvailsApiAvailsSearchPostErrors];
+export type GenerateFromImageApiAiProductGenerateFromImagePostError = GenerateFromImageApiAiProductGenerateFromImagePostErrors[keyof GenerateFromImageApiAiProductGenerateFromImagePostErrors];
 
-export type SearchAvailsApiAvailsSearchPostResponses = {
+export type GenerateFromImageApiAiProductGenerateFromImagePostResponses = {
     /**
      * Successful Response
      */
-    200: AvailsSearchResponse;
+    200: ProductAiResponse;
 };
 
-export type SearchAvailsApiAvailsSearchPostResponse = SearchAvailsApiAvailsSearchPostResponses[keyof SearchAvailsApiAvailsSearchPostResponses];
+export type GenerateFromImageApiAiProductGenerateFromImagePostResponse = GenerateFromImageApiAiProductGenerateFromImagePostResponses[keyof GenerateFromImageApiAiProductGenerateFromImagePostResponses];
 
-export type ResolveDateMathApiRightsWindowResolvePostData = {
-    body: ResolveRequest;
+export type GenerateEmbeddingApiAiProductGenerateEmbeddingPostData = {
+    body: EmbeddingRequest;
     path?: never;
     query?: never;
-    url: '/api/rights-window/resolve';
+    url: '/api/ai/product/generate-embedding';
 };
 
-export type ResolveDateMathApiRightsWindowResolvePostErrors = {
+export type GenerateEmbeddingApiAiProductGenerateEmbeddingPostErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type ResolveDateMathApiRightsWindowResolvePostError = ResolveDateMathApiRightsWindowResolvePostErrors[keyof ResolveDateMathApiRightsWindowResolvePostErrors];
+export type GenerateEmbeddingApiAiProductGenerateEmbeddingPostError = GenerateEmbeddingApiAiProductGenerateEmbeddingPostErrors[keyof GenerateEmbeddingApiAiProductGenerateEmbeddingPostErrors];
 
-export type ResolveDateMathApiRightsWindowResolvePostResponses = {
+export type GenerateEmbeddingApiAiProductGenerateEmbeddingPostResponses = {
     /**
      * Successful Response
      */
-    200: ResolveResponse;
+    200: EmbeddingResponse;
 };
 
-export type ResolveDateMathApiRightsWindowResolvePostResponse = ResolveDateMathApiRightsWindowResolvePostResponses[keyof ResolveDateMathApiRightsWindowResolvePostResponses];
+export type GenerateEmbeddingApiAiProductGenerateEmbeddingPostResponse = GenerateEmbeddingApiAiProductGenerateEmbeddingPostResponses[keyof GenerateEmbeddingApiAiProductGenerateEmbeddingPostResponses];
 
-export type CalculateRoyaltyApiRoyaltyCalculatePostData = {
-    body: RoyaltyCalcRequest;
+export type MapColumnsApiAiCsvMapColumnsPostData = {
+    body: CsvMappingRequest;
     path?: never;
     query?: never;
-    url: '/api/royalty/calculate';
+    url: '/api/ai/csv/map-columns';
 };
 
-export type CalculateRoyaltyApiRoyaltyCalculatePostErrors = {
+export type MapColumnsApiAiCsvMapColumnsPostErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type CalculateRoyaltyApiRoyaltyCalculatePostError = CalculateRoyaltyApiRoyaltyCalculatePostErrors[keyof CalculateRoyaltyApiRoyaltyCalculatePostErrors];
+export type MapColumnsApiAiCsvMapColumnsPostError = MapColumnsApiAiCsvMapColumnsPostErrors[keyof MapColumnsApiAiCsvMapColumnsPostErrors];
 
-export type CalculateRoyaltyApiRoyaltyCalculatePostResponses = {
+export type MapColumnsApiAiCsvMapColumnsPostResponses = {
     /**
      * Successful Response
      */
-    200: RoyaltyCalcRunResponse;
+    200: CsvMappingResponse;
 };
 
-export type CalculateRoyaltyApiRoyaltyCalculatePostResponse = CalculateRoyaltyApiRoyaltyCalculatePostResponses[keyof CalculateRoyaltyApiRoyaltyCalculatePostResponses];
+export type MapColumnsApiAiCsvMapColumnsPostResponse = MapColumnsApiAiCsvMapColumnsPostResponses[keyof MapColumnsApiAiCsvMapColumnsPostResponses];
 
-export type CalculateRetroactiveApiRoyaltyCalculateRetroactivePostData = {
-    body: RetroactiveCalcRequest;
+export type GenerateLinesheetApiAiLinesheetGeneratePostData = {
+    body: LinesheetGenerateRequest;
     path?: never;
     query?: never;
-    url: '/api/royalty/calculate-retroactive';
+    url: '/api/ai/linesheet/generate';
 };
 
-export type CalculateRetroactiveApiRoyaltyCalculateRetroactivePostErrors = {
+export type GenerateLinesheetApiAiLinesheetGeneratePostErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type CalculateRetroactiveApiRoyaltyCalculateRetroactivePostError = CalculateRetroactiveApiRoyaltyCalculateRetroactivePostErrors[keyof CalculateRetroactiveApiRoyaltyCalculateRetroactivePostErrors];
+export type GenerateLinesheetApiAiLinesheetGeneratePostError = GenerateLinesheetApiAiLinesheetGeneratePostErrors[keyof GenerateLinesheetApiAiLinesheetGeneratePostErrors];
 
-export type CalculateRetroactiveApiRoyaltyCalculateRetroactivePostResponses = {
+export type GenerateLinesheetApiAiLinesheetGeneratePostResponses = {
     /**
      * Successful Response
      */
-    200: RoyaltyCalcRunResponse;
+    200: LinesheetGenerateResponse;
 };
 
-export type CalculateRetroactiveApiRoyaltyCalculateRetroactivePostResponse = CalculateRetroactiveApiRoyaltyCalculateRetroactivePostResponses[keyof CalculateRetroactiveApiRoyaltyCalculateRetroactivePostResponses];
+export type GenerateLinesheetApiAiLinesheetGeneratePostResponse = GenerateLinesheetApiAiLinesheetGeneratePostResponses[keyof GenerateLinesheetApiAiLinesheetGeneratePostResponses];
 
-export type DistributeWaterfallApiCommitteeCommitteeIdDistributePostData = {
-    body: DistributeRequest;
-    path: {
-        /**
-         * Committee Id
-         */
-        committee_id: string;
-    };
-    query?: never;
-    url: '/api/committee/{committee_id}/distribute';
-};
-
-export type DistributeWaterfallApiCommitteeCommitteeIdDistributePostErrors = {
-    /**
-     * Validation Error
-     */
-    422: HttpValidationError;
-};
-
-export type DistributeWaterfallApiCommitteeCommitteeIdDistributePostError = DistributeWaterfallApiCommitteeCommitteeIdDistributePostErrors[keyof DistributeWaterfallApiCommitteeCommitteeIdDistributePostErrors];
-
-export type DistributeWaterfallApiCommitteeCommitteeIdDistributePostResponses = {
-    /**
-     * Successful Response
-     */
-    200: DistributeResponse;
-};
-
-export type DistributeWaterfallApiCommitteeCommitteeIdDistributePostResponse = DistributeWaterfallApiCommitteeCommitteeIdDistributePostResponses[keyof DistributeWaterfallApiCommitteeCommitteeIdDistributePostResponses];
-
-export type RunComplianceCheckApiComplianceCheckPostData = {
-    body: ComplianceCheckRequest;
+export type PersonalizeLinesheetApiAiLinesheetPersonalizePostData = {
+    body: PersonalizeRequest;
     path?: never;
     query?: never;
-    url: '/api/compliance/check';
+    url: '/api/ai/linesheet/personalize';
 };
 
-export type RunComplianceCheckApiComplianceCheckPostErrors = {
+export type PersonalizeLinesheetApiAiLinesheetPersonalizePostErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type RunComplianceCheckApiComplianceCheckPostError = RunComplianceCheckApiComplianceCheckPostErrors[keyof RunComplianceCheckApiComplianceCheckPostErrors];
+export type PersonalizeLinesheetApiAiLinesheetPersonalizePostError = PersonalizeLinesheetApiAiLinesheetPersonalizePostErrors[keyof PersonalizeLinesheetApiAiLinesheetPersonalizePostErrors];
 
-export type RunComplianceCheckApiComplianceCheckPostResponses = {
+export type PersonalizeLinesheetApiAiLinesheetPersonalizePostResponses = {
     /**
      * Successful Response
      */
-    200: ComplianceCheckResponse;
+    200: PersonalizeResponse;
 };
 
-export type RunComplianceCheckApiComplianceCheckPostResponse = RunComplianceCheckApiComplianceCheckPostResponses[keyof RunComplianceCheckApiComplianceCheckPostResponses];
+export type PersonalizeLinesheetApiAiLinesheetPersonalizePostResponse = PersonalizeLinesheetApiAiLinesheetPersonalizePostResponses[keyof PersonalizeLinesheetApiAiLinesheetPersonalizePostResponses];
 
-export type GetComplianceDashboardApiComplianceDashboardGetData = {
-    body?: never;
+export type ChatApiAiChatPostData = {
+    body: ChatRequest;
     path?: never;
     query?: never;
-    url: '/api/compliance/dashboard';
+    url: '/api/ai/chat';
 };
 
-export type GetComplianceDashboardApiComplianceDashboardGetResponses = {
+export type ChatApiAiChatPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type ChatApiAiChatPostError = ChatApiAiChatPostErrors[keyof ChatApiAiChatPostErrors];
+
+export type ChatApiAiChatPostResponses = {
     /**
      * Successful Response
      */
-    200: ComplianceDashboardResponse;
+    200: unknown;
 };
 
-export type GetComplianceDashboardApiComplianceDashboardGetResponse = GetComplianceDashboardApiComplianceDashboardGetResponses[keyof GetComplianceDashboardApiComplianceDashboardGetResponses];
-
-export type GenerateStatementsApiStatementGeneratePostData = {
-    body: StatementGenRequest;
+export type OrderBriefingApiAiOrderBriefingPostData = {
+    body: BriefingRequest;
     path?: never;
     query?: never;
-    url: '/api/statement/generate';
+    url: '/api/ai/order/briefing';
 };
 
-export type GenerateStatementsApiStatementGeneratePostErrors = {
+export type OrderBriefingApiAiOrderBriefingPostErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type GenerateStatementsApiStatementGeneratePostError = GenerateStatementsApiStatementGeneratePostErrors[keyof GenerateStatementsApiStatementGeneratePostErrors];
+export type OrderBriefingApiAiOrderBriefingPostError = OrderBriefingApiAiOrderBriefingPostErrors[keyof OrderBriefingApiAiOrderBriefingPostErrors];
 
-export type GenerateStatementsApiStatementGeneratePostResponses = {
+export type OrderBriefingApiAiOrderBriefingPostResponses = {
     /**
      * Successful Response
      */
-    200: StatementGenResponse;
+    200: BriefingResponse;
 };
 
-export type GenerateStatementsApiStatementGeneratePostResponse = GenerateStatementsApiStatementGeneratePostResponses[keyof GenerateStatementsApiStatementGeneratePostResponses];
+export type OrderBriefingApiAiOrderBriefingPostResponse = OrderBriefingApiAiOrderBriefingPostResponses[keyof OrderBriefingApiAiOrderBriefingPostResponses];
 
-export type ExportAccountingApiAccountingExportPostData = {
-    body: AccountingExportRequest;
+export type AnomalyDetectApiAiOrderAnomalyDetectPostData = {
+    body: AnomalyDetectRequest;
     path?: never;
     query?: never;
-    url: '/api/accounting/export';
+    url: '/api/ai/order/anomaly-detect';
 };
 
-export type ExportAccountingApiAccountingExportPostErrors = {
+export type AnomalyDetectApiAiOrderAnomalyDetectPostErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type ExportAccountingApiAccountingExportPostError = ExportAccountingApiAccountingExportPostErrors[keyof ExportAccountingApiAccountingExportPostErrors];
+export type AnomalyDetectApiAiOrderAnomalyDetectPostError = AnomalyDetectApiAiOrderAnomalyDetectPostErrors[keyof AnomalyDetectApiAiOrderAnomalyDetectPostErrors];
 
-export type ExportAccountingApiAccountingExportPostResponses = {
+export type AnomalyDetectApiAiOrderAnomalyDetectPostResponses = {
     /**
      * Successful Response
      */
-    200: AccountingExportResponse;
+    200: AnomalyDetectResponse;
 };
 
-export type ExportAccountingApiAccountingExportPostResponse = ExportAccountingApiAccountingExportPostResponses[keyof ExportAccountingApiAccountingExportPostResponses];
+export type AnomalyDetectApiAiOrderAnomalyDetectPostResponse = AnomalyDetectApiAiOrderAnomalyDetectPostResponses[keyof AnomalyDetectApiAiOrderAnomalyDetectPostResponses];
 
-export type GetSharedApprovalApiSharedApprovalTokenGetData = {
-    body?: never;
-    path: {
-        /**
-         * Token
-         */
-        token: string;
-    };
+export type CheckInvoiceApiAiInvoiceCheckPostData = {
+    body: InvoiceCheckRequest;
+    path?: never;
     query?: never;
-    url: '/api/shared/approval/{token}';
+    url: '/api/ai/invoice/check';
 };
 
-export type GetSharedApprovalApiSharedApprovalTokenGetErrors = {
+export type CheckInvoiceApiAiInvoiceCheckPostErrors = {
     /**
      * Validation Error
      */
     422: HttpValidationError;
 };
 
-export type GetSharedApprovalApiSharedApprovalTokenGetError = GetSharedApprovalApiSharedApprovalTokenGetErrors[keyof GetSharedApprovalApiSharedApprovalTokenGetErrors];
+export type CheckInvoiceApiAiInvoiceCheckPostError = CheckInvoiceApiAiInvoiceCheckPostErrors[keyof CheckInvoiceApiAiInvoiceCheckPostErrors];
 
-export type GetSharedApprovalApiSharedApprovalTokenGetResponses = {
+export type CheckInvoiceApiAiInvoiceCheckPostResponses = {
     /**
      * Successful Response
      */
-    200: SharedApprovalResponse;
+    200: InvoiceCheckResponse;
 };
 
-export type GetSharedApprovalApiSharedApprovalTokenGetResponse = GetSharedApprovalApiSharedApprovalTokenGetResponses[keyof GetSharedApprovalApiSharedApprovalTokenGetResponses];
+export type CheckInvoiceApiAiInvoiceCheckPostResponse = CheckInvoiceApiAiInvoiceCheckPostResponses[keyof CheckInvoiceApiAiInvoiceCheckPostResponses];
+
+export type RecommendRateApiAiPricingRecommendRatePostData = {
+    body: RateRecommendRequest;
+    path?: never;
+    query?: never;
+    url: '/api/ai/pricing/recommend-rate';
+};
+
+export type RecommendRateApiAiPricingRecommendRatePostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RecommendRateApiAiPricingRecommendRatePostError = RecommendRateApiAiPricingRecommendRatePostErrors[keyof RecommendRateApiAiPricingRecommendRatePostErrors];
+
+export type RecommendRateApiAiPricingRecommendRatePostResponses = {
+    /**
+     * Successful Response
+     */
+    200: RateRecommendResponse;
+};
+
+export type RecommendRateApiAiPricingRecommendRatePostResponse = RecommendRateApiAiPricingRecommendRatePostResponses[keyof RecommendRateApiAiPricingRecommendRatePostResponses];
+
+export type NegotiationDraftApiAiPricingNegotiationDraftPostData = {
+    body: NegotiationDraftRequest;
+    path?: never;
+    query?: never;
+    url: '/api/ai/pricing/negotiation-draft';
+};
+
+export type NegotiationDraftApiAiPricingNegotiationDraftPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type NegotiationDraftApiAiPricingNegotiationDraftPostError = NegotiationDraftApiAiPricingNegotiationDraftPostErrors[keyof NegotiationDraftApiAiPricingNegotiationDraftPostErrors];
+
+export type NegotiationDraftApiAiPricingNegotiationDraftPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: NegotiationDraftResponse;
+};
+
+export type NegotiationDraftApiAiPricingNegotiationDraftPostResponse = NegotiationDraftApiAiPricingNegotiationDraftPostResponses[keyof NegotiationDraftApiAiPricingNegotiationDraftPostResponses];
+
+export type DemandForecastApiAiInventoryDemandForecastPostData = {
+    body: DemandForecastRequest;
+    path?: never;
+    query?: never;
+    url: '/api/ai/inventory/demand-forecast';
+};
+
+export type DemandForecastApiAiInventoryDemandForecastPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type DemandForecastApiAiInventoryDemandForecastPostError = DemandForecastApiAiInventoryDemandForecastPostErrors[keyof DemandForecastApiAiInventoryDemandForecastPostErrors];
+
+export type DemandForecastApiAiInventoryDemandForecastPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: DemandForecastResponse;
+};
+
+export type DemandForecastApiAiInventoryDemandForecastPostResponse = DemandForecastApiAiInventoryDemandForecastPostResponses[keyof DemandForecastApiAiInventoryDemandForecastPostResponses];
+
+export type SmartAlertsApiAiInventorySmartAlertsPostData = {
+    body: SmartAlertsRequest;
+    path?: never;
+    query?: never;
+    url: '/api/ai/inventory/smart-alerts';
+};
+
+export type SmartAlertsApiAiInventorySmartAlertsPostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type SmartAlertsApiAiInventorySmartAlertsPostError = SmartAlertsApiAiInventorySmartAlertsPostErrors[keyof SmartAlertsApiAiInventorySmartAlertsPostErrors];
+
+export type SmartAlertsApiAiInventorySmartAlertsPostResponses = {
+    /**
+     * Successful Response
+     */
+    200: SmartAlertsResponse;
+};
+
+export type SmartAlertsApiAiInventorySmartAlertsPostResponse = SmartAlertsApiAiInventorySmartAlertsPostResponses[keyof SmartAlertsApiAiInventorySmartAlertsPostResponses];
+
+export type RewriteToneApiAiContentRewriteTonePostData = {
+    body: ToneRewriteRequest;
+    path?: never;
+    query?: never;
+    url: '/api/ai/content/rewrite-tone';
+};
+
+export type RewriteToneApiAiContentRewriteTonePostErrors = {
+    /**
+     * Validation Error
+     */
+    422: HttpValidationError;
+};
+
+export type RewriteToneApiAiContentRewriteTonePostError = RewriteToneApiAiContentRewriteTonePostErrors[keyof RewriteToneApiAiContentRewriteTonePostErrors];
+
+export type RewriteToneApiAiContentRewriteTonePostResponses = {
+    /**
+     * Successful Response
+     */
+    200: ToneRewriteResponse;
+};
+
+export type RewriteToneApiAiContentRewriteTonePostResponse = RewriteToneApiAiContentRewriteTonePostResponses[keyof RewriteToneApiAiContentRewriteTonePostResponses];

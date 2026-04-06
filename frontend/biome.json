@@ -16,7 +16,8 @@
       "!!**/build",
       "!!**/.cache",
       "!!**/packages/types/schema.ts",
-      "!!**/packages/api-client/src/generated"
+      "!!**/packages/api-client/src/generated",
+      "!!**/styles/globals.css"
     ]
   },
   "formatter": {

@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { CalculateRetroactiveApiRoyaltyCalculateRetroactivePostData, CalculateRetroactiveApiRoyaltyCalculateRetroactivePostErrors, CalculateRetroactiveApiRoyaltyCalculateRetroactivePostResponses, CalculateRoyaltyApiRoyaltyCalculatePostData, CalculateRoyaltyApiRoyaltyCalculatePostErrors, CalculateRoyaltyApiRoyaltyCalculatePostResponses, DistributeWaterfallApiCommitteeCommitteeIdDistributePostData, DistributeWaterfallApiCommitteeCommitteeIdDistributePostErrors, DistributeWaterfallApiCommitteeCommitteeIdDistributePostResponses, ExportAccountingApiAccountingExportPostData, ExportAccountingApiAccountingExportPostErrors, ExportAccountingApiAccountingExportPostResponses, GenerateStatementsApiStatementGeneratePostData, GenerateStatementsApiStatementGeneratePostErrors, GenerateStatementsApiStatementGeneratePostResponses, GetComplianceDashboardApiComplianceDashboardGetData, GetComplianceDashboardApiComplianceDashboardGetResponses, GetSharedApprovalApiSharedApprovalTokenGetData, GetSharedApprovalApiSharedApprovalTokenGetErrors, GetSharedApprovalApiSharedApprovalTokenGetResponses, HealthcheckHealthcheckGetData, HealthcheckHealthcheckGetResponses, ResolveDateMathApiRightsWindowResolvePostData, ResolveDateMathApiRightsWindowResolvePostErrors, ResolveDateMathApiRightsWindowResolvePostResponses, RootGetData, RootGetResponses, RunComplianceCheckApiComplianceCheckPostData, RunComplianceCheckApiComplianceCheckPostErrors, RunComplianceCheckApiComplianceCheckPostResponses, SearchAvailsApiAvailsSearchPostData, SearchAvailsApiAvailsSearchPostErrors, SearchAvailsApiAvailsSearchPostResponses } from './types.gen';
+import type { AnomalyDetectApiAiOrderAnomalyDetectPostData, AnomalyDetectApiAiOrderAnomalyDetectPostErrors, AnomalyDetectApiAiOrderAnomalyDetectPostResponses, ChatApiAiChatPostData, ChatApiAiChatPostErrors, ChatApiAiChatPostResponses, CheckInvoiceApiAiInvoiceCheckPostData, CheckInvoiceApiAiInvoiceCheckPostErrors, CheckInvoiceApiAiInvoiceCheckPostResponses, DemandForecastApiAiInventoryDemandForecastPostData, DemandForecastApiAiInventoryDemandForecastPostErrors, DemandForecastApiAiInventoryDemandForecastPostResponses, GenerateEmbeddingApiAiProductGenerateEmbeddingPostData, GenerateEmbeddingApiAiProductGenerateEmbeddingPostErrors, GenerateEmbeddingApiAiProductGenerateEmbeddingPostResponses, GenerateFromImageApiAiProductGenerateFromImagePostData, GenerateFromImageApiAiProductGenerateFromImagePostErrors, GenerateFromImageApiAiProductGenerateFromImagePostResponses, GenerateLinesheetApiAiLinesheetGeneratePostData, GenerateLinesheetApiAiLinesheetGeneratePostErrors, GenerateLinesheetApiAiLinesheetGeneratePostResponses, HealthcheckHealthcheckGetData, HealthcheckHealthcheckGetResponses, MapColumnsApiAiCsvMapColumnsPostData, MapColumnsApiAiCsvMapColumnsPostErrors, MapColumnsApiAiCsvMapColumnsPostResponses, NegotiationDraftApiAiPricingNegotiationDraftPostData, NegotiationDraftApiAiPricingNegotiationDraftPostErrors, NegotiationDraftApiAiPricingNegotiationDraftPostResponses, OrderBriefingApiAiOrderBriefingPostData, OrderBriefingApiAiOrderBriefingPostErrors, OrderBriefingApiAiOrderBriefingPostResponses, PersonalizeLinesheetApiAiLinesheetPersonalizePostData, PersonalizeLinesheetApiAiLinesheetPersonalizePostErrors, PersonalizeLinesheetApiAiLinesheetPersonalizePostResponses, RecommendRateApiAiPricingRecommendRatePostData, RecommendRateApiAiPricingRecommendRatePostErrors, RecommendRateApiAiPricingRecommendRatePostResponses, RewriteToneApiAiContentRewriteTonePostData, RewriteToneApiAiContentRewriteTonePostErrors, RewriteToneApiAiContentRewriteTonePostResponses, RootGetData, RootGetResponses, SmartAlertsApiAiInventorySmartAlertsPostData, SmartAlertsApiAiInventorySmartAlertsPostErrors, SmartAlertsApiAiInventorySmartAlertsPostResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -33,13 +33,13 @@ export const rootGet = <ThrowOnError extends boolean = false>(options?: Options<
 export const healthcheckHealthcheckGet = <ThrowOnError extends boolean = false>(options?: Options<HealthcheckHealthcheckGetData, ThrowOnError>) => (options?.client ?? client).get<HealthcheckHealthcheckGetResponses, unknown, ThrowOnError>({ url: '/healthcheck', ...options });
 
 /**
- * Search Avails
+ * Generate From Image
  *
- * 7次元Avails検索.
+ * Generate product info from an image using Claude Vision.
  */
-export const searchAvailsApiAvailsSearchPost = <ThrowOnError extends boolean = false>(options: Options<SearchAvailsApiAvailsSearchPostData, ThrowOnError>) => (options.client ?? client).post<SearchAvailsApiAvailsSearchPostResponses, SearchAvailsApiAvailsSearchPostErrors, ThrowOnError>({
+export const generateFromImageApiAiProductGenerateFromImagePost = <ThrowOnError extends boolean = false>(options: Options<GenerateFromImageApiAiProductGenerateFromImagePostData, ThrowOnError>) => (options.client ?? client).post<GenerateFromImageApiAiProductGenerateFromImagePostResponses, GenerateFromImageApiAiProductGenerateFromImagePostErrors, ThrowOnError>({
     security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/avails/search',
+    url: '/api/ai/product/generate-from-image',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -48,13 +48,13 @@ export const searchAvailsApiAvailsSearchPost = <ThrowOnError extends boolean = f
 });
 
 /**
- * Resolve Date Math
+ * Generate Embedding
  *
- * DateMath式を解決して具体日付を返す.
+ * Generate embedding vector for a product.
  */
-export const resolveDateMathApiRightsWindowResolvePost = <ThrowOnError extends boolean = false>(options: Options<ResolveDateMathApiRightsWindowResolvePostData, ThrowOnError>) => (options.client ?? client).post<ResolveDateMathApiRightsWindowResolvePostResponses, ResolveDateMathApiRightsWindowResolvePostErrors, ThrowOnError>({
+export const generateEmbeddingApiAiProductGenerateEmbeddingPost = <ThrowOnError extends boolean = false>(options: Options<GenerateEmbeddingApiAiProductGenerateEmbeddingPostData, ThrowOnError>) => (options.client ?? client).post<GenerateEmbeddingApiAiProductGenerateEmbeddingPostResponses, GenerateEmbeddingApiAiProductGenerateEmbeddingPostErrors, ThrowOnError>({
     security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/rights-window/resolve',
+    url: '/api/ai/product/generate-embedding',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -63,13 +63,13 @@ export const resolveDateMathApiRightsWindowResolvePost = <ThrowOnError extends b
 });
 
 /**
- * Calculate Royalty
+ * Map Columns
  *
- * ロイヤリティ計算実行(非同期).
+ * Auto-map CSV columns to system fields using AI.
  */
-export const calculateRoyaltyApiRoyaltyCalculatePost = <ThrowOnError extends boolean = false>(options: Options<CalculateRoyaltyApiRoyaltyCalculatePostData, ThrowOnError>) => (options.client ?? client).post<CalculateRoyaltyApiRoyaltyCalculatePostResponses, CalculateRoyaltyApiRoyaltyCalculatePostErrors, ThrowOnError>({
+export const mapColumnsApiAiCsvMapColumnsPost = <ThrowOnError extends boolean = false>(options: Options<MapColumnsApiAiCsvMapColumnsPostData, ThrowOnError>) => (options.client ?? client).post<MapColumnsApiAiCsvMapColumnsPostResponses, MapColumnsApiAiCsvMapColumnsPostErrors, ThrowOnError>({
     security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/royalty/calculate',
+    url: '/api/ai/csv/map-columns',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -78,13 +78,13 @@ export const calculateRoyaltyApiRoyaltyCalculatePost = <ThrowOnError extends boo
 });
 
 /**
- * Calculate Retroactive
+ * Generate Linesheet
  *
- * 遡及再計算実行.
+ * Generate linesheet from natural language instruction.
  */
-export const calculateRetroactiveApiRoyaltyCalculateRetroactivePost = <ThrowOnError extends boolean = false>(options: Options<CalculateRetroactiveApiRoyaltyCalculateRetroactivePostData, ThrowOnError>) => (options.client ?? client).post<CalculateRetroactiveApiRoyaltyCalculateRetroactivePostResponses, CalculateRetroactiveApiRoyaltyCalculateRetroactivePostErrors, ThrowOnError>({
+export const generateLinesheetApiAiLinesheetGeneratePost = <ThrowOnError extends boolean = false>(options: Options<GenerateLinesheetApiAiLinesheetGeneratePostData, ThrowOnError>) => (options.client ?? client).post<GenerateLinesheetApiAiLinesheetGeneratePostResponses, GenerateLinesheetApiAiLinesheetGeneratePostErrors, ThrowOnError>({
     security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/royalty/calculate-retroactive',
+    url: '/api/ai/linesheet/generate',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -93,13 +93,13 @@ export const calculateRetroactiveApiRoyaltyCalculateRetroactivePost = <ThrowOnEr
 });
 
 /**
- * Distribute Waterfall
+ * Personalize Linesheet
  *
- * ウォーターフォール分配実行.
+ * Personalize linesheet for a specific buyer.
  */
-export const distributeWaterfallApiCommitteeCommitteeIdDistributePost = <ThrowOnError extends boolean = false>(options: Options<DistributeWaterfallApiCommitteeCommitteeIdDistributePostData, ThrowOnError>) => (options.client ?? client).post<DistributeWaterfallApiCommitteeCommitteeIdDistributePostResponses, DistributeWaterfallApiCommitteeCommitteeIdDistributePostErrors, ThrowOnError>({
+export const personalizeLinesheetApiAiLinesheetPersonalizePost = <ThrowOnError extends boolean = false>(options: Options<PersonalizeLinesheetApiAiLinesheetPersonalizePostData, ThrowOnError>) => (options.client ?? client).post<PersonalizeLinesheetApiAiLinesheetPersonalizePostResponses, PersonalizeLinesheetApiAiLinesheetPersonalizePostErrors, ThrowOnError>({
     security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/committee/{committee_id}/distribute',
+    url: '/api/ai/linesheet/personalize',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -108,13 +108,13 @@ export const distributeWaterfallApiCommitteeCommitteeIdDistributePost = <ThrowOn
 });
 
 /**
- * Run Compliance Check
+ * Chat
  *
- * コンプライアンスチェック実行.
+ * Buyer AI chat with RAG-based product knowledge (SSE streaming).
  */
-export const runComplianceCheckApiComplianceCheckPost = <ThrowOnError extends boolean = false>(options: Options<RunComplianceCheckApiComplianceCheckPostData, ThrowOnError>) => (options.client ?? client).post<RunComplianceCheckApiComplianceCheckPostResponses, RunComplianceCheckApiComplianceCheckPostErrors, ThrowOnError>({
+export const chatApiAiChatPost = <ThrowOnError extends boolean = false>(options: Options<ChatApiAiChatPostData, ThrowOnError>) => (options.client ?? client).post<ChatApiAiChatPostResponses, ChatApiAiChatPostErrors, ThrowOnError>({
     security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/compliance/check',
+    url: '/api/ai/chat',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -123,24 +123,13 @@ export const runComplianceCheckApiComplianceCheckPost = <ThrowOnError extends bo
 });
 
 /**
- * Get Compliance Dashboard
+ * Order Briefing
  *
- * コンプライアンス違反サマリー取得.
+ * Generate daily order briefing with AI.
  */
-export const getComplianceDashboardApiComplianceDashboardGet = <ThrowOnError extends boolean = false>(options?: Options<GetComplianceDashboardApiComplianceDashboardGetData, ThrowOnError>) => (options?.client ?? client).get<GetComplianceDashboardApiComplianceDashboardGetResponses, unknown, ThrowOnError>({
+export const orderBriefingApiAiOrderBriefingPost = <ThrowOnError extends boolean = false>(options: Options<OrderBriefingApiAiOrderBriefingPostData, ThrowOnError>) => (options.client ?? client).post<OrderBriefingApiAiOrderBriefingPostResponses, OrderBriefingApiAiOrderBriefingPostErrors, ThrowOnError>({
     security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/compliance/dashboard',
-    ...options
-});
-
-/**
- * Generate Statements
- *
- * ステートメント一括生成(非同期).
- */
-export const generateStatementsApiStatementGeneratePost = <ThrowOnError extends boolean = false>(options: Options<GenerateStatementsApiStatementGeneratePostData, ThrowOnError>) => (options.client ?? client).post<GenerateStatementsApiStatementGeneratePostResponses, GenerateStatementsApiStatementGeneratePostErrors, ThrowOnError>({
-    security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/statement/generate',
+    url: '/api/ai/order/briefing',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -149,13 +138,13 @@ export const generateStatementsApiStatementGeneratePost = <ThrowOnError extends 
 });
 
 /**
- * Export Accounting
+ * Anomaly Detect
  *
- * 会計CSV出力.
+ * Detect order anomalies with AI.
  */
-export const exportAccountingApiAccountingExportPost = <ThrowOnError extends boolean = false>(options: Options<ExportAccountingApiAccountingExportPostData, ThrowOnError>) => (options.client ?? client).post<ExportAccountingApiAccountingExportPostResponses, ExportAccountingApiAccountingExportPostErrors, ThrowOnError>({
+export const anomalyDetectApiAiOrderAnomalyDetectPost = <ThrowOnError extends boolean = false>(options: Options<AnomalyDetectApiAiOrderAnomalyDetectPostData, ThrowOnError>) => (options.client ?? client).post<AnomalyDetectApiAiOrderAnomalyDetectPostResponses, AnomalyDetectApiAiOrderAnomalyDetectPostErrors, ThrowOnError>({
     security: [{ name: 'Authorization', type: 'apiKey' }],
-    url: '/api/accounting/export',
+    url: '/api/ai/order/anomaly-detect',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -164,8 +153,91 @@ export const exportAccountingApiAccountingExportPost = <ThrowOnError extends boo
 });
 
 /**
- * Get Shared Approval
+ * Check Invoice
  *
- * 外部共有リンク経由の承認結果閲覧(認証不要).
+ * AI double-check for invoice accuracy.
  */
-export const getSharedApprovalApiSharedApprovalTokenGet = <ThrowOnError extends boolean = false>(options: Options<GetSharedApprovalApiSharedApprovalTokenGetData, ThrowOnError>) => (options.client ?? client).get<GetSharedApprovalApiSharedApprovalTokenGetResponses, GetSharedApprovalApiSharedApprovalTokenGetErrors, ThrowOnError>({ url: '/api/shared/approval/{token}', ...options });
+export const checkInvoiceApiAiInvoiceCheckPost = <ThrowOnError extends boolean = false>(options: Options<CheckInvoiceApiAiInvoiceCheckPostData, ThrowOnError>) => (options.client ?? client).post<CheckInvoiceApiAiInvoiceCheckPostResponses, CheckInvoiceApiAiInvoiceCheckPostErrors, ThrowOnError>({
+    security: [{ name: 'Authorization', type: 'apiKey' }],
+    url: '/api/ai/invoice/check',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Recommend Rate
+ *
+ * AI wholesale rate recommendation.
+ */
+export const recommendRateApiAiPricingRecommendRatePost = <ThrowOnError extends boolean = false>(options: Options<RecommendRateApiAiPricingRecommendRatePostData, ThrowOnError>) => (options.client ?? client).post<RecommendRateApiAiPricingRecommendRatePostResponses, RecommendRateApiAiPricingRecommendRatePostErrors, ThrowOnError>({
+    security: [{ name: 'Authorization', type: 'apiKey' }],
+    url: '/api/ai/pricing/recommend-rate',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Negotiation Draft
+ *
+ * Generate negotiation draft with AI.
+ */
+export const negotiationDraftApiAiPricingNegotiationDraftPost = <ThrowOnError extends boolean = false>(options: Options<NegotiationDraftApiAiPricingNegotiationDraftPostData, ThrowOnError>) => (options.client ?? client).post<NegotiationDraftApiAiPricingNegotiationDraftPostResponses, NegotiationDraftApiAiPricingNegotiationDraftPostErrors, ThrowOnError>({
+    security: [{ name: 'Authorization', type: 'apiKey' }],
+    url: '/api/ai/pricing/negotiation-draft',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Demand Forecast
+ *
+ * AI demand forecast for inventory planning.
+ */
+export const demandForecastApiAiInventoryDemandForecastPost = <ThrowOnError extends boolean = false>(options: Options<DemandForecastApiAiInventoryDemandForecastPostData, ThrowOnError>) => (options.client ?? client).post<DemandForecastApiAiInventoryDemandForecastPostResponses, DemandForecastApiAiInventoryDemandForecastPostErrors, ThrowOnError>({
+    security: [{ name: 'Authorization', type: 'apiKey' }],
+    url: '/api/ai/inventory/demand-forecast',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Smart Alerts
+ *
+ * Generate smart inventory alerts.
+ */
+export const smartAlertsApiAiInventorySmartAlertsPost = <ThrowOnError extends boolean = false>(options: Options<SmartAlertsApiAiInventorySmartAlertsPostData, ThrowOnError>) => (options.client ?? client).post<SmartAlertsApiAiInventorySmartAlertsPostResponses, SmartAlertsApiAiInventorySmartAlertsPostErrors, ThrowOnError>({
+    security: [{ name: 'Authorization', type: 'apiKey' }],
+    url: '/api/ai/inventory/smart-alerts',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Rewrite Tone
+ *
+ * Rewrite text to match brand tone.
+ */
+export const rewriteToneApiAiContentRewriteTonePost = <ThrowOnError extends boolean = false>(options: Options<RewriteToneApiAiContentRewriteTonePostData, ThrowOnError>) => (options.client ?? client).post<RewriteToneApiAiContentRewriteTonePostResponses, RewriteToneApiAiContentRewriteTonePostErrors, ThrowOnError>({
+    security: [{ name: 'Authorization', type: 'apiKey' }],
+    url: '/api/ai/content/rewrite-tone',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
