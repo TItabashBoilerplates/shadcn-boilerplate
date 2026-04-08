@@ -27,7 +27,7 @@
     "@gluestack-ui/toast": "^1.0.8",
     "@gluestack-ui/utils": "^3.0.13",
     "expo-symbols": "1.1.0-canary-20251210-1f163e3",
-    "lucide-react-native": "^0.560.0",
+    "lucide-react-native": "^0.562.0",
     "nativewind": "^4.1.23",
     "react-native-reanimated": "~4.1.1"
   },
