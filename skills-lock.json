@@ -31,6 +31,11 @@
       "sourceType": "github",
       "computedHash": "d39e806942fe880347f161056729b588a3cb0f1796270eebf52633fe11cfdce1"
     },
+    "feature-sliced-design": {
+      "source": "feature-sliced/skills",
+      "sourceType": "github",
+      "computedHash": "98020388ca6fb26ac9b060f81eb3064fefce9018e6f660e69419a00adf0801e7"
+    },
     "gluestack-ui-v4": {
       "source": "gluestack/agent-skills",
       "sourceType": "github",

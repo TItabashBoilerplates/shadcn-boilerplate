@@ -30,7 +30,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 │   ├── backend-py.md     # Python コード規約
 │   ├── edge-functions.md # Edge Functions 規約
 │   ├── i18n.md           # 多言語対応（必須）
-│   └── ui-testing.md     # UIテスト（Storybook必須・単体テスト不要）
+│   ├── ui-testing.md     # UIテスト（Storybook必須・単体テスト不要）
+│   └── render-optimization.md # 再描画最小化（FSDスライス単位のステート局所化）
 │
 └── skills/         # 質問時に参照するガイダンス
     ├── fsd/              # Feature Sliced Design
@@ -90,6 +91,8 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 **MANDATORY**: 単体テストでは**外部SDK（pipモジュール）を丸ごとMockしない**。本物のSDKを使い、I/O層（HTTP/DB）のみ差し替えることで、**TypeError・ValueError・RuntimeError を単体テスト時点で検知**し、型安全で堅牢な状態を維持する。詳細は `.claude/rules/backend-py.md` および `.claude/skills/python-testing/` を参照。
 
 **MANDATORY**: コードは常にクリーンな状態を維持。後方互換コード・重複コード・未使用コードは残さない（明示的な指示がある場合を除く）。詳細は `.claude/rules/clean-code.md` を参照。
+
+**MANDATORY**: コンポーネントの再描画は必要最小限に抑える。FSD のスライス単位でステートを局所化し、状態変更の影響範囲をそのスライス内に閉じ込める。TanStack Query の invalidation はピンポイント、Zustand は必ずセレクター使用、Widget/View にビジネスステートを持たせない。詳細は `.claude/rules/render-optimization.md` を参照。
 
 **MANDATORY**: フロントエンド・バックエンドのデバッグ（ログ確認・状態確認・プロセス再起動）は **process-compose MCP ツールを最優先**で使用する。CLI にフォールバックするのは MCP が利用不可の場合のみ。詳細は `.claude/skills/debugging/SKILL.md` を参照。
 
