@@ -31,7 +31,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 │   ├── edge-functions.md # Edge Functions 規約
 │   ├── i18n.md           # 多言語対応（必須）
 │   ├── ui-testing.md     # UIテスト（Storybook必須・単体テスト不要）
-│   └── render-optimization.md # 再描画最小化（FSDスライス単位のステート局所化）
+│   ├── render-optimization.md # 再描画最小化（FSDスライス単位のステート局所化）
+│   └── error-handling.md     # エラーハンドリング（握りつぶし禁止・フォールバック最小化）
 │
 └── skills/         # 質問時に参照するガイダンス
     ├── fsd/              # Feature Sliced Design
@@ -93,6 +94,8 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 **MANDATORY**: コードは常にクリーンな状態を維持。後方互換コード・重複コード・未使用コードは残さない（明示的な指示がある場合を除く）。詳細は `.claude/rules/clean-code.md` を参照。
 
 **MANDATORY**: コンポーネントの再描画は必要最小限に抑える。FSD のスライス単位でステートを局所化し、状態変更の影響範囲をそのスライス内に閉じ込める。TanStack Query の invalidation はピンポイント、Zustand は必ずセレクター使用、Widget/View にビジネスステートを持たせない。詳細は `.claude/rules/render-optimization.md` を参照。
+
+**MANDATORY**: エラーは握りつぶさず適切にエラーとして処理する。不必要なフォールバック処理は禁止。catch したら必ずログ出力 + リスロー or 明示的 Result 型。supabase-js の `{ error }` は必ずチェック。フォールバックは付随的処理（analytics等）のみ許容。詳細は `.claude/rules/error-handling.md` を参照。
 
 **MANDATORY**: フロントエンド・バックエンドのデバッグ（ログ確認・状態確認・プロセス再起動）は **process-compose MCP ツールを最優先**で使用する。CLI にフォールバックするのは MCP が利用不可の場合のみ。詳細は `.claude/skills/debugging/SKILL.md` を参照。
 
