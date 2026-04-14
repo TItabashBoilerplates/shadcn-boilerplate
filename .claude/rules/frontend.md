@@ -176,5 +176,5 @@ const formatted = new Date(utcDate).toLocaleString('ja-JP')
 ## Testing
 
 - **Framework**: Vitest with jsdom environment
-- **RLS Testing**: supabase-test for policy verification
+- **RLS Testing**: pgTAP via `supabase test db` — tests live in `supabase/tests/*.sql`
 - **TDD**: Write failing tests first, then implement

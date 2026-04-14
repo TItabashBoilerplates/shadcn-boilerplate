@@ -43,7 +43,7 @@ build-model-frontend build-model-backend build-model-functions build-model: _dev
 migrate-dev migrate-deploy drizzle-push drizzle-studio drizzle-validate: _devenv
 seed seed-db seed-storage: _devenv
 storybook-local build-storybook: _devenv
-e2e e2e-web e2e-mobile: _devenv
+e2e e2e-web e2e-mobile test-db: _devenv
 deploy-supabase supabase-link deploy-config deploy-functions-all deploy-secrets deploy-buckets: _devenv
 
 # direnv を有効化（初回セットアップ時）
@@ -609,6 +609,15 @@ e2e-web:
 .PHONY: e2e-mobile
 e2e-mobile:
 	cd .maestro && maestro test mobile/
+
+# ===== pgTAP DB Tests =====
+
+# RLS・DB 関数・制約のテスト（pgTAP + supabase test db）
+# テストファイルは supabase/tests/*.sql に配置
+# 詳細は .claude/skills/pgtap/SKILL.md を参照
+.PHONY: test-db
+test-db:
+	supabase test db --local
 
 # ===== Supabase Remote Deploy コマンド =====
 # 詳細は scripts/supabase/ を参照

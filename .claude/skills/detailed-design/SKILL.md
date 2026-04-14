@@ -78,7 +78,7 @@ $ARGUMENTS が指定された場合、まず以下を確認する:
 | Edge Functions | Deno, Supabase Edge Functions | `.claude/rules/edge-functions.md` |
 | UI Testing | Storybook 10 | `.claude/skills/storybook/`, `.claude/rules/ui-testing.md` |
 | Unit Testing | Vitest (Frontend), pytest (Backend) | `.claude/rules/tdd.md` |
-| RLS Testing | supabase-test | `.claude/skills/supabase-test/` |
+| RLS Testing | pgTAP (`supabase test db`) | `.claude/skills/pgtap/` |
 
 ## 認証基盤選択ガイド
 
@@ -146,7 +146,7 @@ $ARGUMENTS が指定された場合、まず以下を確認する:
 ### テスト
 - [ ] ビジネスロジック（model/api/lib）にTDD計画
 - [ ] UIコンポーネントにStorybook計画（単体テスト不要）
-- [ ] RLSポリシーにsupabase-testテスト計画
+- [ ] RLSポリシーにpgTAP（`supabase test db`）テスト計画
 
 ### 自動生成ファイル
 - [ ] 自動生成ファイルを直接編集していないか（`.claude/rules/auto-generated.md` 参照）

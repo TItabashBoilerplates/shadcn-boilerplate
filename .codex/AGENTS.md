@@ -165,7 +165,7 @@ env/
 | `shadcn-ui/` | shadcn/ui + TailwindCSS (Web) |
 | `gluestack/` | gluestack-ui + NativeWind (Mobile) |
 | `storybook/` | Storybook コンポーネントカタログ |
-| `supabase-test/` | RLS テスト（Frontend） |
+| `pgtap/` | RLS・DB 関数テスト（pgTAP + `supabase test db`） |
 | `python-testing/` | Python単体テスト |
 | `i18n/` | next-intl 多言語対応 |
 | `langchain/` | LangChain/LangGraph/LangSmith |

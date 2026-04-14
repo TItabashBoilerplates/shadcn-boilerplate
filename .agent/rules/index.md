@@ -61,8 +61,8 @@ This directory contains guidelines for Antigravity Agent when working in this re
 
 10. **[Testing Guidelines](./testing.md)** ⚠️ **MUST READ**
     - Test-Driven Development (TDD) requirement
-    - supabase-test for frontend API testing
-    - RLS policy testing requirements
+    - pgTAP (`supabase test db`) for RLS / DB-layer testing
+    - RLS policy testing requirements (DB layer via pgTAP, not frontend)
     - CI/CD integration
 
 11. **[UI Testing Policy](./ui-testing.md)** ⚠️ **MUST READ**
@@ -112,7 +112,7 @@ For detailed information, refer to the following documentation:
 3. **Database migrations require manual approval** - No automatic execution
 4. **Test-Driven Development (TDD) is mandatory** - Write tests before implementation
 5. **UI components use Storybook, not unit tests** - See `ui-testing.md`
-6. **Use supabase-test for Supabase API testing** - Test all RLS policies
+6. **Use pgTAP (`supabase test db`) for RLS / DB-layer testing** - Tests live in `supabase/tests/*.sql`
 7. **Clean Code Policy** - No backward compatibility, no duplication, no unused code
 8. **Use TailwindCSS CSS variables** - No hardcoded colors
 9. **Debugging via process-compose MCP** - Use MCP tools first for log/status/restart

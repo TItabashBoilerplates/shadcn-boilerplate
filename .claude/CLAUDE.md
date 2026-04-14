@@ -45,7 +45,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     ├── shadcn-ui/        # shadcn/ui + TailwindCSS (Web)
     ├── gluestack/        # gluestack-ui + NativeWind (Mobile)
     ├── storybook/        # Storybook 10 コンポーネントカタログ
-    ├── supabase-test/    # RLS テスト（Frontend）
+    ├── pgtap/            # RLS・DB 関数テスト（pgTAP + supabase test db）
     ├── python-testing/   # Python単体テスト（外部SDK/TypeError検知）
     ├── i18n/             # next-intl 多言語対応
     ├── langchain/        # LangChain/LangGraph/LangSmith

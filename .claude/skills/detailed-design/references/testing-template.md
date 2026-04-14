@@ -8,7 +8,7 @@
   - .claude/rules/tdd.md - TDD 必須ポリシー
   - .claude/rules/ui-testing.md - UI テスト方針
   - .claude/skills/storybook/SKILL.md - Storybook 10
-  - .claude/skills/supabase-test/ - RLS テスト
+  - .claude/skills/pgtap/ - RLS・DB 層テスト（pgTAP + `supabase test db`）
   - .claude/skills/python-testing/ - Python 単体テスト
   - .claude/skills/maestro/ - E2E テスト
 -->
@@ -28,7 +28,7 @@
 | UI コンポーネント | Storybook | Storybook 10 | - |
 | ビジネスロジック (Frontend) | 単体テスト | Vitest | 必須 |
 | API フック (Frontend) | 単体テスト | Vitest | 必須 |
-| RLS ポリシー | 統合テスト | supabase-test | 必須 |
+| RLS ポリシー / DB 関数 / 制約 | DB 層テスト | pgTAP (`supabase test db`) | 必須 |
 | Backend UseCase | 単体テスト | pytest | 必須 |
 | Backend Gateway | 単体テスト | pytest | 必須 |
 | E2E フロー | E2E テスト | Maestro | - |
@@ -190,10 +190,12 @@ export const SubmitForm: Story = {
 ## RLS テスト
 
 <!--
-  参照: .claude/skills/supabase-test/
+  参照: .claude/skills/pgtap/
 
-  supabase-test を使用して RLS ポリシーを検証する。
-  各テーブルの各操作について、許可/拒否のケースをテストする。
+  pgTAP + `supabase test db` で RLS ポリシーを SQL レベルで検証する。
+  テストは supabase/tests/ 配下にフラットに配置し、認証コンテキスト切替は
+  supabase-test-helpers (tests.authenticate_as 等) を使用する。
+  各テーブルの各操作について、許可/拒否のケースを両方テストする。
 -->
 
 ### テスト対象ポリシー
@@ -205,68 +207,81 @@ export const SubmitForm: Story = {
 | {table} | update_policy_{table} | 自分のデータのみ更新可能 |
 | {table} | service_insert_{table} | service_role のみ作成可能 |
 
+### 実行
+
+```bash
+make test-db   # = supabase test db --local
+```
+
 ### テストケース
 
-```typescript
-// frontend/apps/web/tests/rls/{table}.test.ts
-import { describe, it, expect } from 'vitest'
-import { createTestClient } from '@/tests/helpers/supabase-test'
+```sql
+-- supabase/tests/{table}_rls.sql
+begin;
 
-describe('{table} RLS', () => {
-  describe('SELECT', () => {
-    it('認証ユーザーは自分のデータを取得できること', async () => {
-      const client = await createTestClient({ userId: 'user-1' })
-      const { data, error } = await client
-        .from('{table}')
-        .select('*')
+select plan(7);
 
-      expect(error).toBeNull()
-      expect(data).toHaveLength(/* expected count */)
-      expect(data?.every(d => d.user_id === 'user-1')).toBe(true)
-    })
+-- ===== フィクスチャ =====
+select tests.create_supabase_user('user-1', 'user1@example.com');
+select tests.create_supabase_user('user-2', 'user2@example.com');
 
-    it('他ユーザーのデータを取得できないこと', async () => {
-      const client = await createTestClient({ userId: 'user-2' })
-      const { data } = await client
-        .from('{table}')
-        .select('*')
-        .eq('user_id', 'user-1')
+select tests.authenticate_as_service_role();
 
-      expect(data).toHaveLength(0)
-    })
+insert into public.{table} (user_id, /* ... */) values
+  (tests.get_supabase_uid('user-1'), /* ... */),
+  (tests.get_supabase_uid('user-2'), /* ... */);
 
-    it('未認証ユーザーはアクセスできないこと', async () => {
-      const client = await createTestClient({ anon: true })
-      const { error } = await client
-        .from('{table}')
-        .select('*')
+-- ===== SELECT =====
+select tests.authenticate_as('user-1');
 
-      expect(error).not.toBeNull()
-    })
-  })
+select results_eq(
+  $$ select user_id from public.{table} $$,
+  $$ values (tests.get_supabase_uid('user-1')) $$,
+  '認証ユーザーは自分のデータのみ取得できる'
+);
 
-  describe('INSERT', () => {
-    it('認証ユーザーは自分のデータを作成できること', async () => {
-      // ...
-    })
+select is_empty(
+  $$ select 1 from public.{table} where user_id = tests.get_supabase_uid('user-2') $$,
+  '他ユーザーのデータは取得できない'
+);
 
-    it('他ユーザーのデータを作成できないこと', async () => {
-      // ...
-    })
-  })
+select tests.clear_authentication();
 
-  describe('UPDATE', () => {
-    it('自分のデータのみ更新できること', async () => {
-      // ...
-    })
-  })
+select is_empty(
+  $$ select 1 from public.{table} $$,
+  '未認証ユーザーはアクセスできない'
+);
 
-  describe('DELETE', () => {
-    it('自分のデータのみ削除できること', async () => {
-      // ...
-    })
-  })
-})
+-- ===== INSERT =====
+select tests.authenticate_as('user-1');
+
+select lives_ok(
+  $$ insert into public.{table} (user_id /*, ...*/) values (tests.get_supabase_uid('user-1') /*, ...*/) $$,
+  '認証ユーザーは自分のデータを作成できる'
+);
+
+select throws_ok(
+  $$ insert into public.{table} (user_id /*, ...*/) values (tests.get_supabase_uid('user-2') /*, ...*/) $$,
+  null,
+  '他ユーザーの user_id で作成はブロックされる'
+);
+
+-- ===== UPDATE =====
+select throws_ok(
+  $$ update public.{table} set /* col */ = /* val */ where user_id = tests.get_supabase_uid('user-2') $$,
+  null,
+  '他ユーザーのデータは更新できない'
+);
+
+-- ===== DELETE =====
+select throws_ok(
+  $$ delete from public.{table} where user_id = tests.get_supabase_uid('user-2') $$,
+  null,
+  '他ユーザーのデータは削除できない'
+);
+
+select * from finish();
+rollback;
 ```
 
 ## Backend Python テスト (TDD)
