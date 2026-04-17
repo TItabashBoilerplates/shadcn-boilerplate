@@ -81,10 +81,15 @@
       "sourceType": "github",
       "computedHash": "91b23c09854900c0ed1e85a8a3856b4a7294af2076f20b2cf9ca97f6f21dcb7b"
     },
+    "supabase": {
+      "source": "supabase/agent-skills",
+      "sourceType": "github",
+      "computedHash": "cb675a889c60172febe84740e7c22b600c8241c390deaff3d368c408f10dffdf"
+    },
     "supabase-postgres-best-practices": {
       "source": "supabase/agent-skills",
       "sourceType": "github",
-      "computedHash": "9c87c315aed143ee3b34bec8117100f5035e0df09e6b23e1ecc772cff434c9ad"
+      "computedHash": "d606a1146be6d54fb9e73f718b5320b9acac5ff2ba2d7230a555df4b5a923b4a"
     },
     "two-factor-authentication-best-practices": {
       "source": "better-auth/skills",
