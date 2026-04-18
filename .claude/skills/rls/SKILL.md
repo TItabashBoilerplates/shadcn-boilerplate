@@ -52,6 +52,7 @@ RLS は「書けば動く」ではなく **「正しく、速く、漏らさず�
 | [auth-patterns.md](references/auth-patterns.md) | `auth.uid()` / `auth.jwt()` のラップと使い分け、`auth.users` を JOIN しない、anon 対応 | HIGH |
 | [security-definer-functions.md](references/security-definer-functions.md) | SECURITY DEFINER の安全な書き方、`search_path` injection 防止、短絡評価パターン | **CRITICAL** |
 | [column-level-security.md](references/column-level-security.md) | PII 列の保護、VIEW + security_invoker、別テーブル分割、AAL2 強制 | HIGH |
+| [extensions-and-edge-cases.md](references/extensions-and-edge-cases.md) | TRUNCATE / REFERENCES / COPY FROM のバイパス、pg_cron / pgvector / パーティショニング、`statement_timeout` | **CRITICAL** |
 
 ### ⚡ Performance（パフォーマンス）
 
@@ -60,6 +61,20 @@ RLS は「書けば動く」ではなく **「正しく、速く、漏らさず�
 | [indexes-for-rls.md](references/indexes-for-rls.md) | btree / 複合 / 部分 / 式 / covering インデックス、FK 列、pg_stat_user_indexes 監視 | **CRITICAL** |
 | [function-volatility.md](references/function-volatility.md) | `STABLE` / `IMMUTABLE` / `VOLATILE` の使い分け、`LEAKPROOF` / `PARALLEL SAFE` | HIGH |
 | [performance-verification.md](references/performance-verification.md) | `EXPLAIN (ANALYZE, BUFFERS)` の読み方、`pg_stat_statements`、`index_advisor` | HIGH |
+
+### 📚 Patterns & Cookbook（実装パターン）
+
+| リファレンス | 内容 | 優先度 |
+|-------------|------|--------|
+| [policy-cookbook.md](references/policy-cookbook.md) | 11 パターンのコピペ可能テンプレート（Owner / Public / Org Member / ACL / Hierarchical / MFA / pgvector RAG 等） | HIGH |
+| [multi-tenancy-patterns.md](references/multi-tenancy-patterns.md) | B2B SaaS テナント分離（tenant_id 列・マテリアライズド所属・schema-per-tenant）、JWT race condition、admin アクセス | HIGH |
+
+### 🛠️ Operations（運用）
+
+| リファレンス | 内容 | 優先度 |
+|-------------|------|--------|
+| [migration-safety.md](references/migration-safety.md) | 既存テーブルへの RLS 追加、`ALTER POLICY` の制限、DROP+CREATE トランザクション、`CREATE INDEX CONCURRENTLY`、ロールバック | HIGH |
+| [testing-rls.md](references/testing-rls.md) | **4 × 4 マトリクステンプレート**（コピペ可能）、CI 統合、カバレッジ監査、pgTAP の落とし穴 | **CRITICAL** |
 
 ### 🌐 Service-specific（サービス別）
 
@@ -86,6 +101,11 @@ RLS をレビューする際は以下を順に確認する。該当リファレ�
 - [ ] SECURITY DEFINER 関数内に **認可チェック** がある → `security-definer-functions.md`
 - [ ] `REVOKE EXECUTE ... FROM PUBLIC` + `GRANT EXECUTE ... TO <role>` → `security-definer-functions.md`
 - [ ] PII 列は別テーブルに分離検討 → `column-level-security.md`
+- [ ] `authenticated` / `anon` に **TRUNCATE 権限を付与していない**（公式: TRUNCATE は RLS 非適用） → `extensions-and-edge-cases.md`
+- [ ] 公開 API に **連番 ID を露出していない**（REFERENCES が RLS をバイパスするため） → `extensions-and-edge-cases.md`
+- [ ] pg_cron ジョブは **SECURITY DEFINER 関数経由 + 監査ログ** → `extensions-and-edge-cases.md`
+- [ ] pgvector 検索ラッパー関数は **SECURITY INVOKER** → `extensions-and-edge-cases.md`
+- [ ] `statement_timeout` をロール別に設定（authenticated 8s 等） → `extensions-and-edge-cases.md`
 
 ### パフォーマンス
 - [ ] すべての `auth.uid()` / `auth.jwt()` が **`(SELECT ...)` でラップ** → `auth-patterns.md`
@@ -106,7 +126,21 @@ RLS をレビューする際は以下を順に確認する。該当リファレ�
 - [ ] Realtime: `supabase_realtime` publication に追加済み → `realtime-rls.md`
 
 ### テスト
-- [ ] `pgTAP` で anon / authenticated(自)/authenticated(他)/service_role の **4象限テスト** → `.claude/skills/pgtap/SKILL.md`
+- [ ] `pgTAP` で **anon / authenticated(自)/authenticated(他)/service_role × SELECT/INSERT/UPDATE/DELETE = 16 ケース** → `testing-rls.md`
+- [ ] クロステナントアクセスが全 4 オペレーションで拒否される → `testing-rls.md`
+- [ ] RLS 有効テーブルに対し `supabase/tests/<table>_rls.sql` が存在（カバレッジ監査スクリプト） → `testing-rls.md`
+- [ ] `make test-db` が CI で PASS してから merge（branch protection で強制） → `testing-rls.md`
+
+### 運用・マイグレーション
+- [ ] 既存テーブルへの RLS 追加は **ポリシー CREATE → RLS ENABLE** の順 → `migration-safety.md`
+- [ ] DROP POLICY + CREATE POLICY は同一トランザクション → `migration-safety.md`
+- [ ] drizzle 生成 SQL を目視レビュー + `lock_timeout` 設定 → `migration-safety.md`
+- [ ] ロールバック SQL を事前準備 → `migration-safety.md`
+
+### マルチテナント（該当する場合）
+- [ ] すべてのテナント所有テーブルに `tenant_id` 列 + NOT NULL + **複合インデックス** → `multi-tenancy-patterns.md`
+- [ ] `tenant_id` は JWT `raw_app_meta_data` 経由、即時剥奪が必要なら DB 参照（マテリアライズド所属） → `multi-tenancy-patterns.md`
+- [ ] クライアント側で `.eq('tenant_id', ...)` を必ず付ける → `multi-tenancy-patterns.md`
 
 ---
 
