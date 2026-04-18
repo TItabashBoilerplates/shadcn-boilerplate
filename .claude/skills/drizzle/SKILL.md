@@ -69,6 +69,8 @@ export const editPolicyUsers = pgPolicy('edit_policy_users', {
 }).link(users)
 ```
 
+**重要**: `auth.uid()` は必ず `(select auth.uid())` でラップする（initPlan キャッシュで 94.97% 改善）。`to` ロールも必ず明示する。RLS の設計原則・パフォーマンス最適化・SECURITY DEFINER 関数による再帰 RLS 排除など、詳細は **`.claude/skills/rls/SKILL.md` を必ず参照**。
+
 ### Supabase 組み込みロールの使用
 
 ```typescript

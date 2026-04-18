@@ -40,6 +40,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     ├── tanstack-query/   # TanStack Query v5
     ├── supabase/         # Supabase 認証・RLS
     ├── drizzle/          # Drizzle ORM スキーマ
+    ├── rls/              # RLS パフォーマンス・ベストプラクティス（必読）
     ├── datetime/         # 日時処理
     ├── debugging/        # デバッグ手順（process-compose MCP 優先・Supabase）
     ├── shadcn-ui/        # shadcn/ui + TailwindCSS (Web)
