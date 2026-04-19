@@ -219,8 +219,9 @@ supabase.channel('x').on('postgres_changes', { event: '*', ... }, handler)
 ## 公式ドキュメント
 
 ### 必読
-- **[Supabase: Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)** — 基本・RLS enable・`auth.uid()` / `auth.jwt()`・`bypassrls`
-- **[Supabase: RLS Performance and Best Practices](https://github.com/orgs/supabase/discussions/14576)** — 実測ベンチマーク付きパフォーマンスガイド
+- **[Supabase: Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)** — 基本・RLS enable・`auth.uid()` / `auth.jwt()`・`bypassrls`、**公式の 6 パフォーマンス推奨事項（indexes / SELECT wrap / client filter / security definer / minimize joins / TO role）とベンチマーク表** を含む
+- **[GaryAustin1/RLS-Performance](https://github.com/GaryAustin1/RLS-Performance)** — 公式 Supabase RLS docs から参照されている **正規ベンチマーク repo**（test1-indexed / test2a-wrappedSQL-uid / test2d-sd-fun / test3-addfilter / test5-fixed-join / test6-To-role 等の再現可能な計測スクリプト）
+- **[Supabase Discussion #14576](https://github.com/orgs/supabase/discussions/14576)** — 上記ベンチマーク結果の解説（過去の troubleshooting 記事 `rls-performance-and-best-practices-Z5Jjwv` はこの内容に統合・削除済み）
 - **[PostgreSQL: CREATE POLICY](https://www.postgresql.org/docs/current/sql-createpolicy.html)** — PERMISSIVE/RESTRICTIVE・USING/WITH CHECK の正式仕様
 
 ### SECURITY DEFINER / 関数

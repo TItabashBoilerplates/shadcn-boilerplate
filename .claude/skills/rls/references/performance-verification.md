@@ -213,4 +213,5 @@ SELECT * FROM index_advisor(
 - [PostgreSQL: pg_stat_statements](https://www.postgresql.org/docs/current/pgstatstatements.html)
 - [Supabase: Query Performance](https://supabase.com/docs/guides/platform/performance)
 - [Supabase: index_advisor](https://supabase.com/docs/guides/database/extensions/index_advisor)
+- [GaryAustin1/RLS-Performance](https://github.com/GaryAustin1/RLS-Performance) — Supabase 公式が参照する **RLS ベンチマークの正規 repo**（InitPlan / auth.uid() wrap / TO / filter / security definer / minimize joins の再現可能計測）
 - 本プロジェクトの関連スキル: `supabase-postgres-best-practices/references/monitor-explain-analyze.md`, `monitor-pg-stat-statements.md`
