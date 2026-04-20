@@ -19,7 +19,7 @@
     "@workspace/ui/web": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "lucide-react": "^0.539.0",
+    "lucide-react": "^0.562.0",
     "next": "^16.0.8",
     "next-intl": "^4.4.0",
     "react": "19.2.1",
