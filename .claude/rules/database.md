@@ -9,7 +9,7 @@ paths: drizzle/**/*.ts, supabase/migrations/**/*.sql
 ## Rules
 
 1. **Schema Changes Only**: You may edit schema files (`drizzle/schema/schema.ts`, etc.)
-2. **NO Automatic Migration**: Do NOT run `make migrate-dev`, `make migrate-deploy`, or `make migration`
+2. **NO Automatic Migration**: Do NOT run `devenv tasks run app:migrate-dev`, `devenv tasks run db:migrate-deploy`, or `devenv tasks run app:migrate-dev`
 3. **User Confirmation Required**: Always ask the user to review schema changes and execute migration commands manually
 
 ## Workflow
@@ -21,13 +21,13 @@ vi drizzle/schema/schema.ts
 
 # 2. Inform user
 "スキーマを更新しました。以下のコマンドでマイグレーションを実行してください：
-make migrate-dev"
+devenv tasks run app:migrate-dev"
 
 # 3. User executes migration manually
 # (Claude does NOT execute this)
 
 # ❌ Bad: Automatic migration execution
-# Claude runs make migrate-dev automatically - PROHIBITED
+# Claude runs devenv tasks run app:migrate-dev automatically - PROHIBITED
 ```
 
 ## Schema Design Rules (MANDATORY)
@@ -75,7 +75,7 @@ export const profiles = pgTable('profiles', {
 `sqlacodegen` で SQLModel を自動生成する際、**同じテーブルへの複数の外部キー参照**があると `AmbiguousForeignKeysError` が発生する。
 
 **原因**: sqlacodegen Issue [#376](https://github.com/agronholm/sqlacodegen/issues/376)（未解決）
-**発生箇所**: `make run` 時の SQLModel 自動生成 (`backend-py/app/src/domain/entity/models.py`)
+**発生箇所**: `devenv up` 時の SQLModel 自動生成 (`backend-py/app/src/domain/entity/models.py`)
 
 #### 問題のあるパターン
 
@@ -226,12 +226,12 @@ Type generation is allowed as it's a read-only operation:
 
 ```bash
 # ✅ Allowed
-make build-model-frontend   # Generate Supabase types
-make build-model-functions  # Generate Edge Functions types
-make build-model            # Generate all types
+devenv tasks run model:frontend   # Generate Supabase types
+devenv tasks run model:functions  # Generate Edge Functions types
+devenv tasks run model:build            # Generate all types
 
 # ❌ Prohibited
-make migrate-dev            # Includes migration execution
+devenv tasks run app:migrate-dev            # Includes migration execution
 ```
 
 ## Why This Policy Exists

@@ -44,7 +44,7 @@
   3. 最小限のコードで通す (Green)
   4. リファクタリング (Refactor)
 
-  テストコマンド: make test-frontend
+  テストコマンド: test-frontend
 -->
 
 ### テスト対象一覧
@@ -210,7 +210,7 @@ export const SubmitForm: Story = {
 ### 実行
 
 ```bash
-make test-db   # = supabase test db --local
+test-db   # = supabase test db --local
 ```
 
 ### テストケース
@@ -293,7 +293,7 @@ rollback;
   - 外部SDK を丸ごと Mock しない
   - 本物の SDK を使い、I/O層（HTTP/DB）のみ差し替え
   - autospec / spec_set で本物 API に縛る
-  - テストコマンド: make test-backend-py
+  - テストコマンド: test-backend-py
 -->
 
 ### テスト対象一覧
@@ -381,9 +381,9 @@ appId: com.example.app
 
 | テスト種別 | コマンド |
 |-----------|---------|
-| Frontend 全体 | `make test-frontend` |
-| Backend 全体 | `make test-backend-py` |
-| 全テスト | `make test` |
+| Frontend 全体 | `test-frontend` |
+| Backend 全体 | `test-backend-py` |
+| 全テスト | `test` |
 
 ## All Green ポリシー
 

@@ -100,10 +100,10 @@ vi drizzle/schema/schema.ts
 
 # 2. マイグレーション生成 + 適用（ユーザー承認が必要）
 # ⚠️ Claude は自動実行禁止 - ユーザーに以下を依頼:
-make migrate-dev
+devenv tasks run app:migrate-dev
 
 # 3. 型生成
-make build-model
+devenv tasks run model:build
 ```
 
 **重要**: マイグレーションは破壊的操作のため、Claude は自動実行しません。
@@ -153,10 +153,10 @@ $$ LANGUAGE plpgsql;
 
 ```bash
 # Frontend 用 Supabase 型
-make build-model-frontend
+devenv tasks run model:build-frontend
 
 # Edge Functions 用（Drizzle スキーマもコピー）
-make build-model-functions
+devenv tasks run model:build-functions
 ```
 
 ### Edge Functions での使用

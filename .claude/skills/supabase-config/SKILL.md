@@ -16,7 +16,7 @@ Dashboard 手動変更は **レビュー不能・再現不能・Drift の温床*
 - 新規に `supabase/config.toml` を設計する
 - Auth / OAuth / SMTP / Hooks / MFA を Git 管理下に移す
 - Storage Bucket を宣言的に管理する
-- CI/CD で Supabase リモートプロジェクトへ設定を反映する（`make deploy-supabase`）
+- CI/CD で Supabase リモートプロジェクトへ設定を反映する（`devenv tasks run -P <env> deploy:supabase`）
 - Staging / Production の設定差分を `[remotes.*]` で管理する
 - リモート設定と `config.toml` の drift を検知する
 - GitHub Actions で「CLI が config.toml を validate して落ちる」問題に対処する
@@ -119,7 +119,7 @@ Supabase 設定をレビューする際は以下を順に確認。該当リフ�
 - [ ] デプロイ順序: **link → config push → db push → seed buckets → functions deploy → secrets set** → `cicd-github-actions.md`
 - [ ] PR（main 非マージ）では `db push --dry-run` + 型生成 diff チェックのみ → `cicd-github-actions.md`
 - [ ] `main` ブランチ push で **Production deploy**、`develop` 等で **Staging deploy** → `cicd-github-actions.md`
-- [ ] ローカルで `ENV=stg make deploy-supabase` / `ENV=prod make deploy-supabase` が動くことを確認 → `cicd-github-actions.md`
+- [ ] ローカルで `devenv tasks run -P staging deploy:supabase` / `devenv tasks run -P production deploy:supabase` が動くことを確認 → `cicd-github-actions.md`
 
 ### Drift
 - [ ] Dashboard で変更されていないか定期チェック（週次 or cron） → `drift-and-verification.md`
@@ -193,12 +193,12 @@ env:
 
 | 操作 | Make コマンド | Script | 使う CLI コマンド |
 |-----|---------------|--------|------------------|
-| 全体デプロイ | `ENV=stg make deploy-supabase` | `deploy.sh` | (順次呼び出し) |
-| リンク | `make supabase-link` | `link.sh` | `supabase link --project-ref` |
-| Config 反映 | `make deploy-config` | `deploy-config.sh` | `supabase config push` |
-| Bucket 同期 | `make deploy-buckets` | `deploy-buckets.sh` | `supabase seed buckets --linked` |
-| Function デプロイ | `make deploy-functions-all` | `deploy-functions.sh` | `supabase functions deploy --project-ref` |
-| Secrets 注入 | `make deploy-secrets` | `deploy-secrets.sh` | `supabase secrets set --env-file` |
+| 全体デプロイ | `devenv tasks run -P staging deploy:supabase` | `deploy.sh` | (順次呼び出し) |
+| リンク | `devenv tasks run -P <env> deploy:link` | `link.sh` | `supabase link --project-ref` |
+| Config 反映 | `devenv tasks run -P <env> deploy:config` | `deploy-config.sh` | `supabase config push` |
+| Bucket 同期 | `devenv tasks run -P <env> deploy:buckets` | `deploy-buckets.sh` | `supabase seed buckets --linked` |
+| Function デプロイ | `devenv tasks run -P <env> deploy:functions` | `deploy-functions.sh` | `supabase functions deploy --project-ref` |
+| Secrets 注入 | `devenv tasks run -P <env> deploy:secrets` | `deploy-secrets.sh` | `supabase secrets set --env-file` |
 
 `env/backend/.env.{local,stg,prod}` を `dotenvx` 経由で注入する構成。詳細は `multi-environment.md`。
 
@@ -222,7 +222,7 @@ env:
 
 4. ローカルで supabase start → 挙動確認
 
-5. Staging に手動デプロイ（ENV=stg make deploy-supabase）
+5. Staging に手動デプロイ（devenv tasks run -P staging deploy:supabase）
    └─ 本番前に全設定を Staging で検証
 
 6. GitHub Actions を配線

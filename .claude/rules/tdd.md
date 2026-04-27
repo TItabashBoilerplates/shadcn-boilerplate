@@ -38,9 +38,11 @@ Every implementation MUST follow this strict sequence:
 
 | Operation | Command |
 |-----------|---------|
-| **Frontend Tests** | `make test-frontend` |
-| **Backend Tests** | `make test-backend-py` |
-| **All Tests** | `make test` |
+| **Frontend Tests** | `test-frontend` (Vitest) |
+| **Backend Tests** | `test-backend-py` (pytest) |
+| **All Unit Tests** | `test` |
+| **DB Tests (pgTAP)** | `test-db` |
+| **E2E (Maestro)** | `e2e` / `e2e-web` / `e2e-mobile` |
 
 ## Commit Strategy
 
@@ -112,7 +114,7 @@ features/auth/
 
 ### 作業終了前チェックリスト
 
-1. **全テスト実行**: `make test` を実行
+1. **全テスト実行**: `test` を実行（または個別に `test-frontend` / `test-backend-py` / `test-db`）
 2. **失敗テストの対応**:
    - 原因分析を実施
    - 実装の修正（テストは変更しない）

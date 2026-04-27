@@ -150,7 +150,7 @@ export function createBackendClient(options?: { accessToken?: string }) {
 ### 型エラー発生時
 
 ```bash
-make run                    # Supabase + backend-py 起動（devenv up -d）
+devenv up                    # Supabase + backend-py 起動（devenv up -d）
 bun run generate:api        # 再生成
-make type-check-frontend    # 検証
+type-check-frontend         # 検証
 ```

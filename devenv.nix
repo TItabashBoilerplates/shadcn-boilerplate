@@ -73,6 +73,9 @@ let
   };
 
   # 各アプリ定義から `dev-<name>` script spec を生成。
+  # 終了時の Supabase 停止は手動運用（`supabase-stop` / `stop` script）に統一する。
+  # devenv 2.0 native process manager は task の `after` も `process.manager.after` も
+  # 動かないため、auto-stop の中途半端な実装を持たない方針。
   mkDevScript = name: _cfg: {
     exec = ''exec devenv up backend storybook ${name}'';
     description = "Start backend + storybook + ${name}";
@@ -444,6 +447,169 @@ in
       bun run ../scripts/polar/sync.ts
     '';
 
+    # ---------- Quality CI gate（execIfModified キャッシュ + namespace 並列）----------
+    # 設計方針 (詳細は docs/_research/2026-04-28-devenv-quality-checks.md):
+    #   - **コミット時の差分チェック**は git-hooks (pre-commit) が担当（変更ファイルだけ）
+    #   - **CI / 手動 verify** は ここの tasks が担当（execIfModified で incremental skip）
+    #   - `ci:check` は `before = [ "devenv:enterTest" ]` で `devenv test` に紐付け
+    #     → ローカルも CI も `devenv test` 一発で全 verify
+    #   - auto-fix 系 (lint, format) は scripts のまま (副作用ループ回避)
+    #
+    # status と execIfModified は同時指定不可 (devenv モジュールアサーション)。
+    # auto-fix 系には execIfModified を付けない (issue #2497 fork bomb 回避)。
+
+    # ----- Lint (CI mode = no auto-fix) -----
+    "lint-ci:frontend" = {
+      exec = ''cd "$DEVENV_ROOT/frontend" && nr lint:ci'';
+      execIfModified = [
+        "frontend/**/*.ts"
+        "frontend/**/*.tsx"
+        "frontend/**/*.js"
+        "frontend/**/*.jsx"
+        "frontend/**/*.json"
+        "frontend/biome.json"
+      ];
+    };
+    "lint-ci:drizzle" = {
+      exec = ''cd "$DEVENV_ROOT/drizzle" && nr lint:ci'';
+      execIfModified = [
+        "drizzle/**/*.ts"
+        "drizzle/biome.json"
+      ];
+    };
+    "lint-ci:backend-py" = {
+      exec = ''cd "$DEVENV_ROOT/backend-py/app" && uv run ruff check src/'';
+      execIfModified = [
+        "backend-py/app/src/**/*.py"
+        "backend-py/app/pyproject.toml"
+        "backend-py/app/ruff.toml"
+      ];
+    };
+    "lint-ci:functions" = {
+      exec = ''deno lint "$DEVENV_ROOT/supabase/functions/"'';
+      execIfModified = [
+        "supabase/functions/**/*.ts"
+        "supabase/functions/**/deno.json"
+      ];
+    };
+    "lint-ci:fsd" = {
+      exec = ''
+        cd "$DEVENV_ROOT/frontend/apps/web" && nr lint:fsd
+        cd "$DEVENV_ROOT/frontend/apps/mobile" && nr lint:fsd
+      '';
+      execIfModified = [
+        "frontend/apps/web/**/*.ts"
+        "frontend/apps/web/**/*.tsx"
+        "frontend/apps/mobile/**/*.ts"
+        "frontend/apps/mobile/**/*.tsx"
+        "frontend/apps/web/steiger.config.*"
+        "frontend/apps/mobile/steiger.config.*"
+      ];
+    };
+
+    # ----- Format check (no auto-fix) -----
+    "format-check:frontend" = {
+      exec = ''cd "$DEVENV_ROOT/frontend" && nr format-check'';
+      execIfModified = [
+        "frontend/**/*.ts"
+        "frontend/**/*.tsx"
+        "frontend/**/*.js"
+        "frontend/**/*.jsx"
+        "frontend/**/*.json"
+        "frontend/biome.json"
+      ];
+    };
+    "format-check:drizzle" = {
+      exec = ''cd "$DEVENV_ROOT/drizzle" && nr format-check'';
+      execIfModified = [
+        "drizzle/**/*.ts"
+        "drizzle/biome.json"
+      ];
+    };
+    "format-check:backend-py" = {
+      exec = ''cd "$DEVENV_ROOT/backend-py/app" && uv run ruff format --check src/'';
+      execIfModified = [
+        "backend-py/app/src/**/*.py"
+        "backend-py/app/pyproject.toml"
+        "backend-py/app/ruff.toml"
+      ];
+    };
+    "format-check:functions" = {
+      exec = ''deno fmt --check "$DEVENV_ROOT/supabase/functions/"'';
+      execIfModified = [
+        "supabase/functions/**/*.ts"
+        "supabase/functions/**/deno.json"
+      ];
+    };
+
+    # ----- Type check -----
+    "type-check:frontend" = {
+      exec = ''cd "$DEVENV_ROOT/frontend" && nr type-check'';
+      execIfModified = [
+        "frontend/**/*.ts"
+        "frontend/**/*.tsx"
+        "frontend/**/tsconfig*.json"
+        "frontend/**/package.json"
+      ];
+    };
+    "type-check:mobile" = {
+      exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && nlx tsc --noEmit'';
+      execIfModified = [
+        "frontend/apps/mobile/**/*.ts"
+        "frontend/apps/mobile/**/*.tsx"
+        "frontend/apps/mobile/tsconfig*.json"
+        "frontend/apps/mobile/package.json"
+      ];
+    };
+    "type-check:backend-py" = {
+      exec = ''cd "$DEVENV_ROOT/backend-py/app" && uv run mypy src/'';
+      execIfModified = [
+        "backend-py/app/src/**/*.py"
+        "backend-py/app/pyproject.toml"
+      ];
+    };
+    "type-check:functions" = {
+      exec = ''
+        for dir in "$DEVENV_ROOT"/supabase/functions/*/; do
+          [ -f "$dir/index.ts" ] || continue
+          func_name=$(basename "$dir")
+          if [ -f "$dir/deno.json" ]; then
+            (cd "$dir" && deno cache --config=deno.json index.ts) >/dev/null 2>&1 || true
+            (cd "$dir" && deno check --config=deno.json index.ts) || echo "  ⚠️  Type check failed for $func_name"
+          else
+            deno check "$dir/index.ts" || echo "  ⚠️  Type check failed for $func_name"
+          fi
+        done
+      '';
+      execIfModified = [
+        "supabase/functions/**/*.ts"
+        "supabase/functions/**/deno.json"
+      ];
+    };
+
+    # ----- Aggregator: devenv test → 全 verify を一発実行 -----
+    # `before = [ "devenv:enterTest" ]` で `devenv test` の依存に組み込む。
+    # `after = [ ... ]` で配下の verify task をすべて要求 → namespace 内で並列実行 + キャッシュ。
+    "ci:check" = {
+      exec = ''echo "✅ All CI checks passed"'';
+      before = [ "devenv:enterTest" ];
+      after = [
+        "lint-ci:frontend"
+        "lint-ci:drizzle"
+        "lint-ci:backend-py"
+        "lint-ci:functions"
+        "lint-ci:fsd"
+        "format-check:frontend"
+        "format-check:drizzle"
+        "format-check:backend-py"
+        "format-check:functions"
+        "type-check:frontend"
+        "type-check:mobile"
+        "type-check:backend-py"
+        "type-check:functions"
+      ];
+    };
+
     # ---------- Stop ----------
     "app:stop".exec = ''
       echo "🛑 Stopping devenv processes (backend + storybook)..."
@@ -522,117 +688,103 @@ in
     };
 
     # ---------- Lint ----------
-    "lint-frontend"     = { exec = ''cd "$DEVENV_ROOT/frontend" && nr lint''; description = "Biome lint (frontend, fix)"; };
-    "lint-frontend-ci"  = { exec = ''cd "$DEVENV_ROOT/frontend" && nr lint:ci''; description = "Biome lint (frontend, CI)"; };
-    "lint-fsd"          = { exec = ''cd "$DEVENV_ROOT/frontend/apps/web" && nr lint:fsd && cd "$DEVENV_ROOT/frontend/apps/mobile" && nr lint:fsd''; description = "FSD boundary check"; };
-    "lint-drizzle"      = { exec = ''cd "$DEVENV_ROOT/drizzle" && nr lint''; description = "Biome lint (drizzle, fix)"; };
-    "lint-drizzle-ci"   = { exec = ''cd "$DEVENV_ROOT/drizzle" && nr lint:ci''; description = "Biome lint (drizzle, CI)"; };
-    "lint-backend-py"   = { exec = ''cd "$DEVENV_ROOT/backend-py/app" && uv run ruff check --fix src/''; description = "Ruff lint (backend-py, fix)"; };
-    "lint-backend-py-ci"= { exec = ''cd "$DEVENV_ROOT/backend-py/app" && uv run ruff check src/''; description = "Ruff lint (backend-py, CI)"; };
-    "lint-functions"    = { exec = ''deno lint "$DEVENV_ROOT/supabase/functions/"''; description = "Deno lint (edge functions)"; };
+    # auto-fix 系: scripts に直接処理 (シンプル sequential、execIfModified なし → 副作用ループ回避)
+    "lint-frontend"     = { exec = ''cd "$DEVENV_ROOT/frontend" && nr lint''; description = "Biome lint (frontend, auto-fix)"; };
+    "lint-drizzle"      = { exec = ''cd "$DEVENV_ROOT/drizzle" && nr lint''; description = "Biome lint (drizzle, auto-fix)"; };
+    "lint-backend-py"   = { exec = ''cd "$DEVENV_ROOT/backend-py/app" && uv run ruff check --fix src/''; description = "Ruff lint (backend-py, auto-fix)"; };
+
+    # CI 系: tasks (lint-ci:*) の wrapper → execIfModified キャッシュが効く
+    "lint-frontend-ci"   = { exec = ''exec devenv tasks run lint-ci:frontend''; description = "Biome lint (frontend, CI, cached)"; };
+    "lint-drizzle-ci"    = { exec = ''exec devenv tasks run lint-ci:drizzle''; description = "Biome lint (drizzle, CI, cached)"; };
+    "lint-backend-py-ci" = { exec = ''exec devenv tasks run lint-ci:backend-py''; description = "Ruff lint (backend-py, CI, cached)"; };
+    "lint-fsd"           = { exec = ''exec devenv tasks run lint-ci:fsd''; description = "FSD boundary check (cached)"; };
+    "lint-functions"     = { exec = ''exec devenv tasks run lint-ci:functions''; description = "Deno lint (edge functions, cached)"; };
 
     "lint" = {
       exec = ''
         set -e
-        echo "🔍 Lint all..."
+        echo "🔍 Lint all (auto-fix)..."
         lint-frontend
         lint-drizzle
         lint-backend-py
-        lint-functions
+        deno lint "$DEVENV_ROOT/supabase/functions/"
       '';
-      description = "Lint all subprojects";
+      description = "Lint all subprojects (auto-fix)";
     };
 
     # ---------- Format ----------
-    "format-frontend"        = { exec = ''cd "$DEVENV_ROOT/frontend" && nr format''; description = "Biome format (frontend)"; };
-    "format-frontend-check"  = { exec = ''cd "$DEVENV_ROOT/frontend" && nr format-check''; description = "Biome format check (frontend)"; };
-    "format-drizzle"         = { exec = ''cd "$DEVENV_ROOT/drizzle" && nr format''; description = "Biome format (drizzle)"; };
-    "format-drizzle-check"   = { exec = ''cd "$DEVENV_ROOT/drizzle" && nr format-check''; description = "Biome format check (drizzle)"; };
-    "format-backend-py"      = { exec = ''cd "$DEVENV_ROOT/backend-py/app" && uv run ruff format src/''; description = "Ruff format (backend-py)"; };
-    "format-backend-py-check"= { exec = ''cd "$DEVENV_ROOT/backend-py/app" && uv run ruff format --check src/''; description = "Ruff format check (backend-py)"; };
-    "format-functions"       = { exec = ''deno fmt "$DEVENV_ROOT/supabase/functions/"''; description = "Deno fmt (edge functions)"; };
-    "format-functions-check" = { exec = ''deno fmt --check "$DEVENV_ROOT/supabase/functions/"''; description = "Deno fmt check (edge functions)"; };
+    # auto-fix 系: scripts に直接処理
+    "format-frontend"   = { exec = ''cd "$DEVENV_ROOT/frontend" && nr format''; description = "Biome format (frontend, auto-fix)"; };
+    "format-drizzle"    = { exec = ''cd "$DEVENV_ROOT/drizzle" && nr format''; description = "Biome format (drizzle, auto-fix)"; };
+    "format-backend-py" = { exec = ''cd "$DEVENV_ROOT/backend-py/app" && uv run ruff format src/''; description = "Ruff format (backend-py, auto-fix)"; };
+    "format-functions"  = { exec = ''deno fmt "$DEVENV_ROOT/supabase/functions/"''; description = "Deno fmt (edge functions, auto-fix)"; };
+
+    # check 系: tasks (format-check:*) の wrapper
+    "format-frontend-check"   = { exec = ''exec devenv tasks run format-check:frontend''; description = "Biome format check (frontend, cached)"; };
+    "format-drizzle-check"    = { exec = ''exec devenv tasks run format-check:drizzle''; description = "Biome format check (drizzle, cached)"; };
+    "format-backend-py-check" = { exec = ''exec devenv tasks run format-check:backend-py''; description = "Ruff format check (backend-py, cached)"; };
+    "format-functions-check"  = { exec = ''exec devenv tasks run format-check:functions''; description = "Deno fmt check (edge functions, cached)"; };
 
     "format" = {
       exec = ''
         set -e
-        echo "✨ Format all..."
+        echo "✨ Format all (auto-fix)..."
         format-frontend
         format-drizzle
         format-backend-py
         format-functions
       '';
-      description = "Format all subprojects";
+      description = "Format all subprojects (auto-fix)";
     };
 
+    # 集約 check は namespace match で並列 + キャッシュ (公式 1.7+ 機能)
     "format-check" = {
-      exec = ''
-        set -e
-        echo "🔍 Format check all..."
-        format-frontend-check
-        format-drizzle-check
-        format-backend-py-check
-        format-functions-check
-      '';
-      description = "Format check all subprojects (CI)";
+      exec = ''exec devenv tasks run format-check'';
+      description = "Format check all subprojects (parallel + cached)";
     };
 
     # ---------- Type check ----------
-    "type-check-frontend"  = { exec = ''cd "$DEVENV_ROOT/frontend" && nr type-check''; description = "TS type check (frontend)"; };
-    "type-check-mobile"    = { exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && nlx tsc --noEmit''; description = "TS type check (mobile)"; };
-    "type-check-backend-py"= { exec = ''cd "$DEVENV_ROOT/backend-py/app" && uv run mypy src/''; description = "MyPy type check (backend-py)"; };
-    "check-functions" = {
-      exec = ''
-        echo "🔍 Type checking Edge Functions..."
-        for dir in "$DEVENV_ROOT"/supabase/functions/*/; do
-          [ -f "$dir/index.ts" ] || continue
-          func_name=$(basename "$dir")
-          echo "Checking $func_name..."
-          if [ -f "$dir/deno.json" ]; then
-            (cd "$dir" && deno cache --config=deno.json index.ts) >/dev/null 2>&1 || true
-            (cd "$dir" && deno check --config=deno.json index.ts) || echo "  ⚠️  Type check failed for $func_name"
-          else
-            deno check "$dir/index.ts" || echo "  ⚠️  Type check failed for $func_name"
-          fi
-        done
-        echo "✅ Type check complete!"
-      '';
-      description = "Type check all Edge Functions";
-    };
+    # tasks (type-check:*) の wrapper → execIfModified キャッシュ
+    "type-check-frontend"   = { exec = ''exec devenv tasks run type-check:frontend''; description = "TS type check (frontend, cached)"; };
+    "type-check-mobile"     = { exec = ''exec devenv tasks run type-check:mobile''; description = "TS type check (mobile, cached)"; };
+    "type-check-backend-py" = { exec = ''exec devenv tasks run type-check:backend-py''; description = "MyPy type check (backend-py, cached)"; };
+    "check-functions"       = { exec = ''exec devenv tasks run type-check:functions''; description = "Deno check (edge functions, cached)"; };
 
+    # 集約: namespace match で並列 + キャッシュ
     "type-check" = {
-      exec = ''
-        set -e
-        echo "🔍 Type check all..."
-        type-check-frontend
-        type-check-mobile
-        type-check-backend-py
-        check-functions
-      '';
-      description = "Type check all subprojects";
+      exec = ''exec devenv tasks run type-check'';
+      description = "Type check all subprojects (parallel + cached)";
     };
 
     # ---------- CI gate ----------
+    # `devenv test` 経由で `ci:check` aggregator task を起動。
+    # 配下の lint-ci:* / format-check:* / type-check:* が namespace 並列 + execIfModified キャッシュで実行される。
+    # → 何も変更してなければ全 task キャッシュヒットで秒で終わる。
+    # → 一部だけ変更すれば影響範囲のみ走る (incremental)。
+    # → ローカルと CI で同じコマンド (`devenv test`)、環境差ゼロ。
     "ci-check" = {
-      exec = ''
-        set -e
-        echo "🚀 CI check..."
-        lint-frontend-ci
-        lint-drizzle-ci
-        lint-backend-py-ci
-        format-backend-py-check
-        lint-functions
-        format-functions-check
-        type-check
-      '';
-      description = "Full CI gate (lint + format-check + type-check)";
+      exec = ''exec devenv test'';
+      description = "Full CI gate via `devenv test` (cached, incremental)";
     };
 
     # ---------- Build ----------
     "build-frontend" = { exec = ''cd "$DEVENV_ROOT/frontend" && nr build''; description = "Build frontend (Next.js)"; };
 
     # ---------- Tests ----------
-    "test-db"  = { exec = ''supabase test db --local''; description = "pgTAP DB tests"; };
+    "test-frontend"   = { exec = ''cd "$DEVENV_ROOT/frontend" && nr test''; description = "Vitest (frontend)"; };
+    "test-backend-py" = { exec = ''cd "$DEVENV_ROOT/backend-py/app" && uv run pytest''; description = "pytest (backend-py)"; };
+    "test-db"         = { exec = ''supabase test db --local''; description = "pgTAP DB tests"; };
+    "test" = {
+      exec = ''
+        set -e
+        echo "🧪 Running all unit tests..."
+        test-frontend
+        test-backend-py
+        echo "✅ All unit tests passed."
+        echo "💡 Run 'test-db' for pgTAP DB tests, 'e2e' for Maestro E2E."
+      '';
+      description = "Run all unit tests (frontend + backend-py)";
+    };
     "e2e"      = { exec = ''cd "$DEVENV_ROOT/.maestro" && maestro test .''; description = "Maestro E2E (all)"; };
     "e2e-web"  = { exec = ''cd "$DEVENV_ROOT/.maestro" && maestro test web/''; description = "Maestro E2E (web)"; };
     "e2e-mobile" = { exec = ''cd "$DEVENV_ROOT/.maestro" && maestro test mobile/''; description = "Maestro E2E (mobile)"; };
@@ -668,30 +820,42 @@ in
   };
 
   # Pre-commit hooks（devenv shell 進入時に .git/hooks/ へ自動インストール）
+  #
+  # 設計方針 (詳細は docs/_research/2026-04-28-devenv-quality-checks.md):
+  #   - **git-hooks.nix のビルトインフックを使う** (`biome.enable = true` 等)
+  #   - 各ビルトインは types_or / files / pass_filenames が適切にプリセット済み
+  #   - pass_filenames = true (デフォルト) で **変更ファイルだけ** がツールに渡される
+  #     → コミット時の lint が <200ms で完結 (full project lint と段違いに高速)
+  #   - prek (Rust 実装) が pre-commit を駆動するので Python オーバーヘッドなし
+  #
+  # 全プロジェクトの verify は `devenv test` (= ci:check task) で行う (役割分担)。
   git-hooks.hooks = {
-    frontend-lint = {
+    # ----- JS/TS/JSON: Biome (frontend + drizzle 共通) -----
+    # ビルトインの types_or = [ "javascript" "jsx" "ts" "tsx" "json" ]
+    # biome は ancestor lookup で biome.json を見つけるので frontend/ と drizzle/ 両方カバー
+    biome.enable = true;
+
+    # ----- Python: Ruff (lint) -----
+    ruff.enable = true;
+
+    # ----- Python: Ruff (format) -----
+    ruff-format.enable = true;
+
+    # NOTE: mypy はファイル単位検査だと「import 整合性が一時的に崩れた中間状態」で false positive が
+    # 出やすく、コミット体験を阻害する。プロジェクト単位の型整合性検査は
+    # `type-check:backend-py` task (devenv test 経由、execIfModified キャッシュ付き) に集約。
+    # → コミット時 lint/format は ruff のみ、フル型チェックは `devenv test` で実施。
+
+    # ----- Edge Functions: Deno format -----
+    denofmt = {
       enable = true;
-      name = "Frontend Lint (Biome)";
-      entry = "lint-frontend-ci";
-      files = "\\.(ts|tsx|js|jsx)$";
-      language = "system";
-      pass_filenames = false;
-    };
-    python-lint = {
-      enable = true;
-      name = "Python Lint (Ruff)";
-      entry = "lint-backend-py-ci";
-      files = "\\.py$";
-      language = "system";
-      pass_filenames = false;
-    };
-    deno-fmt = {
-      enable = true;
-      name = "Deno Format Check";
-      entry = "format-functions-check";
       files = "^supabase/functions/.*\\.ts$";
-      language = "system";
-      pass_filenames = false;
+    };
+
+    # ----- Edge Functions: Deno lint -----
+    denolint = {
+      enable = true;
+      files = "^supabase/functions/.*\\.ts$";
     };
   };
 

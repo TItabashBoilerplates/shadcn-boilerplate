@@ -115,7 +115,7 @@ import { cn } from '@/shared/lib/utils'
 ```bash
 # 開発
 cd frontend && bun run dev       # 全apps dev (Turbo)
-make frontend                    # Web のみ
+frontend                    # Web のみ
 
 # ビルド・チェック
 cd frontend && bun run build     # 全体ビルド

@@ -150,7 +150,7 @@ $ARGUMENTS が指定された場合、まず以下を確認する:
 
 ### 自動生成ファイル
 - [ ] 自動生成ファイルを直接編集していないか（`.claude/rules/auto-generated.md` 参照）
-- [ ] 型変更が必要な場合、Drizzle スキーマ（`drizzle/schema/`）を編集し `make build-model` で再生成しているか
+- [ ] 型変更が必要な場合、Drizzle スキーマ（`drizzle/schema/`）を編集し `devenv tasks run model:build` で再生成しているか
 
 ## 条件付きセクションのルール
 

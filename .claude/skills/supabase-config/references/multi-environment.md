@@ -132,8 +132,8 @@ dotenvx run -f env/backend/.env.prod -- supabase config push
 
 ```makefile
 # deploy.sh 内
-ENV=stg make deploy-supabase
-ENV=prod make deploy-supabase
+devenv tasks run -P staging deploy:supabase
+devenv tasks run -P production deploy:supabase
 ```
 
 ### 本プロジェクトの `scripts/supabase/link.sh`

@@ -31,8 +31,10 @@ scripts は devenv shell（direnv 自動アクティベート含む）下で PAT
 | **Type check (all)** | `type-check` |
 | **Type check (per project)** | `type-check-frontend`, `type-check-mobile`, `type-check-backend-py`, `check-functions` |
 | **Build** | `build-frontend`, `build-storybook`, `build-mobile-ios`, `build-mobile-android` |
-| **Tests** | `test-db` (pgTAP), `e2e`, `e2e-web`, `e2e-mobile` |
-| **CI Check (full gate)** | `ci-check` |
+| **Tests (unit)** | `test` (all), `test-frontend` (Vitest), `test-backend-py` (pytest) |
+| **Tests (DB / E2E)** | `test-db` (pgTAP), `e2e`, `e2e-web`, `e2e-mobile` |
+| **CI Check (full gate)** | `ci-check` (= `devenv test`、execIfModified キャッシュで incremental) |
+| **CI Check (直叩き)** | `devenv test` (`ci:check` aggregator task が `before = devenv:enterTest`) |
 | **Services (軽量)** | `devenv up` (= Supabase + backend + storybook), `stop` (停止), `supabase-start` / `supabase-stop` |
 | **Services (frontend apps)** | `dev-web`, `dev-mobile`, `dev-all`, または `devenv up <names...>` |
 | **Services (devenv 外)** | `frontend` (turbo dev), `mobile-ios`, `mobile-android`, `mobile-web` (Expo TUI) |
@@ -68,7 +70,7 @@ cd backend-py && uv run pytest
 cd drizzle && bun run biome check
 npx tsc --noEmit
 
-# ❌ Makefile も使わない（deprecated）
+# ❌ Makefile は削除済み — `make X` は `make: *** No targets. Stop.` でエラー終了する
 make lint
 make ci-check
 make migrate-dev
@@ -95,6 +97,44 @@ Direct command execution is allowed ONLY for:
 - **Listing files**: `ls`, `find`, `tree` (prefer Glob tool)
 - **Git operations**: `git status`, `git diff`, `git log` (read-only)
 - **Package info**: `bun list`, `npm list`, `uv pip list` (read-only)
+
+## 品質チェック設計（2 段階構成）
+
+公式 devenv の推奨パターンに従い、品質チェックは **役割を分けた 2 段階構成**:
+
+### 段階 1: コミット時の差分チェック (git-hooks)
+
+`.pre-commit-config.yaml` は `git-hooks.nix` ビルトインを使う:
+
+| Hook | 対象 |
+|---|---|
+| `biome` | JS/TS/JSON (lint + format、auto-fix、`pass_filenames=true` で変更ファイルのみ) |
+| `ruff` | Python lint (`pass_filenames=true`) |
+| `ruff-format` | Python format |
+| `mypy` | Python type check |
+| `denofmt` | Edge Functions format (supabase/functions/ 配下) |
+| `denolint` | Edge Functions lint |
+
+`prek` (Rust 実装) が pre-commit を駆動。**コミット 1 回 < 200ms** が普通。
+
+### 段階 2: CI / 手動 verify (devenv test)
+
+`devenv test` を叩くと `ci:check` aggregator task が起動し、配下の verify task が並列・キャッシュ実行される:
+
+```
+devenv test
+└── ci:check (before = [devenv:enterTest])
+    ├── lint-ci:frontend / drizzle / backend-py / functions / fsd  (execIfModified)
+    ├── format-check:frontend / drizzle / backend-py / functions    (execIfModified)
+    └── type-check:frontend / mobile / backend-py / functions       (execIfModified)
+```
+
+- `execIfModified` で **mtime + content hash** チェック → 変更なしならスキップ
+- キャッシュ: `.devenv/` 配下、`devenv-tasks` Rust binary が管理
+- 何も変更してなければ全 task キャッシュヒット → 数秒で完了
+- ローカルと CI で **`devenv test` 一本** に統一 (環境差ゼロ)
+
+> **使い分け**: 日常の auto-fix は `lint` / `format` script (シンプル sequential、execIfModified なし → 副作用ループ回避)。CI 相当の verify は `ci-check` または `devenv test`。
 
 ## Enforcement
 

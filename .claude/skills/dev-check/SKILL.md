@@ -11,42 +11,42 @@ effort: max
 ## ワークフロー
 
 ```
-Phase 1: CI Check (make ci-check)
+Phase 1: CI Check (ci-check)
   ├─ Pass → Phase 2 へ
-  └─ Fail → make lint + make format (自動修正) → 型エラーは手動修正 → 再実行 (最大5回)
+  └─ Fail → lint + format (自動修正) → 型エラーは手動修正 → 再実行 (最大5回)
 
-Phase 2: Build (make build-frontend)
+Phase 2: Build (build-frontend)
   ├─ Pass → Phase 3 へ
   └─ Fail → エラー分析 → 修正 → 再実行 (最大5回)
 
-Phase 3: Test (make test-frontend + make test-backend-py)
+Phase 3: Test (test-frontend + test-backend-py)
   ├─ Pass → 完了レポート
   └─ Fail → 実装を修正（テストは変更しない）→ 再実行 (最大5回)
 ```
 
 ## Phase 1: CI Check
 
-1. `make ci-check` を実行
+1. `ci-check` を実行
 2. 失敗した場合:
-   - **lint/format エラー**: まず `make lint` と `make format` を実行（自動修正）
+   - **lint/format エラー**: まず `lint` と `format` を実行（自動修正）
    - **型エラー**: エラー出力を読み、ソースファイルを特定して手動修正
-   - 修正後、再度 `make ci-check` を実行
+   - 修正後、再度 `ci-check` を実行
 3. パスするまで繰り返す（最大5回）
 
 ## Phase 2: Build
 
-1. `make build-frontend` を実行
+1. `build-frontend` を実行
 2. 失敗した場合:
    - ビルドエラー出力を分析
    - ソースコードを修正
-   - 修正後、再度 `make build-frontend` を実行
+   - 修正後、再度 `build-frontend` を実行
 3. パスするまで繰り返す（最大5回）
 
 ## Phase 3: Test
 
 1. 変更したレイヤーに応じてテストを実行:
-   - Frontend を変更した場合: `make test-frontend`
-   - Backend Python を変更した場合: `make test-backend-py`
+   - Frontend を変更した場合: `test-frontend`
+   - Backend Python を変更した場合: `test-backend-py`
    - 両方変更した場合: 両方実行
 2. 失敗した場合:
    - テスト出力を分析し、失敗原因を特定

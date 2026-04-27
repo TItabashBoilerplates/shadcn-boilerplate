@@ -9,8 +9,8 @@ ENV="${ENV:-}"
 if [ "$ENV" = "local" ] || [ -z "$ENV" ]; then
     echo "⚠️  deploy-supabase is for remote environments only."
     echo ""
-    echo "Usage: ENV=stg make deploy-supabase"
-    echo "       ENV=prod make deploy-supabase"
+    echo "Usage: devenv tasks run -P staging deploy:supabase"
+    echo "       devenv tasks run -P production deploy:supabase"
     exit 0
 fi
 

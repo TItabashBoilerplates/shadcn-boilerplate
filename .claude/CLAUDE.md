@@ -101,7 +101,7 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 
 **MANDATORY**: フロントエンド・バックエンドのデバッグは **devenv 2.0 の native process manager の TUI** を主インターフェースとして使用する。`devenv up` を対話端末で実行すると TUI が自動起動し、プロセス一覧・ログ閲覧・再起動がキーボード操作で可能。詳細は `.claude/skills/debugging/SKILL.md` を参照。
 
-**Supabase は devenv 管理対象外**。Docker 起動・停止は Supabase CLI で独立管理する（`supabase-start` / `supabase-stop` script、または `devenv tasks run supabase:start` / `supabase:stop`）。devenv が管理するのは backend / storybook のみ。`devenv up` は `supabase:start` task を `before` 経由で自動実行するため、Supabase → backend の順に起動する。
+**Supabase の Docker コンテナ自体は Supabase CLI が所有**（devenv の native process supervisor は backend / storybook のみ監視）。**起動連動**: `supabase:start` task が backend の `before` に登録されているため `devenv up` 起動時は Supabase → backend の順で立ち上がる。**停止は手動運用**: devenv 2.0 native process manager は task の `after` も `process.manager.after` も動作しない（前者は shutdown 時に cancel、後者は assertion でブロック、native の Rust shutdown パスに task runner 呼び出しが無いため）。auto-stop の中途半端な実装は持たず、停止は `supabase-stop` / `stop` script で明示的に行う運用に統一している。`stop` script は devenv プロセスと Supabase 両方を停止する。
 
 `devenv shell` 進入時 (direnv 経由含む) に `setup:install-*` task が lockfile 変更を検知して `bun install` / `uv sync` を自動同期する (`--frozen-lockfile` / `--frozen` 使用)。
 
@@ -109,13 +109,13 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 |---------|------|
 | `supabase-start` (script) | Supabase ローカル起動（Docker） + Storage Buckets シード |
 | `supabase-stop` (script) | Supabase ローカル停止 |
-| `devenv up` | **軽量セット**: Supabase + backend + storybook を起動（TUI 付き） |
+| `devenv up` | **軽量セット**: Supabase + backend + storybook を起動（TUI 付き）。**終了時に Supabase は自動停止しない** → `stop` または `supabase-stop` で手動停止 |
 | `devenv up web` | web アプリ単独起動（同様に `devenv up backend storybook web` のような任意組み合わせも可） |
 | `dev-web` (script) | 軽量セット + Next.js (web) 一括起動 |
 | `dev-mobile` (script) | 軽量セット + Expo Metro (mobile, non-interactive) |
 | `dev-all` (script) | 軽量セット + 全フロントエンドアプリ一括起動 |
 | `devenv up -d` | バックグラウンド（detached）起動。TUI なし |
-| `devenv processes down` | detached で動いているプロセスの停止 |
+| `devenv processes down` | detached で動いているプロセスの停止（**Supabase は残る** → `stop` または `supabase-stop` で別途停止） |
 | `devenv processes wait` | 全プロセスが ready になるまで待機（CI で使用） |
 | `stop` (script) | devenv プロセス + Supabase の両方を停止 |
 | `frontend` (script) | モノレポ全体 (`turbo dev` = web + mobile 並列、devenv 外、重い) |
@@ -168,16 +168,27 @@ mobile-ios / mobile-android / mobile-web   # Expo 対話的 TUI (devenv 外、�
 stop                          # devenv プロセス + Supabase をすべて停止
 
 # Quality
-lint                         # 全プロジェクトの lint (auto-fix)
+# 公式推奨の 2 段階構成:
+#   - コミット時 → git-hooks (biome/ruff/ruff-format/mypy/denofmt/denolint) が変更ファイルだけ実行 (<200ms)
+#   - CI / 手動 → `devenv test` (= ci:check aggregator) が execIfModified キャッシュで incremental skip
+lint                         # 全プロジェクトの lint (auto-fix、シンプル sequential)
 format                       # 全プロジェクトの format (auto-fix)
-format-check                 # format のみチェック (CI 用)
-type-check                   # 全プロジェクトの型チェック
-ci-check                     # CI gate (lint + format-check + type-check)
+format-check                 # 各 sub-project の format-check sequential
+type-check                   # 各 sub-project の type-check sequential
+ci-check                     # = `devenv test`、ci:check aggregator 経由 (キャッシュ込み)
+devenv test                  # ci-check と同等。ローカル/CI で同じコマンド
 
 # 個別サブプロジェクト
 lint-frontend / lint-drizzle / lint-backend-py / lint-functions / lint-fsd
 format-frontend / format-drizzle / format-backend-py / format-functions
 type-check-frontend / type-check-mobile / type-check-backend-py / check-functions
+
+# Tests
+test                          # 全 unit test (frontend + backend-py)
+test-frontend                 # Vitest
+test-backend-py               # pytest
+test-db                       # pgTAP DB tests
+e2e / e2e-web / e2e-mobile    # Maestro E2E
 
 # Database (user approval required)
 devenv tasks run app:migrate-dev   # Generate + apply migration + type 生成（フルフロー）

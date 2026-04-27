@@ -232,7 +232,7 @@ function ManageButton({ customerId }) {
 | ------------------------- | ---------------------------- |
 | `make polar-sync-dry`     | プラン同期（Dry run）        |
 | `make polar-sync`         | プラン同期（実行）           |
-| `make deploy-polar-webhooks` | Webhook Function デプロイ |
+| `devenv tasks run -P production deploy:polar-webhooks` | Webhook Function デプロイ |
 
 ## 注意事項
 

@@ -392,10 +392,10 @@ EXECUTE FUNCTION update_{table_name}_updated_at();
 #    drizzle/config/post-migration/{file}.sql
 
 # 3. マイグレーション実行（ユーザー承認必須）
-make migrate-dev
+devenv tasks run app:migrate-dev
 
 # 4. 型生成
-make build-model
+devenv tasks run model:build
 ```
 
 ### 既存データへの影響

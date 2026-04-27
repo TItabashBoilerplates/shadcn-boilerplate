@@ -129,7 +129,7 @@ RLS をレビューする際は以下を順に確認する。該当リファレ�
 - [ ] `pgTAP` で **anon / authenticated(自)/authenticated(他)/service_role × SELECT/INSERT/UPDATE/DELETE = 16 ケース** → `testing-rls.md`
 - [ ] クロステナントアクセスが全 4 オペレーションで拒否される → `testing-rls.md`
 - [ ] RLS 有効テーブルに対し `supabase/tests/<table>_rls.sql` が存在（カバレッジ監査スクリプト） → `testing-rls.md`
-- [ ] `make test-db` が CI で PASS してから merge（branch protection で強制） → `testing-rls.md`
+- [ ] `test-db` が CI で PASS してから merge（branch protection で強制） → `testing-rls.md`
 
 ### 運用・マイグレーション
 - [ ] 既存テーブルへの RLS 追加は **ポリシー CREATE → RLS ENABLE** の順 → `migration-safety.md`
@@ -206,7 +206,7 @@ supabase.channel('x').on('postgres_changes', { event: '*', ... }, handler)
    └─ .claude/skills/pgtap/SKILL.md
 
 6. マイグレーション適用依頼（ユーザー承認）
-   └─ make migrate-dev
+   └─ devenv tasks run app:migrate-dev
 
 7. EXPLAIN (ANALYZE, BUFFERS) で計測
    └─ performance-verification.md のチェックポイント

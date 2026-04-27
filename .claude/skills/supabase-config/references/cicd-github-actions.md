@@ -82,7 +82,7 @@ jobs:
         run: |
           supabase gen types typescript --local > frontend/packages/types/schema.ts.new
           diff frontend/packages/types/schema.ts frontend/packages/types/schema.ts.new || (
-            echo "❌ schema.ts is out of date. Run 'make build-model' and commit."
+            echo "❌ schema.ts is out of date. Run 'devenv tasks run model:build' and commit."
             exit 1
           )
 
@@ -300,10 +300,10 @@ jobs:
 
 ```bash
 # staging
-ENV=stg make deploy-supabase
+devenv tasks run -P staging deploy:supabase
 
 # production
-ENV=prod make deploy-supabase
+devenv tasks run -P production deploy:supabase
 ```
 
 CI YAML とローカルで **同一 Make ターゲットを使う** ようにすれば、CI 環境と手元の挙動が一致する:
@@ -312,7 +312,7 @@ CI YAML とローカルで **同一 Make ターゲットを使う** ようにす
 # ワークフローを make に寄せる例
 - run: |
     export SUPABASE_PROJECT_REF=$SUPABASE_PROJECT_ID
-    ENV=prod make deploy-supabase
+    devenv tasks run -P production deploy:supabase
 ```
 
 ---

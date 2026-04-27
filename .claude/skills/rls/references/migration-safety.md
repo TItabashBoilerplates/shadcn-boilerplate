@@ -164,7 +164,7 @@ COMMIT;
 2. SECURITY DEFINER 関数が必要な場合:
    drizzle/config/functions.sql に SQL を追記
 
-3. make migrate-dev（ユーザー承認が必要 — Claude は自動実行禁止）
+3. devenv tasks run app:migrate-dev（ユーザー承認が必要 — Claude は自動実行禁止）
    ├─ drizzle-kit generate: supabase/migrations/<timestamp>_*.sql を生成
    ├─ supabase db push: ローカル DB に適用
    └─ 型再生成
@@ -173,7 +173,7 @@ COMMIT;
    ├─ supabase/migrations/<timestamp>_*.sql
    └─ DROP/CREATE や ALTER POLICY のタイミングを人間がレビュー
 
-5. pgTAP テスト実行: make test-db
+5. pgTAP テスト実行: test-db
    └─ RLS の挙動が回帰していないか全ケース検証
 
 6. 問題なければコミット
@@ -190,7 +190,7 @@ COMMIT;
 ## 6. 本番適用前チェックリスト
 
 - [ ] ローカル環境 (`supabase start`) でマイグレーションが通ることを確認
-- [ ] **pgTAP テストが全 PASS**（`make test-db`）
+- [ ] **pgTAP テストが全 PASS**（`test-db`）
 - [ ] RLS を新規有効化するテーブルで、既存データの `user_id` / `tenant_id` 等が正しいか事前検証
 - [ ] 生成された `supabase/migrations/*.sql` を目視レビュー
 - [ ] DROP + CREATE が混在する場合、トランザクションで包まれているか確認

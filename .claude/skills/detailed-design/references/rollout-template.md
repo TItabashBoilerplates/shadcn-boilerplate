@@ -24,8 +24,8 @@
 | 1.2 | テーブル定義 (`drizzle/schema/schema.ts`) | - | {h} | 1.1 |
 | 1.3 | RLS ポリシー定義 | - | {h} | 1.2 |
 | 1.4 | カスタムSQL (pre/post-migration) | - | {h} | 1.2 |
-| 1.5 | マイグレーション実行 (`make migrate-dev`) | User | {h} | 1.1-1.4 |
-| 1.6 | 型生成 (`make build-model`) | - | {h} | 1.5 |
+| 1.5 | マイグレーション実行 (`devenv tasks run app:migrate-dev`) | User | {h} | 1.1-1.4 |
+| 1.6 | 型生成 (`devenv tasks run model:build`) | - | {h} | 1.5 |
 | 1.7 | RLS テスト作成・実行 | - | {h} | 1.6 |
 
 **完了条件**: マイグレーション成功、RLS テスト All Green
@@ -41,7 +41,7 @@
 | 2.3 | UseCase テスト作成 (Red) | - | {h} | 2.2 |
 | 2.4 | UseCase 実装 (Green) | - | {h} | 2.3 |
 | 2.5 | Controller 実装 | - | {h} | 2.4 |
-| 2.6 | API クライアント生成 (`make build-model-frontend`) | - | {h} | 2.5 |
+| 2.6 | API クライアント生成 (`devenv tasks run model:frontend`) | - | {h} | 2.5 |
 
 **完了条件**: Backend テスト All Green、API クライアント生成成功
 
@@ -78,11 +78,11 @@
 | # | タスク | 担当 | 見積 | 依存 |
 |---|--------|------|------|------|
 | 5.1 | E2E テスト作成 (Maestro) | - | {h} | Phase 4 |
-| 5.2 | CI チェック (`make ci-check`) | - | {h} | Phase 4 |
+| 5.2 | CI チェック (`ci-check`) | - | {h} | Phase 4 |
 | 5.3 | ビルド確認 (`make build`) | - | {h} | 5.2 |
-| 5.4 | 全テスト実行 (`make test`) | - | {h} | 5.3 |
+| 5.4 | 全テスト実行 (`test`) | - | {h} | 5.3 |
 
-**完了条件**: `make ci-check` + `make test` All Green
+**完了条件**: `ci-check` + `test` All Green
 
 ## マイグレーション手順
 
@@ -103,10 +103,10 @@
 #    drizzle/config/post-migration/{NN}_{name}.sql
 
 # 3. マイグレーション実行（ユーザー承認必須）
-make migrate-dev
+devenv tasks run app:migrate-dev
 
 # 4. 型生成
-make build-model
+devenv tasks run model:build
 
 # 5. テスト実行
 make test
@@ -203,8 +203,8 @@ make test
 
 ### 実装完了レビュー
 
-- [ ] `make ci-check` が通過
-- [ ] `make test` が All Green
+- [ ] `ci-check` が通過
+- [ ] `test` が All Green
 - [ ] `make build` が成功
 - [ ] Storybook ビルドが成功
 - [ ] マイグレーションが適用済み

@@ -294,7 +294,7 @@ select like(
 
 ### Makefile
 
-本プロジェクトの `make test-db` を CI で実行:
+本プロジェクトの `test-db` を CI で実行:
 
 ```yaml
 # .github/workflows/ci.yml（例）
@@ -305,7 +305,7 @@ select like(
   run: supabase db push
 
 - name: Run RLS tests
-  run: make test-db
+  run: test-db
 ```
 
 ### テストが失敗したら絶対にマージしない
@@ -402,7 +402,7 @@ helpers のバージョンにより `metadata` が `raw_user_meta_data` に入�
 - [ ] 他人データへの UPDATE / DELETE は **「0 rows affected」** を事後 SELECT で検証
 - [ ] マルチテナント: クロステナントアクセスが確実に拒否される pgTAP テストがある
 - [ ] SECURITY DEFINER 関数は関数単体 + ポリシー経由の両方でテスト
-- [ ] `make test-db` が CI で PASS してから merge
+- [ ] `test-db` が CI で PASS してから merge
 - [ ] RLS テストのないテーブルを検出するカバレッジスクリプトが CI にある
 - [ ] pgTAP テストの FAIL は即 merge block（branch protection）
 

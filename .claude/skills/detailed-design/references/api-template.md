@@ -367,7 +367,7 @@ async def {action}(
   生成先: frontend/packages/api-client/src/generated/
   自動生成ファイルは編集禁止（.claude/rules/auto-generated.md）
 
-  生成コマンド: make build-model-frontend
+  生成コマンド: devenv tasks run model:build-frontend
 
   Backend Python を使用しない場合:
   N/A -- Backend Python を使用しないため Hey API クライアント生成は不要

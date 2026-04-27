@@ -16,11 +16,11 @@ description: Storybook ローカル環境でのコンポーネント開発ガイ
 
 ## 起動方法
 
-Storybook は `make frontend` で Next.js と同時にバックグラウンドで起動します。
+Storybook は `frontend` で Next.js と同時にバックグラウンドで起動します。
 
 ```bash
 # Storybook + Next.js を同時起動（推奨）
-make frontend
+frontend
 
 # Storybook 単独起動
 make storybook-local
@@ -783,7 +783,7 @@ const preview: Preview = {
 
 ```bash
 # ビルドチェック
-make build-storybook
+build-storybook
 # または
 cd frontend && bun run build-storybook
 ```
@@ -868,6 +868,6 @@ export const MobileView: Story = { ... }  // これは不要
 
 ### ビルドチェック
 
-- [ ] Story 追加・変更後は `make build-storybook` でビルドチェック
+- [ ] Story 追加・変更後は `build-storybook` でビルドチェック
 - [ ] 設定変更後は `cd frontend && rm -rf node_modules/.cache/storybook node_modules/.vite` でキャッシュクリア後に再起動
-- [ ] 開発中のエラー確認は `make frontend` のターミナルログでリアルタイム監視
+- [ ] 開発中のエラー確認は `frontend` のターミナルログでリアルタイム監視
