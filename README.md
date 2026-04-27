@@ -83,7 +83,7 @@ Unified code quality management across all projects:
 - **Frontend & Drizzle**: Biome (fast ESLint + Prettier alternative)
 - **Backend Python**: Ruff (lint) + MyPy (type check)
 - **Edge Functions**: Deno native tools
-- **Unified Commands**: `make lint`, `make format`, `make ci-check`
+- **Unified Commands**: `lint`, `format`, `ci-check` (devenv scripts on PATH)
 
 ## Development Environment
 
@@ -130,7 +130,8 @@ By adopting these environments, we can ensure efficient development and maintain
 - [Docker Desktop](https://www.docker.com/) (Supabase ローカル環境用)
 - [devenv](https://devenv.sh/getting-started/) (Nix ベースの開発環境)
 - [direnv](https://direnv.net/) + シェルフック設定
-- Make
+
+> Make は **不要**。日常コマンドはすべて devenv の **scripts** (PATH 直結) と **tasks** (`devenv tasks run <name>`) で提供される。Makefile は deprecated。
 
 ### devenv が提供するツール
 
@@ -144,9 +145,10 @@ By adopting these environments, we can ensure efficient development and maintain
 | Bun | Frontend パッケージ管理 |
 | uv | Python パッケージ管理 |
 | Supabase CLI | データベース・認証 |
-| dotenvx | 環境変数管理 |
 | ni / nr / nlx | パッケージマネージャー抽象化 |
 | Maestro | E2E テスト |
+
+> 環境変数は devenv の **profiles** で管理する。**local が既定**（`-P` 指定なしで base enterShell が `env/<service>/.env.local` + `env/.env.secrets` をロードする）。`-P dev` / `-P staging` / `-P production` を付けると後勝ちで env を上書きする。dotenvx は不要。env ファイル (`env/<service>/.env.<profile>`) は `.env.local` 以外 gitignore 対象。配置されていなくても profile アクティベーション自体はエラーにならず（`[ -f ] && . ` ガードのため）、後で env ファイルを置けば即読み込まれる。
 
 ## Setup
 
@@ -194,8 +196,6 @@ direnv はセキュリティ上の理由から、初回のみ手動で `.envrc` 
 ```bash
 cd shadcn-boilerplate
 direnv allow
-# または
-make direnv-allow
 ```
 
 これ以降は `cd` するだけで自動的に devenv 環境がアクティベートされます:
@@ -216,17 +216,13 @@ cd shadcn-boilerplate
 
 ### 4. プロジェクトの初期化
 
-```bash
-make init
-```
+devenv shell に入っただけで以下が **自動実行** される（`setup:*` task / `before = [ "devenv:enterShell" ]` + `execIfModified`）:
 
-以下が自動的に実行されます:
+- `env/.env.secrets` のテンプレートコピー（無ければ）
+- Frontend / Drizzle 依存関係のインストール（`bun install --frozen-lockfile`）
+- Backend Python 依存関係のインストール（`uv sync --frozen --group dev`）
 
-1. Docker / devenv のインストール確認
-2. Supabase CLI ログイン・初期化・起動
-3. `env/.env.secrets` のテンプレートコピー
-4. Frontend 依存関係のインストール
-5. direnv の有効化 (`direnv allow`)
+> 明示的な init コマンドは不要。Nix が tool chain を提供し、devenv の setup:* task が依存・secrets を自動同期する。Docker (Supabase ローカル用) は外部依存なので `docker info` で動作確認しておくこと。
 
 ### 5. 環境変数の設定
 
@@ -241,97 +237,108 @@ env/
 └── .env.secrets.example       # テンプレート
 ```
 
-`make init` 後に `env/.env.secrets` を編集してください:
+devenv shell 進入時に `setup:secrets` task が `env/.env.secrets` を雛形からコピーする（既にあればスキップ）。コピー後にエディタで編集してください:
 
 ```
 SUPABASE_URL=your_supabase_project_id
 SUPABASE_ANON_KEY=your_supabase_api_key
 ```
 
+profile (`local` / `dev` / `staging` / `production`) ごとに `env/<service>/.env.<profile>` を用意し、`-P <profile>` 指定時に該当 profile の enterShell が `set -a; source` で env を上書きする (`local` は base enterShell に組み込まれているので `-P local` 不要)。env ファイルは `.env.local` 以外すべて gitignore 対象。
+
 ### 6. データベースセットアップ
 
 ```bash
-make migrate-dev    # マイグレーション生成 + 適用 + 型生成
+devenv tasks run app:migrate-dev   # マイグレーション生成 + 適用 + 型生成（フルフロー）
 ```
 
 ## Execution
 
 After successfully completing the setup, you can start the application using one of the following commands:
 
-### All Services (Recommended)
+### Light default — `devenv up`
 
-`make run` starts all services in a single TUI — Supabase, FastAPI backend, Storybook, and Next.js:
+`devenv up` (profile 指定なし = local 既定) は **軽量セット** を起動します:
 
-```bash
-make run    # Start all services (TUI shows live logs for each process)
-make stop   # Stop all services (run in a separate terminal)
-```
-
-The TUI shows logs for each process (`backend`, `storybook`, `web`) in real time.
-Press Ctrl+C to exit the TUI; then run `make stop` to stop Supabase.
-
-### Frontend Only
-
-Start only the frontend (Storybook + Next.js), without backend:
+- Supabase (Docker, `supabase:start` task が backend の `before` で自動先行)
+- backend (FastAPI, port 4040)
+- storybook (port 6006)
 
 ```bash
-make frontend
+devenv up   # 軽量セット (TUI 付き)
+stop        # 全停止 (devenv processes + Supabase Docker)
 ```
 
-- Or directly inside `frontend/` directory:
-  ```bash
-  cd frontend
-  nr dev    # Next.js development server with Turbopack
-  nr build  # Build production application
-  nr start  # Start production server
-  nr lint   # Run Biome lint
-  ```
+TUI で各プロセスのリアルタイムログ・個別再起動が可能。Ctrl+C で TUI を終了したあと、Supabase Docker を完全に停止するには `stop` を別ターミナルで実行する。
 
-### Adding a New Service to `make run`
+> Supabase は devenv 管理外（独立した Docker コンテナ群）。手動制御が必要なときは `supabase-start` / `supabase-stop` script を使う。
 
-All services are managed as [devenv processes](https://devenv.sh/processes/) (process-compose).
-To add a new service to `make run`, add a process entry to `devenv.nix`:
+### モノレポのフロントエンドアプリ起動 (opt-in)
+
+`frontend/apps/<name>` 配下の各アプリは **opt-in process** として登録されており (`start.enable = false`)、`devenv up` 単体では起動しません。明示指定または preset script を使います:
+
+| 起動内容 | コマンド |
+|---|---|
+| 軽量セット (backend + storybook のみ) | `devenv up` |
+| 軽量セット + Next.js (web) | `dev-web`（= `devenv up backend storybook web`） |
+| 軽量セット + Expo Metro (mobile, non-interactive) | `dev-mobile` |
+| 全部入り (web + mobile も含む) | `dev-all` |
+| アプリ単独 (例: web のみ) | `devenv up web` |
+| 任意組み合わせ | `devenv up backend web` など |
+
+> Expo の対話的 TUI（`r` でリロード、QR コード等）は devenv process では使えません。対話操作したい場合は別ターミナルで `mobile` / `mobile-ios` / `mobile-android` / `mobile-web` script を叩いてください (devenv 外で Expo TUI を直接起動)。
+
+### `frontend/apps/` への新規アプリ追加
+
+`devenv.nix` の `frontendApps` attrset に **1 行追加** するだけで以下が自動連動します:
+
+- `processes.<name>` (start.enable=false で opt-in process 化)
+- `scripts.dev-<name>` (= `devenv up backend storybook <name>`)
+- `scripts.dev-all` の起動対象に自動追加
 
 ```nix
-# devenv.nix
-processes = {
-  # Existing processes: backend, storybook, web ...
-
-  # Add your new service here
-  my-service = {
-    exec = ''
-      cd "$DEVENV_ROOT/path/to/service"
-      dotenvx run \
-        -f "$DEVENV_ROOT/env/frontend/.env.local" \
-        -- nr dev
-    '';
-    process-compose = {
-      readiness_probe = {
-        http_get = { host = "127.0.0.1"; port = 4001; path = "/"; };
-        initial_delay_seconds = 10;
-        period_seconds = 3;
-        timeout_seconds = 2;
-        failure_threshold = 20;
-      };
-    };
+# devenv.nix の let block 内
+frontendApps = {
+  web   = { port = 3000; };
+  admin = { port = 3001; };          # ← admin アプリ追加例
+  mobile = {
+    port = 8081;
+    ready = "/status";
+    exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && exec nr start'';
   };
 };
 ```
 
-After editing `devenv.nix`, run `make run` to start all services including the new one.
+| key | 必須 | 既定 | 用途 |
+|---|---|---|---|
+| `port` | ✅ | — | ready probe で叩くポート |
+| `ready` | — | `"/"` | ready probe path |
+| `exec` | — | `cd frontend/apps/<name> && exec nr dev` | 起動コマンドを完全カスタマイズしたい場合のみ |
+
+事前に `frontend/apps/<name>/package.json` に `dev` (Next.js 系) または `start` (Expo 系) script が定義されていることが前提。
+
+### モノレポ全アプリの一括起動 (turbo dev、devenv 外)
+
+```bash
+frontend       # `cd frontend && turbo dev` (web + mobile を並列起動、重い)
+```
+
+`dev-all` は backend + storybook + 各アプリを **devenv の TUI で個別管理**。`frontend` script は **devenv 外で turbo dev** を 1 プロセスとして起動。用途で使い分け。
 
 ### Frontend Development (Mobile)
 
-- Start mobile frontend (Expo):
+Expo の対話的 TUI が必要な場合は別ターミナルで:
 
-  ```bash
-  cd frontend/apps/mobile
-  nr start    # Start Expo development server
-  nr ios      # Start iOS simulator
-  nr android  # Start Android emulator
-  ```
+```bash
+mobile          # 対話的にプラットフォーム選択
+mobile-ios      # iOS シミュレータ
+mobile-android  # Android エミュレータ
+mobile-web      # Web 版
+```
 
 ## Additional Commands
+
+> 全コマンドは devenv の **scripts** (PATH 直結) または **tasks** (`devenv tasks run <name>`)。Makefile は **deprecated**。
 
 ### Code Quality Management
 
@@ -339,67 +346,71 @@ This project implements unified code quality management across all components (F
 
 #### Unified Commands (Recommended)
 
-Commands to manage all projects at once:
-
 ```bash
-make lint           # Lint all projects (auto-fix)
-make format         # Format all projects (auto-fix)
-make format-check   # Format check all projects (CI, no fix)
-make type-check     # Type check all projects
-make ci-check       # CI checks (lint + format + type-check)
+lint           # Lint all projects (auto-fix)
+format         # Format all projects (auto-fix)
+format-check   # Format check all projects (CI, no fix)
+type-check     # Type check all projects
+ci-check       # CI gate (lint + format-check + type-check)
 ```
 
 #### Frontend Specific (Biome)
 
 ```bash
-make lint-frontend           # Biome lint (auto-fix)
-make lint-frontend-ci        # Biome lint (CI, no fix)
-make format-frontend         # Biome format (auto-fix)
-make format-frontend-check   # Biome format check
-make type-check-frontend     # TypeScript type check
+lint-frontend           # Biome lint (auto-fix)
+lint-frontend-ci        # Biome lint (CI, no fix)
+format-frontend         # Biome format (auto-fix)
+format-frontend-check   # Biome format check
+type-check-frontend     # TypeScript type check
+lint-fsd                # FSD boundary check (web + mobile)
 ```
 
 #### Drizzle Specific (Biome)
 
 ```bash
-make lint-drizzle            # Biome lint (auto-fix)
-make lint-drizzle-ci         # Biome lint (CI, no fix)
-make format-drizzle          # Biome format (auto-fix)
-make format-drizzle-check    # Biome format check
+lint-drizzle            # Biome lint (auto-fix)
+lint-drizzle-ci         # Biome lint (CI, no fix)
+format-drizzle          # Biome format (auto-fix)
+format-drizzle-check    # Biome format check
 ```
 
 #### Backend Python Specific (Ruff + MyPy)
 
 ```bash
-make lint-backend-py         # Ruff lint (auto-fix)
-make lint-backend-py-ci      # Ruff lint (CI, no fix)
-make format-backend-py       # Ruff format (auto-fix)
-make format-backend-py-check # Ruff format check
-make type-check-backend-py   # MyPy type check (strict mode)
+lint-backend-py         # Ruff lint (auto-fix)
+lint-backend-py-ci      # Ruff lint (CI, no fix)
+format-backend-py       # Ruff format (auto-fix)
+format-backend-py-check # Ruff format check
+type-check-backend-py   # MyPy type check (strict mode)
 ```
 
 #### Edge Functions Specific (Deno)
 
 ```bash
-make lint-functions          # Deno lint
-make format-functions        # Deno format (auto-fix)
-make format-functions-check  # Deno format check
-make check-functions         # Deno type check (all functions auto-detected)
+lint-functions          # Deno lint
+format-functions        # Deno format (auto-fix)
+format-functions-check  # Deno format check
+check-functions         # Deno type check (all functions auto-detected)
 ```
 
 ### Development Tools
 
-#### Other Tools
-
-- Check services status:
+- Check Supabase status:
 
   ```bash
-  make check
+  check
   ```
 
 - Build frontend:
+
   ```bash
-  make build-frontend
+  build-frontend
+  ```
+
+- Build storybook:
+
+  ```bash
+  build-storybook
   ```
 
 ### Database Operations
@@ -410,77 +421,72 @@ This project manages database schema with Drizzle ORM.
 
 ```bash
 # Generate + Apply migration + Generate types (recommended)
-make migrate-dev
-# Or shorthand
-make migration
+devenv tasks run app:migrate-dev
+
+# Generate + Apply migration only (no type generation)
+devenv tasks run db:migrate-dev
 
 # Push schema directly to DB (for prototyping)
-make drizzle-push
+drizzle-push
 
 # Start Drizzle Studio (GUI)
-make drizzle-studio
+drizzle-studio
 
 # Validate schema
-make drizzle-validate
+drizzle-validate
 ```
 
 **Production (Remote)**:
 
 ```bash
 # Staging environment
-ENV=stg make migrate-deploy
+devenv tasks run -P staging db:migrate-deploy
 
 # Production environment
-ENV=prod make migrate-deploy
+devenv tasks run -P production db:migrate-deploy
 ```
 
 **Command Usage**:
 
-- `make migration` / `make migrate-dev`: For local development. Schema changes → Generate migration → Apply → Generate types in one go
-- `make migrate-deploy`: For remote environments. Only apply existing migration files
-- `make drizzle-push`: Push schema directly without generating migration files (for experimentation/prototyping)
+- `app:migrate-dev`: For local development. Schema changes → Generate migration → Apply → Generate types in one go
+- `db:migrate-deploy`: For remote environments. Only apply existing migration files
+- `drizzle-push`: Push schema directly without generating migration files (for experimentation/prototyping)
 
 For details, see the "Drizzle Schema Management" section in `CLAUDE.md`.
 
 ### Model Generation
 
-- Build Supabase types for frontend:
+```bash
+# Frontend Supabase types + Hey API client
+devenv tasks run model:frontend
 
-  ```bash
-  make build-model-frontend
-  ```
+# Edge Functions Supabase types + Drizzle schema copy
+devenv tasks run model:functions
 
-- Build types for Edge Functions:
-
-  ```bash
-  make build-model-functions
-  ```
-
-- Build all models:
-  ```bash
-  make build-model
-  ```
+# All models (frontend + functions, ordered)
+devenv tasks run model:build
+```
 
 ### Edge Functions
 
-- Deploy single Edge Function:
-  ```bash
-  make deploy-functions FUNCTION=function-name
-  ```
+```bash
+# Deploy all Edge Functions to remote project
+devenv tasks run -P production deploy:functions
+```
 
 ### Deployment (Remote)
 
-Deploy Supabase resources to remote environments (stg/prod):
+Deploy Supabase resources to remote environments (staging/production):
 
 ```bash
 # 1. Supabase platform settings (Config, Buckets, Functions, Secrets)
-ENV=stg make deploy-supabase
+devenv tasks run -P staging deploy:supabase
 
 # 2. DB migration
-ENV=stg make migrate-deploy
+devenv tasks run -P staging db:migrate-deploy
 ```
 
-**What deploy-supabase applies**:
+**What `deploy:supabase` applies**:
 - Config (Auth settings, API settings) - `supabase config push`
 - Storage Buckets - `supabase seed buckets`
 - Edge Functions (all functions) - `supabase functions deploy`

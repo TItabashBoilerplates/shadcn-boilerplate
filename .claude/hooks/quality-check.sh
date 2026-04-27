@@ -28,6 +28,16 @@ fi
 
 cd "$project_root" || exit 0
 
+# devenv scripts は devenv shell (direnv) 経由で PATH に入っている。
+# direnv 未活性のセッション (CI 等) では devenv shell -- 経由でフォールバックする。
+run() {
+  if command -v "$1" >/dev/null 2>&1; then
+    "$@"
+  else
+    devenv shell -- "$@"
+  fi
+}
+
 # 結果を収集
 results=""
 has_error=0
@@ -36,21 +46,21 @@ has_error=0
 if [[ "$file_path" =~ /frontend/.*\.(ts|tsx|js|jsx|json)$ ]]; then
   echo "🔍 Running quality checks for frontend..." >&2
 
-  if ! make lint-frontend 2>&1; then
+  if ! run lint-frontend 2>&1; then
     has_error=1
     results+="❌ lint-frontend failed\n"
   else
     results+="✅ lint-frontend passed\n"
   fi
 
-  if ! make format-frontend 2>&1; then
+  if ! run format-frontend 2>&1; then
     has_error=1
     results+="❌ format-frontend failed\n"
   else
     results+="✅ format-frontend passed\n"
   fi
 
-  if ! make type-check-frontend 2>&1; then
+  if ! run type-check-frontend 2>&1; then
     has_error=1
     results+="❌ type-check-frontend failed\n"
   else
@@ -62,21 +72,21 @@ fi
 if [[ "$file_path" =~ /backend-py/app/.*\.py$ ]]; then
   echo "🔍 Running quality checks for backend-py..." >&2
 
-  if ! make lint-backend-py 2>&1; then
+  if ! run lint-backend-py 2>&1; then
     has_error=1
     results+="❌ lint-backend-py failed\n"
   else
     results+="✅ lint-backend-py passed\n"
   fi
 
-  if ! make format-backend-py 2>&1; then
+  if ! run format-backend-py 2>&1; then
     has_error=1
     results+="❌ format-backend-py failed\n"
   else
     results+="✅ format-backend-py passed\n"
   fi
 
-  if ! make type-check-backend-py 2>&1; then
+  if ! run type-check-backend-py 2>&1; then
     has_error=1
     results+="❌ type-check-backend-py failed\n"
   else
@@ -88,21 +98,21 @@ fi
 if [[ "$file_path" =~ /supabase/functions/.*\.ts$ ]]; then
   echo "🔍 Running quality checks for edge functions..." >&2
 
-  if ! make lint-functions 2>&1; then
+  if ! run lint-functions 2>&1; then
     has_error=1
     results+="❌ lint-functions failed\n"
   else
     results+="✅ lint-functions passed\n"
   fi
 
-  if ! make format-functions 2>&1; then
+  if ! run format-functions 2>&1; then
     has_error=1
     results+="❌ format-functions failed\n"
   else
     results+="✅ format-functions passed\n"
   fi
 
-  if ! make check-functions 2>&1; then
+  if ! run check-functions 2>&1; then
     has_error=1
     results+="❌ check-functions failed\n"
   else
@@ -114,14 +124,14 @@ fi
 if [[ "$file_path" =~ /drizzle/.*\.ts$ ]]; then
   echo "🔍 Running quality checks for drizzle..." >&2
 
-  if ! make lint-drizzle 2>&1; then
+  if ! run lint-drizzle 2>&1; then
     has_error=1
     results+="❌ lint-drizzle failed\n"
   else
     results+="✅ lint-drizzle passed\n"
   fi
 
-  if ! make format-drizzle 2>&1; then
+  if ! run format-drizzle 2>&1; then
     has_error=1
     results+="❌ format-drizzle failed\n"
   else

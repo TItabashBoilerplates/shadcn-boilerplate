@@ -1,662 +1,104 @@
-# プラットフォームと環境を設定
-PLATFORM=web
-ENV=local
+# =============================================================================
+# Makefile is DEPRECATED.
+#
+# All commands are now provided as devenv scripts (PATH-installed) or
+# devenv tasks. Run from inside the devenv shell (direnv is hooked into
+# the directory, so `cd` is enough to activate it).
+#
+# Discovery:
+#   devenv tasks list                # List all tasks (lint:*, db:*, deploy:*, ...)
+#   ls $DEVENV_PROFILE/bin           # List all scripts on PATH
+#
+# Migration map (former make X  →  current devenv command):
+#
+#   make init               →  なし (devenv shell 進入時に setup:* タスクが
+#                                  bun install / uv sync / .env.secrets コピーを自動実行)
+#   make run                →  devenv up
+#   make stop               →  stop                              (script)
+#   make supabase-start     →  supabase-start                    (script)
+#   make supabase-stop      →  supabase-stop                     (script)
+#   make frontend           →  frontend                          (script)
+#   make mobile             →  mobile                            (script)
+#   make mobile-ios         →  mobile-ios                        (script)
+#   make mobile-android     →  mobile-android                    (script)
+#   make mobile-web         →  mobile-web                        (script)
+#   make storybook-local    →  storybook-local                   (script)
+#   make build-storybook    →  build-storybook                   (script)
+#   make build-frontend     →  build-frontend                    (script)
+#   make build-mobile-ios   →  build-mobile-ios                  (script)
+#   make build-mobile-android → build-mobile-android             (script)
+#
+#   make lint               →  lint                              (script)
+#   make lint-frontend      →  lint-frontend                     (script)
+#   make lint-frontend-ci   →  lint-frontend-ci                  (script)
+#   make lint-fsd           →  lint-fsd                          (script)
+#   make lint-drizzle       →  lint-drizzle                      (script)
+#   make lint-drizzle-ci    →  lint-drizzle-ci                   (script)
+#   make lint-backend-py    →  lint-backend-py                   (script)
+#   make lint-backend-py-ci →  lint-backend-py-ci                (script)
+#   make lint-functions     →  lint-functions                    (script)
+#
+#   make format             →  format                            (script)
+#   make format-check       →  format-check                      (script)
+#   make format-frontend    →  format-frontend                   (script)
+#   make format-frontend-check → format-frontend-check           (script)
+#   make format-drizzle     →  format-drizzle                    (script)
+#   make format-drizzle-check → format-drizzle-check             (script)
+#   make format-backend-py  →  format-backend-py                 (script)
+#   make format-backend-py-check → format-backend-py-check       (script)
+#   make format-functions   →  format-functions                  (script)
+#   make format-functions-check → format-functions-check         (script)
+#
+#   make type-check         →  type-check                        (script)
+#   make type-check-frontend → type-check-frontend               (script)
+#   make type-check-mobile  →  type-check-mobile                 (script)
+#   make type-check-backend-py → type-check-backend-py           (script)
+#   make check-functions    →  check-functions                   (script)
+#   make ci-check           →  ci-check                          (script)
+#
+#   make build-model        →  devenv tasks run model:build
+#   make build-model-frontend → devenv tasks run model:frontend
+#   make build-model-functions → devenv tasks run model:functions
+#
+#   make migrate-dev / make migration → devenv tasks run app:migrate-dev
+#   make migrate-deploy     →  devenv tasks run db:migrate-deploy
+#   make drizzle-push       →  drizzle-push                      (script)
+#   make drizzle-studio     →  drizzle-studio                    (script)
+#   make drizzle-validate   →  drizzle-validate                  (script)
+#
+#   make seed               →  devenv tasks run seed:all
+#   make seed-db            →  devenv tasks run seed:db
+#   make seed-storage       →  devenv tasks run seed:storage
+#
+#   make deploy-supabase    →  devenv tasks run -P <env> deploy:supabase
+#   make deploy-functions   →  devenv tasks run -P <env> deploy:functions
+#   make deploy-polar-webhooks → devenv tasks run -P <env> deploy:polar-webhooks
+#   make polar-sync         →  devenv tasks run polar:sync
+#   make polar-sync-dry     →  devenv tasks run polar:sync-dry
+#
+#   make e2e                →  e2e                               (script)
+#   make e2e-web            →  e2e-web                           (script)
+#   make e2e-mobile         →  e2e-mobile                        (script)
+#   make test-db            →  test-db                           (script)
+#   make check              →  check                             (script)
+#
+# Environment switching: prefix with `-P <profile>` (local / staging / production)
+#   devenv up -P staging
+#   devenv tasks run -P production deploy:functions
+#
+# See devenv.nix for the full list of scripts/tasks/profiles.
+# =============================================================================
 
-# ===== Environment file paths =====
-ENV_BACKEND   = env/backend/.env.$(ENV)
-ENV_FRONTEND  = env/frontend/.env.$(ENV)
-ENV_MIGRATION = env/migration/.env.$(ENV)
-ENV_SECRETS   = env/.env.secrets
-
-# Dotenvx shortcuts (ルートから実行するターゲット用)
-DOTENVX_BACKEND         = dotenvx run -f $(ENV_BACKEND)
-DOTENVX_BACKEND_SECRETS = dotenvx run -f $(ENV_BACKEND) -f $(ENV_SECRETS)
-DOTENVX_FRONTEND        = dotenvx run -f $(ENV_FRONTEND)
-DOTENVX_FRONTEND_SECRETS = dotenvx run -f $(ENV_FRONTEND) -f $(ENV_SECRETS)
-DOTENVX_MIGRATION       = dotenvx run -f $(ENV_MIGRATION)
-
-# ===== devenv 環境チェック =====
-# devenv shell / direnv が有効でなければ即座にエラー終了
-.PHONY: _devenv
-_devenv:
-	@test -n "$$DEVENV_ROOT" || { \
-		echo "❌ Error: devenv shell is not active."; \
-		echo "   Run 'devenv shell' or 'direnv allow' first."; \
-		exit 1; \
-	}
-
-# devenv が必要なターゲット（devenv shell 外では実行不可）
-init run frontend stop check supabase-start supabase-stop: _devenv
-mobile mobile-ios mobile-android mobile-web: _devenv
-type-check-mobile build-mobile-ios build-mobile-android: _devenv
-build-frontend lint-frontend lint-fsd: _devenv
-format-frontend format-frontend-check type-check-frontend: _devenv
-format-functions format-functions-check lint-functions check-functions: _devenv
-lint-drizzle format-drizzle format-drizzle-check: _devenv
-lint-backend-py format-backend-py format-backend-py-check: _devenv
-type-check-backend-py lint format format-check type-check ci-check: _devenv
-# pre-commit hook から呼ばれる -ci ターゲット（$DEVENV_ROOT が伝播しないため _devenv 不要）
-# devenv が git-hooks をインストールするため、hook 実行時はツールが PATH 上に存在する
-lint-frontend-ci lint-drizzle-ci lint-backend-py-ci:
-deploy-functions polar-sync-dry polar-sync deploy-polar-webhooks: _devenv
-build-model-frontend build-model-backend build-model-functions build-model: _devenv
-migrate-dev migrate-deploy drizzle-push drizzle-studio drizzle-validate: _devenv
-seed seed-db seed-storage: _devenv
-storybook-local build-storybook: _devenv
-e2e e2e-web e2e-mobile test-db: _devenv
-deploy-supabase supabase-link deploy-config deploy-functions-all deploy-secrets deploy-buckets: _devenv
-
-# direnv を有効化（初回セットアップ時）
-# _devenv チェック不要 - devenv shell なしで実行可能（make init の前提条件）
-# セキュリティ上の理由から direnv は初回のみ手動で allow が必要
-.PHONY: direnv-allow
-direnv-allow:
-	@if command -v direnv >/dev/null 2>&1; then \
-		direnv allow; \
-		echo "✅ direnv enabled. 次回から 'cd' するだけで devenv が自動起動します。"; \
-	else \
-		echo "❌ direnv not found. Install with: brew install direnv"; \
-		echo "   Then add to ~/.zshrc: eval \"\$$(direnv hook zsh)\""; \
-		exit 1; \
-	fi
-
-# 初期化コマンド
-.PHONY: init
-init:
-	# 必要なツールがインストールされているかチェック
-	sh ./bin/check_install.sh
-	# Supabaseにログイン
-	# $(DOTENVX_BACKEND) -- supabase login
-	# Supabaseを初期化
-	# yes 'N' | $(DOTENVX_BACKEND) -- supabase init --force
-	# Supabaseを起動（dotenvxで環境変数を読み込む）
-	# $(DOTENVX_BACKEND) -- supabase start
-	# シークレットの設定がなければコピー
-	if [ ! -f "$(ENV_SECRETS)" ]; then \
-		cp env/.env.secrets.example $(ENV_SECRETS); \
-	fi
-	# フロントエンドの依存関係をインストール
-	cd frontend && ni
-	# Drizzleの依存関係をインストール
-	cd drizzle && ni
-	# バックエンドの依存関係をインストール
-	cd backend-py/app && uv sync
-	# direnv を有効化（次回以降 cd で自動アクティベーション）
-	@if command -v direnv >/dev/null 2>&1; then \
-		direnv allow; \
-		echo "✅ direnv enabled (auto-activation on cd)"; \
-	fi
+.PHONY: %
+%:
 	@echo ""
-	@echo "✅ Initial setup complete!"
+	@echo "❌ Makefile is deprecated. devenv に移行済みです。"
 	@echo ""
-	@echo "📝 Next steps:"
-	@echo "  1. Run 'make migrate-dev' to generate and apply initial database migrations"
-	@echo "  2. Run 'make run' to start Supabase (Docker) + backend + Storybook (devenv TUI)"
-	@echo "  3. Run 'make frontend' to start Next.js dev server (new terminal)"
+	@echo "💡 Try:"
+	@echo "   devenv tasks list                # List all tasks"
+	@echo "   devenv tasks run <ns:name>       # Run a task (e.g. db:migrate-dev)"
+	@echo "   <script-name>                    # Run a script directly (e.g. lint, ci-check, frontend)"
 	@echo ""
-	@echo "Woo-hoo! Everything's ready to roll!"
-
-# ===== Supabase ローカル起動・停止 =====
-# Supabase (Docker コンテナ群) は devenv 管理対象外。
-# Supabase CLI で独立管理し、devenv は backend / storybook のみを管理する。
-
-# Supabase ローカル起動 + Storage Buckets シード
-.PHONY: supabase-start
-supabase-start:
-	@echo "🚀 Starting Supabase (Docker)..."
-	$(DOTENVX_BACKEND_SECRETS) -- supabase start --yes
-	@$(DOTENVX_BACKEND) -- supabase seed buckets --local --yes || true
-
-# Supabase ローカル停止
-.PHONY: supabase-stop
-supabase-stop:
-	@echo "🛑 Stopping Supabase (Docker)..."
-	@$(DOTENVX_BACKEND) -- supabase stop || true
-
-# ローカル環境での起動コマンド（共通基盤: backend + Storybook）
-# Supabase は事前に supabase-start で起動してから devenv up（backend + storybook）を起動する。
-.PHONY: run
-run: supabase-start
-	devenv up
-
-# ローカル環境でのフロントエンド起動コマンド（Next.js のみ）
-# Storybook は `make run`（devenv）側に移管済みのため、ここでは Next.js のみ起動する。
-.PHONY: frontend
-frontend:
-	cd frontend && dotenvx run -f ../$(ENV_FRONTEND) -- nr dev
-
-# ===== Mobile (Expo) コマンド =====
-
-# Mobile開発サーバー起動（全プラットフォーム選択可能）
-.PHONY: mobile
-mobile:
-	cd frontend/apps/mobile && dotenvx run -f ../../../$(ENV_FRONTEND) -- nlx expo start
-
-# Mobile開発サーバー起動（iOS）
-.PHONY: mobile-ios
-mobile-ios:
-	cd frontend/apps/mobile && dotenvx run -f ../../../$(ENV_FRONTEND) -- nlx expo start --ios
-
-# Mobile開発サーバー起動（Android）
-.PHONY: mobile-android
-mobile-android:
-	cd frontend/apps/mobile && dotenvx run -f ../../../$(ENV_FRONTEND) -- nlx expo start --android
-
-# Mobile開発サーバー起動（Web）
-.PHONY: mobile-web
-mobile-web:
-	cd frontend/apps/mobile && dotenvx run -f ../../../$(ENV_FRONTEND) -- nlx expo start --web
-
-# Mobile型チェック
-.PHONY: type-check-mobile
-type-check-mobile:
-	cd frontend/apps/mobile && nlx tsc --noEmit
-
-# Mobileビルド（EASを使用）
-.PHONY: build-mobile-ios
-build-mobile-ios:
-	cd frontend/apps/mobile && dotenvx run -f ../../../$(ENV_FRONTEND) -- nlx eas build --platform ios
-
-.PHONY: build-mobile-android
-build-mobile-android:
-	cd frontend/apps/mobile && dotenvx run -f ../../../$(ENV_FRONTEND) -- nlx eas build --platform android
-
-# ローカル環境での停止コマンド
-# devenv (backend + storybook) と Supabase (Docker) は独立管理のため、両方を明示的に止める。
-.PHONY: stop
-stop:
-	@echo "🛑 Stopping devenv processes (backend + storybook)..."
-	@devenv processes down 2>/dev/null || true
-	@if [ "${ENV}" = "local" ]; then \
-		echo "🛑 Stopping Supabase (Docker)..."; \
-		$(DOTENVX_BACKEND) -- supabase stop 2>/dev/null || true; \
-	fi
-	@echo "✅ All services stopped."
-
-# フロントエンドビルドコマンド
-.PHONY: build-frontend
-build-frontend:
-	cd frontend && nr build
-
-# ===== フロントエンド lint/format コマンド =====
-
-# Biome lint（自動修正）
-.PHONY: lint-frontend
-lint-frontend:
-	cd frontend && nr lint
-
-# Biome lint（CI用、修正なし）
-.PHONY: lint-frontend-ci
-lint-frontend-ci:
-	cd frontend && nr lint:ci
-
-# FSD境界チェック（Web + Mobile）
-.PHONY: lint-fsd
-lint-fsd:
-	@echo "🔍 Running FSD boundary checks..."
-	cd frontend/apps/web && nr lint:fsd
-	cd frontend/apps/mobile && nr lint:fsd
-
-# Biome format（自動修正）
-.PHONY: format-frontend
-format-frontend:
-	cd frontend && nr format
-
-# Biome formatチェック（チェックのみ）
-.PHONY: format-frontend-check
-format-frontend-check:
-	cd frontend && nr format-check
-
-# TypeScript型チェック
-.PHONY: type-check-frontend
-type-check-frontend:
-	cd frontend && nr type-check
-
-# ===== Supabase Edge Functions lint/format/check コマンド =====
-
-# Deno format（自動修正）
-.PHONY: format-functions
-format-functions:
-	deno fmt supabase/functions/
-
-# Deno formatチェック（チェックのみ）
-.PHONY: format-functions-check
-format-functions-check:
-	deno fmt --check supabase/functions/
-
-# Deno lint
-.PHONY: lint-functions
-lint-functions:
-	deno lint supabase/functions/
-
-# Deno型チェック（全functionを自動検出）
-.PHONY: check-functions
-check-functions:
-	@echo "🔍 Type checking Edge Functions..."
-	@for dir in supabase/functions/*/; do \
-		if [ -f "$$dir/index.ts" ]; then \
-			func_name=$$(basename "$$dir"); \
-			echo "Checking $$func_name..."; \
-			if [ -f "$$dir/deno.json" ]; then \
-				echo "  Caching dependencies..."; \
-				(cd "$$dir" && deno cache --config=deno.json index.ts) 2>&1 | grep -v "Download" || true; \
-				echo "  Running type check..."; \
-				(cd "$$dir" && deno check --config=deno.json index.ts) || echo "  ⚠️  Type check failed for $$func_name"; \
-			else \
-				echo "  No deno.json found, using default check..."; \
-				deno check "$$dir/index.ts" || echo "  ⚠️  Type check failed for $$func_name"; \
-			fi \
-		fi \
-	done
-	@echo "✅ Type check complete!"
-
-# ===== Drizzle lint/format コマンド =====
-
-# Biome lint（自動修正）
-.PHONY: lint-drizzle
-lint-drizzle:
-	cd drizzle && nr lint
-
-# Biome lint（CI用、修正なし）
-.PHONY: lint-drizzle-ci
-lint-drizzle-ci:
-	cd drizzle && nr lint:ci
-
-# Biome format（自動修正）
-.PHONY: format-drizzle
-format-drizzle:
-	cd drizzle && nr format
-
-# Biome formatチェック（チェックのみ）
-.PHONY: format-drizzle-check
-format-drizzle-check:
-	cd drizzle && nr format-check
-
-# ===== Backend Python lint/format コマンド =====
-
-# Ruff lint（自動修正）
-.PHONY: lint-backend-py
-lint-backend-py:
-	cd backend-py/app && uv run ruff check --fix src/
-
-# Ruff lint（CI用、修正なし）
-.PHONY: lint-backend-py-ci
-lint-backend-py-ci:
-	cd backend-py/app && uv run ruff check src/
-
-# Ruff format（自動修正）
-.PHONY: format-backend-py
-format-backend-py:
-	cd backend-py/app && uv run ruff format src/
-
-# Ruff formatチェック（チェックのみ）
-.PHONY: format-backend-py-check
-format-backend-py-check:
-	cd backend-py/app && uv run ruff format --check src/
-
-# MyPy型チェック
-.PHONY: type-check-backend-py
-type-check-backend-py:
-	cd backend-py/app && uv run mypy src/
-
-# ===== 統合 lint/format コマンド =====
-
-# 全体のlint（フロントエンド + Drizzle + Backend Python + Edge Functions）
-.PHONY: lint
-lint:
-	@echo "🔍 Running lint for all projects..."
-	@make lint-frontend
-	@make lint-drizzle
-	@make lint-backend-py
-	@make lint-functions
-
-# 全体のformat（自動修正）
-.PHONY: format
-format:
-	@echo "✨ Formatting all projects..."
-	@make format-frontend
-	@make format-drizzle
-	@make format-backend-py
-	@make format-functions
-
-# 全体のformatチェック（CI用）
-.PHONY: format-check
-format-check:
-	@echo "🔍 Checking format for all projects..."
-	@make format-frontend-check
-	@make format-drizzle-check
-	@make format-backend-py-check
-	@make format-functions-check
-
-# 全体の型チェック
-.PHONY: type-check
-type-check:
-	@echo "🔍 Type checking all projects..."
-	@make type-check-frontend
-	@make type-check-mobile
-	@make type-check-backend-py
-	@make check-functions
-
-# CI用の全チェック（lint + format + type-check）
-.PHONY: ci-check
-ci-check:
-	@echo "🚀 Running all CI checks..."
-	@echo "📝 Frontend: Biome CI (lint + format + organize imports)..."
-	@make lint-frontend-ci
-	@echo "📝 Drizzle: Biome CI (lint + format)..."
-	@make lint-drizzle-ci
-	@echo "📝 Backend Python: Ruff CI (lint + format)..."
-	@make lint-backend-py-ci
-	@make format-backend-py-check
-	@echo "📝 Edge Functions: Deno lint + format check..."
-	@make lint-functions
-	@make format-functions-check
-	@echo "🔍 Type checking all projects..."
-	@make type-check
-
-.PHONY: deploy-functions
-deploy-functions:
-	# ENV=localの場合はスキップ、それ以外はproject-refを指定してデプロイ
-	if [ "${ENV}" != "local" ]; then \
-		$(DOTENVX_BACKEND) -- bash -c 'supabase functions deploy watermark --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
-		$(DOTENVX_BACKEND) -- bash -c 'supabase functions deploy stripe-checkout --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
-		$(DOTENVX_BACKEND) -- bash -c 'supabase functions deploy stripe-products --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
-		$(DOTENVX_BACKEND) -- bash -c 'supabase functions deploy stripe-webhooks --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
-		$(DOTENVX_BACKEND_SECRETS) -- bash -c 'supabase functions deploy polar-webhooks --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
-	else \
-		echo "Skipping deploy-functions for local environment"; \
-	fi
-
-# ===== Polar.sh Commands =====
-
-# プラン同期（Dry Run）- 変更内容を確認のみ
-.PHONY: polar-sync-dry
-polar-sync-dry:
-	@echo "🔍 Checking plan differences (dry run)..."
-	cd frontend && dotenvx run -f ../$(ENV_SECRETS) -f ../$(ENV_FRONTEND) -- bun run ../scripts/polar/sync.ts --dry-run
-
-# プラン同期（実行）- Polar.sh にプラン定義を同期
-.PHONY: polar-sync
-polar-sync:
-	@echo "🚀 Syncing plans to Polar.sh..."
-	cd frontend && dotenvx run -f ../$(ENV_SECRETS) -f ../$(ENV_FRONTEND) -- bun run ../scripts/polar/sync.ts
-
-# Polar Webhook デプロイ
-.PHONY: deploy-polar-webhooks
-deploy-polar-webhooks:
-	@if [ "${ENV}" != "local" ]; then \
-		echo "🚀 Deploying Polar webhook handler..."; \
-		$(DOTENVX_BACKEND_SECRETS) -- bash -c 'supabase functions deploy polar-webhooks --no-verify-jwt --project-ref $$SUPABASE_PROJECT_REF'; \
-	else \
-		echo "⚠️  Skipping deploy for local environment"; \
-	fi
-
-# チェックコマンド（サービス稼働状況の確認）
-.PHONY: check
-check:
-	# Supabase の稼働状況を確認
-	$(DOTENVX_BACKEND) -- supabase status
+	@echo "📖 See the migration map in this Makefile, or README.md / .claude/rules/commands.md."
 	@echo ""
-	@echo "💡 All services status: run 'make run' and check the TUI."
-
-# 共通の.git設定のファイルをコピー
-# プリコミットなども
-.PHONY: copy-git-config
-copy-git-config:
-	\cp -f .git-dev/info/exclude .git/info/exclude
-
-# Supabaseのモデルをビルド（モノレポ対応）
-.PHONY: build-model-frontend
-build-model-frontend:
-	# ENV=localの場合のみ実行
-	if [ "${ENV}" = "local" ]; then \
-		$(DOTENVX_BACKEND) -- supabase start; \
-		mkdir -p "./frontend/packages/types"; \
-		supabase gen types typescript --local > "./frontend/packages/types/schema.ts"; \
-		echo "🔧 Generating backend API client (Hey API)..."; \
-		cd frontend && dotenvx run -f ../$(ENV_FRONTEND) -- bun run --filter @workspace/api-client generate || echo "⚠️  Backend API client generation skipped (backend not running)"; \
-	fi
-
-.PHONY: build-model-backend
-build-model-backend:
-	@echo "💡 Backend models (backend-py/app/src/domain/entity/models.py) are manually maintained."
-	@echo "   Edit directly when the database schema changes."
-
-# Edge functionsのモデルをビルド
-.PHONY: build-model-functions
-build-model-functions:
-	# ENV=localの場合のみ実行
-	if [ "${ENV}" = "local" ]; then \
-		$(DOTENVX_BACKEND) -- supabase start; \
-		mkdir -p ./supabase/functions/shared/types/supabase; \
-		supabase gen types typescript --local > ./supabase/functions/shared/types/supabase/schema.ts; \
-		mkdir -p ./supabase/functions/shared/drizzle && cp -r ./drizzle/schema/* ./supabase/functions/shared/drizzle/; \
-		echo "✅ Copied Drizzle schema to supabase/functions/shared/drizzle/"; \
-	fi
-
-# モデルをビルド
-.PHONY: build-model
-build-model:
-	# フロントエンドのモデルをビルド
-	make build-model-frontend
-	# Edge functionsのモデルをビルド
-	make build-model-functions
-	# バックエンドのモデルをビルド
-	make build-model-backend
-
-# ===== Drizzle マイグレーションコマンド =====
-
-# 開発用マイグレーション
-# ローカル環境専用: マイグレーション生成 → 適用 → 型生成を一括実行
-.PHONY: migrate-dev
-migrate-dev:
-	@# ENVが指定されていて、かつlocal以外の場合は警告
-	@if [ -n "${ENV}" ] && [ "${ENV}" != "local" ]; then \
-		echo "⚠️  ERROR: migrate-dev is for local development only!"; \
-		echo "Specified ENV: ${ENV}"; \
-		echo ""; \
-		echo "Use 'ENV=${ENV} make migrate-deploy' for remote environments."; \
-		exit 1; \
-	fi
-	@echo "🚀 Running migrate-dev (generate + apply + build-model)..."
-	@echo ""
-	# Supabaseを起動
-	$(DOTENVX_BACKEND) -- supabase start
-	# Pre-migration SQL適用（extensions等）
-	@echo "🔧 Applying pre-migration SQL (extensions)..."
-	cd drizzle && dotenvx run -f ../$(ENV_MIGRATION) -- nr migrate:pre
-	# マイグレーションを生成
-	@echo "📝 Generating migration..."
-	cd drizzle && dotenvx run -f ../$(ENV_MIGRATION) -- nr generate
-	# マイグレーションを適用
-	@echo "✅ Applying migration to local database..."
-	cd drizzle && dotenvx run -f ../$(ENV_MIGRATION) -- nr migrate
-	# Post-migration SQL適用（functions/triggers等）
-	@echo "🔧 Applying post-migration SQL (functions, triggers)..."
-	cd drizzle && dotenvx run -f ../$(ENV_MIGRATION) -- nr migrate:post
-	# モデル生成
-	@echo "🔧 Generating database types..."
-	make build-model
-	@echo ""
-	@echo "✨ Done! Don't forget to commit migration files to Git."
-
-# 本番用マイグレーション適用
-# 全環境で使用可能: 既存のマイグレーションファイルを適用するだけ
-.PHONY: migrate-deploy
-migrate-deploy:
-	@echo "🚀 Deploying migrations to ${ENV} environment..."
-	@echo ""
-	# Supabaseを起動（ENV=localの場合のみ）
-	if [ "${ENV}" = "local" ] || [ -z "${ENV}" ]; then \
-		$(DOTENVX_BACKEND) -- supabase start; \
-	fi
-	# Pre-migration SQL適用（extensions等）
-	@echo "🔧 Applying pre-migration SQL (extensions)..."
-	cd drizzle && dotenvx run -f ../$(ENV_MIGRATION) -- nr migrate:pre
-	# マイグレーションを適用
-	@echo "📍 Deploying to: $(ENV)"
-	cd drizzle && dotenvx run -f ../$(ENV_MIGRATION) -- nr migrate
-	# Post-migration SQL適用（functions/triggers等）
-	@echo "🔧 Applying post-migration SQL (functions, triggers)..."
-	cd drizzle && dotenvx run -f ../$(ENV_MIGRATION) -- nr migrate:post
-	# モデル生成（ローカルのみ）
-	@if [ -z "${ENV}" ] || [ "${ENV}" = "local" ]; then \
-		make build-model; \
-	fi
-	@echo ""
-	@echo "✅ Migration deployment complete!"
-
-# マイグレーション生成のみ（migrate-devの一部を切り出し）
-.PHONY: migration
-migration: migrate-dev
-
-# スキーマを直接DBにプッシュ（開発時の高速プロトタイピング用）
-.PHONY: drizzle-push
-drizzle-push:
-	@echo "🚀 Pushing schema to database..."
-	cd drizzle && dotenvx run -f ../$(ENV_MIGRATION) -- nr push
-
-# Drizzle Studio起動（GUIでDBを操作）
-.PHONY: drizzle-studio
-drizzle-studio:
-	@echo "🎨 Starting Drizzle Studio..."
-	cd drizzle && dotenvx run -f ../$(ENV_MIGRATION) -- nr studio
-
-# スキーマ検証（Drizzleベース）
-.PHONY: drizzle-validate
-drizzle-validate:
-	@echo "✅ Validating Drizzle schema..."
-	cd drizzle && dotenvx run -f ../$(ENV_MIGRATION) -- nr check
-
-# ===== その他のコマンド =====
-
-# ===== Seed コマンド =====
-# Database + Storage のシードデータを投入
-# 詳細は .claude/skills/seed/SKILL.md を参照
-
-# DB + Storage 両方
-.PHONY: seed
-seed:
-	@make seed-check-env
-	@make seed-db
-	@make seed-storage
-
-# DB のみ
-.PHONY: seed-db
-seed-db:
-	@make seed-check-env
-	@echo "Seeding database (${ENV})..."
-	cd drizzle && dotenvx run -f ../$(ENV_MIGRATION) -- bun run seed/index.ts
-
-# Storage のみ
-.PHONY: seed-storage
-seed-storage:
-	@make seed-check-env
-	@echo "Seeding storage buckets (${ENV})..."
-	@if [ "${ENV}" = "local" ] || [ -z "${ENV}" ]; then \
-		$(DOTENVX_BACKEND) -- supabase seed buckets --local; \
-	else \
-		$(DOTENVX_BACKEND) -- supabase seed buckets --linked; \
-	fi
-
-# 環境チェック（production 警告）
-.PHONY: seed-check-env
-seed-check-env:
-	@if [ "${ENV}" = "production" ]; then \
-		echo ""; \
-		echo "WARNING: You are about to seed PRODUCTION!"; \
-		echo ""; \
-		echo "This will:"; \
-		echo "  - Reset and insert test/sample data"; \
-		echo "  - Potentially overwrite existing data"; \
-		echo ""; \
-		read -p "Are you sure you want to continue? [y/N] " confirm; \
-		if [ "$$confirm" != "y" ] && [ "$$confirm" != "Y" ]; then \
-			echo "Aborted."; \
-			exit 1; \
-		fi; \
-	fi
-
-# ロールバックコマンド
-.PHONY: rollback
-rollback:
-	@echo "⚠️  Drizzle does not have built-in rollback command."
-	@echo "For rollback, manually remove the last migration file and re-run migrations."
 	@exit 1
-
-# ===== Storybook コマンド =====
-
-# Storybook起動（make frontend に統合済み - 推奨）
-.PHONY: storybook
-storybook:
-	@echo "💡 Storybook is started automatically with 'make frontend'."
-	@echo "   For standalone launch, use 'make storybook-local'."
-
-# Storybook起動（ローカル直接起動）
-.PHONY: storybook-local
-storybook-local:
-	cd frontend && bun run storybook
-
-# Storybookビルド
-.PHONY: build-storybook
-build-storybook:
-	cd frontend && bun run build-storybook
-
-# ===== Maestro E2E Testing Commands =====
-
-# E2Eテスト実行（全プラットフォーム）
-.PHONY: e2e
-e2e:
-	cd .maestro && maestro test .
-
-# E2Eテスト実行（Webのみ）
-.PHONY: e2e-web
-e2e-web:
-	cd .maestro && maestro test web/
-
-# E2Eテスト実行（Mobileのみ）
-.PHONY: e2e-mobile
-e2e-mobile:
-	cd .maestro && maestro test mobile/
-
-# ===== pgTAP DB Tests =====
-
-# RLS・DB 関数・制約のテスト（pgTAP + supabase test db）
-# テストファイルは supabase/tests/*.sql に配置
-# 詳細は .claude/skills/pgtap/SKILL.md を参照
-.PHONY: test-db
-test-db:
-	supabase test db --local
-
-# ===== Supabase Remote Deploy コマンド =====
-# 詳細は scripts/supabase/ を参照
-
-# Supabase 一括デプロイ（リモート環境用）
-.PHONY: deploy-supabase
-deploy-supabase:
-	@./scripts/supabase/deploy.sh
-
-# リモートプロジェクトへのリンク
-.PHONY: supabase-link
-supabase-link:
-	@./scripts/supabase/link.sh
-
-# Config Push（Auth, API設定など）
-.PHONY: deploy-config
-deploy-config:
-	@./scripts/supabase/deploy-config.sh
-
-# Edge Functions 全デプロイ（既存の deploy-functions は個別デプロイ用に残す）
-.PHONY: deploy-functions-all
-deploy-functions-all:
-	@./scripts/supabase/deploy-functions.sh
-
-# Secrets 設定
-.PHONY: deploy-secrets
-deploy-secrets:
-	@./scripts/supabase/deploy-secrets.sh
-
-# Storage Buckets 同期
-.PHONY: deploy-buckets
-deploy-buckets:
-	@./scripts/supabase/deploy-buckets.sh

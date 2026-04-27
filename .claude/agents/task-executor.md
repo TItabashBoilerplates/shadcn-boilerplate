@@ -42,7 +42,7 @@ model: inherit
 
 - プロジェクトの `.claude/rules/` に従う
 - TDDワークフローを遵守（テスト→実装→リファクタ）
-- Makefileコマンドを使用（`make lint`, `make test` など）
+- devenv コマンドを使用（`lint`, `ci-check`, `devenv tasks run app:migrate-dev` など）。Makefile は deprecated
 - 1タスク1コミットを維持
 
 ## エラー処理
@@ -74,5 +74,5 @@ pending → in_progress → completed
 必ず以下のルールに従ってください：
 
 - `.claude/rules/tdd.md` - テスト駆動開発必須
-- `.claude/rules/commands.md` - Makefileコマンド使用必須
+- `.claude/rules/commands.md` - devenv コマンド使用必須（Makefile deprecated）
 - `.claude/rules/auto-generated.md` - 自動生成ファイル編集禁止

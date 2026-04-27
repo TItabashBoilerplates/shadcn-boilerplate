@@ -19,7 +19,7 @@ skills: fsd
 ### 1. Lint チェック
 
 ```bash
-make lint
+lint
 ```
 
 フロントエンド、バックエンド、Edge Functionsすべてをチェックします。
@@ -27,26 +27,29 @@ make lint
 ### 2. Format チェック
 
 ```bash
-make format
+format
 ```
 
-コードフォーマットの統一性を確認します。
+コードフォーマットの統一性を確認します（auto-fix を含む）。CI では `format-check`。
 
 ### 3. 型チェック
 
 ```bash
-make type-check
+type-check
 ```
 
 TypeScript/Pythonの型エラーを検出します。
 
-### 4. テスト
+### 4. CI gate（lint-ci + format-check + type-check）
 
 ```bash
-make test
+ci-check
 ```
 
-すべてのテストが通過することを確認します。
+すべての CI 相当チェックを通過することを確認します。
+
+> ※ Makefile は deprecated。`make X` は使わない。`make` を叩くと案内のみ出力する仕様。
+> ※ direnv 未活性のセッションでは `devenv shell -- lint` のように devenv shell 経由で呼ぶ。
 
 ### 5. アーキテクチャ検証
 

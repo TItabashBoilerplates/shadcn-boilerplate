@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ライブラリの API、設定ファイル形式、CLI 構文は**必ずファクトを調査**してから使用
 - 「たぶんこうだろう」「以前こうだった」という推測での実装は**絶対に行わない**
 - **モジュール・パッケージは必ず最新バージョンを調査し、最新のAPIを使用すること**
-- **ビルド・テスト・リント等は必ず Makefile のコマンドを使用すること**（詳細は `.claude/rules/commands.md`）
+- **ビルド・テスト・リント等は必ず devenv のコマンド（scripts または `devenv tasks run`）を使用すること**（詳細は `.claude/rules/commands.md`）
 - 詳細は `.claude/rules/research.md` を参照
 
 ## Memory Structure
@@ -101,22 +101,33 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 
 **MANDATORY**: フロントエンド・バックエンドのデバッグは **devenv 2.0 の native process manager の TUI** を主インターフェースとして使用する。`devenv up` を対話端末で実行すると TUI が自動起動し、プロセス一覧・ログ閲覧・再起動がキーボード操作で可能。詳細は `.claude/skills/debugging/SKILL.md` を参照。
 
-**Supabase は devenv 管理対象外**。Docker 起動・停止は Supabase CLI で独立管理する（`make supabase-start` / `make supabase-stop`）。devenv が管理するのは backend / storybook のみ。`make run` は Supabase 起動 → `devenv up` の順で実行する。
+**Supabase は devenv 管理対象外**。Docker 起動・停止は Supabase CLI で独立管理する（`supabase-start` / `supabase-stop` script、または `devenv tasks run supabase:start` / `supabase:stop`）。devenv が管理するのは backend / storybook のみ。`devenv up` は `supabase:start` task を `before` 経由で自動実行するため、Supabase → backend の順に起動する。
+
+`devenv shell` 進入時 (direnv 経由含む) に `setup:install-*` task が lockfile 変更を検知して `bun install` / `uv sync` を自動同期する (`--frozen-lockfile` / `--frozen` 使用)。
 
 | コマンド | 用途 |
 |---------|------|
-| `make supabase-start` | Supabase ローカル起動（Docker） + Storage Buckets シード |
-| `make supabase-stop` | Supabase ローカル停止 |
-| `make run` | Supabase 起動 → `devenv up`（backend + storybook、TUI 付き） |
-| `devenv up` | backend + storybook をフォアグラウンド起動。対話端末では TUI が自動起動（`--no-tui` で無効化可） |
+| `supabase-start` (script) | Supabase ローカル起動（Docker） + Storage Buckets シード |
+| `supabase-stop` (script) | Supabase ローカル停止 |
+| `devenv up` | **軽量セット**: Supabase + backend + storybook を起動（TUI 付き） |
+| `devenv up web` | web アプリ単独起動（同様に `devenv up backend storybook web` のような任意組み合わせも可） |
+| `dev-web` (script) | 軽量セット + Next.js (web) 一括起動 |
+| `dev-mobile` (script) | 軽量セット + Expo Metro (mobile, non-interactive) |
+| `dev-all` (script) | 軽量セット + 全フロントエンドアプリ一括起動 |
 | `devenv up -d` | バックグラウンド（detached）起動。TUI なし |
 | `devenv processes down` | detached で動いているプロセスの停止 |
 | `devenv processes wait` | 全プロセスが ready になるまで待機（CI で使用） |
-| `make stop` | devenv プロセス + Supabase の両方を停止 |
+| `stop` (script) | devenv プロセス + Supabase の両方を停止 |
+| `frontend` (script) | モノレポ全体 (`turbo dev` = web + mobile 並列、devenv 外、重い) |
+| `mobile` / `mobile-ios` / `mobile-android` / `mobile-web` (script) | Expo 対話的 TUI (devenv 外) |
 
 TUI が主なので、ログ閲覧・個別プロセス再起動・状態確認は TUI 内のキーバインドで操作する（`devenv up` を実行するだけで使える）。
 
-web (Next.js) は `make frontend`、mobile (Expo) は `make mobile*` で起動する（devenv 外・モノレポのスコープ分割）。
+`frontend/apps/<name>` 配下のアプリは **opt-in process** (`start.enable = false`) なので、`devenv up` 単体では起動しない。明示指定または `dev-<name>` script を使う。新規アプリ追加時は `devenv.nix` の `frontendApps` attrset に 1 行追加するだけで、process / `dev-<name>` script / `dev-all` がすべて自動連動する。
+
+> Profile: **local が既定**（base enterShell で env がロードされる）なので `-P local` は不要。`dev` / `staging` / `production` profile は `devenv up -P dev` / `devenv tasks run -P production deploy:functions` のように `-P` 指定で env を上書きする。env ファイル (`env/<service>/.env.<profile>`) は未配置でも profile アクティベーションは成功する（後置き OK）。
+
+> Makefile は **deprecated**。すべて devenv のコマンドへ移行済み。`make X` を叩くと案内メッセージのみ出力する。
 
 ### Package Management
 
@@ -134,26 +145,44 @@ web (Next.js) は `make frontend`、mobile (Expo) は `make mobile*` で起動�
 
 ### Development Commands
 
+すべて devenv shell (direnv 経由) で PATH 上に存在する **scripts** か、`devenv tasks run <name>` で起動する **tasks**。`make X` は使わない。
+
 ```bash
 # Setup
-make init                    # Full project initialization
+# `devenv shell` 進入 (direnv 経由含む) で setup:* タスクが自動実行:
+#   - setup:secrets         → env/.env.secrets を雛形からコピー (無ければ)
+#   - setup:install-frontend → bun install (frontend) ※ lockfile 変更検知時のみ
+#   - setup:install-drizzle  → bun install (drizzle)
+#   - setup:install-backend  → uv sync (backend-py/app)
+# 明示的なブートストラップタスクは不要。
 
 # Services
-make supabase-start          # Start Supabase (Docker) only
-make supabase-stop           # Stop Supabase (Docker) only
-make run                     # Start Supabase, then backend + Storybook (devenv TUI)
-make frontend                # Start Next.js dev server
-make stop                    # Stop devenv processes + Supabase
+supabase-start                # Supabase (Docker) のみ起動
+supabase-stop                 # Supabase (Docker) のみ停止
+devenv up                     # 軽量セット: Supabase + backend + Storybook
+dev-web                       # 軽量セット + Next.js (web)
+dev-mobile                    # 軽量セット + Expo Metro (mobile, non-interactive)
+dev-all                       # 軽量セット + 全 frontendApps
+devenv up backend web         # 任意組み合わせ
+mobile-ios / mobile-android / mobile-web   # Expo 対話的 TUI (devenv 外、別ターミナル)
+stop                          # devenv プロセス + Supabase をすべて停止
 
 # Quality
-make lint                    # Lint all
-make format                  # Format all
-make type-check              # Type check all
-make ci-check                # CI checks (lint + format + type)
+lint                         # 全プロジェクトの lint (auto-fix)
+format                       # 全プロジェクトの format (auto-fix)
+format-check                 # format のみチェック (CI 用)
+type-check                   # 全プロジェクトの型チェック
+ci-check                     # CI gate (lint + format-check + type-check)
+
+# 個別サブプロジェクト
+lint-frontend / lint-drizzle / lint-backend-py / lint-functions / lint-fsd
+format-frontend / format-drizzle / format-backend-py / format-functions
+type-check-frontend / type-check-mobile / type-check-backend-py / check-functions
 
 # Database (user approval required)
-make migrate-dev             # Generate + apply migration
-make build-model             # Generate types only
+devenv tasks run app:migrate-dev   # Generate + apply migration + type 生成（フルフロー）
+devenv tasks run db:migrate-dev    # マイグレーション生成 + 適用のみ
+devenv tasks run model:build       # 型のみ再生成
 ```
 
 ### Environment Configuration

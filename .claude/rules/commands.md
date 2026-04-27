@@ -1,26 +1,59 @@
 # Development Command Policy
 
-**CRITICAL / NON-NEGOTIABLE**: Always use Makefile commands for development tasks. Direct execution of tools is **strictly prohibited**.
+**CRITICAL / NON-NEGOTIABLE**: Always use **devenv** commands (scripts on PATH or `devenv tasks run <name>`) for development. Direct execution of underlying tools (bun/uv/biome/ruff/tsc/deno/supabase) is **strictly prohibited**.
 
-**特に品質チェック（lint, format, type-check, test, build）は例外なく `make` コマンドを使用すること。**
+**Makefile は deprecated**。`make X` は使わない。誤って叩いた場合は案内メッセージのみが出る。
 
-## Required Makefile Commands
+**特に品質チェック（lint, format, type-check, test, build, ci-check）は例外なく devenv のコマンドを使うこと。**
 
-**ALWAYS use `make` commands** for the following operations:
+## devenv コマンドの種類
 
-| Operation | Commands |
-|-----------|----------|
-| **Linting** | `make lint`, `make lint-frontend`, `make lint-backend-py`, `make lint-functions`, `make lint-drizzle` |
-| **Formatting** | `make format`, `make format-frontend`, `make format-backend-py`, `make format-functions`, `make format-drizzle` |
-| **Type Checking** | `make type-check`, `make type-check-frontend`, `make type-check-backend-py` |
-| **Building** | `make build`, `make build-frontend`, `make build-backend-py` |
-| **Testing** | `make test`, `make test-frontend`, `make test-backend-py` |
-| **CI Checks** | `make ci-check` |
-| **Services** | `make run`, `make frontend`, `make stop` |
+| 種類 | 使い方 | 例 |
+|---|---|---|
+| **Scripts** (PATH 直結) | コマンド名を直接打つ | `lint`, `format`, `type-check`, `ci-check`, `dev-web`, `dev-mobile`, `dev-all`, `frontend`, `mobile-ios`, `lint-frontend`, `format-backend-py`, `supabase-start`, `stop`, `drizzle-studio` |
+| **Tasks** (依存グラフ・pipeline) | `devenv tasks run <namespace:name>` | `devenv tasks run db:migrate-dev`, `devenv tasks run model:build`, `devenv tasks run deploy:functions` |
+| **Processes** (常駐サービス) | `devenv up [PROCESSES...]` | `devenv up` (軽量セット), `devenv up web`, `devenv up backend web` |
 
-## Prohibited Direct Commands (品質チェック)
+scripts は devenv shell（direnv 自動アクティベート含む）下で PATH 上に存在する。direnv 未活性のセッションでは `devenv shell -- <command>` 経由で呼び出す。
 
-以下のような直接実行は**絶対に禁止**。必ず対応する `make` コマンドを使うこと：
+## Required Commands（品質チェック）
+
+**ALWAYS use** these scripts for the following operations:
+
+| Operation | Command |
+|-----------|---------|
+| **Linting (all)** | `lint` |
+| **Linting (per project)** | `lint-frontend`, `lint-drizzle`, `lint-backend-py`, `lint-functions`, `lint-fsd` |
+| **Linting (CI mode)** | `lint-frontend-ci`, `lint-drizzle-ci`, `lint-backend-py-ci`（通常は `ci-check` から呼ばれる） |
+| **Formatting (all)** | `format` |
+| **Formatting (per project)** | `format-frontend`, `format-drizzle`, `format-backend-py`, `format-functions` |
+| **Format check (CI)** | `format-check`（個別: `format-frontend-check`, `format-drizzle-check`, `format-backend-py-check`, `format-functions-check`） |
+| **Type check (all)** | `type-check` |
+| **Type check (per project)** | `type-check-frontend`, `type-check-mobile`, `type-check-backend-py`, `check-functions` |
+| **Build** | `build-frontend`, `build-storybook`, `build-mobile-ios`, `build-mobile-android` |
+| **Tests** | `test-db` (pgTAP), `e2e`, `e2e-web`, `e2e-mobile` |
+| **CI Check (full gate)** | `ci-check` |
+| **Services (軽量)** | `devenv up` (= Supabase + backend + storybook), `stop` (停止), `supabase-start` / `supabase-stop` |
+| **Services (frontend apps)** | `dev-web`, `dev-mobile`, `dev-all`, または `devenv up <names...>` |
+| **Services (devenv 外)** | `frontend` (turbo dev), `mobile-ios`, `mobile-android`, `mobile-web` (Expo TUI) |
+
+## Required Tasks（pipeline / 依存付き）
+
+| Operation | Command |
+|---|---|
+| **DB migration (full pipeline)** | `devenv tasks run app:migrate-dev` |
+| **DB migration (生成 + 適用のみ)** | `devenv tasks run db:migrate-dev` |
+| **DB migration (deploy)** | `devenv tasks run db:migrate-deploy` |
+| **Type/Model 生成** | `devenv tasks run model:build` (= model:frontend + model:functions) |
+| **Seed (DB + Storage)** | `devenv tasks run seed:all` |
+| **Deploy Edge Functions** | `devenv tasks run deploy:functions` |
+| **Deploy Supabase 全体** | `devenv tasks run deploy:supabase` |
+| **Polar.sh プラン同期** | `devenv tasks run polar:sync-dry` / `polar:sync` |
+| **初回ブートストラップ** | 不要（`devenv shell` / `direnv reload` で `setup:*` が自動セットアップ） |
+
+## Prohibited Direct Commands（品質チェック）
+
+以下のような直接実行は**絶対に禁止**。必ず devenv の scripts / tasks を使うこと：
 
 ```bash
 # ❌ 絶対に直接実行しない
@@ -35,20 +68,24 @@ cd backend-py && uv run pytest
 cd drizzle && bun run biome check
 npx tsc --noEmit
 
-# ✅ 必ず Makefile を使用
-make lint                    # 全体 lint
-make lint-frontend           # Frontend lint
-make lint-backend-py         # Backend lint
-make format                  # 全体 format
-make format-frontend         # Frontend format
-make format-backend-py       # Backend format
-make type-check              # 全体型チェック
-make type-check-frontend     # Frontend 型チェック
-make type-check-backend-py   # Backend 型チェック
-make test                    # 全体テスト
-make test-frontend           # Frontend テスト
-make test-backend-py         # Backend テスト
-make ci-check                # CI チェック (lint + format + type)
+# ❌ Makefile も使わない（deprecated）
+make lint
+make ci-check
+make migrate-dev
+
+# ✅ 必ず devenv scripts または tasks を使用
+lint                              # 全体 lint
+lint-frontend                     # Frontend lint
+lint-backend-py                   # Backend lint
+format                            # 全体 format
+format-frontend                   # Frontend format
+format-backend-py                 # Backend format
+type-check                        # 全体型チェック
+type-check-frontend               # Frontend 型チェック
+type-check-backend-py             # Backend 型チェック
+ci-check                          # CI チェック (lint + format + type)
+devenv tasks run app:migrate-dev  # マイグレーション (フルフロー)
+devenv tasks run model:build      # モデル/型再生成
 ```
 
 ## Exceptions
@@ -67,5 +104,6 @@ This command usage policy is **CRITICAL and NON-NEGOTIABLE**.
 - 環境依存の差異による不整合
 - CI/CD パイプラインとの乖離
 - 意図しない副作用（設定差異によるフォーマット崩れ等）
+- profile (env) 設定が読み込まれず、本番設定で local 開発するリスク
 
 **違反は一切許容しない。**
