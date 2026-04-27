@@ -29,11 +29,11 @@
       "persistent": true
     },
     "lint": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^lint"],
       "inputs": ["$TURBO_DEFAULT$", "eslint.config.*"]
     },
     "type-check": {
-      "dependsOn": ["^build", "generate"],
+      "dependsOn": ["^type-check", "generate"],
       "outputs": []
     },
     "format": {
