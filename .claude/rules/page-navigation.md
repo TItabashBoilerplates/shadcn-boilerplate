@@ -97,7 +97,7 @@ Suspense を導入する以上、境界内のエラーを回復する導線が�
 - 素の `<a href>` は遷移に使わない（プリフェッチが効かず SPA 遷移にならない）
 - プリフェッチはデフォルト有効。明示的に無効化しない
 
-## ルール 6: スケルトンは `packages/ui/web/components/skeleton` を使う
+## ルール 6: スケルトンは `packages/ui/components/skeleton` を使う
 
 独自の `animate-pulse` div を散らかさず、共有の `Skeleton` コンポーネントを使用する。スケルトンの寸法は実コンテンツの寸法に合わせる（レイアウトシフトを抑制）。
 

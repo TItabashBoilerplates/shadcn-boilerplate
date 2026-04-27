@@ -15,9 +15,9 @@
 
 以下は **Storybook 対象**（単体テスト不要）：
 
-- `packages/ui/web/components/` - shadcn/ui コンポーネント
-- `packages/ui/web/magicui/` - MagicUI コンポーネント
-- `packages/ui/mobile/components/` - gluestack-ui コンポーネント
+- `packages/ui/components/` - shadcn/ui コンポーネント
+- `packages/ui/magicui/` - MagicUI コンポーネント
+- `packages/native-ui/components/` - gluestack-ui コンポーネント
 - `apps/web/src/shared/ui/` - 共有 UI
 - `apps/web/src/entities/*/ui/` - エンティティ UI
 - `apps/web/src/features/*/ui/` - フィーチャー UI

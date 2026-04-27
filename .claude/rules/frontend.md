@@ -53,14 +53,14 @@ frontend/
 
 | 対象 | 配置場所 | 例 |
 |------|---------|-----|
-| **Web UI コンポーネント** | `packages/ui/web/` | Button, Card, Input (shadcn/ui) |
-| **Mobile UI コンポーネント** | `packages/ui/mobile/` | Button, Card (gluestack-ui) |
+| **Web UI コンポーネント** | `packages/ui/` | Button, Card, Input (shadcn/ui) |
+| **Mobile UI コンポーネント** | `packages/native-ui/` | Button, Card (gluestack-ui) |
 | **デザイントークン** | `packages/tokens/` | colors, radius |
 | **Supabase クライアント** | `packages/client-supabase/` | createClient, types |
 | **TanStack Query 設定** | `packages/query/` | QueryClient, hooks |
 | **TailwindCSS 設定** | `packages/tailwind-config/` | theme, plugins |
 | **型定義** | `packages/*/types/` | 共通インターフェース |
-| **ユーティリティ** | `packages/ui/web/lib/` or app の `shared/lib/` | cn, formatDate |
+| **ユーティリティ** | `packages/ui/lib/` or app の `shared/lib/` | cn, formatDate |
 
 ### 禁止事項
 
@@ -70,10 +70,10 @@ frontend/
 // apps/mobile/components/ui/button.tsx (同じロジック)
 
 // ✅ Good: packages で共通化（プラットフォーム別）
-// packages/ui/web/components/button.tsx (Web)
-// packages/ui/mobile/components/button/ (Mobile)
-import { Button } from '@workspace/ui/web/components/button' // Web
-import { Button } from '@workspace/ui/mobile/components/button' // Mobile
+// packages/ui/components/button.tsx (Web)
+// packages/native-ui/components/button/ (Mobile)
+import { Button } from '@workspace/ui/components/button' // Web
+import { Button } from '@workspace/native-ui/components/button' // Mobile
 ```
 
 ```typescript
@@ -122,8 +122,8 @@ import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
 // 2. Workspace packages
-import { Button } from '@workspace/ui/web/components/button' // Web
-import { Button } from '@workspace/ui/mobile/components/button' // Mobile
+import { Button } from '@workspace/ui/components/button' // Web
+import { Button } from '@workspace/native-ui/components/button' // Mobile
 import { colors } from '@workspace/tokens'
 import { createClient } from '@workspace/client-supabase/client'
 

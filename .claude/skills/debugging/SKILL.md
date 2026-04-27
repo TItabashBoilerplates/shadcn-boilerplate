@@ -368,8 +368,8 @@ e2e-mobile     # Maestro E2E（Mobile）
    - 対話端末: TUI で `storybook` を選択
    - 非対話: `tail -100 /tmp/devenv-*/processes/logs/storybook.stdout.log`（webpack のビルドエラーは stdout 側に出ることが多い）と `storybook.stderr.log` の両方
 2. よくある原因:
-   - `.storybook/preview.tsx` の import 解決失敗（`@workspace/ui/web/...` 等のワークスペースエイリアス）
-   - `packages/ui/web/package.json` の `exports` / `files` 不整合
+   - `.storybook/preview.tsx` の import 解決失敗（`@workspace/ui/...` 等のワークスペースエイリアス）
+   - `packages/ui/package.json` の `exports` / `files` 不整合
    - story glob にマッチするファイルがない（致命ではないが警告として出る）
 3. 修正後は TUI のキーバインドで再起動、または `devenv up` を一度止めて再起動
 

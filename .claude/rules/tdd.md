@@ -73,9 +73,9 @@ TDD is NOT required for:
 
 | 対象 | 場所 |
 |------|------|
-| shadcn/ui | `packages/ui/web/components/` |
-| MagicUI | `packages/ui/web/magicui/` |
-| gluestack-ui | `packages/ui/mobile/components/` |
+| shadcn/ui | `packages/ui/components/` |
+| MagicUI | `packages/ui/magicui/` |
+| gluestack-ui | `packages/native-ui/components/` |
 | Shared UI | `apps/web/src/shared/ui/` |
 | Entity UI | `apps/web/src/entities/*/ui/` |
 | Feature UI | `apps/web/src/features/*/ui/` |

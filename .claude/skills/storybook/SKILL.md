@@ -36,8 +36,8 @@ make storybook-local
 // frontend/.storybook/main.ts
 stories: [
   // Packages
-  "../packages/ui/web/**/*.stories.@(ts|tsx)",
-  "../packages/ui/mobile/**/*.stories.@(ts|tsx)",
+  "../packages/ui/**/*.stories.@(ts|tsx)",
+  "../packages/native-ui/**/*.stories.@(ts|tsx)",
   // Apps - FSD レイヤー
   "../apps/web/src/entities/**/*.stories.@(ts|tsx)",
   "../apps/web/src/features/**/*.stories.@(ts|tsx)",
@@ -52,8 +52,8 @@ stories: [
 
 | 対象               | title パターン                          | 例                                   |
 | ------------------ | --------------------------------------- | ------------------------------------ |
-| packages/ui/web    | `packages/ui/web/{Component}`           | `packages/ui/web/Button`             |
-| packages/ui/mobile | `packages/ui/mobile/{Component}`        | `packages/ui/mobile/Button`          |
+| packages/ui    | `packages/ui/{Component}`           | `packages/ui/Button`             |
+| packages/native-ui | `packages/native-ui/{Component}`        | `packages/native-ui/Button`          |
 | apps/web entities  | `apps/web/entities/{slice}/{Component}` | `apps/web/entities/quest/QuestCard`  |
 | apps/web features  | `apps/web/features/{slice}/{Component}` | `apps/web/features/vote/VoteModal`   |
 | apps/web widgets   | `apps/web/widgets/{slice}/{Component}`  | `apps/web/widgets/app-shell/Sidebar` |
@@ -272,8 +272,8 @@ resolve: {
     // React Native Web
     { find: 'react-native', replacement: 'react-native-web' },
     // Workspace - 具体的なパスを先に
-    { find: '@workspace/ui/web', replacement: join(__dirname, '../packages/ui/web') },
-    { find: '@workspace/ui/mobile', replacement: join(__dirname, '../packages/ui/mobile') },
+    { find: '@workspace/ui', replacement: join(__dirname, '../packages/ui') },
+    { find: '@workspace/native-ui', replacement: join(__dirname, '../packages/native-ui') },
     { find: '@workspace/tokens', replacement: join(__dirname, '../packages/tokens/src') },
     // App aliases - 具体的なパスを先に
     { find: '@/shared/lib/i18n', replacement: join(__dirname, './mocks/shared-lib-i18n.tsx') },
@@ -379,7 +379,7 @@ import { Trophy, Flag, TrendingUp } from "lucide-react";
 <span className="material-symbols-outlined">sports</span>;
 ```
 
-アイコンマッピングは `packages/ui/web/components/icon/icon.tsx` で管理。
+アイコンマッピングは `packages/ui/components/icon/icon.tsx` で管理。
 
 ## HMR（Hot Module Replacement）
 
@@ -661,9 +661,9 @@ resolve: {
 
 **ルール**:
 
-1. **サブパスを持つモジュール**（`next-intl/routing`, `@workspace/ui/web` 等）は配列形式で定義
+1. **サブパスを持つモジュール**（`next-intl/routing`, `@workspace/ui` 等）は配列形式で定義
 2. **具体的なパス → 一般的なパス**の順に並べる
-3. 同様のパターン: `@/shared/lib/i18n` → `@`, `@workspace/ui/web` → `@workspace`
+3. 同様のパターン: `@/shared/lib/i18n` → `@`, `@workspace/ui` → `@workspace`
 
 ---
 
@@ -687,8 +687,8 @@ async viteFinal(config) {
     resolve: {
       alias: {
         // Workspace packages
-        '@workspace/ui/web': join(__dirname, '../packages/ui/web'),
-        '@workspace/ui/mobile': join(__dirname, '../packages/ui/mobile'),
+        '@workspace/ui': join(__dirname, '../packages/ui'),
+        '@workspace/native-ui': join(__dirname, '../packages/native-ui'),
         '@workspace/tokens': join(__dirname, '../packages/tokens/src'),
         '@workspace/query': join(__dirname, '../packages/query'),
         '@workspace/client-supabase/client': join(__dirname, './mocks/workspace-client-supabase.ts'),
@@ -750,7 +750,7 @@ const preview: Preview = {
 
 **原因**: Google Fonts が読み込まれていないか、Material Symbols を使用している
 
-**解決**: Lucide React に移行。`packages/ui/web/components/icon/icon.tsx` を確認。
+**解決**: Lucide React に移行。`packages/ui/components/icon/icon.tsx` を確認。
 
 ---
 

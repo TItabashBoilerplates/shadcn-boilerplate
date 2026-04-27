@@ -78,7 +78,7 @@ frontend/apps/web/app/[locale]/
   ルール:
   - UI コンポーネント -> Storybook 必須、単体テスト不要
   - ビジネスロジック（model/api） -> 単体テスト必須 (TDD)
-  - 共通 UI -> packages/ui/web/ または shared/ui/
+  - 共通 UI -> packages/ui/ または shared/ui/
   - UI ライブラリ: shadcn/ui (Radix UI + TailwindCSS 4)
 -->
 
@@ -92,7 +92,7 @@ graph TD
     Feature2["{FeatureName}Actions<br/>(features/{feature})"]
     Entity1["{EntityName}Card<br/>(entities/{entity})"]
     Entity2["{EntityName}List<br/>(entities/{entity})"]
-    Shared["Button, Input, Card<br/>(packages/ui/web)"]
+    Shared["Button, Input, Card<br/>(packages/ui)"]
 
     View --> Widget1
     Widget1 --> Feature1

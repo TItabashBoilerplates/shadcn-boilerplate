@@ -20,7 +20,7 @@ React Native (Expo) アプリケーションにおける gluestack-ui コンポ�
 
 ```
 frontend/
-├── packages/ui/mobile/              # gluestack-ui コンポーネント（共有）
+├── packages/native-ui/              # gluestack-ui コンポーネント（共有）
 │   ├── components/
 │   │   ├── button/
 │   │   │   └── index.tsx
@@ -306,24 +306,24 @@ export const supabase = createClient(
 cd frontend
 bun run ui:add:mobile <component-name>
 
-# または packages/ui/mobile から直接
-cd packages/ui/mobile
+# または packages/native-ui から直接
+cd packages/native-ui
 bunx gluestack-ui@latest add <component-name> --use-bun
 ```
 
-コンポーネントは `packages/ui/mobile/components/` にインストールされます。
+コンポーネントは `packages/native-ui/components/` にインストールされます。
 
 ### 手動で追加する場合
 
 1. **パッケージインストール**
    ```bash
-   cd frontend/packages/ui/mobile
+   cd frontend/packages/native-ui
    bun add @gluestack-ui/<component-name>
    ```
 
 2. **コンポーネントファイル作成**
    ```
-   packages/ui/mobile/components/<component-name>/index.tsx
+   packages/native-ui/components/<component-name>/index.tsx
    ```
 
 3. **実装パターンに従う**
@@ -341,8 +341,8 @@ bunx gluestack-ui@latest add <component-name> --use-bun
 
 ```tsx
 // workspace パッケージから（推奨）
-import { Button, ButtonText } from '@workspace/ui/mobile/components/button'
-import { GluestackUIProvider } from '@workspace/ui/mobile/components/gluestack-ui-provider'
+import { Button, ButtonText } from '@workspace/native-ui/components/button'
+import { GluestackUIProvider } from '@workspace/native-ui/components/gluestack-ui-provider'
 
 // ユーティリティ
 import { tva } from '@gluestack-ui/nativewind-utils/tva'

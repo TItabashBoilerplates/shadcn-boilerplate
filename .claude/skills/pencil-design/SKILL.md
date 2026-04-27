@@ -447,9 +447,9 @@ Design-First の場合、Pencil 上で定義したトークンを `globals.css` 
 ```
 | デザイン要素 | shadcn/ui コンポーネント | インポートパス |
 |-------------|----------------------|--------------|
-| ui/button-primary | Button (variant="default") | @workspace/ui/web |
-| ui/input | Input | @workspace/ui/web |
-| entity/user-card | Card + CardHeader + CardContent | @workspace/ui/web |
+| ui/button-primary | Button (variant="default") | @workspace/ui |
+| ui/input | Input | @workspace/ui |
+| entity/user-card | Card + CardHeader + CardContent | @workspace/ui |
 ```
 
 #### 2. FSD 配置ガイド
@@ -462,7 +462,7 @@ Design-First の場合、Pencil 上で定義したトークンを `globals.css` 
 | widget/header | widgets/header/ui/ | src/widgets/header/ui/ |
 | feature/auth-form | features/auth/ui/ | src/features/auth/ui/ |
 | entity/user-card | entities/user/ui/ | src/entities/user/ui/ |
-| ui/button-primary | shared/ui/ | packages/ui/web/components/ |
+| ui/button-primary | shared/ui/ | packages/ui/components/ |
 ```
 
 #### 3. i18n キー構造

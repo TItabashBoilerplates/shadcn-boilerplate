@@ -143,7 +143,7 @@ describe('use{Feature}Form', () => {
 
 <!--
   Mobile (React Native / gluestack-ui) コンポーネントも Storybook の対象。
-  Storybook 設定に packages/ui/mobile/**/*.stories が含まれている。
+  Storybook 設定に packages/native-ui/**/*.stories が含まれている。
 
   参照: .claude/skills/storybook/SKILL.md
 
@@ -152,13 +152,13 @@ describe('use{Feature}Form', () => {
     Mobile コンポーネントはスタイルが適用されない状態で表示される。
   - 構造の確認のみ可能。NativeWind v5 安定版リリースを待つ。
 
-  title パターン: packages/ui/mobile/{Component}
-  配置先: packages/ui/mobile/components/{Component}.stories.tsx
+  title パターン: packages/native-ui/{Component}
+  配置先: packages/native-ui/components/{Component}.stories.tsx
 -->
 
 | コンポーネント | ストーリーファイル | 備考 |
 |--------------|-----------------|------|
-| {MobileComponent} | packages/ui/mobile/components/{MobileComponent}.stories.tsx | スタイル未適用（NativeWind v5 制限） |
+| {MobileComponent} | packages/native-ui/components/{MobileComponent}.stories.tsx | スタイル未適用（NativeWind v5 制限） |
 
 ### Interaction テスト
 
