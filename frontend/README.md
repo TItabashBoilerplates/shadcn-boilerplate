@@ -98,8 +98,8 @@ This project uses a **platform-specific UI approach**:
 
 | Platform | UI Library | Package |
 |----------|------------|---------|
-| **Web** | shadcn/ui + MagicUI | `@workspace/ui/web` |
-| **Mobile** | gluestack-ui + NativeWind | `@workspace/ui/mobile` |
+| **Web** | shadcn/ui + MagicUI | `@workspace/ui` |
+| **Mobile** | gluestack-ui + NativeWind | `@workspace/native-ui` |
 | **Shared** | Design Tokens | `@workspace/tokens` |
 
 ### Web: shadcn/ui Components
@@ -113,10 +113,10 @@ This project uses a **platform-specific UI approach**:
 bun run ui:add:web button card input dialog
 
 # Or directly
-cd packages/ui/web && bunx shadcn@canary add button
+cd packages/ui && bunx shadcn@canary add button
 ```
 
-Components are installed to `packages/ui/web/components/`.
+Components are installed to `packages/ui/components/`.
 
 #### Available Components
 
@@ -136,10 +136,10 @@ Components are installed to `packages/ui/web/components/`.
 bun run ui:add:mobile button card input
 
 # Or directly
-cd packages/ui/mobile && bunx gluestack-ui@latest add button --use-bun
+cd packages/native-ui && bunx gluestack-ui@latest add button --use-bun
 ```
 
-Components are installed to `packages/ui/mobile/components/`.
+Components are installed to `packages/native-ui/components/`.
 
 ### Design Tokens
 
@@ -346,8 +346,8 @@ export function DateDisplay({ utcDate }: DateDisplayProps) {
 - **Strict mode**: Enabled
 - **Path aliases**:
   - `@/*` → `apps/web/src/*` or `apps/mobile/*`
-  - `@workspace/ui/web` → `packages/ui/web`
-  - `@workspace/ui/mobile` → `packages/ui/mobile`
+  - `@workspace/ui` → `packages/ui`
+  - `@workspace/native-ui` → `packages/native-ui`
   - `@workspace/tokens` → `packages/tokens`
 
 ## Testing
@@ -371,8 +371,8 @@ Packages can reference each other using `@workspace/` prefix:
 ```json
 {
   "dependencies": {
-    "@workspace/ui/web": "workspace:*",
-    "@workspace/ui/mobile": "workspace:*",
+    "@workspace/ui": "workspace:*",
+    "@workspace/native-ui": "workspace:*",
     "@workspace/tokens": "workspace:*",
     "@workspace/auth": "workspace:*",
     "@workspace/types": "workspace:*"
