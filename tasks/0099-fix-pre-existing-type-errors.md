@@ -1,11 +1,12 @@
 # Pre-existing 型エラーの解消（schema.ts 再生成 + vitest.config.ts 型整合）
 
 ## メタ情報
-- **状態**: pending
+- **状態**: completed
 - **優先度**: medium
 - **作成日**: 2026-04-28
 - **更新日**: 2026-04-28
 - **担当エージェント**: task-executor
+- **完了コミット**: `e48ca42 fix(frontend): unblock type-check (vitest dedupe + native-ui paths)`
 
 ## 概要
 
