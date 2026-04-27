@@ -1,20 +1,16 @@
 {
   "files": [],
   "references": [
-    {
-      "path": "./apps/web"
-    },
-    {
-      "path": "./packages/ui"
-    },
-    {
-      "path": "./packages/ui/mobile"
-    },
-    {
-      "path": "./packages/types"
-    },
-    {
-      "path": "./packages/client/supabase"
-    }
+    { "path": "./apps/web" },
+    { "path": "./apps/mobile" },
+    { "path": "./packages/ui" },
+    { "path": "./packages/native-ui" },
+    { "path": "./packages/types" },
+    { "path": "./packages/tokens" },
+    { "path": "./packages/api-client" },
+    { "path": "./packages/onesignal" },
+    { "path": "./packages/polar" },
+    { "path": "./packages/app" },
+    { "path": "./packages/client/supabase" }
   ]
 }
