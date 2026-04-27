@@ -79,18 +79,46 @@ let
   };
 
   # 各アプリ定義から `dev-<name>` script spec を生成。
-  # 終了時の Supabase 停止は手動運用（`supabase-stop` / `stop` script）に統一する。
-  # devenv 2.0 native process manager は task の `after` も `process.manager.after` も
-  # 動かないため、auto-stop の中途半端な実装を持たない方針。
-  mkDevScript = name: _cfg: {
-    exec = ''exec devenv up backend storybook ${name}'';
-    description = "Start backend + storybook + ${name}";
-  };
+  #
+  # 設計: dev サーバー本体は **foreground で直接 exec** する（`nr dev` / `nr start` 等）。
+  # backend + storybook だけ devenv supervisor で detached 起動し、Next.js / Expo Metro の
+  # ような「開発者が一番見たいプロセス」は素のまま foreground に置いて
+  # 標準の dev server UX（カラフルなログ・hot reload・キーバインド）をそのまま活かす。
+  #
+  # frontendApps の各エントリの `exec` を process spec と dev script の両方で再利用するため、
+  # mobile の `exec nr start` のような上書きも自動で反映される。
+  #
+  # 終了時の Supabase / detached プロセスの停止は手動運用（`supabase-stop` / `stop` script）。
+  mkDevScript = name: cfg:
+    let
+      appExec = cfg.exec or ''
+        cd "$DEVENV_ROOT/frontend/apps/${name}"
+        exec nr dev
+      '';
+    in {
+      exec = ''
+        set -e
+        echo "🚀 Ensuring backend + storybook are running (detached)..."
+        devenv up -d backend storybook 2>/dev/null || true
+        echo "▶️  Starting ${name} dev server (foreground)..."
+        ${appExec}
+      '';
+      description = "Backend + storybook (detached) + ${name} dev server (foreground)";
+    };
 
-  # 全アプリを含む `dev-all` script の exec を組み立てる。
-  devAllExec = ''
-    exec devenv up backend storybook ${lib.concatStringsSep " " (lib.attrNames frontendApps)}
-  '';
+  # 全アプリを並列起動する `dev-all` は複数 dev server を 1 ターミナルで束ねる必要があるので
+  # devenv の supervisor を使い続ける。`start.enable = false` を CLI 引数だけでは上書きできない
+  # devenv 2.0 native の仕様回避として `--option` を併用する。
+  # 詳細: docs/_research/2026-04-28-devenv-process-start-enable.md
+  devAllExec =
+    let
+      appNames = lib.attrNames frontendApps;
+      overrides = lib.concatMapStringsSep " " (n:
+        ''--option "processes.${n}.start.enable:bool" true''
+      ) appNames;
+    in ''
+      exec devenv ${overrides} up backend storybook ${lib.concatStringsSep " " appNames}
+    '';
 in
 {
   # devenv 標準の dotenv 統合 (`dotenv.enable`) は使わない:
@@ -142,8 +170,13 @@ in
   #
   # 起動制御:
   #   - `start.enable = true` (default): `devenv up` で自動起動 (= backend / storybook)
-  #   - `start.enable = false`         : 明示指定が必要 (= frontendApps の各エントリ)
-  #     例: `devenv up web`, `devenv up backend storybook web`, `dev-web` script
+  #   - `start.enable = false`         : opt-in（= frontendApps の各エントリ）
+  #     devenv 2.0 native process manager は `devenv up <name>` の引数で渡しても
+  #     `start.enable = false` のプロセスは起動しない（NotStarted で登録するのみ）。
+  #     - `dev-<name>` script: process としては起動せず、detached の backend + storybook
+  #       だけ devenv に管理させて、dev server 本体は素の `nr dev` を foreground exec する。
+  #     - `dev-all` / 直接 `devenv up <name>`: `--option processes.<name>.start.enable:bool true`
+  #       で上書きする（mkDevScript / devAllExec を参照）。
   #
   # frontendApps から process 群が自動生成される（let-binding 参照）。
   # 新規アプリは `frontendApps` に 1 行追加するだけで `processes`/`scripts.dev-<name>`/
@@ -804,6 +837,14 @@ in
     "storybook-local" = { exec = ''cd "$DEVENV_ROOT/frontend" && exec bun run storybook''; description = "Storybook standalone (without devenv up)"; };
     "build-storybook" = { exec = ''cd "$DEVENV_ROOT/frontend" && bun run build-storybook''; description = "Build Storybook"; };
 
+    # ---------- Skill / dev tooling ----------
+    # uipro-cli: UI/UX Pro Max skill installer (https://www.npmjs.com/package/uipro-cli)
+    # bunx 経由で都度実行（bun のキャッシュを利用、グローバル node_modules を作らない）。
+    "uipro" = {
+      exec = ''cd "$DEVENV_ROOT" && exec bunx uipro-cli "$@"'';
+      description = "Run uipro-cli (UI/UX Pro Max skill installer) via bunx";
+    };
+
     # ---------- Status check ----------
     "check" = {
       exec = ''
@@ -839,20 +880,44 @@ in
     # ----- JS/TS/JSON: Biome (frontend + drizzle 共通) -----
     # ビルトインの types_or = [ "javascript" "jsx" "ts" "tsx" "json" ]
     # biome は ancestor lookup で biome.json を見つけるので frontend/ と drizzle/ 両方カバー
-    biome.enable = true;
+    #
+    # NOTE: --write を付けない（check モード）。理由:
+    #   - prek の patch 機構と biome --write の組み合わせで毎回「files were modified」
+    #     と報告されてループする現象が発生する（staged content と working tree が
+    #     一致していても biome が再書き込みするため）。
+    #   - auto-fix は scripts (`lint`, `format`) や IDE 連携で行う。
+    #     pre-commit の役割は「壊れたコードを通さないゲート」で十分。
+    biome = {
+      enable = true;
+      entry = lib.mkForce "${pkgs.biome}/bin/biome check";
+    };
 
     # ----- Python: Ruff (lint) -----
-    ruff.enable = true;
+    # backend-py 配下のみ対象。リポジトリ root 直下や .claude/skills 等にある
+    # Python ファイル（外部ツール同期由来）は backend-py の ruff 設定を意図しないため
+    # 対象から外す。プロジェクト単位の verify は `lint-backend-py` task で行う。
+    ruff = {
+      enable = true;
+      files = "^backend-py/.*\\.py$";
+    };
 
     # ----- Python: Ruff (format) -----
-    ruff-format.enable = true;
+    ruff-format = {
+      enable = true;
+      files = "^backend-py/.*\\.py$";
+    };
 
     # ----- Python: Mypy (type check) -----
     # 型エラーの早期検出を優先しコミット時にもフルチェック相当を回す。
     # ファイル単位の false positive (import 整合性が一時的に崩れた中間状態) は許容し、
     # 引っかかったら fix → re-commit で対応する。
     # プロジェクト単位の最終確認は `type-check:backend-py` task (devenv test 経由) で重ねて行う。
-    mypy.enable = true;
+    # tests/ は pytest で動的型チェック相当を行うため mypy 対象外（pyproject.toml の exclude
+    # は CLI 個別ファイル渡しでは効かないので、ここでも明示除外する）。
+    mypy = {
+      enable = true;
+      files = "^backend-py/app/src/.*\\.py$";
+    };
 
     # ----- Edge Functions: Deno format -----
     denofmt = {

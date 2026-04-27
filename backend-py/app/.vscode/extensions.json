@@ -1,3 +1,8 @@
 {
-  "recommendations": ["modular-mojotools.vscode-mojo", "charliermarsh.ruff", "ms-python.python", "ms-python.mypy-type-checker"]
+	"recommendations": [
+		"modular-mojotools.vscode-mojo",
+		"charliermarsh.ruff",
+		"ms-python.python",
+		"ms-python.mypy-type-checker"
+	]
 }

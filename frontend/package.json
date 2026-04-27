@@ -38,7 +38,7 @@
     "zustand": "^5.0.7"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.11",
+    "@biomejs/biome": "2.4.11",
     "@react-native/babel-preset": "^0.82.1",
     "@storybook/addon-docs": "^10.1.10",
     "@storybook/addon-react-native-web": "^0.0.29",

@@ -1,20 +1,12 @@
-import {
-  assertEquals,
-  assertExists,
-} from "https://deno.land/std@0.220.1/assert/mod.ts";
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  it,
-} from "https://deno.land/std@0.220.1/testing/bdd.ts";
+import { assertEquals, assertExists } from "@std/assert";
+import { afterEach, beforeEach, describe, it } from "@std/testing/bdd";
 import {
   assertSpyCalls,
   type Spy,
   spy,
   type Stub,
   stub,
-} from "https://deno.land/std@0.220.1/testing/mock.ts";
+} from "@std/testing/mock";
 
 // Logger をテスト
 describe("Edge Functions Logger", () => {

@@ -100,9 +100,7 @@ export function createOneSignalClient() {
 
       if (!response.ok) {
         const error: OneSignalApiError = await response.json();
-        throw new Error(
-          `OneSignal API error: ${JSON.stringify(error.errors)}`,
-        );
+        throw new Error(`OneSignal API error: ${JSON.stringify(error.errors)}`);
       }
 
       return response.json();
@@ -212,9 +210,7 @@ export function createOneSignalClient() {
      * @param options - 通知オプション
      * @returns 通知レスポンス
      */
-    sendToAll(
-      options: SendNotificationOptions,
-    ): Promise<NotificationResponse> {
+    sendToAll(options: SendNotificationOptions): Promise<NotificationResponse> {
       return this.sendToSegment(["Subscribed Users"], options);
     },
   };

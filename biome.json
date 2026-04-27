@@ -1,3 +1,26 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.4.13/schema.json"
+	"$schema": "https://biomejs.dev/schemas/2.4.11/schema.json",
+	"files": {
+		"includes": [
+			"**",
+			"!**/node_modules",
+			"!**/.next",
+			"!**/.turbo",
+			"!**/dist",
+			"!**/build",
+			"!**/.cache",
+			"!.devenv",
+			"!**/skills",
+			"!.agent",
+			"!.agents",
+			"!.claude",
+			"!.codex",
+			"!.cursor",
+			"!.gemini",
+			"!.github/skills",
+			"!.shared",
+			"!.vscode",
+			"!supabase/functions"
+		]
+	}
 }

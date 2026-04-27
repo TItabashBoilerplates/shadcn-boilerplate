@@ -4,12 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **CRITICAL - 推測実装の完全禁止**:
 
+- **タスク開始前に、必ず利用可能な Skill を確認し、該当するものがあれば最初に `Skill` ツールで起動すること**（詳細は `.claude/rules/skills-first.md`）
 - **推測・記憶・一般知識に基づく実装は一切禁止**
 - 実装前に必ず **Context7 MCP** または **WebSearch/WebFetch** で公式ドキュメントを確認すること
 - ライブラリの API、設定ファイル形式、CLI 構文は**必ずファクトを調査**してから使用
 - 「たぶんこうだろう」「以前こうだった」という推測での実装は**絶対に行わない**
 - **モジュール・パッケージは必ず最新バージョンを調査し、最新のAPIを使用すること**
 - **ビルド・テスト・リント等は必ず devenv のコマンド（scripts または `devenv tasks run`）を使用すること**（詳細は `.claude/rules/commands.md`）
+- **Supabase 上のインフラ（DB / Storage / Auth / Edge Functions / Logs / Migrations / Advisors）を調査・操作する場合は、必ず `supabase` MCP（ローカル）または `supabase-prod` MCP（本番、read-only）を使用すること**（`psql` / `curl` / `supabase` CLI を Bash で直接叩くのは禁止。詳細は `.claude/rules/mcp-supabase.md`）
 - 詳細は `.claude/rules/research.md` を参照
 
 ## Memory Structure
@@ -19,6 +21,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```
 .claude/
 ├── rules/          # 常に適用されるポリシー・制約
+│   ├── skills-first.md   # タスク開始前に Skill 確認・起動を必須化
 │   ├── tdd.md            # テスト駆動開発（TDD）必須
 │   ├── research.md       # Research-First ポリシー
 │   ├── supabase-first.md # Supabase優先アーキテクチャ
@@ -33,7 +36,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 │   ├── ui-testing.md     # UIテスト（Storybook必須・単体テスト不要）
 │   ├── render-optimization.md # 再描画最小化（FSDスライス単位のステート局所化）
 │   ├── error-handling.md     # エラーハンドリング（握りつぶし禁止・フォールバック最小化）
-│   └── page-navigation.md    # ページ遷移（loading.tsx + Suspense によるストリーミング必須）
+│   ├── page-navigation.md    # ページ遷移（loading.tsx + Suspense によるストリーミング必須）
+│   └── mcp-supabase.md       # Supabase インフラ操作は MCP（supabase / supabase-prod）必須
 │
 └── skills/         # 質問時に参照するガイダンス
     ├── fsd/              # Feature Sliced Design
@@ -87,6 +91,8 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 | **Database**          | PostgreSQL, Drizzle ORM, pgvector                |
 | **Auth**              | Supabase Auth                                    |
 
+**MANDATORY**: 調査・実装・レビュー・デバッグなど、**あらゆるタスクを開始する前に必ず利用可能な Skill 一覧を確認**し、該当するものがあれば**最初に `Skill` ツールで起動**すること。Next.js / Supabase / Drizzle / FSD / shadcn / gluestack / Better Auth / Stripe / Resend / Maestro / LangChain / TanStack Query 等、本リポジトリで使用する主要技術には Skill が用意されている。Skill を確認せずに着手する実装はやり直しとなる。詳細は `.claude/rules/skills-first.md` を参照。
+
 **MANDATORY**: すべてのユーザー向けテキストは多言語対応（i18n）必須。詳細は `.claude/skills/i18n/` を参照。
 
 **MANDATORY**: すべての実装はテスト駆動開発（TDD）を厳守。**作業終了時は必ず All Green（全テスト通過）を確認**。詳細は `.claude/rules/tdd.md` を参照。
@@ -100,6 +106,8 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 **MANDATORY**: エラーは握りつぶさず適切にエラーとして処理する。不必要なフォールバック処理は禁止。catch したら必ずログ出力 + リスロー or 明示的 Result 型。supabase-js の `{ error }` は必ずチェック。フォールバックは付随的処理（analytics等）のみ許容。詳細は `.claude/rules/error-handling.md` を参照。
 
 **MANDATORY**: フロントエンド・バックエンドのデバッグは **devenv 2.0 の native process manager の TUI** を主インターフェースとして使用する。`devenv up` を対話端末で実行すると TUI が自動起動し、プロセス一覧・ログ閲覧・再起動がキーボード操作で可能。詳細は `.claude/skills/debugging/SKILL.md` を参照。
+
+**MANDATORY**: Supabase 上のインフラ（DB / Storage / Auth / Edge Functions / Logs / Migrations / Advisors / 設定）を**調査・操作**する場合は、必ず **`supabase` MCP**（ローカル）または **`supabase-prod` MCP**（本番、read-only）を使用する。`psql` / `curl` / `supabase` CLI を Bash で直接叩くのは禁止。本番への書き込みが必要な場合は必ずユーザーに判断をあおぐこと。詳細は `.claude/rules/mcp-supabase.md` を参照。
 
 **Supabase の Docker コンテナ自体は Supabase CLI が所有**（devenv の native process supervisor は backend / storybook のみ監視）。**起動連動**: `supabase:start` task が backend の `before` に登録されているため `devenv up` 起動時は Supabase → backend の順で立ち上がる。**停止は手動運用**: devenv 2.0 native process manager は task の `after` も `process.manager.after` も動作しない（前者は shutdown 時に cancel、後者は assertion でブロック、native の Rust shutdown パスに task runner 呼び出しが無いため）。auto-stop の中途半端な実装は持たず、停止は `supabase-stop` / `stop` script で明示的に行う運用に統一している。`stop` script は devenv プロセスと Supabase 両方を停止する。
 

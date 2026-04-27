@@ -10,10 +10,20 @@ import type {
 } from "./handlers/types.ts";
 
 const logger = createFunctionLogger("polar-webhook");
+
 import {
   handleCheckoutCreated,
   handleCheckoutUpdated,
 } from "./handlers/checkout.ts";
+import {
+  handleCustomerCreated,
+  handleCustomerUpdated,
+} from "./handlers/customer.ts";
+import {
+  handleOrderCreated,
+  handleOrderPaid,
+  handleOrderRefunded,
+} from "./handlers/order.ts";
 import {
   handleSubscriptionActive,
   handleSubscriptionCanceled,
@@ -22,15 +32,6 @@ import {
   handleSubscriptionUncanceled,
   handleSubscriptionUpdated,
 } from "./handlers/subscription.ts";
-import {
-  handleOrderCreated,
-  handleOrderPaid,
-  handleOrderRefunded,
-} from "./handlers/order.ts";
-import {
-  handleCustomerCreated,
-  handleCustomerUpdated,
-} from "./handlers/customer.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -179,10 +180,7 @@ Deno.serve(async (req: Request) => {
 
     switch (eventType) {
       case "checkout.created":
-        result = handleCheckoutCreated(
-          supabase,
-          payload.data as PolarCheckout,
-        );
+        result = handleCheckoutCreated(supabase, payload.data as PolarCheckout);
         break;
       case "checkout.updated":
         result = await handleCheckoutUpdated(
@@ -250,10 +248,7 @@ Deno.serve(async (req: Request) => {
         );
         break;
       case "customer.updated":
-        result = handleCustomerUpdated(
-          supabase,
-          payload.data as PolarCustomer,
-        );
+        result = handleCustomerUpdated(supabase, payload.data as PolarCustomer);
         break;
       default:
         logger.info("Unhandled event type", { eventType });

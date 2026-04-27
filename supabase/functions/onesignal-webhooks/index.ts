@@ -22,11 +22,6 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { createFunctionLogger } from "../shared/logger/index.ts";
-import type {
-  HandlerResult,
-  WebhookEventType,
-  WebhookPayload,
-} from "./handlers/types.ts";
 import {
   handleNotificationClicked,
   handleNotificationDelivered,
@@ -36,6 +31,11 @@ import {
   handleSubscriptionCreated,
   handleSubscriptionDeleted,
 } from "./handlers/subscription.ts";
+import type {
+  HandlerResult,
+  WebhookEventType,
+  WebhookPayload,
+} from "./handlers/types.ts";
 
 const logger = createFunctionLogger("onesignal-webhook");
 

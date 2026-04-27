@@ -1,9 +1,9 @@
-import type { Database } from "../shared/types/supabase/schema.ts";
 import { createClient } from "@supabase/supabase-js";
-import { createFunctionLogger } from "../shared/logger/index.ts";
 // Drizzle型の使用例
 import type { InferSelectModel } from "drizzle-orm";
-import { users } from "../shared/drizzle/index.ts";
+import type { users } from "../shared/drizzle/index.ts";
+import { createFunctionLogger } from "../shared/logger/index.ts";
+import type { Database } from "../shared/types/supabase/schema.ts";
 
 const logger = createFunctionLogger("helloworld");
 
@@ -32,10 +32,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     if (req.method === "GET") {
-      const query = await supabaseClient
-        .from("users")
-        .select("*")
-        .limit(1);
+      const query = await supabaseClient.from("users").select("*").limit(1);
 
       logger.debug("Query result", { data: query.data });
       const generalUser = query.data?.[0];

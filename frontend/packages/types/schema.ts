@@ -34,16 +34,194 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      __drizzle_migrations: {
+        Row: {
+          created_at: number | null
+          hash: string
+          id: number
+        }
+        Insert: {
+          created_at?: number | null
+          hash: string
+          id?: number
+        }
+        Update: {
+          created_at?: number | null
+          hash?: string
+          id?: number
+        }
+        Relationships: []
+      }
+      orders: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          polar_price_id: string
+          polar_product_id: string
+          status: Database["public"]["Enums"]["order_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          id: string
+          polar_price_id: string
+          polar_product_id: string
+          status?: Database["public"]["Enums"]["order_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          polar_price_id?: string
+          polar_product_id?: string
+          status?: Database["public"]["Enums"]["order_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_user_id_users_id_fk"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          cancel_at_period_end: number
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          polar_price_id: string
+          polar_product_id: string
+          status: Database["public"]["Enums"]["subscription_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cancel_at_period_end?: number
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id: string
+          polar_price_id: string
+          polar_product_id: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cancel_at_period_end?: number
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          polar_price_id?: string
+          polar_product_id?: string
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_user_id_users_id_fk"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_profiles: {
+        Row: {
+          email: string
+          first_name: string
+          id: number
+          last_name: string
+          phone_number: string | null
+          polar_customer_id: string | null
+          user_id: string
+        }
+        Insert: {
+          email: string
+          first_name?: string
+          id?: number
+          last_name?: string
+          phone_number?: string | null
+          polar_customer_id?: string | null
+          user_id: string
+        }
+        Update: {
+          email?: string
+          first_name?: string
+          id?: number
+          last_name?: string
+          phone_number?: string | null
+          polar_customer_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_profiles_user_id_users_id_fk"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          account_name: string
+          created_at: string
+          display_name: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          account_name: string
+          created_at?: string
+          display_name?: string
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          account_name?: string
+          created_at?: string
+          display_name?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_cuid: { Args: never; Returns: string }
     }
     Enums: {
-      [_ in never]: never
+      order_status: "paid" | "refunded" | "partially_refunded"
+      subscription_status:
+        | "active"
+        | "canceled"
+        | "incomplete"
+        | "incomplete_expired"
+        | "past_due"
+        | "trialing"
+        | "unpaid"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -173,7 +351,18 @@ export const Constants = {
     Enums: {},
   },
   public: {
-    Enums: {},
+    Enums: {
+      order_status: ["paid", "refunded", "partially_refunded"],
+      subscription_status: [
+        "active",
+        "canceled",
+        "incomplete",
+        "incomplete_expired",
+        "past_due",
+        "trialing",
+        "unpaid",
+      ],
+    },
   },
 } as const
 

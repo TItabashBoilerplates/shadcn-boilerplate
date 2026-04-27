@@ -1,110 +1,205 @@
 {
-  "version": 1,
-  "skills": {
-    "better-auth-best-practices": {
-      "source": "better-auth/skills",
-      "sourceType": "github",
-      "computedHash": "a4c830509e85557b59339d8d93a4e243e9e59c686e7678854d39230e12c2a6dc"
-    },
-    "better-auth-security-best-practices": {
-      "source": "better-auth/skills",
-      "sourceType": "github",
-      "computedHash": "5717187bba9c22030c7174c74012f01c359f21e2ce87e0eb80e24244d8b8c915"
-    },
-    "building-native-ui": {
-      "source": "expo/skills",
-      "sourceType": "github",
-      "computedHash": "342df93f481a0dba919f372d6c7b40d2b4bf5b51dd24363aea2e5d0bae27a6fa"
-    },
-    "create-auth-skill": {
-      "source": "better-auth/skills",
-      "sourceType": "github",
-      "computedHash": "31c027d02dbf1faa37f58191f574b9443143042fb2b684fe32df53ab0270487c"
-    },
-    "email-and-password-best-practices": {
-      "source": "better-auth/skills",
-      "sourceType": "github",
-      "computedHash": "747d7f73bd9e2ec5317b8ef88dc70f97df716d00e3d02de4051feebaa48b062d"
-    },
-    "expo-api-routes": {
-      "source": "expo/skills",
-      "sourceType": "github",
-      "computedHash": "015c6b849507fda73fcc32d2448f033aaaaa21f5229085342b8421727a90cafb"
-    },
-    "expo-cicd-workflows": {
-      "source": "expo/skills",
-      "sourceType": "github",
-      "computedHash": "700b20b575fcbe75ad238b41a0bd57938abe495e62dc53e05400712ab01ee7c0"
-    },
-    "expo-deployment": {
-      "source": "expo/skills",
-      "sourceType": "github",
-      "computedHash": "9ea9f16374765c1b16764a51bd43a64098921b33f48e94d9c5c1cce24b335c10"
-    },
-    "expo-dev-client": {
-      "source": "expo/skills",
-      "sourceType": "github",
-      "computedHash": "234e2633b7fbcef2d479f8fe8ab20d53d08ed3e4beec7c965da4aff5b43affe7"
-    },
-    "expo-tailwind-setup": {
-      "source": "expo/skills",
-      "sourceType": "github",
-      "computedHash": "d39e806942fe880347f161056729b588a3cb0f1796270eebf52633fe11cfdce1"
-    },
-    "feature-sliced-design": {
-      "source": "feature-sliced/skills",
-      "sourceType": "github",
-      "computedHash": "98020388ca6fb26ac9b060f81eb3064fefce9018e6f660e69419a00adf0801e7"
-    },
-    "gluestack-ui-v4": {
-      "source": "gluestack/agent-skills",
-      "sourceType": "github",
-      "computedHash": "5f00d8934fef415e31bbae36b1cb8bfe59452eeff0e48dea27172d620a00c612"
-    },
-    "native-data-fetching": {
-      "source": "expo/skills",
-      "sourceType": "github",
-      "computedHash": "3cd0ba91f359f9f84cd40f36f356287994a0e952520fac6e03ef7952d0397879"
-    },
-    "organization-best-practices": {
-      "source": "better-auth/skills",
-      "sourceType": "github",
-      "computedHash": "79a5a85b43d10e9fe37582b3506b051a33a991817b938f349099baa5ddba21aa"
-    },
-    "shadcn": {
-      "source": "shadcn/ui",
-      "sourceType": "github",
-      "computedHash": "507f011a70e8b3ae242bdc0bb5b39fd91a1d4049a0f3c281991ccf84973d591c"
-    },
-    "stripe-best-practices": {
-      "source": "exceptionless/exceptionless",
-      "sourceType": "github",
-      "computedHash": "91b23c09854900c0ed1e85a8a3856b4a7294af2076f20b2cf9ca97f6f21dcb7b"
-    },
-    "supabase": {
-      "source": "supabase/agent-skills",
-      "sourceType": "github",
-      "computedHash": "cb675a889c60172febe84740e7c22b600c8241c390deaff3d368c408f10dffdf"
-    },
-    "supabase-postgres-best-practices": {
-      "source": "supabase/agent-skills",
-      "sourceType": "github",
-      "computedHash": "d606a1146be6d54fb9e73f718b5320b9acac5ff2ba2d7230a555df4b5a923b4a"
-    },
-    "two-factor-authentication-best-practices": {
-      "source": "better-auth/skills",
-      "sourceType": "github",
-      "computedHash": "7e297aaf887e11fdc03e52bdbf44974e161e8f7c393170ced7dc66cace4f6d46"
-    },
-    "upgrading-expo": {
-      "source": "expo/skills",
-      "sourceType": "github",
-      "computedHash": "939a6820e0d6ead943bb4ad93cec647815e73fbc04043401773b2138e9e13b69"
-    },
-    "use-dom": {
-      "source": "expo/skills",
-      "sourceType": "github",
-      "computedHash": "8eca0e229f16e3499e5dbf791a79f5a5cba1e98b4af88ca495c903930d7f1ba0"
-    }
-  }
+	"version": 1,
+	"skills": {
+		"agent-email-inbox": {
+			"source": "resend/resend-skills",
+			"sourceType": "github",
+			"computedHash": "25ffa798578026fcfdc5bdbe5b10ec2d2cd1784f8a94344c0ac055f3a82b57d4"
+		},
+		"better-auth-best-practices": {
+			"source": "better-auth/skills",
+			"sourceType": "github",
+			"computedHash": "a4c830509e85557b59339d8d93a4e243e9e59c686e7678854d39230e12c2a6dc"
+		},
+		"better-auth-security-best-practices": {
+			"source": "better-auth/skills",
+			"sourceType": "github",
+			"computedHash": "5717187bba9c22030c7174c74012f01c359f21e2ce87e0eb80e24244d8b8c915"
+		},
+		"building-native-ui": {
+			"source": "expo/skills",
+			"sourceType": "github",
+			"computedHash": "342df93f481a0dba919f372d6c7b40d2b4bf5b51dd24363aea2e5d0bae27a6fa"
+		},
+		"create-auth-skill": {
+			"source": "better-auth/skills",
+			"sourceType": "github",
+			"computedHash": "31c027d02dbf1faa37f58191f574b9443143042fb2b684fe32df53ab0270487c"
+		},
+		"deep-agents-core": {
+			"source": "langchain-ai/langchain-skills",
+			"sourceType": "github",
+			"computedHash": "8cbf6f61f42b2482472f53a99e23607f16017e1e16ca037409c6c8fcfcbcc395"
+		},
+		"deep-agents-memory": {
+			"source": "langchain-ai/langchain-skills",
+			"sourceType": "github",
+			"computedHash": "b7b0facdff17b6f3ad77019e30a697175389e06ec7260780f49d5b3a1d28ad2a"
+		},
+		"deep-agents-orchestration": {
+			"source": "langchain-ai/langchain-skills",
+			"sourceType": "github",
+			"computedHash": "1570f8d88e1233edc3306d28224604172b016aedba0ced2efa2dd8e38e28ae62"
+		},
+		"email-and-password-best-practices": {
+			"source": "better-auth/skills",
+			"sourceType": "github",
+			"computedHash": "747d7f73bd9e2ec5317b8ef88dc70f97df716d00e3d02de4051feebaa48b062d"
+		},
+		"email-best-practices": {
+			"source": "resend/resend-skills",
+			"sourceType": "github",
+			"computedHash": "73502c047040e1d55b1c90c86b661784279f0956de06d7dc74738c904d122c22"
+		},
+		"expo-api-routes": {
+			"source": "expo/skills",
+			"sourceType": "github",
+			"computedHash": "015c6b849507fda73fcc32d2448f033aaaaa21f5229085342b8421727a90cafb"
+		},
+		"expo-cicd-workflows": {
+			"source": "expo/skills",
+			"sourceType": "github",
+			"computedHash": "700b20b575fcbe75ad238b41a0bd57938abe495e62dc53e05400712ab01ee7c0"
+		},
+		"expo-deployment": {
+			"source": "expo/skills",
+			"sourceType": "github",
+			"computedHash": "9ea9f16374765c1b16764a51bd43a64098921b33f48e94d9c5c1cce24b335c10"
+		},
+		"expo-dev-client": {
+			"source": "expo/skills",
+			"sourceType": "github",
+			"computedHash": "234e2633b7fbcef2d479f8fe8ab20d53d08ed3e4beec7c965da4aff5b43affe7"
+		},
+		"expo-tailwind-setup": {
+			"source": "expo/skills",
+			"sourceType": "github",
+			"computedHash": "d39e806942fe880347f161056729b588a3cb0f1796270eebf52633fe11cfdce1"
+		},
+		"feature-sliced-design": {
+			"source": "feature-sliced/skills",
+			"sourceType": "github",
+			"computedHash": "98020388ca6fb26ac9b060f81eb3064fefce9018e6f660e69419a00adf0801e7"
+		},
+		"framework-selection": {
+			"source": "langchain-ai/langchain-skills",
+			"sourceType": "github",
+			"computedHash": "4077205bed91c048ba47f0db1bd66930bdbdd04e5195dc3d5b265272c5059cd1"
+		},
+		"gluestack-ui-v4": {
+			"source": "gluestack/agent-skills",
+			"sourceType": "github",
+			"computedHash": "5f00d8934fef415e31bbae36b1cb8bfe59452eeff0e48dea27172d620a00c612"
+		},
+		"langchain-dependencies": {
+			"source": "langchain-ai/langchain-skills",
+			"sourceType": "github",
+			"computedHash": "bab5411cdfbdeaa42544c45791d9d3fc18d4cc193f4a3c5e2f6bd567422bffaf"
+		},
+		"langchain-fundamentals": {
+			"source": "langchain-ai/langchain-skills",
+			"sourceType": "github",
+			"computedHash": "ede1b3210a135e2c7eb5ddb51e0aaf3b78fde07cfd9fbe6efaeb4d6c5db60bd2"
+		},
+		"langchain-middleware": {
+			"source": "langchain-ai/langchain-skills",
+			"sourceType": "github",
+			"computedHash": "7d1931c4439cc4ba0c4cc92e824aa08067b76748911196319b595c91041cdd61"
+		},
+		"langchain-rag": {
+			"source": "langchain-ai/langchain-skills",
+			"sourceType": "github",
+			"computedHash": "545c661f6ed9b54cfe078a438052b2742d6122fc022f69db67d1a01aca4c726c"
+		},
+		"langgraph-fundamentals": {
+			"source": "langchain-ai/langchain-skills",
+			"sourceType": "github",
+			"computedHash": "d754005c69632037ca79c4daa8177b03e5a0f17f40cde3b0f532b33a8df88ded"
+		},
+		"langgraph-human-in-the-loop": {
+			"source": "langchain-ai/langchain-skills",
+			"sourceType": "github",
+			"computedHash": "0e81f1ef881b4c82bdcb5bece6309558f9e53681022f8347f869abc403b48637"
+		},
+		"langgraph-persistence": {
+			"source": "langchain-ai/langchain-skills",
+			"sourceType": "github",
+			"computedHash": "fc617bfab9d06826cba1097def5c7775f4522a1dabdd1a0111472f9929b1b914"
+		},
+		"native-data-fetching": {
+			"source": "expo/skills",
+			"sourceType": "github",
+			"computedHash": "3cd0ba91f359f9f84cd40f36f356287994a0e952520fac6e03ef7952d0397879"
+		},
+		"next-best-practices": {
+			"source": "vercel-labs/next-skills",
+			"sourceType": "github",
+			"computedHash": "db85045827ebeb83ac8dbc992b69188755eeb74dcf01cbf5e694d58aa494a106"
+		},
+		"next-cache-components": {
+			"source": "vercel-labs/next-skills",
+			"sourceType": "github",
+			"computedHash": "f835d8226c28abf012cc013928e2627c8a7a046de61127ef229be1711bd1f255"
+		},
+		"next-upgrade": {
+			"source": "vercel-labs/next-skills",
+			"sourceType": "github",
+			"computedHash": "e3aeb1f9e8a68d24df0c1c2e3c8ab97ede09a7251a2c76988318d02254346979"
+		},
+		"organization-best-practices": {
+			"source": "better-auth/skills",
+			"sourceType": "github",
+			"computedHash": "79a5a85b43d10e9fe37582b3506b051a33a991817b938f349099baa5ddba21aa"
+		},
+		"react-email": {
+			"source": "resend/resend-skills",
+			"sourceType": "github",
+			"computedHash": "d1fe70541c06ebf1cc58b774d35634399c466e55684776cfba6768a2079ad79b"
+		},
+		"resend": {
+			"source": "resend/resend-skills",
+			"sourceType": "github",
+			"computedHash": "936851c3e22e6de1d416134a9cd170d7540ddebe5a1c0113eef66537c843c6ed"
+		},
+		"resend-cli": {
+			"source": "resend/resend-skills",
+			"sourceType": "github",
+			"computedHash": "8253f110ec3cbaac56153fc9051eeb7d3e8dbba03c31b49981aeb4d6f036d6d7"
+		},
+		"shadcn": {
+			"source": "shadcn/ui",
+			"sourceType": "github",
+			"computedHash": "2bc6cf38ec7b4a5778a43fabb3e87642c9897ad45e9eb42438b57fd2def6cca8"
+		},
+		"stripe-best-practices": {
+			"source": "exceptionless/exceptionless",
+			"sourceType": "github",
+			"computedHash": "91b23c09854900c0ed1e85a8a3856b4a7294af2076f20b2cf9ca97f6f21dcb7b"
+		},
+		"supabase": {
+			"source": "supabase/agent-skills",
+			"sourceType": "github",
+			"computedHash": "d836a3567233bc5367d3f5f78cf0d90289f2b2385e37d22f450886e435e15c73"
+		},
+		"supabase-postgres-best-practices": {
+			"source": "supabase/agent-skills",
+			"sourceType": "github",
+			"computedHash": "d606a1146be6d54fb9e73f718b5320b9acac5ff2ba2d7230a555df4b5a923b4a"
+		},
+		"two-factor-authentication-best-practices": {
+			"source": "better-auth/skills",
+			"sourceType": "github",
+			"computedHash": "7e297aaf887e11fdc03e52bdbf44974e161e8f7c393170ced7dc66cace4f6d46"
+		},
+		"upgrading-expo": {
+			"source": "expo/skills",
+			"sourceType": "github",
+			"computedHash": "939a6820e0d6ead943bb4ad93cec647815e73fbc04043401773b2138e9e13b69"
+		},
+		"use-dom": {
+			"source": "expo/skills",
+			"sourceType": "github",
+			"computedHash": "8eca0e229f16e3499e5dbf791a79f5a5cba1e98b4af88ca495c903930d7f1ba0"
+		}
+	}
 }

@@ -8,8 +8,8 @@
  * ```
  */
 
-export { createOneSignalClient } from "./client.ts";
 export type { OneSignalClient } from "./client.ts";
+export { createOneSignalClient } from "./client.ts";
 
 export type {
   CreateNotificationRequest,

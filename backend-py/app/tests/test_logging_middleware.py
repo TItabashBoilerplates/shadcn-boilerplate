@@ -7,8 +7,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from util.logging import configure_logging, request_id_var, user_id_var
 from middleware.logging_middleware import LoggingMiddleware
+from util.logging import configure_logging, request_id_var, user_id_var
 
 
 @pytest.fixture

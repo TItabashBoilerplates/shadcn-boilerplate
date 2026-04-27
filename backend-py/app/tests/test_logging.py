@@ -17,12 +17,11 @@ class TestGetLogLevel:
         """Default log level should be INFO when LOG_LEVEL is not set."""
         with patch.dict(os.environ, {}, clear=True):
             os.environ.pop("LOG_LEVEL", None)
-            from util.logging import get_log_level
-
             # Re-import to get fresh value
             import importlib
 
             import util.logging
+            from util.logging import get_log_level
 
             importlib.reload(util.logging)
             assert util.logging.get_log_level() == logging.INFO
@@ -30,11 +29,10 @@ class TestGetLogLevel:
     def test_debug_level(self):
         """LOG_LEVEL=DEBUG should return DEBUG level."""
         with patch.dict(os.environ, {"LOG_LEVEL": "DEBUG"}):
-            from util.logging import get_log_level
-
             import importlib
 
             import util.logging
+            from util.logging import get_log_level
 
             importlib.reload(util.logging)
             assert util.logging.get_log_level() == logging.DEBUG
@@ -42,11 +40,10 @@ class TestGetLogLevel:
     def test_warning_level(self):
         """LOG_LEVEL=WARNING should return WARNING level."""
         with patch.dict(os.environ, {"LOG_LEVEL": "WARNING"}):
-            from util.logging import get_log_level
-
             import importlib
 
             import util.logging
+            from util.logging import get_log_level
 
             importlib.reload(util.logging)
             assert util.logging.get_log_level() == logging.WARNING
@@ -54,11 +51,10 @@ class TestGetLogLevel:
     def test_case_insensitive(self):
         """LOG_LEVEL should be case insensitive."""
         with patch.dict(os.environ, {"LOG_LEVEL": "error"}):
-            from util.logging import get_log_level
-
             import importlib
 
             import util.logging
+            from util.logging import get_log_level
 
             importlib.reload(util.logging)
             assert util.logging.get_log_level() == logging.ERROR
@@ -66,11 +62,10 @@ class TestGetLogLevel:
     def test_invalid_level_defaults_to_info(self):
         """Invalid LOG_LEVEL should default to INFO."""
         with patch.dict(os.environ, {"LOG_LEVEL": "INVALID"}):
-            from util.logging import get_log_level
-
             import importlib
 
             import util.logging
+            from util.logging import get_log_level
 
             importlib.reload(util.logging)
             assert util.logging.get_log_level() == logging.INFO

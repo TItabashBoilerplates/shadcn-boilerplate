@@ -34,11 +34,11 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { createFunctionLogger } from "../shared/logger/index.ts";
-import { createOneSignalClient } from "../shared/onesignal/index.ts";
 import type {
   LocalizedContent,
   PlatformOptions,
 } from "../shared/onesignal/index.ts";
+import { createOneSignalClient } from "../shared/onesignal/index.ts";
 
 const logger = createFunctionLogger("onesignal-send");
 
@@ -129,7 +129,10 @@ async function verifyAuth(
   }
 
   const supabase = createClient(supabaseUrl, serviceRoleKey);
-  const { data: { user }, error } = await supabase.auth.getUser(token);
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser(token);
 
   if (error || !user) {
     return { authorized: false };
@@ -170,13 +173,10 @@ Deno.serve(async (req: Request) => {
 
     // バリデーション
     if (!body.contents || Object.keys(body.contents).length === 0) {
-      return new Response(
-        JSON.stringify({ error: "contents is required" }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
+      return new Response(JSON.stringify({ error: "contents is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // OneSignal クライアント作成
@@ -191,7 +191,7 @@ Deno.serve(async (req: Request) => {
       platformOptions: body.platformOptions,
     };
 
-    let result;
+    let result: Awaited<ReturnType<typeof onesignal.sendToAll>>;
 
     switch (body.type) {
       case "user":

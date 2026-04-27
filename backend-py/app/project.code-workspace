@@ -1,9 +1,9 @@
 {
-  "folders": [
-    {
-      "name": "root",
-      "path": "."
-    }
-  ],
-  "settings": {}
+	"folders": [
+		{
+			"name": "root",
+			"path": "."
+		}
+	],
+	"settings": {}
 }

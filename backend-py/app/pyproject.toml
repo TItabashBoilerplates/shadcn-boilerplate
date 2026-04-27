@@ -5,6 +5,7 @@ mypy_path = "src"
 explicit_package_bases = true
 exclude = [
     '^\.venv/',
+    '^tests/',  # テストコードは pytest 等 SDK の型解決が複雑なため strict 対象外
 ]
 strict = true
 ignore_missing_imports = true
@@ -38,6 +39,21 @@ unfixable = [
 ]
 
 logger-objects = ["src.library.logger.LOGGER"]
+
+[tool.ruff.lint.per-file-ignores]
+# テストコード固有の許容: assert は当然、fixture/型注釈/import 規則は緩める
+"tests/**/*.py" = [
+    "S101",     # assert は pytest テストで必須
+    "ANN001",   # 関数引数の型注釈 (pytest fixture は推論で十分)
+    "ANN201",   # 戻り値の型注釈 (テスト関数は None 固定)
+    "ANN202",   # 内部関数の戻り値型注釈
+    "ANN401",   # Any 型 (テストでは許容)
+    "ARG002",   # 未使用引数 (pytest fixture 名で注入)
+    "PLR2004",  # マジックナンバー (200, 500 等の HTTP ステータス)
+    "PLC0415",  # トップレベル import (importlib.reload を伴うテストで必要)
+    "F401",     # 未使用 import (テストで一時的に存在することがある)
+    "F841",     # 未使用変数 (テストで意図的に存在することがある)
+]
 
 [tool.ruff.lint.isort]
 combine-as-imports = true
