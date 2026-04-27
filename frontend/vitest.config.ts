@@ -25,7 +25,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './apps/web/src'),
       '@workspace/ui': path.resolve(__dirname, './packages/ui'),
-      '@workspace/ui/mobile': path.resolve(__dirname, './packages/ui/mobile'),
+      '@workspace/native-ui': path.resolve(__dirname, './packages/native-ui'),
       '@workspace/auth': path.resolve(__dirname, './packages/auth'),
       '@workspace/types': path.resolve(__dirname, './packages/types'),
       '@workspace/client-supabase': path.resolve(__dirname, './packages/client/supabase'),
