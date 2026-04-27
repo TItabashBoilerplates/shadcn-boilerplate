@@ -52,7 +52,7 @@
           "level": "error",
           "options": {
             "paths": {
-              "@workspace/ui/web/components": "Use individual component imports (e.g., @workspace/ui/web/components/button) instead of barrel imports."
+              "@workspace/ui/components": "Use individual component imports (e.g., @workspace/ui/components/button) instead of barrel imports."
             }
           }
         }

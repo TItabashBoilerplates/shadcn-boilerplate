@@ -2,8 +2,8 @@
 
 import { useCustomerPortal, useSubscription } from '@workspace/polar/hooks'
 import type { SubscriptionStatus as SubscriptionStatusValue } from '@workspace/polar/types'
-import { Badge } from '@workspace/ui/web/components/badge'
-import { Button } from '@workspace/ui/web/components/button'
+import { Badge } from '@workspace/ui/components/badge'
+import { Button } from '@workspace/ui/components/button'
 import {
   Card,
   CardContent,
@@ -11,7 +11,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from '@workspace/ui/web/components/card'
+} from '@workspace/ui/components/card'
 import { Calendar, CreditCard } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { useEffect, useState } from 'react'

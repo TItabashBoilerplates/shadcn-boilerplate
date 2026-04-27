@@ -1,8 +1,8 @@
 'use client'
 
-import { Button } from '@workspace/ui/web/components/button'
-import { Input } from '@workspace/ui/web/components/input'
-import { Label } from '@workspace/ui/web/components/label'
+import { Button } from '@workspace/ui/components/button'
+import { Input } from '@workspace/ui/components/input'
+import { Label } from '@workspace/ui/components/label'
 import { Mail } from 'lucide-react'
 import { useLocale } from 'next-intl'
 import { useActionState, useState } from 'react'

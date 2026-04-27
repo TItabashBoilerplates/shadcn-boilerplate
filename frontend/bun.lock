@@ -106,7 +106,7 @@
         "@workspace/auth": "workspace:*",
         "@workspace/client-supabase": "workspace:*",
         "@workspace/types": "workspace:*",
-        "@workspace/ui/web": "workspace:*",
+        "@workspace/ui": "workspace:*",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "lucide-react": "^0.539.0",
@@ -270,37 +270,8 @@
         "typescript": "^5.8.0",
       },
     },
-    "packages/ui/mobile": {
-      "name": "@workspace/ui/mobile",
-      "version": "0.0.0",
-      "dependencies": {
-        "@expo/vector-icons": "^15.0.3",
-        "@gluestack-ui/button": "^1.0.14",
-        "@gluestack-ui/core": "^3.0.12",
-        "@gluestack-ui/nativewind-utils": "^1.0.28",
-        "@gluestack-ui/overlay": "^0.1.15",
-        "@gluestack-ui/toast": "^1.0.8",
-        "@gluestack-ui/utils": "^3.0.13",
-        "@workspace/tokens": "workspace:*",
-        "expo-symbols": "1.1.0-canary-20251210-1f163e3",
-        "lucide-react-native": "^0.560.0",
-        "nativewind": "^4.1.23",
-        "react-native-reanimated": "~4.1.1",
-      },
-      "devDependencies": {
-        "@types/react": "~19.1.0",
-        "react": "19.2.1",
-        "react-native": "0.82.1",
-        "react-native-css": "^3.0.1",
-        "typescript": "~5.9.2",
-      },
-      "peerDependencies": {
-        "react": "^19.0.0",
-        "react-native": ">=0.82.0",
-      },
-    },
-    "packages/ui/web": {
-      "name": "@workspace/ui/web",
+    "packages/ui": {
+      "name": "@workspace/ui",
       "version": "0.0.0",
       "dependencies": {
         "@hookform/resolvers": "^5.2.2",
@@ -332,6 +303,35 @@
       },
       "peerDependencies": {
         "react": "^19.0.0",
+      },
+    },
+    "packages/ui/mobile": {
+      "name": "@workspace/ui/mobile",
+      "version": "0.0.0",
+      "dependencies": {
+        "@expo/vector-icons": "^15.0.3",
+        "@gluestack-ui/button": "^1.0.14",
+        "@gluestack-ui/core": "^3.0.12",
+        "@gluestack-ui/nativewind-utils": "^1.0.28",
+        "@gluestack-ui/overlay": "^0.1.15",
+        "@gluestack-ui/toast": "^1.0.8",
+        "@gluestack-ui/utils": "^3.0.13",
+        "@workspace/tokens": "workspace:*",
+        "expo-symbols": "1.1.0-canary-20251210-1f163e3",
+        "lucide-react-native": "^0.560.0",
+        "nativewind": "^4.1.23",
+        "react-native-reanimated": "~4.1.1",
+      },
+      "devDependencies": {
+        "@types/react": "~19.1.0",
+        "react": "19.2.1",
+        "react-native": "0.82.1",
+        "react-native-css": "^3.0.1",
+        "typescript": "~5.9.2",
+      },
+      "peerDependencies": {
+        "react": "^19.0.0",
+        "react-native": ">=0.82.0",
       },
     },
     "tooling/eslint": {
@@ -1861,9 +1861,9 @@
 
     "@workspace/typescript-config": ["@workspace/typescript-config@workspace:tooling/typescript"],
 
-    "@workspace/ui/mobile": ["@workspace/ui/mobile@workspace:packages/ui/mobile"],
+    "@workspace/ui": ["@workspace/ui@workspace:packages/ui"],
 
-    "@workspace/ui/web": ["@workspace/ui/web@workspace:packages/ui/web"],
+    "@workspace/ui/mobile": ["@workspace/ui/mobile@workspace:packages/ui/mobile"],
 
     "@workspace/web": ["@workspace/web@workspace:apps/web"],
 
@@ -4549,11 +4549,11 @@
 
     "@workspace/types/@supabase/supabase-js": ["@supabase/supabase-js@2.87.1", "", { "dependencies": { "@supabase/auth-js": "2.87.1", "@supabase/functions-js": "2.87.1", "@supabase/postgrest-js": "2.87.1", "@supabase/realtime-js": "2.87.1", "@supabase/storage-js": "2.87.1" } }, "sha512-tVgqZqnHZVum584KuUKSQZgcy6ZkhVd6gG8QWg2QfIXH9HmXdamauxdVsLXwaNPJxEdOyfAfwIyi5XUsiVYWtg=="],
 
+    "@workspace/ui/@radix-ui/react-slot": ["@radix-ui/react-slot@1.2.4", "", { "dependencies": { "@radix-ui/react-compose-refs": "1.1.2" }, "peerDependencies": { "@types/react": "*", "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc" }, "optionalPeers": ["@types/react"] }, "sha512-Jl+bCv8HxKnlTLVrcDE8zTMJ09R9/ukw4qBs/oZClOfoQk/cOTbDn+NceXfV7j09YPVQUryJPHurafcSg6EVKA=="],
+
     "@workspace/ui/mobile/@types/react": ["@types/react@19.1.17", "", { "dependencies": { "csstype": "^3.0.2" } }, "sha512-Qec1E3mhALmaspIrhWt9jkQMNdw6bReVu64mjvhbhq2NFPftLPVr+l1SZgmw/66WwBNpDh7ao5AT6gF5v41PFA=="],
 
     "@workspace/ui/mobile/nativewind": ["nativewind@4.2.1", "", { "dependencies": { "comment-json": "^4.2.5", "debug": "^4.3.7", "react-native-css-interop": "0.2.1" }, "peerDependencies": { "tailwindcss": ">3.3.0" } }, "sha512-10uUB2Dlli3MH3NDL5nMHqJHz1A3e/E6mzjTj6cl7hHECClJ7HpE6v+xZL+GXdbwQSnWE+UWMIMsNz7yOQkAJQ=="],
-
-    "@workspace/ui/web/@radix-ui/react-slot": ["@radix-ui/react-slot@1.2.4", "", { "dependencies": { "@radix-ui/react-compose-refs": "1.1.2" }, "peerDependencies": { "@types/react": "*", "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc" }, "optionalPeers": ["@types/react"] }, "sha512-Jl+bCv8HxKnlTLVrcDE8zTMJ09R9/ukw4qBs/oZClOfoQk/cOTbDn+NceXfV7j09YPVQUryJPHurafcSg6EVKA=="],
 
     "@workspace/web/@radix-ui/react-slot": ["@radix-ui/react-slot@1.2.4", "", { "dependencies": { "@radix-ui/react-compose-refs": "1.1.2" }, "peerDependencies": { "@types/react": "*", "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc" }, "optionalPeers": ["@types/react"] }, "sha512-Jl+bCv8HxKnlTLVrcDE8zTMJ09R9/ukw4qBs/oZClOfoQk/cOTbDn+NceXfV7j09YPVQUryJPHurafcSg6EVKA=="],
 

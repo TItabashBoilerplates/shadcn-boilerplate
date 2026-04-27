@@ -1,11 +1,11 @@
-import { Button } from '@workspace/ui/web/components/button'
+import { Button } from '@workspace/ui/components/button'
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@workspace/ui/web/components/card'
+} from '@workspace/ui/components/card'
 import { CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 import { getTranslations } from 'next-intl/server'

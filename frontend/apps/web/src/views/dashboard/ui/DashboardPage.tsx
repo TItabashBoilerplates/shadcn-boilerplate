@@ -4,7 +4,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@workspace/ui/web/components/card'
+} from '@workspace/ui/components/card'
 import type { ReactNode } from 'react'
 import { AuthStatus } from '@/widgets/auth-status'
 

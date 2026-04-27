@@ -1,4 +1,4 @@
-import { Skeleton } from '@workspace/ui/web/components/skeleton'
+import { Skeleton } from '@workspace/ui/components/skeleton'
 import { getTranslations } from 'next-intl/server'
 import { Header } from '@/widgets/header'
 

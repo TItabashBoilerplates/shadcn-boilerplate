@@ -4,7 +4,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from '@workspace/ui/web/components/card'
+} from '@workspace/ui/components/card'
 import { BackendApiClient } from '@/shared/api'
 
 interface DashboardBackendInfoProps {

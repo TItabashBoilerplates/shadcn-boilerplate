@@ -1,6 +1,6 @@
 'use client'
 
-import { Button } from '@workspace/ui/web/components/button'
+import { Button } from '@workspace/ui/components/button'
 import { useTranslations } from 'next-intl'
 import { useEffect } from 'react'
 

@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader } from '@workspace/ui/web/components/card'
-import { Skeleton } from '@workspace/ui/web/components/skeleton'
+import { Card, CardContent, CardHeader } from '@workspace/ui/components/card'
+import { Skeleton } from '@workspace/ui/components/skeleton'
 import { getTranslations } from 'next-intl/server'
 
 export async function DashboardBackendInfoSkeleton() {
