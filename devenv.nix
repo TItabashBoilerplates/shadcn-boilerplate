@@ -18,14 +18,20 @@ let
   # backend service の exec body。
   # local profile の `processes.backend` と base の `containers.backend` の両方から
   # 参照したいので let-binding で一度だけ定義する。
-  # 末尾を `exec uv run uvicorn` にすることで bash → uvicorn を置換し、uvicorn 自体が
-  # session leader になる（PR #2620 が想定する終了シグナル伝播パスを確保）。
+  #
+  # 末尾を `exec "$UV_PROJECT_ENVIRONMENT/bin/uvicorn"` にすることで
+  # bash → uvicorn を直接置換し、uvicorn 自体を session leader にする
+  # （PR #2620 が要求する終了シグナル伝播パス）。
+  # `uv run` を間に挟むと、`uv run` が wrapper として親プロセスに残り続け、
+  # devenv が SIGTERM を打っても子の python uvicorn まで伝搬せず orphan 化する
+  # （issue #2619 系の症状。実機で `Address already in use` の起動失敗を確認済み）。
+  # `uv sync` は idempotent なワンショットなので exec の前に普通に実行する。
   backendExec = ''
     set -euo pipefail
     cd "$DEVENV_ROOT/backend-py/app"
     export PYTHONPATH="$DEVENV_ROOT/backend-py/app/src''${PYTHONPATH:+:$PYTHONPATH}"
     uv sync --group dev
-    exec uv run uvicorn app:app \
+    exec "$UV_PROJECT_ENVIRONMENT/bin/uvicorn" app:app \
       --proxy-headers --reload \
       --host 0.0.0.0 --port 4040
   '';
@@ -841,10 +847,12 @@ in
     # ----- Python: Ruff (format) -----
     ruff-format.enable = true;
 
-    # NOTE: mypy はファイル単位検査だと「import 整合性が一時的に崩れた中間状態」で false positive が
-    # 出やすく、コミット体験を阻害する。プロジェクト単位の型整合性検査は
-    # `type-check:backend-py` task (devenv test 経由、execIfModified キャッシュ付き) に集約。
-    # → コミット時 lint/format は ruff のみ、フル型チェックは `devenv test` で実施。
+    # ----- Python: Mypy (type check) -----
+    # 型エラーの早期検出を優先しコミット時にもフルチェック相当を回す。
+    # ファイル単位の false positive (import 整合性が一時的に崩れた中間状態) は許容し、
+    # 引っかかったら fix → re-commit で対応する。
+    # プロジェクト単位の最終確認は `type-check:backend-py` task (devenv test 経由) で重ねて行う。
+    mypy.enable = true;
 
     # ----- Edge Functions: Deno format -----
     denofmt = {
