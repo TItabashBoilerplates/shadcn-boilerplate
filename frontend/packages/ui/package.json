@@ -13,7 +13,8 @@
     "./magicui/*": "./src/magicui/*.tsx",
     "./lib/*": "./src/lib/*.ts",
     "./hooks/*": "./src/hooks/*.ts",
-    "./styles/globals.css": "./src/styles/globals.css"
+    "./styles/globals.css": "./src/styles/globals.css",
+    "./postcss.config": "./postcss.config.mjs"
   },
   "scripts": {
     "type-check": "tsc --noEmit"
