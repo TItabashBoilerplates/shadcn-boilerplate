@@ -18,8 +18,8 @@
     "format-check": "biome format .",
     "type-check": "turbo type-check",
     "clean": "turbo clean && rm -rf node_modules",
-    "ui:add:web": "cd packages/ui && bunx shadcn@canary add",
-    "ui:add:mobile": "cd packages/ui/mobile && bunx gluestack-ui@latest add --use-bun",
+    "ui:add:web": "cd packages/ui && bunx shadcn@latest add",
+    "ui:add:mobile": "cd packages/native-ui && bunx gluestack-ui@latest add --use-bun",
     "tokens:build": "bun run packages/tokens/scripts/generate-css.ts",
     "generate:types": "bun run scripts/generate-types.ts",
     "storybook": "storybook dev -p 6006",
@@ -38,7 +38,7 @@
     "zustand": "^5.0.7"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.3.2",
+    "@biomejs/biome": "^2.4.11",
     "@react-native/babel-preset": "^0.82.1",
     "@storybook/addon-docs": "^10.1.10",
     "@storybook/addon-react-native-web": "^0.0.29",
