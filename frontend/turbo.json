@@ -63,5 +63,29 @@
     "EXPO_PUBLIC_SUPABASE_URL",
     "EXPO_PUBLIC_SUPABASE_ANON_KEY",
     "BACKEND_URL"
-  ]
+  ],
+  "boundaries": {
+    "tags": {
+      "app": {
+        "dependencies": {
+          "allow": ["app", "ui-pkg", "infra-pkg", "tool-pkg"]
+        }
+      },
+      "ui-pkg": {
+        "dependencies": {
+          "allow": ["ui-pkg", "infra-pkg", "tool-pkg"]
+        }
+      },
+      "infra-pkg": {
+        "dependencies": {
+          "allow": ["infra-pkg", "tool-pkg"]
+        }
+      },
+      "tool-pkg": {
+        "dependencies": {
+          "allow": ["tool-pkg"]
+        }
+      }
+    }
+  }
 }
