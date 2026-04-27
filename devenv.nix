@@ -1,13 +1,4 @@
-{ pkgs, inputs, config, lib, ... }:
-
-let
-  # process-compose v1.94.0+ (MCP サーバー機能を含む)
-  # rolling nixpkgs は v1.87.0 のため unstable から取得
-  pkgsUnstable = import inputs.nixpkgs-unstable {
-    system = pkgs.system;
-    config.allowUnfree = pkgs.config.allowUnfree;
-  };
-in
+{ pkgs, config, lib, ... }:
 
 {
   # dotenv 自動読み込みは無効化（各コマンドで dotenvx を明示的に使用する）
@@ -43,97 +34,15 @@ in
 
   languages.deno.enable = true;
 
-  # process-compose 設定（MCP サーバー + TCP ソケット）
-  process.managers.process-compose = {
-    # process-compose v1.94.0+ を使用（MCP サーバー機能対応）
-    package = pkgsUnstable.process-compose;
-    # TCP 経由で REST API にアクセスできるよう Unix ソケット無効化
-    unixSocket.enable = false;
-
-    settings = {
-      # MCP サーバーを有効化（process-compose v1.94.0+ の組み込み機能）
-      mcp_server = {
-        host = "localhost";
-        port = 8090;
-        transport = "sse";
-      };
-
-      # MCP デバッグツール（devenv-tasks を完全バイパスして直接実行）
-      # devenv の processes セクションは全て devenv-tasks --mode all 経由になり
-      # 長時間プロセス(backend/storybook)の完了待ちで MCP が返らなくなるため
-      # settings.processes に直接定義して process-compose がそのまま実行する
-      processes = {
-        # 全プロセスの状態確認（ヘルスエンドポイント直接確認、port 8080 不使用）
-        "get-process-status" = {
-          command = ''bash -c 'echo "=== backend (4040) ===" && (curl -sf --max-time 3 http://localhost:4040/healthcheck && echo OK) || echo FAIL; echo "=== storybook (6006) ===" && (curl -sf --max-time 3 http://localhost:6006/ >/dev/null && echo OK) || echo FAIL; echo "=== web (3000) ===" && (curl -sf --max-time 3 http://localhost:3000/ >/dev/null && echo OK) || echo FAIL; echo "=== supabase (54321) ===" && (curl -sf --max-time 3 http://localhost:54321/health >/dev/null && echo OK) || echo FAIL' '';
-          disabled = true;
-          namespace = "mcp";
-          mcp = { type = "tool"; };
-        };
-        # 指定プロセスのログ取得（ログファイル直接読み取り、port 8080 不使用）
-        "get-process-logs" = {
-          command = ''bash -c 'LOGFILE="/Users/tknr/Development/shadcn-boilerplate/.devenv/state/process-compose/process-compose.log"; S=$(mktemp /tmp/pc.XXXXXX.py); printf "import sys,json\nfor l in sys.stdin:\n l=l.strip()\n if not l:continue\n try:print(json.loads(l).get(\"message\",\"\"))\n except:pass\n" > "$S"; grep -a "\"process\":\"@{process_name}\"" "$LOGFILE" 2>/dev/null | tail -n @{lines} | python3 "$S" 2>/dev/null; rm -f "$S"' '';
-          disabled = true;
-          namespace = "mcp";
-          mcp = {
-            type = "tool";
-            arguments = [
-              {
-                name = "process_name";
-                type = "string";
-                description = "プロセス名 (backend / storybook / web)";
-                required = true;
-              }
-              {
-                name = "lines";
-                type = "string";
-                description = "取得する行数 (例: 50, 100)";
-                required = true;
-              }
-            ];
-          };
-        };
-        # プロセス再起動（バックグラウンドで port 8080 を呼び出してブロック回避）
-        "restart-process" = {
-          command = ''bash -c 'curl -sf --max-time 10 -X POST "http://localhost:8080/process/restart/@{process_name}" >/tmp/pc-restart-result 2>&1 & sleep 2; cat /tmp/pc-restart-result 2>/dev/null && echo "Restart requested for @{process_name}" || echo "Restart sent (check process-compose TUI)"' '';
-          disabled = true;
-          namespace = "mcp";
-          mcp = {
-            type = "tool";
-            arguments = [
-              {
-                name = "process_name";
-                type = "string";
-                description = "再起動するプロセス名 (backend / storybook / web)";
-                required = true;
-              }
-            ];
-          };
-        };
-        # プロセス起動（バックグラウンドで port 8080 を呼び出してブロック回避）
-        "start-process" = {
-          command = ''bash -c 'curl -sf --max-time 10 -X POST "http://localhost:8080/process/start/@{process_name}" >/tmp/pc-start-result 2>&1 & sleep 2; cat /tmp/pc-start-result 2>/dev/null && echo "Start requested for @{process_name}" || echo "Start sent (check process-compose TUI)"' '';
-          disabled = true;
-          namespace = "mcp";
-          mcp = {
-            type = "tool";
-            arguments = [
-              {
-                name = "process_name";
-                type = "string";
-                description = "起動するプロセス名 (backend / storybook / web)";
-                required = true;
-              }
-            ];
-          };
-        };
-      };
-    };
-  };
-
-  # devenv processes（process-compose 経由で管理）
+  # devenv 2.0 の native process manager が以下のプロセスを管理する。
+  # process-compose は使わない（process.manager.implementation を指定しないと native が使われる）。
+  #
+  # NOTE: Supabase (Docker コンテナ群) は devenv 管理対象外。
+  # Supabase CLI で独立管理する（`make supabase-start` / `make supabase-stop`）。
+  # devenv が管理するのは backend / storybook のみ。
   processes = {
-    # FastAPI バックエンド
+    # FastAPI バックエンド。
+    # 前提として Supabase が起動済みであること（`make supabase-start` または `make run`）。
     backend = {
       exec = ''
         set -euo pipefail
@@ -149,65 +58,28 @@ in
               --host 0.0.0.0 --port 4040
           '
       '';
-      process-compose = {
-        readiness_probe = {
-          http_get = {
-            host = "127.0.0.1";
-            port = 4040;
-            path = "/healthcheck";
-          };
-          initial_delay_seconds = 5;
-          period_seconds = 30;
-          timeout_seconds = 2;
-          failure_threshold = 5;
-        };
+      ready.http.get = {
+        host = "127.0.0.1";
+        port = 4040;
+        path = "/healthcheck";
       };
     };
 
-    # Storybook コンポーネントカタログ
+    # Storybook コンポーネントカタログ（DB 非依存、独立起動）。
+    # web (Next.js) は `make frontend`、mobile (Expo) は `make mobile*` が担当（devenv 外）。
+    # `--ci` を付けて TUI 上でインタラクティブプロンプトが出ないようにする
+    # （port 衝突時は別 port に勝手にフォールバックせずエラー終了 → restart で復旧）。
     storybook = {
       exec = ''
         cd "$DEVENV_ROOT/frontend"
-        exec bun run storybook -- --host 0.0.0.0 --port 6006 --quiet
+        exec bun run storybook -- --host 0.0.0.0 --port 6006 --quiet --ci
       '';
-      process-compose = {
-        readiness_probe = {
-          http_get = {
-            host = "127.0.0.1";
-            port = 6006;
-            path = "/";
-          };
-          initial_delay_seconds = 10;
-          period_seconds = 3;
-          timeout_seconds = 2;
-          failure_threshold = 20;
-        };
+      ready.http.get = {
+        host = "127.0.0.1";
+        port = 6006;
+        path = "/";
       };
     };
-
-    # Next.js Web フロントエンド
-    web = {
-      exec = ''
-        cd "$DEVENV_ROOT/frontend"
-        dotenvx run \
-          -f "$DEVENV_ROOT/env/frontend/.env.local" \
-          -- nr dev
-      '';
-      process-compose = {
-        readiness_probe = {
-          http_get = {
-            host = "127.0.0.1";
-            port = 3000;
-            path = "/";
-          };
-          initial_delay_seconds = 10;
-          period_seconds = 3;
-          timeout_seconds = 2;
-          failure_threshold = 20;
-        };
-      };
-    };
-
   };
 
   # OCI コンテナイメージ（devenv container build backend で生成）
@@ -229,10 +101,8 @@ in
       fi
       exec "$HOME/.bun/bin/dotenvx" "$@"
     '';
-    # backend を起動（devenv up のショートカット）
-    services.exec = "devenv up";
     # make コマンドのショートカット
-    dev.exec = "make frontend";
+    dev.exec = "devenv up";
     lint.exec = "make lint";
     fmt.exec = "make format";
   };

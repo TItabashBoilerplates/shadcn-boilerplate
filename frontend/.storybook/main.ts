@@ -14,12 +14,12 @@ const config: StorybookConfig = {
     // PACKAGES - Web UI のみ（Mobile は TailwindCSS 4 互換性問題のため一時無効）
     // ============================================
     {
-      directory: '../packages/ui/web/components',
+      directory: '../packages/ui/web/src/components',
       files: '*.stories.@(js|jsx|ts|tsx)',
       titlePrefix: 'Packages/UI Web/Components',
     },
     {
-      directory: '../packages/ui/web/magicui',
+      directory: '../packages/ui/web/src/magicui',
       files: '**/*.stories.@(js|jsx|ts|tsx)',
       titlePrefix: 'Packages/UI Web/MagicUI',
     },
@@ -33,11 +33,6 @@ const config: StorybookConfig = {
       titlePrefix: 'Widgets',
     },
     {
-      directory: '../apps/web/src/shared/ui',
-      files: '**/*.stories.@(js|jsx|ts|tsx)',
-      titlePrefix: 'Shared',
-    },
-    {
       directory: '../apps/web/src/entities',
       files: '**/ui/**/*.stories.@(js|jsx|ts|tsx)',
       titlePrefix: 'Entities',
@@ -47,6 +42,10 @@ const config: StorybookConfig = {
       files: '**/ui/**/*.stories.@(js|jsx|ts|tsx)',
       titlePrefix: 'Features',
     },
+
+    // NOTE: apps/web/src/shared/ には ui/ ディレクトリが存在しないため除外
+    //       (現状の shared 配下: api / config / hooks / lib)
+    //       UI を追加する場合はここに { directory: '../apps/web/src/shared/ui', ... } を復活させる
 
     // TODO: Mobile UI (gluestack-ui) - TailwindCSS 4 との互換性問題解決後に有効化
     // TODO: Views - i18n (@/shared/lib/i18n) 依存の解決後に有効化
@@ -61,12 +60,25 @@ const config: StorybookConfig = {
 
   staticDirs: ['../apps/web/public'],
 
-  // Webpack 設定: @/ エイリアスを解決
+  // Webpack 設定:
+  //   - `@/`: apps/web/src への FSD エイリアス
+  //   - `@workspace/ui/web/*`: スコープ内に追加スラッシュを含む非標準パッケージ名のため、
+  //     Webpack5 の enhanced-resolve が `@workspace/ui` をパッケージとして解釈してしまい、
+  //     `node_modules/@workspace/ui/web/package.json` の `exports` を解決できない。
+  //     Next.js (Turbopack) は exports を解決するが、Storybook の Webpack5 builder では
+  //     subpath ごとに alias を張って exports をミラーする必要がある。
+  //     alias は `packages/ui/web/package.json` の `exports` フィールドと同期させる。
   webpackFinal: async (config) => {
     if (config.resolve) {
+      const uiWebSrc = resolve(__dirname, '../packages/ui/web/src')
       config.resolve.alias = {
         ...config.resolve.alias,
         '@': resolve(__dirname, '../apps/web/src'),
+        '@workspace/ui/web/components': `${uiWebSrc}/components`,
+        '@workspace/ui/web/magicui': `${uiWebSrc}/magicui`,
+        '@workspace/ui/web/lib': `${uiWebSrc}/lib`,
+        '@workspace/ui/web/hooks': `${uiWebSrc}/hooks`,
+        '@workspace/ui/web/styles': `${uiWebSrc}/styles`,
       }
     }
     return config

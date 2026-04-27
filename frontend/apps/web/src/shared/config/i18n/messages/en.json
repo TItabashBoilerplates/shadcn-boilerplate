@@ -59,5 +59,18 @@
     "manageSubscription": "Manage Subscription",
     "noSubscription": "No active subscription",
     "viewPlans": "View Plans"
+  },
+  "Loading": {
+    "page": "Loading page...",
+    "dashboard": "Loading dashboard...",
+    "backendInfo": "Loading backend response..."
+  },
+  "ErrorBoundary": {
+    "title": "Something went wrong",
+    "description": "An unexpected error occurred. You can try again or return home.",
+    "retry": "Try again",
+    "backHome": "Back to home",
+    "globalTitle": "Application error",
+    "globalDescription": "The application failed to load. Please reload the page."
   }
 }

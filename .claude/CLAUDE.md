@@ -32,7 +32,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 │   ├── i18n.md           # 多言語対応（必須）
 │   ├── ui-testing.md     # UIテスト（Storybook必須・単体テスト不要）
 │   ├── render-optimization.md # 再描画最小化（FSDスライス単位のステート局所化）
-│   └── error-handling.md     # エラーハンドリング（握りつぶし禁止・フォールバック最小化）
+│   ├── error-handling.md     # エラーハンドリング（握りつぶし禁止・フォールバック最小化）
+│   └── page-navigation.md    # ページ遷移（loading.tsx + Suspense によるストリーミング必須）
 │
 └── skills/         # 質問時に参照するガイダンス
     ├── fsd/              # Feature Sliced Design
@@ -42,7 +43,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     ├── drizzle/          # Drizzle ORM スキーマ
     ├── rls/              # RLS パフォーマンス・ベストプラクティス（必読）
     ├── datetime/         # 日時処理
-    ├── debugging/        # デバッグ手順（process-compose MCP 優先・Supabase）
+    ├── debugging/        # デバッグ手順（devenv 2.0 native CLI 優先・Supabase）
     ├── shadcn-ui/        # shadcn/ui + TailwindCSS (Web)
     ├── gluestack/        # gluestack-ui + NativeWind (Mobile)
     ├── storybook/        # Storybook 10 コンポーネントカタログ
@@ -98,14 +99,24 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 
 **MANDATORY**: エラーは握りつぶさず適切にエラーとして処理する。不必要なフォールバック処理は禁止。catch したら必ずログ出力 + リスロー or 明示的 Result 型。supabase-js の `{ error }` は必ずチェック。フォールバックは付随的処理（analytics等）のみ許容。詳細は `.claude/rules/error-handling.md` を参照。
 
-**MANDATORY**: フロントエンド・バックエンドのデバッグ（ログ確認・状態確認・プロセス再起動）は **process-compose MCP ツールを最優先**で使用する。CLI にフォールバックするのは MCP が利用不可の場合のみ。詳細は `.claude/skills/debugging/SKILL.md` を参照。
+**MANDATORY**: フロントエンド・バックエンドのデバッグは **devenv 2.0 の native process manager の TUI** を主インターフェースとして使用する。`devenv up` を対話端末で実行すると TUI が自動起動し、プロセス一覧・ログ閲覧・再起動がキーボード操作で可能。詳細は `.claude/skills/debugging/SKILL.md` を参照。
 
-| MCP ツール | 用途 |
-|-----------|------|
-| `get-process-status` | 全サービス死活確認 |
-| `get-process-logs` | プロセスログ取得（引数: process_name, lines） |
-| `restart-process` | プロセス再起動（引数: process_name） |
-| `start-process` | プロセス起動（引数: process_name） |
+**Supabase は devenv 管理対象外**。Docker 起動・停止は Supabase CLI で独立管理する（`make supabase-start` / `make supabase-stop`）。devenv が管理するのは backend / storybook のみ。`make run` は Supabase 起動 → `devenv up` の順で実行する。
+
+| コマンド | 用途 |
+|---------|------|
+| `make supabase-start` | Supabase ローカル起動（Docker） + Storage Buckets シード |
+| `make supabase-stop` | Supabase ローカル停止 |
+| `make run` | Supabase 起動 → `devenv up`（backend + storybook、TUI 付き） |
+| `devenv up` | backend + storybook をフォアグラウンド起動。対話端末では TUI が自動起動（`--no-tui` で無効化可） |
+| `devenv up -d` | バックグラウンド（detached）起動。TUI なし |
+| `devenv processes down` | detached で動いているプロセスの停止 |
+| `devenv processes wait` | 全プロセスが ready になるまで待機（CI で使用） |
+| `make stop` | devenv プロセス + Supabase の両方を停止 |
+
+TUI が主なので、ログ閲覧・個別プロセス再起動・状態確認は TUI 内のキーバインドで操作する（`devenv up` を実行するだけで使える）。
+
+web (Next.js) は `make frontend`、mobile (Expo) は `make mobile*` で起動する（devenv 外・モノレポのスコープ分割）。
 
 ### Package Management
 
@@ -128,9 +139,11 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 make init                    # Full project initialization
 
 # Services
-make run                     # Start Supabase + backend-py (devenv, background)
-make frontend                # Start Storybook + Next.js dev server
-make stop                    # Stop all services (backend-py + Supabase)
+make supabase-start          # Start Supabase (Docker) only
+make supabase-stop           # Stop Supabase (Docker) only
+make run                     # Start Supabase, then backend + Storybook (devenv TUI)
+make frontend                # Start Next.js dev server
+make stop                    # Stop devenv processes + Supabase
 
 # Quality
 make lint                    # Lint all

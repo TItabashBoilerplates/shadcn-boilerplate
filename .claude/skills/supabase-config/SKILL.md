@@ -25,7 +25,7 @@ Dashboard 手動変更は **レビュー不能・再現不能・Drift の温床*
 - `supabase/` — Supabase クライアント・SSR 全般
 - `drizzle/` — DB スキーマ（`config.toml` ではなく migrations で管理）
 - `rls/` — RLS ポリシー（DB 層、`config.toml` 対象外）
-- `debugging/` — `process-compose` 経由のローカルデバッグ
+- `debugging/` — devenv 2.0 native process manager 経由のローカルデバッグ
 
 ---
 

@@ -26,7 +26,7 @@ _devenv:
 	}
 
 # devenv が必要なターゲット（devenv shell 外では実行不可）
-init run frontend stop check: _devenv
+init run frontend stop check supabase-start supabase-stop: _devenv
 mobile mobile-ios mobile-android mobile-web: _devenv
 type-check-mobile build-mobile-ios build-mobile-android: _devenv
 build-frontend lint-frontend lint-fsd: _devenv
@@ -66,11 +66,11 @@ init:
 	# 必要なツールがインストールされているかチェック
 	sh ./bin/check_install.sh
 	# Supabaseにログイン
-	$(DOTENVX_BACKEND) -- supabase login
+	# $(DOTENVX_BACKEND) -- supabase login
 	# Supabaseを初期化
-	yes 'N' | $(DOTENVX_BACKEND) -- supabase init --force
+	# yes 'N' | $(DOTENVX_BACKEND) -- supabase init --force
 	# Supabaseを起動（dotenvxで環境変数を読み込む）
-	$(DOTENVX_BACKEND) -- supabase start
+	# $(DOTENVX_BACKEND) -- supabase start
 	# シークレットの設定がなければコピー
 	if [ ! -f "$(ENV_SECRETS)" ]; then \
 		cp env/.env.secrets.example $(ENV_SECRETS); \
@@ -80,7 +80,7 @@ init:
 	# Drizzleの依存関係をインストール
 	cd drizzle && ni
 	# バックエンドの依存関係をインストール
-	cd backend-py && uv sync
+	cd backend-py/app && uv sync
 	# direnv を有効化（次回以降 cd で自動アクティベーション）
 	@if command -v direnv >/dev/null 2>&1; then \
 		direnv allow; \
@@ -91,30 +91,38 @@ init:
 	@echo ""
 	@echo "📝 Next steps:"
 	@echo "  1. Run 'make migrate-dev' to generate and apply initial database migrations"
-	@echo "  2. Run 'make run' to start Supabase + backend (blocks in TUI)"
-	@echo "  3. Run 'make frontend' to start Storybook + Next.js dev server (new terminal)"
+	@echo "  2. Run 'make run' to start Supabase (Docker) + backend + Storybook (devenv TUI)"
+	@echo "  3. Run 'make frontend' to start Next.js dev server (new terminal)"
 	@echo ""
 	@echo "Woo-hoo! Everything's ready to roll!"
 
-# ローカル環境での起動コマンド
+# ===== Supabase ローカル起動・停止 =====
+# Supabase (Docker コンテナ群) は devenv 管理対象外。
+# Supabase CLI で独立管理し、devenv は backend / storybook のみを管理する。
+
+# Supabase ローカル起動 + Storage Buckets シード
+.PHONY: supabase-start
+supabase-start:
+	@echo "🚀 Starting Supabase (Docker)..."
+	$(DOTENVX_BACKEND_SECRETS) -- supabase start --yes
+	@$(DOTENVX_BACKEND) -- supabase seed buckets --local --yes || true
+
+# Supabase ローカル停止
+.PHONY: supabase-stop
+supabase-stop:
+	@echo "🛑 Stopping Supabase (Docker)..."
+	@$(DOTENVX_BACKEND) -- supabase stop || true
+
+# ローカル環境での起動コマンド（共通基盤: backend + Storybook）
+# Supabase は事前に supabase-start で起動してから devenv up（backend + storybook）を起動する。
 .PHONY: run
-run:
-	# Supabaseを起動（ENV=localの場合のみ）
-	if [ "${ENV}" = "local" ]; then \
-		$(DOTENVX_BACKEND_SECRETS) -- supabase start; \
-		$(DOTENVX_BACKEND_SECRETS) -- supabase seed buckets --local; \
-	fi
-	# 既存プロセスを停止してから起動（二重起動防止）
-	process-compose down 2>/dev/null || true
-	# 全サービスを起動（TUI でログを表示）
+run: supabase-start
 	devenv up
 
-# ローカル環境でのフロントエンド起動コマンド（Storybook + Next.js）
+# ローカル環境でのフロントエンド起動コマンド（Next.js のみ）
+# Storybook は `make run`（devenv）側に移管済みのため、ここでは Next.js のみ起動する。
 .PHONY: frontend
 frontend:
-	# Storybookをバックグラウンドで起動
-	cd frontend && bun run storybook -- --quiet &
-	# Next.js 開発サーバーを起動（フォアグラウンド）
 	cd frontend && dotenvx run -f ../$(ENV_FRONTEND) -- nr dev
 
 # ===== Mobile (Expo) コマンド =====
@@ -154,13 +162,14 @@ build-mobile-android:
 	cd frontend/apps/mobile && dotenvx run -f ../../../$(ENV_FRONTEND) -- nlx eas build --platform android
 
 # ローカル環境での停止コマンド
+# devenv (backend + storybook) と Supabase (Docker) は独立管理のため、両方を明示的に止める。
 .PHONY: stop
 stop:
-	# backend-py を停止
-	process-compose down 2>/dev/null || true
-	# Supabaseを停止（ENV=localの場合のみ）
-	if [ "${ENV}" = "local" ]; then \
-		$(DOTENVX_BACKEND) -- supabase stop; \
+	@echo "🛑 Stopping devenv processes (backend + storybook)..."
+	@devenv processes down 2>/dev/null || true
+	@if [ "${ENV}" = "local" ]; then \
+		echo "🛑 Stopping Supabase (Docker)..."; \
+		$(DOTENVX_BACKEND) -- supabase stop 2>/dev/null || true; \
 	fi
 	@echo "✅ All services stopped."
 

@@ -1,48 +1,76 @@
 ---
 name: debugging
-description: デバッグ手順ガイダンス。プロセスログ確認、Supabase ローカル環境のトラブルシューティングについての質問に使用。backend-py は devenv（process-compose）で管理、Supabase は Docker で管理。ログ確認・状態確認・プロセス再起動はまず process-compose MCP ツールを使用する。
+description: デバッグ手順ガイダンス。プロセスログ確認、Supabase ローカル環境のトラブルシューティングについての質問に使用。devenv 2.0 が backend + Storybook を管理し、Supabase は CLI で独立管理する。devenv の TUI を主インターフェースとする。
 ---
 
 # デバッグスキル
 
 このプロジェクトのデバッグ方法を説明します。
 
-## CRITICAL: デバッグの最優先手段 — process-compose MCP
+## CRITICAL: デバッグの最優先手段 — devenv 2.0 TUI
 
-**フロントエンド・バックエンドのログ確認・状態確認・プロセス再起動は、まず process-compose MCP ツールを使用する。**
+**backend + Storybook の監視・ログ閲覧・再起動は、devenv 2.0 の native process manager が提供する TUI（Terminal UI）を使用する。** process-compose への依存は 2026-04 に完全撤去済み。
 
-process-compose MCP サーバーは port 8090 (SSE) で常時稼働しており、Claude Code から直接呼び出せる。
-CLI コマンドを使う前に、以下の MCP ツールを優先すること。
+**Supabase は devenv 管理対象外**。Docker コンテナ群の起動・停止は Supabase CLI（`make supabase-start` / `make supabase-stop`）で独立管理する。devenv プロセスにぶら下げると trap・ready probe・依存順序などの管理が複雑になるため意図的に分離している。
 
-### 利用可能な MCP ツール
+`devenv up` を対話端末で実行すると、Rust 製 native process manager の TUI が自動起動し、以下を一画面で扱える:
 
-| ツール | 用途 | 主な引数 |
-|--------|------|---------|
-| `get-process-status` | 全プロセスの死活確認（backend/storybook/web/supabase） | なし |
-| `get-process-logs` | 指定プロセスの最新ログ取得 | `process_name`, `lines` |
-| `restart-process` | クラッシュ・停止プロセスの再起動 | `process_name` |
-| `start-process` | 停止中プロセスの起動 | `process_name` |
+- 全プロセスの状態（pending / running / ready / failed）
+- 各プロセスのリアルタイムログ
+- 個別プロセスの再起動・起動・停止
 
-### 対象プロセス名
+devenv が管理するプロセスは以下の通り（Supabase は含まれない）:
 
-| プロセス名 | サービス | ポート |
-|-----------|----------|-------|
-| `backend` | FastAPI バックエンド | 4040 |
-| `storybook` | Storybook | 6006 |
-| `web` | Next.js | 3000 |
+1. `backend` — uvicorn 起動。`/healthcheck` 200 で ready。**前提として Supabase が起動済みであること**
+2. `storybook` — DB 非依存、独立起動。`/` 200 で ready
+
+`make run` は内部で `make supabase-start`（Supabase Docker 起動）→ `devenv up`（backend + storybook）の順で実行する。
+
+### 実在する CLI サブコマンド
+
+native manager は TUI が主なので、CLI サブコマンドは少ない。
+
+| コマンド | 用途 |
+|---------|------|
+| `devenv up` | フォアグラウンド起動（TUI 付き） |
+| `devenv up <name>` | 指定プロセスのみ起動（例: `devenv up supabase`） |
+| `devenv up -d` | バックグラウンド起動（TUI なし） |
+| `devenv up --no-tui` | TUI を明示的に無効化（プレーンログ出力） |
+| `devenv processes down` | detached で動いているプロセスを停止 |
+| `devenv processes wait` | 全プロセスが ready になるまで待機（CI で使う） |
+| `devenv up --strict-ports` | ポート衝突時に自動リトライせずエラー終了 |
+
+**`devenv processes status/logs/restart` は存在しない**。これらの操作は TUI 内のキーボードで行う。
 
 ### 典型的なデバッグフロー
 
-```
-1. get-process-status      → 全サービスの生死を即確認
-2. get-process-logs        → 問題プロセスのログを確認
-3. restart-process         → クラッシュしていれば再起動
-4. get-process-logs (再度) → 再起動後のログを確認
+```bash
+# 1. TUI で全プロセスの状態を俯瞰する
+devenv up
+
+# 2. TUI 上で問題プロセスを選択してログを確認する
+#    （TUI のキーバインドでナビゲーション・再起動が可能）
+
+# 3. 必要なら TUI を Ctrl-C で終了して再起動
+devenv up
 ```
 
-### MCP ツールが使えない場合
+### TUI を使わない運用（CI / detached）
 
-process-compose が停止している場合は CLI にフォールバック（後述）。
+detached 起動した場合は TUI がないため、CLI での運用になる:
+
+```bash
+# detached で起動
+devenv up -d
+
+# 準備完了を待つ
+devenv processes wait
+
+# 停止
+devenv processes down
+```
+
+ログは `.devenv/state/` 配下に保存されるが、レイアウトは manager 実装により変わり得るため、インタラクティブ確認には `devenv up`（フォアグラウンド + TUI）を使うのが確実。
 
 ---
 
@@ -50,26 +78,22 @@ process-compose が停止している場合は CLI にフォールバック（�
 
 | サービス | 管理方法 | 起動コマンド |
 |----------|----------|-------------|
-| backend-py (FastAPI) | devenv / process-compose | `devenv up` |
-| Storybook | devenv / process-compose | `devenv up` |
-| Next.js (web) | devenv / process-compose | `devenv up` |
-| Supabase | Docker | `make run` |
+| Supabase（Docker 群） | **devenv 外** | `make supabase-start` / `make supabase-stop`（Supabase CLI 経由） |
+| backend-py (FastAPI) | devenv / native process manager | `devenv up` |
+| Storybook | devenv / native process manager | `devenv up` |
+| Next.js (web) | **devenv 外** | `make frontend`（モノレポのスコープ分割のため） |
+| Mobile (Expo) | **devenv 外** | `make mobile` / `make mobile-ios` / `make mobile-android` / `make mobile-web` |
+| 一括起動 | — | `make run`（Supabase 起動 → `devenv up`） |
 
 ---
 
 ## サービス状態確認
 
-### MCP（推奨）
-
-MCP ツール `get-process-status` を呼び出す。
-
-### CLI（フォールバック）
-
 ```bash
-# process-compose TUI で全プロセス確認
+# 主: TUI で俯瞰
 devenv up
 
-# Supabase の状態確認
+# 副: Supabase コンテナの詳細状態
 dotenvx run -f env/backend/.env.local -- supabase status
 ```
 
@@ -77,53 +101,25 @@ dotenvx run -f env/backend/.env.local -- supabase status
 
 ## ログ確認
 
-### MCP（推奨）
-
-MCP ツール `get-process-logs` で `process_name` と `lines` を指定して呼び出す。
-
-```
-例: process_name=backend, lines=50
-例: process_name=web, lines=100
-例: process_name=storybook, lines=30
-```
-
-### CLI（フォールバック）
-
-```bash
-# process-compose のログを確認（リアルタイム）
-process-compose logs -f backend
-
-# 直近のログのみ
-process-compose logs --tail 100 backend
-
-# ログファイルを直接確認
-tail -f .devenv/state/process-compose/process-compose.log
-```
+- **メイン**: `devenv up` を起動して TUI 内でプロセスを選択 → リアルタイムログ
+- **detached 時**: `devenv processes down` → `devenv up`（フォアグラウンド）で見直す
+- **Supabase コンポーネント単位**: `docker logs -f supabase_db_<project>` など（後述）
 
 ---
 
 ## プロセス再起動
 
-### MCP（推奨）
+- **メイン**: TUI 内のキーバインドで個別再起動（backend / storybook）
+- **全体再起動**: `devenv up` を Ctrl-C で停止 → 再度 `devenv up`
+- **Supabase 再起動**: `make supabase-stop && make supabase-start`（devenv とは独立）
 
-MCP ツール `restart-process` で `process_name` を指定して呼び出す。
-
-### CLI（フォールバック）
-
-```bash
-# 全サービス再起動
-make stop
-make run
-
-# process-compose TUI から個別再起動も可能
-devenv up
-```
+`devenv up` を Ctrl-C で停止しても **Supabase Docker コンテナは落ちない**（独立管理のため）。Supabase を完全に停止するには `make supabase-stop` を明示的に実行するか、`make stop`（devenv + Supabase をまとめて停止）を使う。
 
 ---
 
-## Supabase ログ確認
+## Supabase ログ確認（Docker 個別コンテナ）
 
-Supabase は Docker で管理しているため MCP 対象外。CLI を使用する。
+`supabase` プロセスは `supabase start` のラッパーなので、TUI に表示されるのは CLI のラッパーログ。Supabase の各コンポーネント（DB / Auth / Edge Functions など）のログは Docker コンテナを直接参照する。
 
 ```bash
 # コンテナ名を確認
@@ -184,20 +180,24 @@ SELECT * FROM auth.users LIMIT 5;
 
 ## フロントエンドデバッグ
 
-### ログ確認（推奨: MCP）
+### Next.js (web)
 
-MCP ツール `get-process-logs` で `process_name=web` を指定。
-
-### 開発サーバー起動
+web は devenv 外。`make frontend` で独立起動している。
 
 ```bash
-# Storybook + Next.js 同時起動
+# Next.js 開発サーバー起動（別ターミナル）
 make frontend
 
 # ブラウザで確認
 # Next.js:   http://localhost:3000
-# Storybook: http://localhost:6006
+# Storybook: http://localhost:6006（devenv 側）
 ```
+
+ブラウザコンソール・Network タブ・Next.js のサーバーログ（`make frontend` を実行したターミナル）でデバッグする。
+
+### Storybook
+
+Storybook は devenv 管理下。TUI の `storybook` プロセスを選択してログを見る。再起動も TUI のキーバインドから。
 
 ### ビルドエラーの確認
 
@@ -217,9 +217,10 @@ make build-frontend
 # 状態確認
 dotenvx run -f env/backend/.env.local -- supabase status
 
-# 停止 → 起動（Supabase + backend-py）
-make stop
-make run
+# devenv 経由で停止 → 起動（trap により Docker も一緒に落ちる）
+# 1. TUI を Ctrl-C で止める
+# 2. 再度起動
+devenv up
 ```
 
 ### DB リセット
@@ -261,41 +262,46 @@ make test-backend-py # Backend Python のみ
 
 ## トラブルシューティング
 
-### backend-py が起動しない
+### backend が起動しない
 
-```
-1. MCP: get-process-status で状態確認
-2. MCP: get-process-logs (backend, 100) でエラーログ確認
-3. MCP: restart-process (backend) で再起動
-4. MCP: get-process-logs (backend, 50) で再起動後のログ確認
-```
+1. TUI で `backend` のログを確認する（`devenv up` 起動中）
+2. **Supabase が起動しているか確認**（backend は Supabase に接続するため、未起動だと起動失敗する）: `dotenvx run -f env/backend/.env.local -- supabase status`
+3. Supabase が未起動なら: `make supabase-start`
+4. 個別再起動: TUI のキーバインド、または `devenv up` を一度止めてから再起動
+5. supabase の health を直接叩く: `curl -sf http://localhost:54321/rest/v1/`
 
-CLI フォールバック:
+### Storybook が起動しない
+
+TUI で `storybook` プロセスを選択してログを確認。再起動も TUI から。
+
+### Next.js (web) が起動しない
+
+web は devenv 外なので、`make frontend` を実行したターミナルのログを直接確認する。
+
 ```bash
-process-compose list
-process-compose logs --tail 100 backend
-make stop && make run
-```
+# ポート 3000 が空いているか
+lsof -i :3000
 
-### Next.js が起動しない
+# 依存の再インストール
+cd frontend && ni
 
-```
-1. MCP: get-process-status でポート競合確認
-2. MCP: get-process-logs (web, 50) でエラー内容確認
-3. MCP: restart-process (web) で再起動
+# 直接起動（Makefile が問題な可能性を排除）
+cd frontend && dotenvx run -f ../env/frontend/.env.local -- nr dev
 ```
 
 ### ポートが使用中
 
 ```bash
-lsof -i :4040   # Backend Python
-lsof -i :3000   # Next.js
-lsof -i :6006   # Storybook
-lsof -i :54321  # Supabase API
+lsof -i :4040   # backend (devenv)
+lsof -i :3000   # Next.js (make frontend)
+lsof -i :6006   # Storybook (devenv)
+lsof -i :54321  # Supabase API (Docker, make supabase-start)
 lsof -i :54323  # Supabase Studio
 
 kill -9 <PID>
 ```
+
+`devenv up --strict-ports` でポート衝突を即エラー化することも可能（デフォルトは自動で代替ポートを試す）。
 
 ### マイグレーションエラー
 

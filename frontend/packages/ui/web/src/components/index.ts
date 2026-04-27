@@ -27,6 +27,7 @@ export {
 } from './dialog'
 export { Input } from './input'
 export { Label } from './label'
+export { Skeleton } from './skeleton'
 export {
   Tooltip,
   TooltipContent,

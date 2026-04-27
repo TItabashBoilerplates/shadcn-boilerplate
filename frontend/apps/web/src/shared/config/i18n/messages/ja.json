@@ -59,5 +59,18 @@
     "manageSubscription": "契約を管理",
     "noSubscription": "有効な契約がありません",
     "viewPlans": "プランを見る"
+  },
+  "Loading": {
+    "page": "ページを読み込み中...",
+    "dashboard": "ダッシュボードを読み込み中...",
+    "backendInfo": "バックエンド応答を読み込み中..."
+  },
+  "ErrorBoundary": {
+    "title": "エラーが発生しました",
+    "description": "予期しないエラーが発生しました。再試行するかホームに戻ってください。",
+    "retry": "再試行",
+    "backHome": "ホームに戻る",
+    "globalTitle": "アプリケーションエラー",
+    "globalDescription": "アプリケーションの読み込みに失敗しました。ページを再読み込みしてください。"
   }
 }
