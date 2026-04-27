@@ -211,5 +211,5 @@ const ButtonSpinner = AccessibleButton.Spinner
 const ButtonIcon = AccessibleButton.Icon
 const ButtonGroup = AccessibleButton.Group
 
-export { Button, ButtonText, ButtonSpinner, ButtonIcon, ButtonGroup }
 export type { ButtonProps }
+export { Button, ButtonGroup, ButtonIcon, ButtonSpinner, ButtonText }

@@ -1,5 +1,5 @@
 {
-  "name": "@workspace/ui/mobile",
+  "name": "@workspace/native-ui",
   "version": "0.0.0",
   "private": true,
   "type": "module",

@@ -1,4 +1,4 @@
-import { ThemedText } from '@workspace/ui/mobile/layout'
+import { ThemedText } from '@workspace/native-ui/layout'
 import { Image, View } from 'react-native'
 
 interface UserAvatarProps {

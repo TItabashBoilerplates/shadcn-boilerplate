@@ -1,4 +1,4 @@
-import { Button, ButtonText } from '@workspace/ui/mobile/components'
+import { Button, ButtonText } from '@workspace/native-ui/components'
 import { View } from 'react-native'
 
 import { type Locale, supportedLocales } from '@/shared/config/i18n'

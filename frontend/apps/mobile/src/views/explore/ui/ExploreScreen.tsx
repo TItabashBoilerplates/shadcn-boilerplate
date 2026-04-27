@@ -1,5 +1,5 @@
-import { IconSymbol } from '@workspace/ui/mobile/components'
-import { ParallaxScrollView, ThemedText, ThemedView } from '@workspace/ui/mobile/layout'
+import { IconSymbol } from '@workspace/native-ui/components'
+import { ParallaxScrollView, ThemedText, ThemedView } from '@workspace/native-ui/layout'
 import { Image } from 'expo-image'
 import { Platform, StyleSheet } from 'react-native'
 

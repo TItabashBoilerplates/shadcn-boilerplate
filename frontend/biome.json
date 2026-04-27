@@ -116,7 +116,7 @@
       }
     },
     {
-      "includes": ["packages/ui/mobile/components/gluestack-ui-provider/index.web.tsx"],
+      "includes": ["packages/native-ui/components/gluestack-ui-provider/index.web.tsx"],
       "linter": {
         "rules": {
           "security": {

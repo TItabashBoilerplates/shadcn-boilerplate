@@ -1,4 +1,4 @@
-import { ThemedText, ThemedView } from '@workspace/ui/mobile/layout'
+import { ThemedText, ThemedView } from '@workspace/native-ui/layout'
 import { Link } from 'expo-router'
 import { StyleSheet } from 'react-native'
 

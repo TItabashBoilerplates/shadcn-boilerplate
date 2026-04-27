@@ -1,4 +1,4 @@
-import { Collapsible } from '@workspace/ui/mobile/components'
+import { Collapsible } from '@workspace/native-ui/components'
 import type { PropsWithChildren } from 'react'
 
 interface CollapsibleSectionProps {

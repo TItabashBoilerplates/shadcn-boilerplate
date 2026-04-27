@@ -12,8 +12,8 @@
       "@/features/*": ["./src/features/*"],
       "@/entities/*": ["./src/entities/*"],
       "@/shared/*": ["./src/shared/*"],
-      "@workspace/ui/mobile": ["../../packages/ui/mobile/components"],
-      "@workspace/ui/mobile/*": ["../../packages/ui/mobile/*"],
+      "@workspace/native-ui": ["../../packages/native-ui/components"],
+      "@workspace/native-ui/*": ["../../packages/native-ui/*"],
       "@workspace/tokens": ["../../packages/tokens/src"],
       "@workspace/tokens/*": ["../../packages/tokens/src/*"]
     }

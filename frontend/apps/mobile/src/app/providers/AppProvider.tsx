@@ -1,5 +1,5 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native'
-import { useColorScheme } from '@workspace/ui/mobile/hooks'
+import { useColorScheme } from '@workspace/native-ui/hooks'
 import type { PropsWithChildren } from 'react'
 import { OneSignalInitializer } from './OneSignalInitializer'
 

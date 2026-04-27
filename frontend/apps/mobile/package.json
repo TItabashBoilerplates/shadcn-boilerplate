@@ -12,6 +12,7 @@
     "lint:fsd": "eslint . --max-warnings 0 --rule 'boundaries/element-types: error'"
   },
   "dependencies": {
+    "@workspace/native-ui": "workspace:*",
     "@expo/vector-icons": "^15.0.3",
     "@gluestack-ui/button": "^1.0.14",
     "@gluestack-ui/nativewind-utils": "^1.0.28",

@@ -1,4 +1,4 @@
-import { Button, ButtonText } from '@workspace/ui/mobile/components'
+import { Button, ButtonText } from '@workspace/native-ui/components'
 import { Text, View } from 'react-native'
 
 import { useI18n } from '@/shared/hooks'

@@ -1,6 +1,6 @@
-import { IconSymbol } from '@workspace/ui/mobile/components'
-import { Colors } from '@workspace/ui/mobile/constants'
-import { useColorScheme } from '@workspace/ui/mobile/hooks'
+import { IconSymbol } from '@workspace/native-ui/components'
+import { Colors } from '@workspace/native-ui/constants'
+import { useColorScheme } from '@workspace/native-ui/hooks'
 import { Tabs } from 'expo-router'
 
 import { useI18n } from '@/shared/hooks'

@@ -1,4 +1,4 @@
-import { ParallaxScrollView, ThemedText, ThemedView } from '@workspace/ui/mobile/layout'
+import { ParallaxScrollView, ThemedText, ThemedView } from '@workspace/native-ui/layout'
 import { Image } from 'expo-image'
 import { Link } from 'expo-router'
 import { Platform, StyleSheet } from 'react-native'
