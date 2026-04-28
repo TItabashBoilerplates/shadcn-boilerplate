@@ -1,6 +1,6 @@
 ---
 name: devenv-cicd
-description: GitHub Actions × devenv 2.0 による CI/CD ガイダンス。`.github/workflows/` の YAML 編集、`devenv tasks run` を CI で動かす、`enterShell` hook を発火させる、`devenv test` の process phase 回避、Cachix・`.devenv/` キャッシュ、`concurrency` group などについての質問に使用。本リポジトリの ci-check / test ジョブの設計方針を提供。
+description: GitHub Actions × devenv 2.0 による CI/CD ガイダンス。`.github/workflows/` の YAML 編集、`devenv tasks run` を CI で動かす、`enterShell` hook を発火させる、`devenv test` の process phase 回避、`/nix/store` の cache 戦略（cache-nix-action × cachix）、`concurrency` group などについての質問に使用。本リポジトリの ci-check / test ジョブの設計方針を提供。
 ---
 
 # devenv-cicd Skill
@@ -44,8 +44,10 @@ defaults:
 - `concurrency.group = ${{ github.workflow }}-${{ github.ref }}`、`cancel-in-progress = ${{ github.event_name == 'pull_request' }}`
   - PR への連続 push は古い走行をキャンセルし、main / develop への直接 push はキャンセルしない
 - `defaults.run.shell: devenv shell bash -- -e {0}` を **workflow レベル**で設定 → 両 job の全 `run:` で enterShell hook が発火
-- `cachix/install-nix-action@v31` + `cachix/cachix-action@v16` (`name: devenv`) で Nix binary cache
-- `actions/cache@v4` で `.devenv/` を cache（後述）
+- `cachix/install-nix-action@v31` で Nix インストール（`extra_nix_config: keep-outputs = true; keep-env-derivations = true` 必須、後述）
+- `nix-community/cache-nix-action@v7` で **`/nix/store` 自体**を GHA cache に乗せる
+- `cachix/cachix-action@v16` (`name: devenv`) を read-only substituter として併用
+- `actions/cache@v4` で `node_modules` 系を別 cache（`/nix/store` 外）
 - `Install devenv.sh` step は `shell: bash` override + `run: nix profile add nixpkgs#devenv`
 
 #### `ci-check` job（lint + format + type-check）
@@ -85,15 +87,42 @@ CI で lint / format / type-check しか走らせたくないのに毎回 Supaba
 
 verify task 自体は `execIfModified` キャッシュ込みで実装されているので、aggregator を経由しなくても効果は同じ。
 
-### Cachix と Cache 戦略（CRITICAL）
+### Cache 戦略（CRITICAL）
 
-**3 段で効かせる**。**`.devenv/` だけをキャッシュするのは不十分**。詳細は次節「重大な落とし穴」も参照。
+**3 段で効かせる**。`/nix/store` を cache する層と `node_modules` を cache する層を分けるのがポイント。`.devenv/` を `actions/cache` で抱えるアンチパターンは**やめる**（後述「事故 3」参照）。
 
-| キャッシュ | 何をキャッシュするか | 効果 |
+| 層 | キャッシュ対象 | 効果 |
 |---|---|---|
-| `cachix/cachix-action@v16` (`name: devenv`) | Nix store（devenv shell の構成要素、bun / nodejs / uv / python など Nix で管理されるパッケージ） | shell の build 時間を秒単位に短縮 |
-| `actions/cache@v4` の `path: .devenv` | task runner の state（`execIfModified` ハッシュ DB）、`backend-py` の uv venv（`UV_PROJECT_ENVIRONMENT=$DEVENV_ROOT/.devenv/state/venv`） | 無変更コミットでは setup / verify task ごとスキップ |
-| `actions/cache@v4` の `path: frontend/**/node_modules`, `drizzle/node_modules` | **Bun workspace の install 結果**（`.devenv/` 外） | `setup:install-frontend` task が `execIfModified` で skip された際に node_modules が空になるのを防ぐ |
+| `nix-community/cache-nix-action@v7` | **`/nix/store`** 全体（devenv shell の構成要素、bun / nodejs / uv / python など Nix で管理されるすべて） | shell の build / 評価結果を保持。2 回目以降の `Configuring shell` がほぼ瞬時 |
+| `cachix/cachix-action@v16` (`name: devenv`) | devenv 公式の Cachix binary cache を read-only substituter として登録 | 1 回目（cache-nix-action が cold）でも devenv 共通依存物は build from source を回避できる |
+| `actions/cache@v4` の `path: frontend/**/node_modules`, `drizzle/node_modules` | **Bun workspace の install 結果**（`/nix/store` 外） | `setup:install-frontend` task が `execIfModified` で skip された際に node_modules が空になるのを防ぐ |
+
+**`.devenv/` は CI ではキャッシュしない**。`uv venv` (`UV_PROJECT_ENVIRONMENT=$DEVENV_ROOT/.devenv/state/venv`) は CI 上では `setup:install-backend` task が `uv sync --frozen` で毎回再生成するため cache 不要（数秒で済む）。task runner の execIfModified state も CI では「毎回フルチェックで OK」なので cache せず捨てる。
+
+#### `cache-nix-action` の必須設定
+
+```yaml
+- uses: cachix/install-nix-action@v31
+  with:
+    extra_nix_config: |
+      keep-outputs = true
+      keep-env-derivations = true
+- uses: nix-community/cache-nix-action@v7
+  with:
+    primary-key: nix-${{ runner.os }}-${{ hashFiles('devenv.nix', 'devenv.lock', 'devenv.yaml') }}
+    restore-prefixes-first-match: nix-${{ runner.os }}-
+    gc-max-store-size-linux: 5G
+    purge: true
+    purge-prefixes: nix-${{ runner.os }}-
+    purge-created: 0
+    purge-primary-key: never
+```
+
+- **`keep-outputs = true` / `keep-env-derivations = true`** は cache-nix-action 公式の必須要件。これがないと nix store の自動 GC で devenv-shell の依存（中間ビルド成果物・derivation）が落ちて、2 回目以降に「あるはずのものが無い」状態になる。
+- `primary-key` は `devenv.nix` / `devenv.lock` / `devenv.yaml` の hash で組む。devenv 設定が変われば cache を作り直す。`bun.lock` / `uv.lock` は `/nix/store` の中身に影響しないので含めない（含めるとキャッシュ rotation が無駄に増える）。
+- `restore-prefixes-first-match` で部分一致 fallback を効かせる。devenv 設定が変わっても近い cache から始めて差分だけ build できる。
+- `gc-max-store-size-linux: 5G` で GHA cache の上限 (10GB/repo) に引っかからないよう保存前に GC。
+- `purge: true` + `purge-primary-key: never` で primary-key 以外の古い cache を整理。
 
 #### 重大な落とし穴 — `setup:install-*` の `execIfModified` × CI
 
@@ -103,33 +132,30 @@ verify task 自体は `execIfModified` キャッシュ込みで実装されて�
 
 CI 上では:
 
-1. job A で初回 install → `frontend/node_modules/` 生成 → `.devenv/state/tasks` に「実行済み」hash 記録 → cache action が `.devenv/` だけ保存（node_modules はパスに無いと保存されない）
-2. job B（別 runner）で cache restore → `.devenv/` だけ復元される → `frontend/node_modules/` は**存在しない**
+1. job A で初回 install → `frontend/node_modules/` 生成 → `.devenv/state/tasks` に「実行済み」hash 記録
+2. job B（別 runner）で `.devenv/` だけ復元される → `frontend/node_modules/` は**存在しない**
 3. enterShell hook → `setup:install-frontend` が hash 一致を見て skip → install されないまま step が進む → `vitest` / `tsc` 等が見つからずに死ぬ
 
-**根本対策（採用中）**: `actions/cache@v4` の `path` に `node_modules` も含める。lockfile が変われば cache key も変わるので整合性も取れる。
+**根本対策（採用中）**: `actions/cache@v4` で `node_modules` 系を別 cache に切り出す。lockfile が変われば cache key も変わるので整合性も取れる。
 
 ```yaml
-- name: Cache devenv state and dependencies
+- name: Cache node_modules
   uses: actions/cache@v4
   with:
     path: |
-      .devenv
       frontend/node_modules
       frontend/apps/*/node_modules
       frontend/packages/*/node_modules
       frontend/tooling/*/node_modules
       drizzle/node_modules
-    key: ${{ runner.os }}-devenv-${{ hashFiles('devenv.nix', 'devenv.lock', 'devenv.yaml', 'frontend/bun.lock', 'drizzle/bun.lock', 'backend-py/app/uv.lock') }}
+    key: ${{ runner.os }}-node-modules-${{ hashFiles('frontend/bun.lock', 'drizzle/bun.lock') }}
     restore-keys:
-      - ${{ runner.os }}-devenv-
+      - ${{ runner.os }}-node-modules-
 ```
 
-**なぜ uv venv は `.devenv/` だけで足りるのか**: `backend-py` は `UV_PROJECT_ENVIRONMENT=$DEVENV_ROOT/.devenv/state/venv` で uv venv を `.devenv/` 内に置く設定にしているため、`.devenv/` キャッシュに含まれる。Bun workspace は `frontend/node_modules` に hoist されるため `.devenv/` 外。**つまり「install 結果がどこに出るか」を正確に把握して cache path を決める必要がある**。
+**なぜ uv venv は cache しなくて良いのか**: `backend-py` は `UV_PROJECT_ENVIRONMENT=$DEVENV_ROOT/.devenv/state/venv` で venv を `.devenv/` 内に置いているが、CI では `.devenv/` を cache しない方針なので毎回 `uv sync --frozen` で再生成される（数秒）。Bun workspace は `frontend/node_modules` に hoist される（`/nix/store` 外）ため、こちらは別 cache 必須。**つまり「install 結果がどこに出るか」と「cache せず毎回再生成して許容できるコストか」を見て cache path を決める**。
 
-> ⚠️ **教訓**: 公式 devenv の GitHub Actions ドキュメント [Using devenv in GitHub Actions](https://devenv.sh/integrations/github-actions/) は `.devenv/` だけを cache する**最小例**しか示していない。これは「devenv 自体の state」のキャッシュ例にすぎず、外部パッケージマネージャ（bun / npm / pnpm 等）が `.devenv/` 外に出力する install 結果のキャッシュ方法は別途考える必要がある。**最小例をそのまま真似ると CI が壊れる**。
-
-`restore-keys` で部分一致 fallback を効かせると、構成変更があっても近いキャッシュから始めて差分だけ再構築できる。両 job で同じ key を共有しても、`actions/cache` は同 key の重複保存を黙ってスキップするので問題なし。glob path（`frontend/apps/*/node_modules` 等）は `actions/cache@v4` でサポートされており、存在しないパスは silent skip される。
+> ⚠️ **教訓**: 公式 devenv の GitHub Actions ドキュメント [Using devenv in GitHub Actions](https://devenv.sh/integrations/github-actions/) は `.devenv/` を cache する**最小例**を示している（が、それは罠）。公式最小例は「devenv 自体の state」のキャッシュ例にすぎず、`.devenv/profile` が `/nix/store` への symlink を持つことや、外部パッケージマネージャ（bun / npm / pnpm 等）が `.devenv/` 外に出力する install 結果のキャッシュ方法は別途考える必要がある。**最小例をそのまま真似ると CI が壊れる**。
 
 ## やってはいけないパターン
 
@@ -187,30 +213,72 @@ CI 用途では、verify task を直接列挙する。
   run: nix profile add nixpkgs#devenv
 ```
 
-### NG: `.devenv/` だけ cache して `node_modules` を cache しない
-
-「重大な落とし穴」節参照。`execIfModified` は inputs の hash しか見ず、outputs の存在を確認しないので、`node_modules` を cache に含めないと install 結果が消えた状態で task が skip され、ツールが見つからずに死ぬ。
+### NG: `.devenv/` を `actions/cache` で抱える
 
 ```yaml
-# ❌ NG: bun workspace の node_modules がキャッシュされない
-- uses: actions/cache@v4
-  with:
-    path: .devenv
-    key: ...
-```
-
-```yaml
-# ✅ OK: install 結果も含めてキャッシュ
+# ❌ NG: .devenv/profile が /nix/store への symlink を持つため、
+#       別 runner で restore すると参照先実体が無く
+#       「no substituter that can build it」で失敗する。
 - uses: actions/cache@v4
   with:
     path: |
       .devenv
       frontend/node_modules
+      ...
+    key: ...
+```
+
+```yaml
+# ✅ OK: /nix/store 自体を cache-nix-action で抱え、node_modules は別 cache
+- uses: cachix/install-nix-action@v31
+  with:
+    extra_nix_config: |
+      keep-outputs = true
+      keep-env-derivations = true
+- uses: nix-community/cache-nix-action@v7
+  with:
+    primary-key: nix-${{ runner.os }}-${{ hashFiles('devenv.nix', 'devenv.lock', 'devenv.yaml') }}
+    restore-prefixes-first-match: nix-${{ runner.os }}-
+    gc-max-store-size-linux: 5G
+    purge: true
+    purge-prefixes: nix-${{ runner.os }}-
+    purge-created: 0
+    purge-primary-key: never
+- uses: actions/cache@v4
+  with:
+    path: |
+      frontend/node_modules
       frontend/apps/*/node_modules
       frontend/packages/*/node_modules
       frontend/tooling/*/node_modules
       drizzle/node_modules
-    key: ...
+    key: ${{ runner.os }}-node-modules-${{ hashFiles('frontend/bun.lock', 'drizzle/bun.lock') }}
+```
+
+詳細は「事故 3」参照。
+
+### NG: `cache-nix-action` を `extra_nix_config` 無しで使う
+
+```yaml
+# ❌ NG: keep-outputs = true / keep-env-derivations = true が無いと
+#       nix store の自動 GC で devenv-shell の依存物が落ちる。
+#       次回 cache restore したときに「あるはずのものが無い」状態になる。
+- uses: cachix/install-nix-action@v31
+- uses: nix-community/cache-nix-action@v7
+  with:
+    primary-key: ...
+```
+
+```yaml
+# ✅ OK: cache-nix-action 公式推奨の nix.conf を必ず設定する
+- uses: cachix/install-nix-action@v31
+  with:
+    extra_nix_config: |
+      keep-outputs = true
+      keep-env-derivations = true
+- uses: nix-community/cache-nix-action@v7
+  with:
+    primary-key: ...
 ```
 
 ### NG: devenv script 名に bash 組み込みコマンドを使う
@@ -243,9 +311,10 @@ bash には `test` / `time` / `kill` / `printf` / `read` / `true` / `false` / `l
 
 | 変更 | 必要な workflow 修正 |
 |---|---|
-| 新しい lockfile（例: `tooling/<new>/bun.lock`）が増えた | `.devenv/` cache key の `hashFiles(...)` 引数に追加。さもないと依存変更が cache key に反映されず stale cache が使われ続ける |
-| 新しい install 出力ディレクトリが `.devenv/` 外にできる（例: 新しい monorepo を `tools/` 配下に追加し独自 `node_modules` ができる） | `actions/cache@v4` の `path:` リストに追加。漏らすと CI で「cache hit したのに必要なツールが見つからない」事故が起きる |
-| 新しいパッケージマネージャを導入（pnpm / yarn 等） | install 出力先を確認のうえ cache path に追加。`UV_PROJECT_ENVIRONMENT` のように `.devenv/` 内に出力先を寄せる選択肢も検討 |
+| `devenv.nix` / `devenv.lock` / `devenv.yaml` を変更（依存物の更新） | `cache-nix-action` の `primary-key` は自動で hash が変わるので追加対応不要（`hashFiles(...)` 引数に既に含まれているため） |
+| 新しい lockfile（例: `tooling/<new>/bun.lock`）が増えた | `node_modules` cache の `hashFiles(...)` 引数に追加。さもないと依存変更が cache key に反映されず stale cache が使われ続ける |
+| 新しい install 出力ディレクトリが `/nix/store` 外にできる（例: 新しい monorepo を `tools/` 配下に追加し独自 `node_modules` ができる） | `actions/cache@v4` の `path:` リストに追加。漏らすと CI で「cache hit したのに必要なツールが見つからない」事故が起きる |
+| 新しいパッケージマネージャを導入（pnpm / yarn 等） | install 出力先を確認のうえ `actions/cache` の path に追加 |
 
 ## 参考テンプレート（最小骨格）
 
@@ -272,22 +341,35 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: cachix/install-nix-action@v31
+        with:
+          # cache-nix-action 公式推奨。必須設定。
+          extra_nix_config: |
+            keep-outputs = true
+            keep-env-derivations = true
+      - uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('devenv.nix', 'devenv.lock', 'devenv.yaml') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+          gc-max-store-size-linux: 5G
+          purge: true
+          purge-prefixes: nix-${{ runner.os }}-
+          purge-created: 0
+          purge-primary-key: never
       - uses: cachix/cachix-action@v16
         with:
           name: devenv
-      - name: Cache devenv state and dependencies
+      - name: Cache node_modules
         uses: actions/cache@v4
         with:
           path: |
-            .devenv
             frontend/node_modules
             frontend/apps/*/node_modules
             frontend/packages/*/node_modules
             frontend/tooling/*/node_modules
             drizzle/node_modules
-          key: ${{ runner.os }}-devenv-${{ hashFiles('devenv.nix', 'devenv.lock', 'devenv.yaml', '**/bun.lock', '**/uv.lock') }}
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('frontend/bun.lock', 'drizzle/bun.lock') }}
           restore-keys:
-            - ${{ runner.os }}-devenv-
+            - ${{ runner.os }}-node-modules-
       - name: Install devenv.sh
         shell: bash
         run: nix profile add nixpkgs#devenv
@@ -306,7 +388,10 @@ jobs:
 - [ ] `devenv test` を CI で叩いていないか（process phase 起動回避）
 - [ ] verify task / test を直接列挙しているか
 - [ ] `bun install` / `uv sync` を bash から直接呼んでいないか
-- [ ] `actions/cache` の `path:` に **`.devenv/` だけでなく install 結果（`frontend/**/node_modules`, `drizzle/node_modules` 等）も含まれているか**
+- [ ] **`/nix/store` を `cache-nix-action` で cache しているか**（`actions/cache` で `.devenv/` を抱えていないか）
+- [ ] **`cachix/install-nix-action` の `extra_nix_config` に `keep-outputs = true` と `keep-env-derivations = true` が設定されているか**
+- [ ] `actions/cache` の `path:` に **`frontend/**/node_modules`, `drizzle/node_modules` 等の install 結果が含まれているか**
+- [ ] `cache-nix-action` の `primary-key` が devenv 設定 (`devenv.nix` / `devenv.lock` / `devenv.yaml`) の hash で組まれているか
 - [ ] `actions/cache` の `key:` の `hashFiles(...)` に新 lockfile が含まれているか（lockfile を新規追加した場合）
 - [ ] devenv script 名が **bash builtin と衝突していないか**（`type <name>` で確認）
 - [ ] `concurrency` group が設定されているか
@@ -331,18 +416,60 @@ jobs:
 
 **原因**: `actions/cache@v4` の `path:` が `.devenv` だけ。`setup:install-frontend` task の `execIfModified` は lockfile の hash 一致で skip と判定したが、`frontend/node_modules`（`.devenv/` 外）はキャッシュされていないため復元されず、空の状態で task が skip された。`backend-py` 側は `UV_PROJECT_ENVIRONMENT=$DEVENV_ROOT/.devenv/state/venv` で venv を `.devenv/` 内に置いていたためたまたま無事だった。
 
-**修正**: cache `path:` に `frontend/node_modules` 系および `drizzle/node_modules` を追加。lockfile が変われば cache key も変わるので整合性も取れる。
+**修正（暫定）**: cache `path:` に `frontend/node_modules` 系および `drizzle/node_modules` を追加。lockfile が変われば cache key も変わるので整合性も取れる。
+
+**追記（最終修正）**: 事故 3 を経て `.devenv/` 自体を cache 対象から外し、`node_modules` だけを `actions/cache` で別 cache に切り出す形に変更。
 
 **教訓**:
 - `execIfModified` は **inputs の hash しか見ず、outputs の存在を確認しない**。CI のように outputs が ephemeral（job 間で消える）な環境では、outputs もキャッシュ対象に含めなければならない。
 - 公式 devenv の GitHub Actions ドキュメントは `.devenv/` だけを cache する**最小例**しか示しておらず、外部パッケージマネージャ（bun / npm 等）が `.devenv/` 外に出力する install 結果のキャッシュ方法は別問題として扱われている。**最小例をそのまま真似ると壊れる**。
-- **install 結果がどこに出力されるか**を正確に把握してから cache path を決める。`.devenv/` 内に寄せるオプション（`UV_PROJECT_ENVIRONMENT` 等）があれば優先的に使う。
+- **install 結果がどこに出力されるか**を正確に把握してから cache path を決める。
 - 「他に問題ない」と即答する前に、**少なくとも cache scope が完結しているかは検証**する。具体的には: (1) install task が出力するパスを列挙、(2) それぞれが cache に含まれているか確認、(3) cache miss シナリオを頭の中で trace。
+
+### 事故 3: `.devenv/` を `actions/cache` で抱えると `/nix/store` symlink がダングリングになる（2026-04-28）
+
+**症状**: 同じ commit / 同じ cache key で 2 連続走らせて、片方の job が成功し、もう片方が失敗する。失敗側のログ:
+
+```
+Configuring shell
+Configuring shell in 223ms
+Error:   × Failed to get dev environment from derivation
+  ╰─▶ error: path '/nix/store/<hash>-devenv-shell.drv' is required,
+      but there is no substituter that can build it
+```
+
+成功側は `Configuring shell` に 28 秒かけて build from source していた。失敗側は `.devenv/nix-eval-cache.db` の評価結果を信じて即座に `/nix/store` を探しに行き、**実体が無くて即死**。
+
+**原因**: `actions/cache@v4` で `.devenv/` を cache していた。`.devenv/` の中身は:
+
+| 項目 | 中身 |
+|---|---|
+| `profile` | `/nix/store/...-devenv-profile` への **symlink** |
+| `bash-bash` | `/nix/store/...-bash-interactive-...` への symlink |
+| `gc/` | gc-roots（さらに `/nix/store` への symlink 群） |
+| `nix-eval-cache.db` | nix の評価結果（drv ハッシュ）を保存する SQLite DB |
+| `shell-*.sh` | 過去の shell 評価結果 |
+
+`.devenv/` 自体は cache 復元されるが、symlink が指している `/nix/store/...` の実体は別 runner では存在しない。`devenv shell` は `nix-eval-cache.db` の cached drv hash を使って `/nix/store/...drv` を realize しようとし、無いので失敗。public な `cachix devenv` cache はこのリポジトリ固有の shell.drv を持っていないので fallback もできない。
+
+なぜ片方の job だけ成功するのかは決定的には判明しなかったが、SQLite WAL / gc-roots の状態が job 間で僅かに違うため、片方は eval cache を引いて即死、もう片方は cache miss と判定して 28 秒かけて build from source、と振る舞いが分岐する。**いずれにせよ `.devenv/` を runner 跨ぎで cache するのは根本的に整合しない**。
+
+**修正**: `.devenv/` を `actions/cache` から外し、代わりに `nix-community/cache-nix-action@v7` で `/nix/store` 自体を cache する構成に変更。`/nix/store` を cache すれば symlink 先の実体も同時に揃うので、`.devenv/` の symlink / eval cache は `/nix/store` の整合性に追随できる（ただし本リポジトリでは `.devenv/` 自体は cache しない方針に振り、CI では毎回再生成）。
+
+`cache-nix-action` 公式推奨の `keep-outputs = true` / `keep-env-derivations = true` を `cachix/install-nix-action` の `extra_nix_config` で設定するのを忘れないこと。これがないと nix store の自動 GC で必要な derivation / outputs が落ちる。
+
+**教訓**:
+- **`.devenv/` は `actions/cache` で抱えてはいけない**。中身が `/nix/store` への symlink と評価キャッシュ DB を含むため、別 runner で復元すると整合しない。
+- **「CI cache」の対象は内容物が `/nix/store` から自己完結している層に限る**。symlink で外を参照する層は外側ごと cache するか、cache せずに毎回再生成するかのどちらか。
+- 公式 devenv の GitHub Actions ドキュメントの最小例は `.devenv/` を cache していないので、それに従うのが正解。逆に「最適化のつもりで `.devenv/` を cache 対象に追加する」のはアンチパターン。
+- 同じ cache key で 2 job 並列走らせて結果が分岐する場合、**SQLite WAL / gc-roots 等の「cache 内に入っている可変状態」が原因**であることを疑う。
 
 ## 関連ドキュメント
 
 - 公式: [Using devenv in GitHub Actions](https://devenv.sh/integrations/github-actions/)
 - 公式 issue（CI 最適化議論）: [What to do to optimize CI? #1575](https://github.com/cachix/devenv/issues/1575)
+- [nix-community/cache-nix-action README](https://github.com/nix-community/cache-nix-action)
+- [cachix/install-nix-action README](https://github.com/cachix/install-nix-action)
 - 本リポジトリ:
   - `.github/workflows/ci.yml` — 実装
   - `devenv.nix` — task / scripts 定義
