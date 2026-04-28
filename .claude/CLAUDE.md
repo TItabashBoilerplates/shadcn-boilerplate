@@ -198,10 +198,12 @@ test-backend-py               # pytest
 test-db                       # pgTAP DB tests
 e2e / e2e-web / e2e-mobile    # Maestro E2E
 
-# Database (user approval required)
-devenv tasks run app:migrate-dev   # Generate + apply migration + type 生成（フルフロー）
-devenv tasks run db:migrate-dev    # マイグレーション生成 + 適用のみ
-devenv tasks run model:build       # 型のみ再生成
+# Database
+# ローカルは AI 自動実行可、本番 / staging (`db:migrate-deploy`) はユーザー承認必須。詳細は .claude/rules/database.md
+devenv tasks run app:migrate-dev   # ローカル: Generate + apply migration + type 生成（フルフロー、AI 実行可）
+devenv tasks run db:migrate-dev    # ローカル: マイグレーション生成 + 適用のみ（AI 実行可）
+devenv tasks run model:build       # 型のみ再生成（AI 実行可）
+devenv tasks run -P production db:migrate-deploy   # 本番: ⚠️ ユーザー承認必須
 
 # Task graph 確認 (依存・実行順序を可視化)
 devenv tasks list                          # 全 task の階層表示
@@ -249,14 +251,17 @@ nr build
 
 ## Supabase Configuration
 
-| Setting                | Location                       |
-| ---------------------- | ------------------------------ |
-| Auth (OAuth, JWT, MFA) | `supabase/config.toml`         |
-| Storage buckets        | `supabase/config.toml`         |
-| API settings           | `supabase/config.toml`         |
-| Tables                 | `drizzle/schema/`              |
-| RLS policies           | `drizzle/schema/`              |
-| Realtime               | `drizzle/config/functions.sql` |
+| Setting                | Location                                |
+| ---------------------- | --------------------------------------- |
+| Auth (OAuth, JWT, MFA) | `supabase/config.toml`                  |
+| Storage buckets        | `supabase/config.toml`                  |
+| API settings           | `supabase/config.toml`                  |
+| Tables                 | `drizzle/schema/`                       |
+| RLS policies           | `drizzle/schema/`                       |
+| Realtime               | `drizzle/config/post-migration/`        |
+| Migrations             | `drizzle/migrations/` (drizzle-kit 出力) |
+
+> **マイグレーションは Drizzle に集約**: 出力先は `drizzle/migrations/`（v3 フォルダ形式）。`supabase/migrations/` は使用せず、Supabase の GitHub 連携によるマイグレーション自動適用も利用しない（GitHub 連携自体は Edge Functions / config 同期のため維持）。
 
 ---
 

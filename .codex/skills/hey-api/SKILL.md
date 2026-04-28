@@ -150,7 +150,7 @@ export function createBackendClient(options?: { accessToken?: string }) {
 ### 型エラー発生時
 
 ```bash
-make run                    # バックエンド起動
-bun run generate:api        # 再生成
-make type-check-frontend    # 検証
+devenv up                   # バックエンドを含む軽量セット起動
+devenv tasks run model:frontend  # API クライアント再生成（Hey API 含む）
+type-check-frontend         # 検証
 ```

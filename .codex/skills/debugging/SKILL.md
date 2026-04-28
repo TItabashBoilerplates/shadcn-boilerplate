@@ -39,10 +39,10 @@ CLI コマンドを使う前に、以下の MCP ツールを優先すること�
 
 | サービス | 管理方法 | 起動コマンド |
 |----------|----------|-------------|
-| backend-py (FastAPI) | devenv / process-compose | `devenv up` |
-| Storybook | devenv / process-compose | `devenv up` |
-| Next.js (web) | devenv / process-compose | `devenv up` |
-| Supabase | Docker | `make run` |
+| backend-py (FastAPI) | devenv 2.0 native process manager | `devenv up`（軽量セット） |
+| Storybook | devenv 2.0 native process manager | `devenv up`（軽量セット） |
+| Next.js (web) | devenv 2.0 native (opt-in) | `dev-web` または `devenv up web` |
+| Supabase（Docker 群） | **devenv 外**、Supabase CLI が所有 | `supabase-start`（`devenv up` の `before` で自動先行起動） |
 
 ---
 
@@ -57,7 +57,7 @@ process-compose logs -f storybook
 tail -f .devenv/state/process-compose/process-compose.log
 
 # 全サービス再起動
-make stop && make run
+stop && devenv up
 ```
 
 ---
@@ -76,11 +76,11 @@ docker logs -f supabase_edge_runtime_<project_name>
 ## 品質チェック
 
 ```bash
-make lint
-make format
-make type-check
-make ci-check
-make test
+lint           # 全プロジェクトの lint (auto-fix)
+format         # 全プロジェクトの format (auto-fix)
+type-check     # 全プロジェクトの型チェック
+ci-check       # CI チェック (lint + format + type、= devenv test)
+test           # 全 unit test (frontend + backend-py)
 ```
 
 ---

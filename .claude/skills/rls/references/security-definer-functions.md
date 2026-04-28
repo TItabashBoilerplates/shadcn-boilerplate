@@ -115,10 +115,10 @@ CREATE FUNCTION is_org_member(p_org_id uuid) RETURNS boolean
 
 ## 6. Drizzle での扱い
 
-現状 Drizzle には SECURITY DEFINER 関数の DSL がないため、`drizzle/config/functions.sql` に SQL で記述する。
+現状 Drizzle には SECURITY DEFINER 関数の DSL がないため、`drizzle/config/post-migration/` に SQL で記述する。
 
 ```sql
--- drizzle/config/functions.sql
+-- drizzle/config/post-migration/
 CREATE OR REPLACE FUNCTION public.is_org_member_of_brand(p_brand_id uuid)
 RETURNS boolean LANGUAGE sql SECURITY DEFINER STABLE
 SET search_path = public, pg_temp
@@ -216,7 +216,7 @@ CREATE POLICY "..." USING (is_org_member(org_id));  -- 行ごと評価
 - [ ] 関数内に `(SELECT auth.uid())` を使った認可チェックがある
 - [ ] `REVOKE EXECUTE ... FROM PUBLIC` + `GRANT EXECUTE ... TO <role>`
 - [ ] ポリシーから呼ぶ際は `(SELECT fn(...))` でラップ
-- [ ] 関数定義は `drizzle/config/functions.sql` に配置
+- [ ] 関数定義は `drizzle/config/post-migration/` に配置
 - [ ] pgTAP で関数の正しさ + ポリシーの挙動を検証
 
 ## 参考

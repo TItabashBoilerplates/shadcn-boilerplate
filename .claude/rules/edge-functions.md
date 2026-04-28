@@ -105,8 +105,8 @@ import postgres from "npm:postgres"
 ```json
 {
   "imports": {
-    "drizzle-orm": "npm:drizzle-orm@^0.44.7",
-    "drizzle-orm/": "npm:drizzle-orm@^0.44.7/",
+    "drizzle-orm": "npm:drizzle-orm@^0.45.2",
+    "drizzle-orm/": "npm:drizzle-orm@^0.45.2/",
     "postgres": "https://deno.land/x/postgresjs@v3.4.8/mod.js"
   }
 }

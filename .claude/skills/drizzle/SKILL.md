@@ -11,15 +11,16 @@ description: Drizzle ORM によるデータベーススキーマ管理ガイダ�
 
 ```
 drizzle/
-├── drizzle.config.ts         # Drizzle Kit 設定
-├── migrate.ts                # カスタムSQL実行スクリプト
+├── drizzle.config.ts         # Drizzle Kit 設定（out: './migrations'）
+├── migrate.ts                # pre/post-migration SQL ランナー（Bun）
 ├── schema/
 │   ├── schema.ts             # メインスキーマ（テーブル + RLS）
 │   ├── types.ts              # Enum 定義
 │   └── index.ts              # Public API
 ├── config/
-│   └── functions.sql         # カスタムSQL（関数・トリガー）
-└── (migrations → supabase/migrations/)
+│   ├── pre-migration/        # generate/migrate より前に流す SQL（extensions 等）
+│   └── post-migration/       # migrate の後に流す SQL（functions/triggers/realtime）
+└── migrations/               # drizzle-kit 出力（v3 フォルダ形式、git 管理）
 ```
 
 ## テーブル定義
@@ -98,13 +99,16 @@ export const insertPolicy = pgPolicy('authenticated_insert', {
 # 1. スキーマ編集
 vi drizzle/schema/schema.ts
 
-# 2. マイグレーション生成 + 適用（ユーザー承認が必要）
-# ⚠️ Claude は自動実行禁止 - ユーザーに以下を依頼:
+# 2. マイグレーション生成 + 適用（ローカル: AI 自動実行可）
 devenv tasks run app:migrate-dev
 
-# 3. 型生成
+# 3. 型のみ再生成 (migration 不要時)
 devenv tasks run model:build
 ```
+
+**実行ポリシー** (詳細は `.claude/rules/database.md`):
+- **ローカル** (`app:migrate-dev` / `db:migrate-dev`): AI 自動実行可。失敗は schema 修正 → 再実行で復旧可能。
+- **本番 / staging** (`db:migrate-deploy`): ⚠️ **AI 自動実行禁止**。共有環境 / 本番への適用は必ずユーザーに確認してから手動実行。
 
 **重要**: マイグレーションは破壊的操作のため、Claude は自動実行しません。
 
@@ -128,13 +132,18 @@ export const users = pgTable('users', {
 })
 ```
 
-## カスタムSQL（functions.sql）
+## カスタムSQL（pre/post-migration）
+
+カスタム SQL は **2 フェーズ** で `drizzle/config/` 配下に置き、`migrate.ts` (Bun) が `drizzle-kit migrate` の前後で順次実行する。
 
 ```sql
--- drizzle/config/functions.sql
-
+-- drizzle/config/pre-migration/00_extensions.sql （generate/migrate より前）
 -- pgvector 拡張
 CREATE EXTENSION IF NOT EXISTS vector;
+```
+
+```sql
+-- drizzle/config/post-migration/00_functions.sql （migrate の後）
 
 -- Realtime Publication
 ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
@@ -149,15 +158,61 @@ END;
 $$ LANGUAGE plpgsql;
 ```
 
+実行順:
+```
+nr migrate:pre → nr generate → nr migrate → nr migrate:post
+```
+
 ## 型生成
 
 ```bash
-# Frontend 用 Supabase 型
-devenv tasks run model:build-frontend
+# Frontend 用: Supabase 型 + Drizzle schema コピー (db-schema パッケージへ)
+devenv tasks run model:frontend
 
-# Edge Functions 用（Drizzle スキーマもコピー）
-devenv tasks run model:build-functions
+# Edge Functions 用 (Supabase 型 + Drizzle スキーマコピー)
+devenv tasks run model:functions
+
+# 両方一括
+devenv tasks run model:build
 ```
+
+## Frontend での Drizzle 由来 zod schema 利用
+
+`@workspace/db-schema` パッケージ経由で drizzle-zod 生成の zod schema を frontend Form / API validation に使う:
+
+```typescript
+import { usersInsertSchema, type UsersInsert } from '@workspace/db-schema/zod'
+import { z } from 'zod'
+
+// users テーブルの NOT NULL / UNIQUE / max length が自動反映される
+export const accountUpdateSchema = usersInsertSchema.pick({
+  displayName: true,
+  accountName: true,
+})
+
+// オンボーディング: accountName は handle_new_user() トリガーが自動付与する → 入力欄に出さない
+export const onboardingSchema = usersInsertSchema
+  .pick({ displayName: true })
+  .extend({ agreedToTerms: z.literal(true) })
+
+export type AccountUpdate = z.infer<typeof accountUpdateSchema>
+```
+
+### DB トリガーで埋まるカラムの扱い (重要)
+
+`drizzle/config/post-migration/00_functions.sql` の `handle_new_user()` で自動付与されるカラム (例: `users.accountName`) は DB 上 NOT NULL だが **アプリ層は送らない**。drizzle-zod は DB 制約通りに required にするため、Form/API payload では `pick` か `omit` で必要なフィールドだけ取り出す:
+
+| シナリオ | パターン |
+|---|---|
+| サインアップ (OAuth/OTP) | accountName は送らない → schema 含めない |
+| Onboarding (初回プロフィール) | `usersInsertSchema.pick({ displayName: true })` |
+| アカウント設定変更 | `usersInsertSchema.pick({ displayName: true, accountName: true })` |
+| PATCH 部分更新 | `usersUpdateSchema.omit({ id: true })` (PK は path 由来) |
+
+**前提**:
+- `frontend/packages/db-schema/src/schema/` は **auto-generated**（手動編集禁止、`.claude/rules/auto-generated.md` 参照）
+- drizzle/schema/ を編集 → `devenv tasks run model:frontend` で zod 側も自動再生成
+- 提供 schema: `usersInsertSchema` / `usersUpdateSchema` / `usersSelectSchema` ほか全テーブル分（users / userProfiles / subscriptions / orders）
 
 ### Edge Functions での使用
 
@@ -167,8 +222,8 @@ Edge Functions で Drizzle ORM と PostgreSQL を使用する場合：
 ```json
 {
   "imports": {
-    "drizzle-orm": "npm:drizzle-orm@^0.44.7",
-    "drizzle-orm/": "npm:drizzle-orm@^0.44.7/",
+    "drizzle-orm": "npm:drizzle-orm@^0.45.2",
+    "drizzle-orm/": "npm:drizzle-orm@^0.45.2/",
     "postgres": "https://deno.land/x/postgresjs@v3.4.8/mod.js"
   }
 }

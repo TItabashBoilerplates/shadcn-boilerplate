@@ -50,7 +50,7 @@ AS $$ ... $$;
 
 ### Drizzle からの呼び出し側
 
-Drizzle には SECURITY DEFINER 関数の DSL がないので、関数自体は `drizzle/config/functions.sql` に書き、pgPolicy から `(select ...)` でラップして呼ぶ。
+Drizzle には SECURITY DEFINER 関数の DSL がないので、関数自体は `drizzle/config/post-migration/` に書き、pgPolicy から `(select ...)` でラップして呼ぶ。
 
 ```typescript
 pgPolicy('org_read', {

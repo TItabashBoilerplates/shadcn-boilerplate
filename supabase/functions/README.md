@@ -88,13 +88,14 @@ database operations.
 
 ```typescript
 import type { InferInsertModel, InferSelectModel } from "npm:drizzle-orm";
-import { chatRooms, generalUsers, messages } from "../shared/drizzle/index.ts";
+import { orders, subscriptions, userProfiles, users } from "../shared/drizzle/index.ts";
 
 // Infer types from Drizzle schemas
-type User = InferSelectModel<typeof generalUsers>;
-type NewUser = InferInsertModel<typeof generalUsers>;
-type ChatRoom = InferSelectModel<typeof chatRooms>;
-type Message = InferSelectModel<typeof messages>;
+type User = InferSelectModel<typeof users>;
+type NewUser = InferInsertModel<typeof users>;
+type UserProfile = InferSelectModel<typeof userProfiles>;
+type Subscription = InferSelectModel<typeof subscriptions>;
+type Order = InferSelectModel<typeof orders>;
 ```
 
 **Usage with Supabase Client**:
@@ -102,9 +103,9 @@ type Message = InferSelectModel<typeof messages>;
 ```typescript
 import { createClient } from "npm:@supabase/supabase-js@^2";
 import type { InferSelectModel } from "npm:drizzle-orm";
-import { generalUsers } from "../shared/drizzle/index.ts";
+import { users } from "../shared/drizzle/index.ts";
 
-type User = InferSelectModel<typeof generalUsers>;
+type User = InferSelectModel<typeof users>;
 
 Deno.serve(async (req: Request) => {
   const supabase = createClient(
@@ -147,25 +148,26 @@ connection instead of the Supabase REST API.
 
 ```typescript
 import { createDrizzleClient } from "../shared/db/index.ts";
-import { generalUsers } from "../shared/drizzle/index.ts";
+import { users } from "../shared/drizzle/index.ts";
 
 Deno.serve(async (req: Request) => {
   const db = createDrizzleClient();
 
   // Simple query
-  const users = await db.select().from(generalUsers);
+  const allUsers = await db.select().from(users);
 
   // Transaction example
   await db.transaction(async (tx) => {
-    await tx.insert(generalUsers).values({
+    await tx.insert(users).values({
       id: "user-123",
       displayName: "Alice",
+      accountName: "alice_001",
       // ...
     });
     // Additional operations within the same transaction
   });
 
-  return new Response(JSON.stringify({ users }), {
+  return new Response(JSON.stringify({ users: allUsers }), {
     headers: { "Content-Type": "application/json" },
   });
 });
@@ -190,7 +192,7 @@ are discouraged).
 {
   "imports": {
     "@supabase/supabase-js": "npm:@supabase/supabase-js@^2",
-    "drizzle-orm": "npm:drizzle-orm@^0.44.7"
+    "drizzle-orm": "npm:drizzle-orm@^0.45.2"
   }
 }
 ```
@@ -217,9 +219,9 @@ cd my-function
 // supabase/functions/my-function/index.ts
 import { createClient } from "npm:@supabase/supabase-js@^2";
 import type { InferSelectModel } from "npm:drizzle-orm";
-import { generalUsers } from "../shared/drizzle/index.ts";
+import { users } from "../shared/drizzle/index.ts";
 
-type User = InferSelectModel<typeof generalUsers>;
+type User = InferSelectModel<typeof users>;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -281,7 +283,7 @@ Deno.serve(async (req: Request) => {
 {
   "imports": {
     "@supabase/supabase-js": "npm:@supabase/supabase-js@^2",
-    "drizzle-orm": "npm:drizzle-orm@^0.44.7"
+    "drizzle-orm": "npm:drizzle-orm@^0.45.2"
   }
 }
 ```
@@ -383,18 +385,18 @@ Leverage Drizzle schemas for complete type safety:
 
 ```typescript
 import type { InferInsertModel, InferSelectModel } from "npm:drizzle-orm";
-import { chatRooms, messages } from "../shared/drizzle/index.ts";
+import { orders, subscriptions } from "../shared/drizzle/index.ts";
 
-type Message = InferSelectModel<typeof messages>;
-type NewMessage = InferInsertModel<typeof messages>;
+type Order = InferSelectModel<typeof orders>;
+type NewOrder = InferInsertModel<typeof orders>;
 
 // Use types with Supabase operations
 const { data } = await supabase
-  .from("messages")
+  .from("orders")
   .select("*")
-  .eq("chat_room_id", roomId);
+  .eq("user_id", userId);
 
-const typedMessages: Message[] = data as Message[];
+const typedOrders: Order[] = data as Order[];
 ```
 
 ## Shared Code
@@ -406,7 +408,7 @@ type generation:
 
 ```bash
 # Generate types and copy Drizzle schemas
-make build-model-functions
+devenv tasks run model:functions
 ```
 
 **Generated Files**:
@@ -415,14 +417,12 @@ make build-model-functions
 - `shared/drizzle/schema.ts` - All table definitions
 - `shared/drizzle/types.ts` - Enum definitions
 
-**Available Tables**:
+**Available Tables** (boilerplate baseline):
 
-- generalUsers, generalUserProfiles
-- corporateUsers, organizations
-- chatRooms, messages, userChats
-- virtualUsers, virtualUserChats, virtualUserProfiles
-- embeddings (pgvector)
-- addresses
+- users, userProfiles
+- subscriptions, orders (Polar.sh)
+
+> プロジェクト固有のドメインテーブルを追加した場合は drizzle/schema/ を編集 → `devenv tasks run model:functions` でコピー先も更新される。
 
 ### Supabase Types
 
@@ -611,7 +611,7 @@ cat supabase/functions/my-function/deno.json
 
 ```bash
 # Regenerate types and schemas
-make build-model-functions
+devenv tasks run model:functions
 
 # Check shared/drizzle/ was updated
 ls -la supabase/functions/shared/drizzle/

@@ -47,20 +47,31 @@ function isValidPhase(phase: string): phase is Phase {
 }
 
 async function executeSqlFiles(configDir: string, phase: Phase): Promise<void> {
-  const databaseUrl = Bun.env.POSTGRES_URL
-
-  if (!databaseUrl) {
-    console.error('❌ Error: POSTGRES_URL environment variable is required')
-    process.exit(1)
-  }
-
   const targetDir = `${configDir}/${phase}`
 
-  // ディレクトリが存在するか確認
+  // ディレクトリが存在するか確認（接続前にスキップ判定）
   if (!existsSync(targetDir)) {
     console.log(`⚠️  Directory not found: ${targetDir}`)
     console.log('Skipping SQL execution.')
     return
+  }
+
+  // 対象ディレクトリ内の全 .sql ファイルを取得
+  const sqlFiles = readdirSync(targetDir)
+    .filter((file) => file.endsWith('.sql'))
+    .sort() // アルファベット順でソート（一貫性のため）
+
+  if (sqlFiles.length === 0) {
+    console.log(`⚠️  No SQL files found in ${phase}/`)
+    console.log('Skipping SQL execution.')
+    return
+  }
+
+  // 実行が確定したのち POSTGRES_URL を要求する
+  const databaseUrl = Bun.env.POSTGRES_URL
+  if (!databaseUrl) {
+    console.error('❌ Error: POSTGRES_URL environment variable is required')
+    process.exit(1)
   }
 
   console.log(`🔌 Connecting to database...`)
@@ -72,85 +83,30 @@ async function executeSqlFiles(configDir: string, phase: Phase): Promise<void> {
   try {
     console.log(`📖 Reading SQL files from ${phase}/...`)
 
-    // 対象ディレクトリ内の全 .sql ファイルを取得
-    const sqlFiles = readdirSync(targetDir)
-      .filter((file) => file.endsWith('.sql'))
-      .sort() // アルファベット順でソート（一貫性のため）
+    console.log(`Found ${sqlFiles.length} SQL file(s): ${sqlFiles.join(', ')}`)
+    console.log('')
 
-    if (sqlFiles.length === 0) {
-      console.log(`⚠️  No SQL files found in ${phase}/`)
-      console.log('Skipping SQL execution.')
-    } else {
-      console.log(`Found ${sqlFiles.length} SQL file(s): ${sqlFiles.join(', ')}`)
+    // 各SQLファイルを順次実行。1ファイルでも失敗したら即時 throw して停止。
+    for (const file of sqlFiles) {
+      console.log(`🔧 Executing ${file}...`)
+      const sqlPath = `${targetDir}/${file}`
+      const sqlFile = Bun.file(sqlPath)
+      const sqlContent = await sqlFile.text()
+
+      try {
+        await db.execute(sql.raw(sqlContent))
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          console.error(`❌ Failed to execute ${file}: ${error.message}`)
+        } else {
+          console.error(`❌ Failed to execute ${file}: unknown error`, error)
+        }
+        throw error
+      }
+
+      console.log(`✅ ${file} executed successfully`)
       console.log('')
-
-      // 各ファイルの実行結果を記録
-      const results: Array<{ file: string; success: boolean; error?: string }> = []
-
-      // 各SQLファイルを順次実行
-      for (const file of sqlFiles) {
-        try {
-          console.log(`🔧 Executing ${file}...`)
-          const sqlPath = `${targetDir}/${file}`
-          const sqlFile = Bun.file(sqlPath)
-          const sqlContent = await sqlFile.text()
-
-          // SQLを実行
-          await db.execute(sql.raw(sqlContent))
-
-          console.log(`✅ ${file} executed successfully`)
-          results.push({ file, success: true })
-        } catch (error) {
-          console.error(`⚠️  Error executing ${file}:`)
-          if (error instanceof Error) {
-            console.error(`   ${error.message}`)
-            results.push({ file, success: false, error: error.message })
-          } else {
-            console.error('   Unknown error occurred')
-            results.push({ file, success: false, error: 'Unknown error' })
-          }
-          // エラーが発生しても続行
-        }
-        console.log('') // 空行で区切り
-      }
-
-      // 実行結果のサマリーを表示
-      const successful = results.filter((r) => r.success)
-      const failed = results.filter((r) => !r.success)
-
-      console.log('📊 Execution Summary:')
-      console.log(`  Phase: ${phase}`)
-      console.log(`  Total files: ${results.length}`)
-      console.log(`  Successful: ${successful.length}`)
-      console.log(`  Failed: ${failed.length}`)
-
-      if (successful.length > 0) {
-        console.log('')
-        console.log('✅ Successfully executed:')
-        for (const r of successful) {
-          console.log(`  - ${r.file}`)
-        }
-      }
-
-      if (failed.length > 0) {
-        console.log('')
-        console.log('❌ Failed to execute:')
-        for (const r of failed) {
-          console.log(`  - ${r.file}: ${r.error}`)
-        }
-        console.log('')
-        console.log('⚠️  Some SQL files failed to execute. Please check the errors above.')
-        // 失敗があっても exit(1) しない（警告のみ）
-      }
     }
-  } catch (error) {
-    console.error('❌ Fatal error during SQL execution:')
-    if (error instanceof Error) {
-      console.error(`   ${error.message}`)
-    } else {
-      console.error('   Unknown error occurred')
-    }
-    process.exit(1)
   } finally {
     // 接続を確実にクローズ
     await client.end()
@@ -184,4 +140,12 @@ async function main() {
   console.log(`✨ ${phase} phase complete!`)
 }
 
-main()
+main().catch((error: unknown) => {
+  if (error instanceof Error) {
+    console.error(`\n❌ Fatal error: ${error.message}`)
+    if (error.stack) console.error(error.stack)
+  } else {
+    console.error('\n❌ Fatal error: unknown error', error)
+  }
+  process.exit(1)
+})

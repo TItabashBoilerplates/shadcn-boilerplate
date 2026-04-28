@@ -197,7 +197,7 @@ supabase.channel('x').on('postgres_changes', { event: '*', ... }, handler)
    └─ PII 列あり → column-level-security.md
 
 3. Drizzle スキーマに pgPolicy を定義
-   └─ 関数は drizzle/config/functions.sql に生 SQL で
+   └─ 関数は drizzle/config/post-migration/ に生 SQL で
 
 4. インデックス設計
    └─ indexes-for-rls.md のチェックリスト

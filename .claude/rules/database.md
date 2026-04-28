@@ -1,34 +1,70 @@
 ---
-paths: drizzle/**/*.ts, supabase/migrations/**/*.sql
+paths: drizzle/**/*.ts, drizzle/migrations/**/*.sql
 ---
 
 # Database Migration Policy
 
-**CRITICAL**: NEVER automatically execute database migrations without explicit user approval.
+**ローカル開発のマイグレーションは AI 実行可。本番デプロイは引き続きユーザー承認必須。**
 
 ## Rules
 
-1. **Schema Changes Only**: You may edit schema files (`drizzle/schema/schema.ts`, etc.)
-2. **NO Automatic Migration**: Do NOT run `devenv tasks run app:migrate-dev`, `devenv tasks run db:migrate-deploy`, or `devenv tasks run app:migrate-dev`
-3. **User Confirmation Required**: Always ask the user to review schema changes and execute migration commands manually
+| 操作 | 対象 DB | AI 自動実行 | 備考 |
+|---|---|---|---|
+| `devenv tasks run app:migrate-dev` | **ローカル** Supabase (localhost:54322) | **可** | スキーマ生成 → 適用 → 型再生成。失敗してもローカルなので安全に再実行可能 |
+| `devenv tasks run db:migrate-dev` | **ローカル** Supabase | **可** | 上記から型生成を除いたサブセット |
+| `devenv tasks run model:*` | (DB 接続を伴わない型生成) | **可** | 元から read-only |
+| `devenv tasks run -P staging db:migrate-deploy` | **共有 staging** | **要承認** | 共有環境への変更。実行前にユーザーへ明示確認 |
+| `devenv tasks run -P production db:migrate-deploy` | **本番** | **要承認** | 不可逆かつデータ損失リスクあり。実行前にユーザーへ明示確認 |
+| `drizzle/migrations/` 内ファイルの**手動編集** | (生成済み migration) | **禁止** | ハッシュ整合性が壊れる。スキーマ側を直して再 generate する |
 
-## Workflow
+## Workflow (Local Development)
 
 ```bash
-# ✅ Good: Proper workflow
 # 1. Edit schema
 vi drizzle/schema/schema.ts
 
-# 2. Inform user
-"スキーマを更新しました。以下のコマンドでマイグレーションを実行してください：
-devenv tasks run app:migrate-dev"
+# 2. AI が自動実行してよい (ローカル DB のみ)
+devenv tasks run app:migrate-dev
+# → migrate:pre → drizzle-kit generate → drizzle-kit migrate → migrate:post → model:build
 
-# 3. User executes migration manually
-# (Claude does NOT execute this)
+# 3. 生成された migration SQL を確認 (AI / 人間どちらでも)
+ls drizzle/migrations/
+cat drizzle/migrations/<latest>/migration.sql
 
-# ❌ Bad: Automatic migration execution
-# Claude runs devenv tasks run app:migrate-dev automatically - PROHIBITED
+# 4. 失敗した場合の復旧
+# - エラーログを読む
+# - drizzle/schema/*.ts または drizzle/config/post-migration/*.sql を修正
+# - 必要なら supabase-stop && supabase-start でローカル DB をリセット
+# - 再度 app:migrate-dev
 ```
+
+## Workflow (Remote Deployment, USER APPROVAL REQUIRED)
+
+```bash
+# AI は実行禁止。以下のいずれかでユーザーに確認:
+# - 「staging に migration を適用してよいか」
+# - 「production に migration を適用してよいか」
+# - 「どの profile (staging / production) に対して実行するか」
+
+# ユーザーが実行を承認した場合のみ:
+devenv tasks run -P staging db:migrate-deploy
+# or
+devenv tasks run -P production db:migrate-deploy
+```
+
+## Why Local Migrations Can Be Auto-Executed
+
+- ローカル Supabase は Docker コンテナで再起動可能 (`stop && supabase-start`)
+- マイグレーションログ (`__drizzle_migrations`) はローカルにしか反映されない
+- スキーマ変更 → 型再生成 → テストの流れを止めずに進められる
+- 失敗してもデータ損失は開発者個人のローカル DB に限定
+
+## Why Remote Migrations Still Require Approval
+
+- staging / production は **共有システム**（チームメンバーや本番ユーザーに影響）
+- データ損失は不可逆
+- migration SQL の **目視レビュー**を経てから適用すべき
+- 実行タイミング（メンテナンス時間帯など）に配慮が必要
 
 ## Schema Design Rules (MANDATORY)
 
@@ -220,27 +256,7 @@ using: sql`true`
 
 ---
 
-## Type Generation (Allowed)
-
-Type generation is allowed as it's a read-only operation:
-
-```bash
-# ✅ Allowed
-devenv tasks run model:frontend   # Generate Supabase types
-devenv tasks run model:functions  # Generate Edge Functions types
-devenv tasks run model:build            # Generate all types
-
-# ❌ Prohibited
-devenv tasks run app:migrate-dev            # Includes migration execution
-```
-
-## Why This Policy Exists
-
-- Database migrations are **irreversible** operations
-- Schema changes affect **production data**
-- User must review migration SQL before applying
-- Prevents accidental data loss or corruption
-
 ## Enforcement
 
-**Always ask the user for explicit approval before database operations.**
+- **ローカル**: AI が `app:migrate-dev` / `db:migrate-dev` を自動実行してよい。失敗時はエラーログ確認 → スキーマまたは pre/post SQL の修正 → 再実行のループで自走可能。
+- **本番 / staging**: AI は `db:migrate-deploy` を実行しない。ユーザーに明示確認をしてから手動実行。

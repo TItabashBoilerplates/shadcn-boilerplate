@@ -201,7 +201,7 @@ const { data } = await supabase.storage.from('user-files').list(`users/${userId}
 
 ## 10. Drizzle / Migration での扱い
 
-`storage.objects` は Supabase Auth/Storage が管理するテーブル。Drizzle スキーマでは定義しない。RLS ポリシーを書く場合は **生の SQL** を `drizzle/config/functions.sql` または新規 `storage-policies.sql` に書き、マイグレーションで適用する。
+`storage.objects` は Supabase Auth/Storage が管理するテーブル。Drizzle スキーマでは定義しない。RLS ポリシーを書く場合は **生の SQL** を `drizzle/config/post-migration/` または新規 `storage-policies.sql` に書き、マイグレーションで適用する。
 
 ```sql
 -- drizzle/config/storage-policies.sql

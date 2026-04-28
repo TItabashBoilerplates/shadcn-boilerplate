@@ -9,7 +9,9 @@
 - ライブラリの API、設定ファイル形式、CLI 構文は**必ずファクトを調査**してから使用
 - 「たぶんこうだろう」「以前こうだった」という推測での実装は**絶対に行わない**
 - **モジュール・パッケージは必ず最新バージョンを調査し、最新のAPIを使用すること**
-- **ビルド・テスト・リント等は必ず Makefile のコマンドを使用すること**
+- **ビルド・テスト・リント等は必ず devenv のコマンド（scripts または `devenv tasks run`）を使用すること**
+
+> Makefile は **deprecated**。すべて devenv のコマンドへ移行済み。`make X` を叩くと案内メッセージのみ出力する。
 
 ## 会話言語
 
@@ -54,49 +56,74 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 |---------|------|
 | **Research-First** | 実装前に公式ドキュメント確認必須 |
 | **TDD** | テスト駆動開発、All Green必須 |
-| **Commands** | Makefileコマンド使用必須 |
+| **Commands** | devenv の scripts / `devenv tasks run` 使用必須 |
 | **Auto-Generated** | 自動生成ファイル編集禁止 |
 | **Supabase-First** | supabase-js優先、バックエンドは最終手段 |
 | **i18n** | 多言語対応必須（en, ja） |
 | **DateTime** | UTC保存、Frontend変換 |
 | **Clean Code** | 後方互換禁止、重複禁止 |
 | **UI Testing** | UI は Storybook、単体テスト不要 |
-| **Debugging** | ログ確認・再起動は process-compose MCP 最優先 |
+| **Debugging** | devenv 2.0 の native process manager TUI を主インターフェース |
 
-### Debugging — process-compose MCP（MANDATORY）
+### Debugging — devenv 2.0 native TUI（MANDATORY）
 
-フロントエンド・バックエンドのデバッグは **process-compose MCP ツールを最優先**で使用する。
-MCP サーバーは port 8090 (SSE) で常時稼働。詳細は `.codex/skills/debugging/SKILL.md` を参照。
+フロントエンド・バックエンドのデバッグは **devenv 2.0 の native process manager の TUI** を主インターフェースとして使用する。`devenv up` を対話端末で実行すると TUI が自動起動し、プロセス一覧・ログ閲覧・再起動がキーボード操作で可能。詳細は `.codex/skills/debugging/SKILL.md` を参照。
 
-| ツール | 用途 | 引数 |
-|--------|------|------|
-| `get-process-status` | 全サービス死活確認 | なし |
-| `get-process-logs` | ログ取得 | `process_name` (backend/storybook/web), `lines` |
-| `restart-process` | プロセス再起動 | `process_name` |
-| `start-process` | プロセス起動 | `process_name` |
+| 操作 | 方法 |
+|---|---|
+| 全プロセス死活確認 | `devenv up` を実行すると TUI でリスト表示、または `devenv processes wait` で ready 待機 |
+| ログ取得 | TUI 内で対象プロセス選択 → ログ閲覧 |
+| プロセス再起動 | TUI 内で対象プロセス選択 → 再起動 |
+| 軽量セット起動 | `devenv up`（Supabase + backend + storybook） |
+| 個別アプリ起動 | `dev-web`, `dev-mobile`, または `devenv up <name>` |
+| 全停止 | `stop`（devenv プロセス + Supabase 両方） |
 
 ---
 
 ## Development Commands
 
+すべて devenv shell（direnv 経由）で PATH 上に存在する **scripts** か、`devenv tasks run <name>` で起動する **tasks**。`make X` は使わない。
+
 ```bash
 # Setup
-make init                    # Full project initialization
+# `devenv shell` 進入（direnv 経由含む）で setup:* タスクが自動実行:
+#   - setup:secrets         → env/.env.secrets を雛形からコピー（無ければ）
+#   - setup:install-frontend → bun install (frontend) ※ lockfile 変更検知時のみ
+#   - setup:install-drizzle  → bun install (drizzle)
+#   - setup:install-backend  → uv sync (backend-py/app)
+# 明示的なブートストラップタスクは不要。
 
 # Services
-make run                     # Start backend (Docker)
-make frontend                # Start frontend dev server
-make stop                    # Stop all services
+supabase-start                # Supabase (Docker) のみ起動
+supabase-stop                 # Supabase (Docker) のみ停止
+devenv up                     # 軽量セット: Supabase + backend + Storybook（TUI 付き）
+dev-web                       # 軽量セット + Next.js (web)
+dev-mobile                    # 軽量セット + Expo Metro (mobile, non-interactive)
+dev-all                       # 軽量セット + 全 frontendApps
+devenv up backend web         # 任意組み合わせ
+stop                          # devenv プロセス + Supabase をすべて停止
 
 # Quality
-make lint                    # Lint all
-make format                  # Format all
-make type-check              # Type check all
-make ci-check                # CI checks (lint + format + type)
+lint                          # 全プロジェクトの lint (auto-fix)
+format                        # 全プロジェクトの format (auto-fix)
+format-check                  # 各 sub-project の format-check
+type-check                    # 各 sub-project の type-check
+ci-check                      # = `devenv test`、ci:check aggregator 経由（キャッシュ込み）
+devenv test                   # ci-check と同等。ローカル/CI で同じコマンド
 
-# Database (user approval required)
-make migrate-dev             # Generate + apply migration
-make build-model             # Generate types only
+# Tests
+test                          # 全 unit test (frontend + backend-py)
+test-frontend                 # Vitest
+test-backend-py               # pytest
+test-db                       # pgTAP DB tests
+e2e / e2e-web / e2e-mobile    # Maestro E2E
+
+# Database
+# ローカルは AI 自動実行可、本番 / staging (`db:migrate-deploy`) はユーザー承認必須。詳細は .codex/skills/drizzle/SKILL.md
+devenv tasks run app:migrate-dev   # ローカル: Generate + apply migration + type 生成（フルフロー、AI 実行可）
+devenv tasks run db:migrate-dev    # ローカル: マイグレーション生成 + 適用のみ（AI 実行可）
+devenv tasks run model:build       # 型のみ再生成（AI 実行可）
+devenv tasks run -P production db:migrate-deploy   # 本番: ⚠️ ユーザー承認必須
 ```
 
 ---
@@ -123,7 +150,10 @@ env/
 | API settings           | `supabase/config.toml`         |
 | Tables                 | `drizzle/schema/`              |
 | RLS policies           | `drizzle/schema/`              |
-| Realtime               | `drizzle/config/functions.sql` |
+| Realtime               | `drizzle/config/post-migration/` |
+| Migrations             | `drizzle/migrations/` (drizzle-kit 出力) |
+
+> **マイグレーションは Drizzle に集約**: 出力先は `drizzle/migrations/`（v3 フォルダ形式）。`supabase/migrations/` は使用しない。
 
 ---
 
@@ -170,4 +200,4 @@ env/
 | `i18n/` | next-intl 多言語対応 |
 | `langchain/` | LangChain/LangGraph/LangSmith |
 | `maestro/` | Maestro E2Eテスト |
-| `debugging/` | デバッグ手順（process-compose MCP 優先） |
+| `debugging/` | デバッグ手順（devenv 2.0 native CLI 優先・Supabase） |

@@ -162,15 +162,17 @@ COMMIT;
    └─ pgPolicy 定義
 
 2. SECURITY DEFINER 関数が必要な場合:
-   drizzle/config/functions.sql に SQL を追記
+   drizzle/config/post-migration/*.sql に SQL を追記（migrate.ts が drizzle-kit migrate の後に実行）
 
-3. devenv tasks run app:migrate-dev（ユーザー承認が必要 — Claude は自動実行禁止）
-   ├─ drizzle-kit generate: supabase/migrations/<timestamp>_*.sql を生成
-   ├─ supabase db push: ローカル DB に適用
+3. devenv tasks run app:migrate-dev（ローカルは AI 自動実行可。本番デプロイ db:migrate-deploy は要承認）
+   ├─ migrate:pre: drizzle/config/pre-migration/*.sql を実行（extensions 等）
+   ├─ drizzle-kit generate: drizzle/migrations/<ts>_<name>/migration.sql を生成
+   ├─ drizzle-kit migrate: ローカル DB に適用
+   ├─ migrate:post: drizzle/config/post-migration/*.sql を実行（functions/triggers/realtime）
    └─ 型再生成
 
 4. マイグレーション内容を確認
-   ├─ supabase/migrations/<timestamp>_*.sql
+   ├─ drizzle/migrations/<ts>_<name>/migration.sql
    └─ DROP/CREATE や ALTER POLICY のタイミングを人間がレビュー
 
 5. pgTAP テスト実行: test-db
@@ -192,7 +194,7 @@ COMMIT;
 - [ ] ローカル環境 (`supabase start`) でマイグレーションが通ることを確認
 - [ ] **pgTAP テストが全 PASS**（`test-db`）
 - [ ] RLS を新規有効化するテーブルで、既存データの `user_id` / `tenant_id` 等が正しいか事前検証
-- [ ] 生成された `supabase/migrations/*.sql` を目視レビュー
+- [ ] 生成された `drizzle/migrations/<ts>_<name>/migration.sql` を目視レビュー
 - [ ] DROP + CREATE が混在する場合、トランザクションで包まれているか確認
 - [ ] `lock_timeout` / `statement_timeout` を migration 実行時に設定
 - [ ] ロールバック手順を書面化（「何が起きたら何を流すか」）

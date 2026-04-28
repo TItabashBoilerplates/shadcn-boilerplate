@@ -368,8 +368,9 @@ in
       nr migrate:post
     '';
 
-    # local 環境のフルフロー: migration → 型生成（順序保証のため inline で sequential 実行）。
+    # local 環境のフルフロー: migration → 型生成。
     # `migrate-dev` という慣用名なのでこちらが「ユーザーが普段叩くやつ」。
+    # 型生成・コピーは model:build に委譲し DRY を担保 (重複定義しない)。
     "app:migrate-dev" = {
       exec = ''
         set -euo pipefail
@@ -379,28 +380,26 @@ in
         nr generate
         nr migrate
         nr migrate:post
+        cd "$DEVENV_ROOT"
         echo "🔧 Generating types from migrated schema..."
-        cd "$DEVENV_ROOT"
-        mkdir -p frontend/packages/types
-        supabase gen types typescript --local > frontend/packages/types/schema.ts
-        cd frontend && bun run --filter @workspace/api-client generate \
-          || echo "⚠️  API client gen skipped (backend not running)"
-        cd "$DEVENV_ROOT"
-        mkdir -p supabase/functions/shared/types/supabase
-        supabase gen types typescript --local > supabase/functions/shared/types/supabase/schema.ts
-        mkdir -p supabase/functions/shared/drizzle
-        cp -r drizzle/schema/* supabase/functions/shared/drizzle/
+        devenv tasks run model:build
         echo "✨ Migration + type generation done!"
       '';
       after = [ "supabase:start" ];
     };
 
     # ---------- Type/Model 生成 ----------
+    # 注: コピー先 (frontend/packages/db-schema/src/schema, supabase/functions/shared/drizzle)
+    # は auto-generated。コピー前に rm -rf でゴーストファイル (削除されたテーブル等) を一掃する。
     "model:frontend" = {
       exec = ''
         set -euo pipefail
         mkdir -p "$DEVENV_ROOT/frontend/packages/types"
         supabase gen types typescript --local > "$DEVENV_ROOT/frontend/packages/types/schema.ts"
+        echo "🔧 Copying Drizzle schema to @workspace/db-schema..."
+        rm -rf "$DEVENV_ROOT/frontend/packages/db-schema/src/schema"
+        mkdir -p "$DEVENV_ROOT/frontend/packages/db-schema/src/schema"
+        cp -r "$DEVENV_ROOT/drizzle/schema/"* "$DEVENV_ROOT/frontend/packages/db-schema/src/schema/"
         echo "🔧 Generating backend API client (Hey API)..."
         cd "$DEVENV_ROOT/frontend"
         bun run --filter @workspace/api-client generate \
@@ -415,6 +414,7 @@ in
         mkdir -p "$DEVENV_ROOT/supabase/functions/shared/types/supabase"
         supabase gen types typescript --local \
           > "$DEVENV_ROOT/supabase/functions/shared/types/supabase/schema.ts"
+        rm -rf "$DEVENV_ROOT/supabase/functions/shared/drizzle"
         mkdir -p "$DEVENV_ROOT/supabase/functions/shared/drizzle"
         cp -r "$DEVENV_ROOT/drizzle/schema/"* "$DEVENV_ROOT/supabase/functions/shared/drizzle/"
         echo "✅ Drizzle schema copied to supabase/functions/shared/drizzle/"

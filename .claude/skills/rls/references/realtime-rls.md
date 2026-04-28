@@ -20,7 +20,7 @@ Supabase 公式:
 ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
 ```
 
-Drizzle プロジェクトでは `drizzle/config/functions.sql` に書く（現状 Drizzle DSL で publication 操作不可）。
+Drizzle プロジェクトでは `drizzle/config/post-migration/` に書く（現状 Drizzle DSL で publication 操作不可）。
 
 ### (b) `REPLICA IDENTITY FULL`（UPDATE / DELETE で旧値を受け取る場合）
 
@@ -191,7 +191,7 @@ enabled = true
 ```
 
 ```sql
--- drizzle/config/functions.sql
+-- drizzle/config/post-migration/
 ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
 ALTER TABLE public.messages REPLICA IDENTITY FULL;  -- UPDATE の old_record 必要な場合のみ
 ```

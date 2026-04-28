@@ -137,7 +137,7 @@ JWT の `app_metadata` 更新には token 再発行が必要（最大 JWT 有効
 即時反映が必要なら、DB テーブルを参照する SECURITY DEFINER ヘルパー関数を使う。
 
 ```sql
--- ヘルパー関数（drizzle/config/functions.sql）
+-- ヘルパー関数（drizzle/config/post-migration/）
 CREATE OR REPLACE FUNCTION public.is_org_member(p_org_id uuid)
 RETURNS boolean
 LANGUAGE sql SECURITY DEFINER STABLE

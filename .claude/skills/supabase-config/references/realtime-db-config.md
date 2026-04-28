@@ -16,7 +16,7 @@ max_header_length = 4096
 Publication への追加が必要。`config.toml` ではなく SQL で:
 
 ```sql
--- drizzle/config/functions.sql 等に
+-- drizzle/config/post-migration/ 等に
 ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
 ```
@@ -106,7 +106,7 @@ enabled = true
 schema_paths = []   # Drizzle の schema を読ませるなら追加（通常は migrations/ で OK）
 ```
 
-`schema_paths` は `supabase db reset` 時に追加で実行する SQL の glob。本プロジェクトは Drizzle 経由で `supabase/migrations/` に既に SQL を生成しているため空でよい。
+`schema_paths` は `supabase db reset` 時に追加で実行する SQL の glob。本プロジェクトはマイグレーションを Drizzle 側 (`drizzle/migrations/`) に集約しており、Supabase 側のマイグレーション機構は使わないため空でよい。
 
 ---
 

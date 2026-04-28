@@ -20,7 +20,7 @@ description: pgTAP + `supabase test db` を使った RLS ポリシー・DB 関�
 
 | 項目 | 値 |
 |------|-----|
-| 実行コマンド | `make test-db`（= `supabase test db --local`） |
+| 実行コマンド | `test-db` script（= `supabase test db --local`） |
 | テスト配置先 | `supabase/tests/` フラット構成 |
 | ファイル拡張子 | `.sql` または `.pg` |
 | 実行順 | アルファベット順（`000-setup-*` で setup を先頭実行） |
@@ -56,7 +56,7 @@ create extension if not exists pgtap with schema extensions;
 ### 2. 実行
 
 ```bash
-make test-db
+test-db
 ```
 
 ## テストファイルの型
@@ -169,8 +169,8 @@ RLS を追加したテーブルは以下すべてを検証する:
 
 1. **Red**: RLS ポリシーをまだ書かない状態で、拒否シナリオのテストを書く。
    `tests.authenticate_as('bob')` で他人の行を SELECT できてしまい `is_empty` が FAIL する。
-2. **Green**: 最小のポリシーを `drizzle/schema/` に追加して `make migrate-dev` を依頼。
-   → 再度 `make test-db` で PASS。
+2. **Green**: 最小のポリシーを `drizzle/schema/` に追加して `devenv tasks run app:migrate-dev` を依頼。
+   → 再度 `test-db` で PASS。
 3. **Refactor**: ポリシー式を読みやすく整理。テストは触らない。
 
 **重要**: テストを修正して PASS させるのは禁止。必ず実装（RLS ポリシー）側を修正する。
