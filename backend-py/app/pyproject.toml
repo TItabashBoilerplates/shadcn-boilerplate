@@ -75,85 +75,22 @@ max-complexity = 3
 [project]
 name = "backend-py"
 version = "0.1.0"
-description = "Add your description here"
+description = "FastAPI + Supabase auth boilerplate skeleton"
 requires-python = ">=3.12"
 dependencies = [
-    "orjson ==3.10.14",
+    # Web framework
     "fastapi",
     "starlette",
     "uvicorn[standard]",
-    # "python-multipart",  # Form()/File()/UploadFile 未使用
-    "supabase",
-    # "strawberry-graphql",  # GraphQL 未使用
-    # "pandas",  # データ処理 未使用
-    # "numpy",  # 数値計算 未使用
-    # "scipy",  # 科学計算 未使用
-    # "httpx",  # 直接import無し（supabaseの依存で含まれる）
+    "orjson ==3.10.14",
 
-    # SQLModel & Database
+    # Auth / DB
+    "supabase",
     "sqlmodel",
     "psycopg2-binary",
 
-    # Autogen
-    # "pyautogen",  # マルチエージェント 未使用
-
-    # OpenAI
-    # "openai",  # langchain-openai 経由で使用するため直接依存不要
-
-    # LangChain
-    # "langchain",  # langchain_core のみ使用（langchain-openai の依存で含まれる）
-    # "langchain-community",  # 未使用
-    # "langchain-anthropic",  # 未使用
-    "langchain-openai",
-    # "langchain-postgres",  # ベクトルストア 未使用
-    # "langgraph",  # エージェント状態管理 未使用
-    # "langchainhub",  # プロンプトテンプレート 未使用
-
-    # 画像
-    # "Pillow",  # 画像処理 未使用
-
-    # 画像生成AI Client
-    # "replicate",  # 未使用
-    # "fal-client",  # 未使用
-
-    # runpod
-    # "runpod",  # GPU推論 未使用
-
-    # Modal
-    # "modal",  # コンテナ化推論 未使用
-
-    # AI
-    # "torch",  # 深層学習 未使用
-
-    # WebRTC
-    # "aiortc",  # 未使用
-    # "livekit",  # 未使用
-    # "livekit-api",  # 未使用
-
-    # Message Queue
-    # "kombu",  # 未使用
-    # "tembo-pgmq-python",  # 未使用
-
-    # AWS
-    # "boto3",
-
-    # Google Cloud
-    # "google-cloud-bigquery-data-exchange",
-
-    # Azure
-    # "azure-identity",
-
-    # Snowflake
-    # "snowflake-connector-python",
-
-    # 音声
-    # "cartesia",  # 未使用
-
     # Logging
     "structlog",
-
-    # "pyyaml>=6.0.2",  # 直接import無し
-    # "oyaml>=1.0",  # 直接import無し
 ]
 
 [dependency-groups]
@@ -169,16 +106,6 @@ dev = [
     "pytest-mock",
     "testcontainers[postgres]",
     "httpx",
-
-    # 画像生成AI
-    # "diffusers",  # 未使用
-    # "transformers",  # 未使用
-    # "sentencepiece",  # 未使用
-    # "protobuf",  # 未使用
-    # "accelerate",  # 未使用
-    # "compel",  # 未使用
-    # "torchao",  # 未使用
-    # "huggingface-hub",  # 未使用
 ]
 
 [tool.pytest.ini_options]

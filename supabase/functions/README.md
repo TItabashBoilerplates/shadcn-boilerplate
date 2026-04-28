@@ -88,7 +88,12 @@ database operations.
 
 ```typescript
 import type { InferInsertModel, InferSelectModel } from "npm:drizzle-orm";
-import { orders, subscriptions, userProfiles, users } from "../shared/drizzle/index.ts";
+import {
+  orders,
+  subscriptions,
+  userProfiles,
+  users,
+} from "../shared/drizzle/index.ts";
 
 // Infer types from Drizzle schemas
 type User = InferSelectModel<typeof users>;
@@ -290,7 +295,10 @@ Deno.serve(async (req: Request) => {
 
 ### Step 4: Test Locally
 
-> **NOTE**: 以下の `supabase functions serve` は **local 動作確認 / デバッグ用** の Supabase CLI 直叩きです。本リポジトリでの**デプロイの正規経路は `devenv tasks run -P <profile> deploy:functions`** で、CLI を直接呼んではいけません（`/.claude/rules/commands.md`）。
+> **NOTE**: 以下の `supabase functions serve` は **local 動作確認 / デバッグ用**
+> の Supabase CLI 直叩きです。本リポジトリでの**デプロイの正規経路は
+> `devenv tasks run -P <profile> deploy:functions`** で、CLI
+> を直接呼んではいけません（`/.claude/rules/commands.md`）。
 
 ```bash
 # Serve function locally (local debug only)
@@ -305,7 +313,9 @@ curl -i --location --request POST 'http://localhost:54321/functions/v1/my-functi
 
 ### Step 5: Deploy
 
-> **正規経路**: 以下は背景理解のための CLI 例。**実際のデプロイは必ず devenv tasks 経由で行うこと**（`scripts/supabase/deploy.sh` が config push / buckets / functions / secrets を順序実行する）:
+> **正規経路**: 以下は背景理解のための CLI 例。**実際のデプロイは必ず devenv
+> tasks 経由で行うこと**（`scripts/supabase/deploy.sh` が config push / buckets
+> / functions / secrets を順序実行する）:
 >
 > ```bash
 > devenv tasks run -P staging    deploy:functions   # ステージング
@@ -431,7 +441,8 @@ devenv tasks run model:functions
 - users, userProfiles
 - subscriptions, orders (Polar.sh)
 
-> プロジェクト固有のドメインテーブルを追加した場合は drizzle/schema/ を編集 → `devenv tasks run model:functions` でコピー先も更新される。
+> プロジェクト固有のドメインテーブルを追加した場合は drizzle/schema/ を編集 →
+> `devenv tasks run model:functions` でコピー先も更新される。
 
 ### Supabase Types
 
@@ -522,7 +533,10 @@ deno test --allow-env --allow-net
 
 ## Deployment
 
-> **正規経路**: 本リポジトリでは **必ず devenv tasks 経由でデプロイする**。`scripts/supabase/deploy.sh` が link / config push / buckets / functions / secrets の順序を保証する。Supabase CLI 直叩き (`supabase functions deploy`) は禁止 (`/.claude/rules/commands.md`)。
+> **正規経路**: 本リポジトリでは **必ず devenv tasks
+> 経由でデプロイする**。`scripts/supabase/deploy.sh` が link / config push /
+> buckets / functions / secrets の順序を保証する。Supabase CLI 直叩き
+> (`supabase functions deploy`) は禁止 (`/.claude/rules/commands.md`)。
 >
 > ```bash
 > devenv tasks run -P staging    deploy:functions   # 単発 functions のみデプロイ (staging)

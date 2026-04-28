@@ -3,8 +3,8 @@
 import { type DefaultError, queryOptions } from '@tanstack/react-query';
 
 import { client } from '../client.gen';
-import { healthcheckHealthcheckGet, type Options, rootGet } from '../sdk.gen';
-import type { HealthcheckHealthcheckGetData, HealthcheckHealthcheckGetResponse, RootGetData, RootGetResponse } from '../types.gen';
+import { healthcheckHealthcheckGet, type Options } from '../sdk.gen';
+import type { HealthcheckHealthcheckGetData, HealthcheckHealthcheckGetResponse } from '../types.gen';
 
 export type QueryKey<TOptions extends Options> = [
     Pick<TOptions, 'baseUrl' | 'body' | 'headers' | 'path' | 'query'> & {
@@ -38,24 +38,6 @@ const createQueryKey = <TOptions extends Options>(id: string, options?: TOptions
     }
     return [params];
 };
-
-export const rootGetQueryKey = (options?: Options<RootGetData>) => createQueryKey('rootGet', options);
-
-/**
- * Root
- */
-export const rootGetOptions = (options?: Options<RootGetData>) => queryOptions<RootGetResponse, DefaultError, RootGetResponse, ReturnType<typeof rootGetQueryKey>>({
-    queryFn: async ({ queryKey, signal }) => {
-        const { data } = await rootGet({
-            ...options,
-            ...queryKey[0],
-            signal,
-            throwOnError: true
-        });
-        return data;
-    },
-    queryKey: rootGetQueryKey(options)
-});
 
 export const healthcheckHealthcheckGetQueryKey = (options?: Options<HealthcheckHealthcheckGetData>) => createQueryKey('healthcheckHealthcheckGet', options);
 

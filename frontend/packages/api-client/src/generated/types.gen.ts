@@ -4,26 +4,6 @@ export type ClientOptions = {
     baseUrl: 'http://127.0.0.1:4040' | (string & {});
 };
 
-export type RootGetData = {
-    body?: never;
-    path?: never;
-    query?: never;
-    url: '/';
-};
-
-export type RootGetResponses = {
-    /**
-     * Response Root  Get
-     *
-     * Successful Response
-     */
-    200: {
-        [key: string]: string;
-    };
-};
-
-export type RootGetResponse = RootGetResponses[keyof RootGetResponses];
-
 export type HealthcheckHealthcheckGetData = {
     body?: never;
     path?: never;

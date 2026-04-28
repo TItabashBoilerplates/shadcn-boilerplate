@@ -1,0 +1,8 @@
+{
+	"venvPath": "../../.devenv/state",
+	"venv": "venv",
+	"include": ["src", "tests"],
+	"extraPaths": ["src"],
+	"pythonVersion": "3.13",
+	"reportMissingImports": "warning"
+}

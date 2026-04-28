@@ -72,7 +72,6 @@ The frontend monorepo (`frontend/packages/`) contains the following shared packa
 | `@workspace/query` | TanStack Query configuration |
 | `@workspace/client` | Supabase client (@supabase/ssr) |
 | `@workspace/logger` | Logging (Pino) |
-| `@workspace/polar` | Polar.sh payment integration |
 | `@workspace/onesignal` | OneSignal push notifications |
 | `@workspace/utils` | Utility functions |
 
@@ -528,7 +527,6 @@ The project includes integrations for:
 - **[Turbo](https://turbo.build/)**: High-performance build system for monorepos
 - **[Docker](https://docker.com/)**: Used for Supabase local environment
 - **[devenv](https://devenv.sh/)**: Nix-based development environment with process management (replaces Docker for backend/frontend services)
-- **[Polar.sh](https://polar.sh/)**: Payment and subscription management
 - **[OneSignal](https://onesignal.com/)**: Push notification service
 
 ### AI Coding Assistants

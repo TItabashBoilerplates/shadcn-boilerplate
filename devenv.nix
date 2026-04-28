@@ -458,33 +458,12 @@ in
         echo "Skipping deploy:functions for local environment"
         exit 0
       fi
-      for fn in watermark stripe-checkout stripe-products stripe-webhooks polar-webhooks; do
+      for fn in watermark stripe-checkout stripe-products stripe-webhooks; do
         supabase functions deploy "$fn" --no-verify-jwt --project-ref "$SUPABASE_PROJECT_REF"
       done
     '';
 
-    "deploy:polar-webhooks".exec = ''
-      set -euo pipefail
-      if [ "''${ENV:-local}" = "local" ]; then
-        echo "⚠️  Skipping deploy for local environment"
-        exit 0
-      fi
-      echo "🚀 Deploying Polar webhook handler..."
-      supabase functions deploy polar-webhooks --no-verify-jwt --project-ref "$SUPABASE_PROJECT_REF"
-    '';
-
     "deploy:supabase".exec = ''./scripts/supabase/deploy.sh'';
-
-    # ---------- Polar.sh ----------
-    "polar:sync-dry".exec = ''
-      cd "$DEVENV_ROOT/frontend"
-      bun run ../scripts/polar/sync.ts --dry-run
-    '';
-
-    "polar:sync".exec = ''
-      cd "$DEVENV_ROOT/frontend"
-      bun run ../scripts/polar/sync.ts
-    '';
 
     # ---------- Quality CI gate（execIfModified キャッシュ + namespace 並列）----------
     # 設計方針 (詳細は docs/_research/2026-04-28-devenv-quality-checks.md):
@@ -929,15 +908,24 @@ in
     };
 
     # ----- Edge Functions: Deno format -----
+    # deno fmt/lint は以下のいずれかで "No target files found" exit 1 になる:
+    #   (a) 引数 0 件
+    #   (b) 渡された引数が全て削除済み (pre-commit は deleted file path も regex 一致なら渡してくる)
+    #   (c) 渡された引数が全て supabase/functions/deno.json の fmt/lint.exclude に含まれる
+    #       (例: shared/drizzle/, shared/types/supabase/ などの auto-generated 領域)
+    # wrapper で削除済みは事前フィルタし、残りを呼んで "No target files found" が出たら exit 0 に
+    # 倒す (= 「対象ファイルなし」は失敗ではなくスキップ扱い)。
     denofmt = {
       enable = true;
       files = "^supabase/functions/.*\\.ts$";
+      entry = lib.mkForce ''${pkgs.bash}/bin/bash -c 'files=(); for f in "$@"; do [ -f "$f" ] && files+=("$f"); done; [ ''${#files[@]} -eq 0 ] && exit 0; out=$(${pkgs.deno}/bin/deno fmt "''${files[@]}" 2>&1); rc=$?; if [ $rc -ne 0 ] && printf "%s" "$out" | grep -q "No target files found"; then exit 0; fi; printf "%s\n" "$out"; exit $rc' --'';
     };
 
     # ----- Edge Functions: Deno lint -----
     denolint = {
       enable = true;
       files = "^supabase/functions/.*\\.ts$";
+      entry = lib.mkForce ''${pkgs.bash}/bin/bash -c 'files=(); for f in "$@"; do [ -f "$f" ] && files+=("$f"); done; [ ''${#files[@]} -eq 0 ] && exit 0; out=$(${pkgs.deno}/bin/deno lint "''${files[@]}" 2>&1); rc=$?; if [ $rc -ne 0 ] && printf "%s" "$out" | grep -q "No target files found"; then exit 0; fi; printf "%s\n" "$out"; exit $rc' --'';
     };
   };
 

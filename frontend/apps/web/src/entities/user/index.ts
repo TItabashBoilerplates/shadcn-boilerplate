@@ -7,12 +7,12 @@
  */
 
 // Hooks
-export { useAuthUser, useUser, useUserProfile, useUserWithProfile } from './model/hooks'
+export { useAuthUser, useUser } from './model/hooks'
 
 // Store
 export { useUserStore } from './model/store'
 // Types
-export type { AuthUser, User, UserProfile, UserWithProfile } from './model/types'
+export type { AuthUser, User } from './model/types'
 
 // UI Components
 export { UserAvatar } from './ui/UserAvatar'

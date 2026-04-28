@@ -50,7 +50,6 @@ scripts は devenv shell（direnv 自動アクティベート含む）下で PAT
 | **Seed (DB + Storage)** | `devenv tasks run seed:all` |
 | **Deploy Edge Functions** | `devenv tasks run deploy:functions` |
 | **Deploy Supabase 全体** | `devenv tasks run deploy:supabase` |
-| **Polar.sh プラン同期** | `devenv tasks run polar:sync-dry` / `polar:sync` |
 | **初回ブートストラップ** | 不要（`devenv shell` / `direnv reload` で `setup:*` が自動セットアップ） |
 
 ## Prohibited Direct Commands（品質チェック）

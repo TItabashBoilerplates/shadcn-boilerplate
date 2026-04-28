@@ -12,7 +12,11 @@
 
 ## Commands
 
-すべて devenv の **scripts** (PATH 直結) または **tasks** (`devenv tasks run <name>`) を使用する。Makefile は **deprecated**（削除済み）。直接 `deno lint` / `deno fmt` / `supabase functions deploy` での実行は禁止（local 動作確認用の `supabase functions serve` を除く）。
+すべて devenv の **scripts** (PATH 直結) または **tasks**
+(`devenv tasks run <name>`) を使用する。Makefile は
+**deprecated**（削除済み）。直接 `deno lint` / `deno fmt` /
+`supabase functions deploy` での実行は禁止（local 動作確認用の
+`supabase functions serve` を除く）。
 
 ```bash
 # Lint / Format / Type-check (scripts on PATH)

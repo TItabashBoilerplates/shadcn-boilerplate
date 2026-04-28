@@ -1,18 +1,10 @@
 """Domain entity package.
 
-Import order matters: base entities first, then those with FK dependencies.
-SQLAlchemy resolves relationships lazily from its registry, so all models
-must be imported before any ORM queries are executed.
+Currently empty — the boilerplate ships only with FastAPI scaffolding and
+Supabase auth/logging middleware. Add SQLModel entities here as you grow the
+domain. Import order matters once entities have FK dependencies, since
+SQLAlchemy resolves relationships lazily from its registry: import base
+entities first, then those with dependencies.
 """
 
-from domain.entity.order import Orders
-from domain.entity.subscription import Subscriptions
-from domain.entity.user import Users
-from domain.entity.user_profile import UserProfiles
-
-__all__ = [
-    "Orders",
-    "Subscriptions",
-    "UserProfiles",
-    "Users",
-]
+__all__: list[str] = []

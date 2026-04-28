@@ -50,7 +50,7 @@
 | 状態管理 / 取得 (web) | `data-fetching` |
 | 状態管理 / 取得 (mobile) | `native-data-fetching` |
 | Better Auth | `better-auth-best-practices`, `email-and-password-best-practices`, `two-factor-authentication-best-practices`, `organization-best-practices`, `better-auth-security-best-practices`, `create-auth-skill`, `Better Auth Best Practices` |
-| Stripe / 決済 / サブスク | `stripe-integration`, `stripe-best-practices`, `polar` |
+| Stripe / 決済 / サブスク | `stripe-integration`, `stripe-best-practices` |
 | Resend / メール送信 / Webhook | `resend`, `resend-cli`, `send-email`, `react-email`, `email-best-practices`, `agent-email-inbox` |
 | LangChain / LangGraph / LangSmith / エージェント | `langchain` |
 | Storybook | `storybook` |

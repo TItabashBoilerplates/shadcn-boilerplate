@@ -19,13 +19,4 @@ export const usersRefinement = (f: GeneratorFunctions) => ({
       accountName: f.email({ isUnique: true }),
     },
   },
-  userProfiles: {
-    count: 10,
-    columns: {
-      firstName: f.firstName(),
-      lastName: f.lastName(),
-      email: f.email({ isUnique: true }),
-      phoneNumber: f.phoneNumber({ template: '090-####-####' }),
-    },
-  },
 })
