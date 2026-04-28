@@ -56,7 +56,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     ├── fastapi/          # FastAPI ベストプラクティス（公式）
     ├── i18n/             # next-intl 多言語対応
     ├── langchain/        # LangChain/LangGraph/LangSmith
-    └── maestro/          # Maestro E2Eテスト
+    ├── maestro/          # Maestro E2Eテスト
+    └── devenv-cicd/      # GitHub Actions × devenv 2.0 CI/CD（enterShell hook / .devenv キャッシュ / concurrency）
 ```
 
 ## Domain Documentation
