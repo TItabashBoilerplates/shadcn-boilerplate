@@ -6,6 +6,22 @@ on:
   push:
     branches: [main, develop]
 
+# 同一 PR / branch で後続の push が来たら走行中の workflow をキャンセルし、
+# main / develop への直接 push は最後まで走らせる。
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# 公式推奨: すべての `run:` を devenv shell 内で実行する。
+# これにより `devenv:enterShell` hook が発火し、`before = [ "devenv:enterShell" ]`
+# が付いた `setup:install-frontend` / `setup:install-drizzle` / `setup:install-backend`
+# が lockfile 変更検知ベースで自動同期される（`bun install --frozen-lockfile` /
+# `uv sync --frozen`）。
+# Refs: https://devenv.sh/integrations/github-actions/
+defaults:
+  run:
+    shell: devenv shell bash -- -e {0}
+
 jobs:
   ci-check:
     name: CI Check (lint + format + type-check)
@@ -16,12 +32,22 @@ jobs:
       - uses: cachix/cachix-action@v16
         with:
           name: devenv
+      # `.devenv/` には `setup:*` / `lint-ci:*` / `format-check:*` / `type-check:*` の
+      # `execIfModified` ハッシュ（task state DB）が保存される。これをキャッシュすることで
+      # 変更のない task は 2 回目以降スキップされる。
+      # key には devenv 設定 + 各種 lockfile を含めて、構成変化時は新規キャッシュを取り直す。
+      - name: Cache devenv state
+        uses: actions/cache@v4
+        with:
+          path: .devenv
+          key: ${{ runner.os }}-devenv-${{ hashFiles('devenv.nix', 'devenv.lock', 'devenv.yaml', 'frontend/bun.lock', 'drizzle/bun.lock', 'backend-py/app/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-devenv-
       - name: Install devenv.sh
+        shell: bash
         run: nix profile add nixpkgs#devenv
-      # Run all verify tasks. Each uses execIfModified caching, so unchanged
-      # areas skip on subsequent runs. Equivalent to the ci:check aggregator's
-      # dependencies but invoked directly to avoid devenv test's process phase
-      # (which would spin up Supabase Docker + Storybook on every CI run).
+      # `devenv test` (= ci:check aggregator) は process phase で Supabase Docker /
+      # Storybook を起動してしまうため CI では使わず、配下の verify task を直接列挙する。
       - name: Run verify tasks
         run: |
           devenv tasks run \
@@ -48,7 +74,15 @@ jobs:
       - uses: cachix/cachix-action@v16
         with:
           name: devenv
+      - name: Cache devenv state
+        uses: actions/cache@v4
+        with:
+          path: .devenv
+          key: ${{ runner.os }}-devenv-${{ hashFiles('devenv.nix', 'devenv.lock', 'devenv.yaml', 'frontend/bun.lock', 'drizzle/bun.lock', 'backend-py/app/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-devenv-
       - name: Install devenv.sh
+        shell: bash
         run: nix profile add nixpkgs#devenv
       - name: Run unit tests
-        run: devenv shell test
+        run: test
