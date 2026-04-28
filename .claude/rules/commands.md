@@ -136,6 +136,27 @@ devenv test
 
 > **使い分け**: 日常の auto-fix は `lint` / `format` script (シンプル sequential、execIfModified なし → 副作用ループ回避)。CI 相当の verify はローカルでは `ci-check` または `devenv test`、CI では verify task の直接列挙。
 
+## devenv script 命名規則（MANDATORY）
+
+devenv の `scripts.<name>` で新規 script を定義する際は、**bash 組み込みコマンドと衝突する名前を使用してはならない**。
+
+| 禁止例（bash builtin 衝突） | 安全な代替 |
+|---|---|
+| `test` | `unit-test`, `test-frontend` |
+| `time` | `bench`, `time-it` |
+| `kill`, `printf`, `read`, `true`, `false`, `let`, `local`, `set`, `trap`, `wait`, `exec`, `eval`, `command`, `type`, `hash`, `exit`, `echo` 等 | ハイフン付きの具体的な名前 |
+
+**理由**: bash は **builtin を PATH より優先**するため、衝突する名前で script を定義しても CI の `run: <script>` で**builtin が呼ばれて意図と違う挙動になる**。`test` の場合は引数なしで exit 1 が返って `-e` で即落ちした事故が実際に起きている（`.claude/skills/devenv-cicd/SKILL.md` 「過去の事故と教訓」参照）。
+
+**確認方法**: 新規 script を `devenv.nix` に追加する前に必ず `type <name>` で組み込みでないことを確認する。
+
+```bash
+type test           # → test is a shell builtin   ❌ 使用不可
+type unit-test      # → unit-test not found       ✅ 使用可（または既存 script なら PATH のパス表示）
+```
+
+ハイフン付きの kebab-case（`lint-frontend`, `format-check`, `test-db`, `unit-test`, `dev-web` など）は builtin と衝突しないので安全。本リポジトリの既存命名もこれを踏襲している。
+
 ## Enforcement
 
 This command usage policy is **CRITICAL and NON-NEGOTIABLE**.
