@@ -32,14 +32,25 @@ jobs:
       - uses: cachix/cachix-action@v16
         with:
           name: devenv
-      # `.devenv/` には `setup:*` / `lint-ci:*` / `format-check:*` / `type-check:*` の
-      # `execIfModified` ハッシュ（task state DB）が保存される。これをキャッシュすることで
-      # 変更のない task は 2 回目以降スキップされる。
-      # key には devenv 設定 + 各種 lockfile を含めて、構成変化時は新規キャッシュを取り直す。
-      - name: Cache devenv state
+      # キャッシュ対象:
+      #   - `.devenv/`        : devenv-tasks の state DB (execIfModified ハッシュ) + uv venv
+      #                         (UV_PROJECT_ENVIRONMENT=.devenv/state/venv)
+      #   - `frontend/node_modules` 系 : Bun workspace の install 結果 (hoist 先)。
+      #                                  これを cache しないと `setup:install-frontend` task が
+      #                                  execIfModified で skip された際に node_modules が空で
+      #                                  vitest 等が見つからない。
+      #   - `drizzle/node_modules`     : drizzle 側の install 結果 (lint-ci:drizzle が利用)。
+      # key は devenv 設定 + 全 lockfile の hash。lockfile が変われば再 install されて新キーで保存。
+      - name: Cache devenv state and dependencies
         uses: actions/cache@v4
         with:
-          path: .devenv
+          path: |
+            .devenv
+            frontend/node_modules
+            frontend/apps/*/node_modules
+            frontend/packages/*/node_modules
+            frontend/tooling/*/node_modules
+            drizzle/node_modules
           key: ${{ runner.os }}-devenv-${{ hashFiles('devenv.nix', 'devenv.lock', 'devenv.yaml', 'frontend/bun.lock', 'drizzle/bun.lock', 'backend-py/app/uv.lock') }}
           restore-keys: |
             ${{ runner.os }}-devenv-
@@ -74,10 +85,16 @@ jobs:
       - uses: cachix/cachix-action@v16
         with:
           name: devenv
-      - name: Cache devenv state
+      - name: Cache devenv state and dependencies
         uses: actions/cache@v4
         with:
-          path: .devenv
+          path: |
+            .devenv
+            frontend/node_modules
+            frontend/apps/*/node_modules
+            frontend/packages/*/node_modules
+            frontend/tooling/*/node_modules
+            drizzle/node_modules
           key: ${{ runner.os }}-devenv-${{ hashFiles('devenv.nix', 'devenv.lock', 'devenv.yaml', 'frontend/bun.lock', 'drizzle/bun.lock', 'backend-py/app/uv.lock') }}
           restore-keys: |
             ${{ runner.os }}-devenv-
