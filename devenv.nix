@@ -914,9 +914,18 @@ in
     # プロジェクト単位の最終確認は `type-check:backend-py` task (devenv test 経由) で重ねて行う。
     # tests/ は pytest で動的型チェック相当を行うため mypy 対象外（pyproject.toml の exclude
     # は CLI 個別ファイル渡しでは効かないので、ここでも明示除外する）。
+    #
+    # ビルトインの mypy フックは project root から `mypy` を直接呼ぶため、
+    # backend-py/app の uv venv にインストールされたパッケージ (fastapi, sqlmodel,
+    # sqlalchemy, pydantic 等) を解決できず import-not-found が大量に出る。
+    # `cd backend-py/app && uv run mypy src/` の形に上書きすることで venv 内の
+    # mypy + 全依存を見つけられるようにする。pass_filenames=false でファイル列を
+    # 受け取らずプロジェクト単位で実行 (= type-check:backend-py task と同じ挙動)。
     mypy = {
       enable = true;
       files = "^backend-py/app/src/.*\\.py$";
+      pass_filenames = false;
+      entry = lib.mkForce ''${pkgs.bash}/bin/bash -c 'cd "$(git rev-parse --show-toplevel)/backend-py/app" && uv run mypy src/' '';
     };
 
     # ----- Edge Functions: Deno format -----

@@ -126,7 +126,7 @@ export function VerifyOTPForm({ email, className }: VerifyOTPFormProps) {
       </form>
 
       <div className="space-y-2 text-center">
-        <p className="text-sm text-muted-foreground">Didn't receive the code?</p>
+        <p className="text-sm text-muted-foreground">Didn&apos;t receive the code?</p>
         <Button
           type="button"
           variant="outline"

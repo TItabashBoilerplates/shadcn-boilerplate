@@ -202,6 +202,11 @@ e2e / e2e-web / e2e-mobile    # Maestro E2E
 devenv tasks run app:migrate-dev   # Generate + apply migration + type 生成（フルフロー）
 devenv tasks run db:migrate-dev    # マイグレーション生成 + 適用のみ
 devenv tasks run model:build       # 型のみ再生成
+
+# Task graph 確認 (依存・実行順序を可視化)
+devenv tasks list                          # 全 task の階層表示
+devenv tasks list --mode before app:migrate-dev   # 上流依存の確認
+devenv tasks list --mode after  supabase:start    # 下流影響の確認
 ```
 
 ### Environment Configuration

@@ -26,8 +26,10 @@
 
 import { clientLogger } from '@workspace/logger/client'
 import { useEffect, useRef } from 'react'
-// @ts-expect-error - react-native-onesignal の型定義がない可能性
-import { OneSignal } from 'react-native-onesignal'
+// react-native-onesignal は EAS native build セットアップ時に追加予定。
+// インストール前は型・モジュール解決ともに失敗するので両方を抑止する。
+// @ts-expect-error - react-native-onesignal は未インストール
+import { OneSignal } from 'react-native-onesignal' // eslint-disable-line import/no-unresolved
 
 const logger = clientLogger.child({ provider: 'OneSignal' })
 

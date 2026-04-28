@@ -7,5 +7,4 @@
  * @see https://documentation.onesignal.com/docs/web-push-custom-code-setup
  */
 
-// eslint-disable-next-line no-undef
 importScripts('https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.sw.js')

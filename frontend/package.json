@@ -17,6 +17,8 @@
     "format": "biome format --write .",
     "format-check": "biome format .",
     "type-check": "turbo type-check",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "clean": "turbo clean && rm -rf node_modules",
     "ui:add:web": "cd packages/ui && bunx shadcn@latest add",
     "ui:add:mobile": "cd packages/native-ui && bunx gluestack-ui@latest add --use-bun",

@@ -7,152 +7,48 @@ on:
     branches: [main, develop]
 
 jobs:
-  lint-and-format-check:
-    name: Lint & Format Check
+  ci-check:
+    name: CI Check (lint + format + type-check)
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@v5
+      - uses: cachix/install-nix-action@v31
+      - uses: cachix/cachix-action@v16
         with:
-          bun-version: "1.2.8"
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Setup Deno
-        uses: denoland/setup-deno@v2
-        with:
-          deno-version: "2.1.4"
-
-      - name: Install Frontend dependencies
+          name: devenv
+      - name: Install devenv.sh
+        run: nix profile add nixpkgs#devenv
+      # Run all verify tasks. Each uses execIfModified caching, so unchanged
+      # areas skip on subsequent runs. Equivalent to the ci:check aggregator's
+      # dependencies but invoked directly to avoid devenv test's process phase
+      # (which would spin up Supabase Docker + Storybook on every CI run).
+      - name: Run verify tasks
         run: |
-          cd frontend
-          bun install
+          devenv tasks run \
+            lint-ci:frontend \
+            lint-ci:drizzle \
+            lint-ci:backend-py \
+            lint-ci:functions \
+            lint-ci:fsd \
+            format-check:frontend \
+            format-check:drizzle \
+            format-check:backend-py \
+            format-check:functions \
+            type-check:frontend \
+            type-check:mobile \
+            type-check:backend-py \
+            type-check:functions
 
-      - name: Install Drizzle dependencies
-        run: |
-          cd drizzle
-          bun install
-
-      - name: Install Backend Python dependencies
-        run: |
-          cd backend-py/app
-          pip install uv
-          uv sync --dev
-
-      - name: Frontend - Biome CI
-        run: cd frontend && bun run lint:ci
-
-      - name: Drizzle - Biome CI
-        run: cd drizzle && bun run lint:ci
-
-      - name: Backend Python - Ruff Check
-        run: cd backend-py/app && uv run ruff check src/ && uv run ruff format --check src/
-
-      - name: Edge Functions - Deno Lint & Format
-        run: deno lint supabase/functions/ && deno fmt --check supabase/functions/
-
-  type-check:
-    name: Type Check
+  test:
+    name: Unit Tests (frontend + backend-py)
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - uses: actions/checkout@v5
+      - uses: cachix/install-nix-action@v31
+      - uses: cachix/cachix-action@v16
         with:
-          bun-version: "1.2.8"
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Setup Deno
-        uses: denoland/setup-deno@v2
-        with:
-          deno-version: "2.1.4"
-
-      - name: Install Frontend dependencies
-        run: |
-          cd frontend
-          bun install
-
-      - name: Install Drizzle dependencies
-        run: |
-          cd drizzle
-          bun install
-
-      - name: Install Backend Python dependencies
-        run: |
-          cd backend-py/app
-          pip install uv
-          uv sync --dev
-
-      - name: Frontend - Type Check
-        run: cd frontend && bun run type-check
-
-      - name: Backend Python - MyPy
-        run: cd backend-py/app && uv run mypy src/
-
-      - name: Edge Functions - Deno Check
-        run: |
-          for dir in supabase/functions/*/; do
-            if [ -f "${dir}index.ts" ]; then
-              echo "Checking $(basename ${dir})..."
-              (cd "${dir}" && deno check index.ts)
-            fi
-          done
-
-  test-frontend:
-    name: Test Frontend
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.2.8"
-
-      - name: Install dependencies
-        run: |
-          cd frontend
-          bun install
-          # Install test dependencies
-          bun add -d vitest @vitejs/plugin-react jsdom @testing-library/react @testing-library/jest-dom
-
-      - name: Run tests
-        run: |
-          cd frontend
-          bun run vitest run
-
-  test-backend:
-    name: Test Backend Python
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        run: |
-          cd backend-py/app
-          pip install uv
-          uv sync --dev
-
-      - name: Run tests
-        run: |
-          cd backend-py/app
-          uv run pytest
+          name: devenv
+      - name: Install devenv.sh
+        run: nix profile add nixpkgs#devenv
+      - name: Run unit tests
+        run: devenv shell test

@@ -79,7 +79,7 @@ export function LoginForm({ className }: LoginFormProps) {
         <div className="space-y-2 text-center">
           <h2 className="text-2xl font-bold">Check Your Email</h2>
           <p className="text-muted-foreground">
-            We've sent a 6-digit code to <strong>{email}</strong>
+            We&apos;ve sent a 6-digit code to <strong>{email}</strong>
           </p>
         </div>
         <div className="rounded-lg border border-border bg-muted/50 p-4">
@@ -127,7 +127,7 @@ export function LoginForm({ className }: LoginFormProps) {
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
-        We'll send you a 6-digit code to verify your email.
+        We&apos;ll send you a 6-digit code to verify your email.
       </p>
     </form>
   )

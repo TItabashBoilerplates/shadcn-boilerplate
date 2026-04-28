@@ -13,8 +13,19 @@ import {
   CardTitle,
 } from '@workspace/ui/components/card'
 import { Calendar, CreditCard } from 'lucide-react'
+import Link from 'next/link'
 import { useTranslations } from 'next-intl'
-import { useEffect, useState } from 'react'
+import { useSyncExternalStore } from 'react'
+
+const subscribeNoop = () => () => {}
+const getClientSnapshot = () => true
+const getServerSnapshot = () => false
+
+// Hydration-safe "is on client" flag. Server/server-snapshot returns false,
+// client renders true after mount — without setState-in-effect cascading renders.
+function useIsClient() {
+  return useSyncExternalStore(subscribeNoop, getClientSnapshot, getServerSnapshot)
+}
 
 interface SubscriptionStatusProps {
   polarCustomerId?: string
@@ -49,13 +60,9 @@ export function SubscriptionStatus({ polarCustomerId }: SubscriptionStatusProps)
   const t = useTranslations('Subscription')
   const { subscription, isLoading } = useSubscription()
   const { openPortal, isLoading: isPortalLoading } = useCustomerPortal()
-  const [mounted, setMounted] = useState(false)
+  const isClient = useIsClient()
 
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted) {
+  if (!isClient) {
     return null
   }
 
@@ -80,7 +87,7 @@ export function SubscriptionStatus({ polarCustomerId }: SubscriptionStatusProps)
         </CardContent>
         <CardFooter>
           <Button asChild variant="outline">
-            <a href="/pricing">{t('viewPlans')}</a>
+            <Link href="/pricing">{t('viewPlans')}</Link>
           </Button>
         </CardFooter>
       </Card>
