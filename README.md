@@ -38,12 +38,12 @@ Each directory has its own dependencies and node_modules/, cleanly separated.
 
 ### Package Managers
 
-Using optimal package managers for each component:
+Using optimal package managers for each component (バージョンは devenv が管理):
 
-- **Frontend**: Bun 1.2.8 (fast, Node.js compatible)
+- **Frontend**: Bun (fast, Node.js compatible)
 - **Backend Python**: uv (Rust-based, fast dependency management)
 - **Drizzle**: Bun (same as frontend)
-- **Edge Functions**: Deno 2.5.6 (built-in package manager)
+- **Edge Functions**: Deno (built-in package manager)
 
 ### ni Commands (Package Manager Abstraction)
 
@@ -205,7 +205,7 @@ cd shadcn-boilerplate
 # direnv: loading .envrc
 # direnv: using devenv
 # ✓ Building shell in 250ms
-# devenv: Node v22.22.0, Python 3.13.11, Deno 2.6.6, Bun 1.2.7, uv 0.9.28
+# devenv: Node, Python, Deno, Bun, uv が PATH 上に揃う（バージョンは devenv.lock に固定）
 ```
 
 - 初回のみ Nix ビルドが走るため数分かかります。2回目以降は数百ミリ秒です
@@ -237,12 +237,7 @@ env/
 └── .env.secrets.example       # テンプレート
 ```
 
-devenv shell 進入時に `setup:secrets` task が `env/.env.secrets` を雛形からコピーする（既にあればスキップ）。コピー後にエディタで編集してください:
-
-```
-SUPABASE_URL=your_supabase_project_id
-SUPABASE_ANON_KEY=your_supabase_api_key
-```
+devenv shell 進入時に `setup:secrets` task が `env/.env.secrets` を雛形からコピーする（既にあればスキップ）。コピー後、`env/.env.secrets.example` に列挙されているキー（Supabase / 各種 API キー等）を実際の値で埋めてください。
 
 profile (`local` / `dev` / `staging` / `production`) ごとに `env/<service>/.env.<profile>` を用意し、`-P <profile>` 指定時に該当 profile の enterShell が `set -a; source` で env を上書きする (`local` は base enterShell に組み込まれているので `-P local` 不要)。env ファイルは `.env.local` 以外すべて gitignore 対象。
 
