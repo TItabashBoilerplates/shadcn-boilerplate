@@ -80,9 +80,9 @@
 | 5.1 | E2E テスト作成 (Maestro) | - | {h} | Phase 4 |
 | 5.2 | CI チェック (`ci-check`) | - | {h} | Phase 4 |
 | 5.3 | ビルド確認 (`make build`) | - | {h} | 5.2 |
-| 5.4 | 全テスト実行 (`test`) | - | {h} | 5.3 |
+| 5.4 | 全テスト実行 (`unit-test`) | - | {h} | 5.3 |
 
-**完了条件**: `ci-check` + `test` All Green
+**完了条件**: `ci-check` + `unit-test` All Green
 
 ## マイグレーション手順
 
@@ -204,7 +204,7 @@ test
 ### 実装完了レビュー
 
 - [ ] `ci-check` が通過
-- [ ] `test` が All Green
+- [ ] `unit-test` が All Green
 - [ ] `make build` が成功
 - [ ] Storybook ビルドが成功
 - [ ] マイグレーションが適用済み

@@ -383,7 +383,7 @@ appId: com.example.app
 |-----------|---------|
 | Frontend 全体 | `test-frontend` |
 | Backend 全体 | `test-backend-py` |
-| 全テスト | `test` |
+| 全テスト | `unit-test` |
 
 ## All Green ポリシー
 

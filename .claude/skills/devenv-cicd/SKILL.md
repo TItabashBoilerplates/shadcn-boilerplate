@@ -67,10 +67,12 @@ verify task のみを **直接列挙** して `devenv tasks run ...` で実行�
 
 ```yaml
 - name: Run unit tests
-  run: test
+  run: unit-test
 ```
 
-defaults によりすでに devenv shell 内なので、`devenv shell test` のように二重に書かず devenv script (`test`) を直接呼ぶ。
+defaults によりすでに devenv shell 内なので、`devenv shell unit-test` のように二重に書かず devenv script (`unit-test`) を直接呼ぶ。
+
+> **Note**: script 名を `test` ではなく **`unit-test`** にしているのは、`test` が bash 組み込みコマンド（`[` と等価）と名前衝突するため。bash では builtin が PATH より優先されるため、`run: test` と書くと**引数なしの builtin `test` が実行されて exit 1 を返し**、`-e` で即座にジョブが落ちる（devenv の同名 script は呼ばれない）。`unit-test` のように builtin と衝突しない名前にする必要がある。
 
 ### なぜ `devenv test` を使わないか
 

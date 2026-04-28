@@ -85,4 +85,4 @@ jobs:
         shell: bash
         run: nix profile add nixpkgs#devenv
       - name: Run unit tests
-        run: test
+        run: unit-test

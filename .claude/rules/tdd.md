@@ -40,7 +40,7 @@ Every implementation MUST follow this strict sequence:
 |-----------|---------|
 | **Frontend Tests** | `test-frontend` (Vitest) |
 | **Backend Tests** | `test-backend-py` (pytest) |
-| **All Unit Tests** | `test` |
+| **All Unit Tests** | `unit-test` |
 | **DB Tests (pgTAP)** | `test-db` |
 | **E2E (Maestro)** | `e2e` / `e2e-web` / `e2e-mobile` |
 
@@ -114,7 +114,7 @@ features/auth/
 
 ### 作業終了前チェックリスト
 
-1. **全テスト実行**: `test` を実行（または個別に `test-frontend` / `test-backend-py` / `test-db`）
+1. **全テスト実行**: `unit-test` を実行（または個別に `test-frontend` / `test-backend-py` / `test-db`）
 2. **失敗テストの対応**:
    - 原因分析を実施
    - 実装の修正（テストは変更しない）

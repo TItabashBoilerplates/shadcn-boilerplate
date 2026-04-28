@@ -196,7 +196,7 @@ format-frontend / format-drizzle / format-backend-py / format-functions
 type-check-frontend / type-check-mobile / type-check-backend-py / check-functions
 
 # Tests
-test                          # 全 unit test (frontend + backend-py)
+unit-test                     # 全 unit test (frontend + backend-py) ※ `test` は bash 組み込みと衝突するため `unit-test`
 test-frontend                 # Vitest
 test-backend-py               # pytest
 test-db                       # pgTAP DB tests

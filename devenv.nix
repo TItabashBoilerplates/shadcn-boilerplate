@@ -792,7 +792,11 @@ in
     "test-frontend"   = { exec = ''cd "$DEVENV_ROOT/frontend" && nr test''; description = "Vitest (frontend)"; };
     "test-backend-py" = { exec = ''cd "$DEVENV_ROOT/backend-py/app" && uv run pytest''; description = "pytest (backend-py)"; };
     "test-db"         = { exec = ''supabase test db --local''; description = "pgTAP DB tests"; };
-    "test" = {
+    # NOTE: `test` という名前は bash 組み込みコマンド（`[` と等価）と衝突し、
+    # PATH 上の同名スクリプトより builtin が優先される。CI で `run: test` を呼ぶと
+    # 引数なしの builtin `test` が exit 1 を返してジョブが落ちるため、`unit-test`
+    # に名前を変えてある。
+    "unit-test" = {
       exec = ''
         set -e
         echo "🧪 Running all unit tests..."
