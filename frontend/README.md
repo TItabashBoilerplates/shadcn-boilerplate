@@ -189,49 +189,46 @@ Theme configuration: `packages/tokens/` and `apps/web/app/globals.css`
 
 ### Getting Started
 
+すべて devenv の **scripts** (PATH 直結) または **tasks** (`devenv tasks run <name>`) を使用する。Makefile は **deprecated**（削除済み）。
+
 ```bash
-# Install dependencies (from project root)
-make init
+# Setup
+# `devenv shell` 進入 (direnv 経由含む) で setup:* タスクが自動実行され
+# bun install / uv sync が完了する。明示的な init コマンドは不要。
 
 # Start development server
-make frontend
-# or
-cd frontend
-bun run dev
+dev-web                 # 軽量セット (Supabase + backend + storybook) + Next.js (web)
+# または
+devenv up web           # web を軽量セットと一緒に起動
 ```
 
-### Common Commands
+### Common Commands (devenv scripts on PATH)
 
 ```bash
 # Development
-bun run dev              # Start Next.js dev server (Turbo)
-bun run build            # Build all packages
-bun run type-check       # TypeScript type checking
+dev-web                # 軽量 + Next.js (web)
+dev-mobile             # 軽量 + Expo Metro (mobile, non-interactive)
+dev-all                # 全部入り (web + mobile + backend + storybook)
+build-frontend         # Next.js production build
+type-check-frontend    # TypeScript type check
 
 # Code Quality
-bun run lint             # Biome lint (auto-fix)
-bun run lint:ci          # Biome lint (CI mode, no fix)
-bun run format           # Biome format (auto-fix)
+lint-frontend          # Biome lint (auto-fix)
+lint-frontend-ci       # Biome lint (CI, no fix)
+format-frontend        # Biome format (auto-fix)
+format-frontend-check  # Biome format check
+lint-fsd               # FSD boundary check (web + mobile, ESLint)
 
-# UI Components
-bun run ui:add:web <name>     # Add shadcn/ui component (Web)
-bun run ui:add:mobile <name>  # Add gluestack-ui component (Mobile)
-bun run tokens:build          # Generate CSS from design tokens
+# UI Components (devenv shell 内で nlx 経由)
+nlx shadcn@latest add <name>          # shadcn/ui (Web)
+nlx gluestack-ui@latest add --use-bun # gluestack-ui (Mobile)
 
 # Type Generation
-bun run generate:types   # Generate Supabase types
+devenv tasks run model:frontend       # Supabase types + API client
+devenv tasks run model:build          # All models
 ```
 
-### Makefile Commands (from project root)
-
-```bash
-make lint-frontend           # Biome lint (auto-fix)
-make lint-frontend-ci        # Biome lint (CI, no fix)
-make format-frontend         # Biome format (auto-fix)
-make format-frontend-check   # Biome format check
-make type-check-frontend     # TypeScript type check
-make build-model-frontend    # Generate Supabase types
-```
+正典: `/.claude/rules/commands.md`
 
 ## Internationalization (i18n)
 
@@ -352,12 +349,15 @@ export function DateDisplay({ utcDate }: DateDisplayProps) {
 
 ## Testing
 
-This project uses **Vitest** for unit testing.
+This project uses **Vitest** for unit testing. すべて devenv の **scripts** (PATH 直結) で実行する。
 
 ```bash
-bun run test              # Run tests
-bun run test:watch        # Watch mode
-bun run test:coverage     # Coverage report
+test-frontend              # Run Vitest (一回のみ)
+test                       # 全 unit test (frontend + backend-py)
+
+# Watch / coverage が必要な場合は devenv shell 内で nr 経由
+nr test:watch              # Watch mode
+nr test:coverage           # Coverage report
 ```
 
 ## Package Management
@@ -460,6 +460,8 @@ Key features:
 - **Security headers**: Adds X-Content-Type-Options, X-Frame-Options, etc.
 - **Function timeouts**: Configures max duration for API routes
 
+> **Note on `devCommand`**: `vercel.json` の `"devCommand": "bun run dev"` は **Vercel 環境専用フック**（Vercel ビルド環境には devenv が存在しないため）。ローカル開発では devenv の `dev-web` script を使用すること。Vercel 側からこのフックが呼ばれるのは `vercel dev` 等の限定的なケースのみで、通常のデプロイ (`buildCommand`) には影響しない。
+
 #### Vercel Project Settings
 
 When creating a new Vercel project, configure the following:
@@ -520,17 +522,18 @@ vercel --prod
 
 #### Deployment Best Practices
 
-1. **Test Locally**: Run `bun run build` before pushing
-2. **Check Types**: Run `bun run type-check` to catch type errors
-3. **Lint Code**: Run `bun run lint` to ensure code quality
-4. **Preview Deployments**: Test changes in preview environments before merging
-5. **Environment Variables**: Never commit secrets, use Vercel environment variables
+1. **Test Locally**: Run `build-frontend` before pushing
+2. **Check Types**: Run `type-check-frontend` to catch type errors
+3. **Lint Code**: Run `lint-frontend` to ensure code quality
+4. **Full CI Gate**: Run `ci-check` (= `devenv test`) to verify all projects
+5. **Preview Deployments**: Test changes in preview environments before merging
+6. **Environment Variables**: Never commit secrets, use Vercel environment variables
 
 #### Troubleshooting Deployment
 
 **Build Fails with "Module not found"**:
 - Ensure all workspace dependencies are listed in `package.json`
-- Run `bun install` locally to verify dependencies
+- `devenv shell` を再アクティベートして `setup:install-frontend` task で lockfile を同期
 
 **Environment Variables Not Available**:
 - Ensure variables are prefixed with `NEXT_PUBLIC_` for client-side access
@@ -559,16 +562,17 @@ If you see hydration errors related to dates or times:
 
 If Supabase types are out of sync:
 ```bash
-make build-model-frontend
+devenv tasks run model:frontend     # Frontend types のみ再生成
+devenv tasks run model:build        # 全 model 再生成
 ```
 
 ### Build Errors
 
 Clear cache and rebuild:
 ```bash
-bun run clean
-bun install
-bun run build
+nr clean                            # turbo clean + node_modules 削除 (devenv shell 内)
+# `devenv shell` を抜けて再アクティベートで setup:install-frontend が再実行される
+build-frontend                      # Next.js production build
 ```
 
 ## Additional Resources

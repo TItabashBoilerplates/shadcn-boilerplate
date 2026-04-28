@@ -108,8 +108,8 @@ devenv tasks run app:migrate-dev
 # 4. 型生成
 devenv tasks run model:build
 
-# 5. テスト実行
-make test
+# 5. テスト実行 (devenv script。Makefile は削除済み)
+test
 ```
 
 ### 既存テーブル変更の場合

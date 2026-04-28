@@ -7,13 +7,14 @@ description: shadcn/ui + TailwindCSS 4 UI implementation guidance. Use for compo
 
 ## Adding Components
 
-```bash
-# Add via Makefile (recommended)
-make frontend && cd frontend && bun run ui:add button
+devenv shell 内で `nlx` 経由で追加するのが正規の方法。Makefile は **deprecated**（削除済み）。
 
-# Or directly
-cd frontend && bunx shadcn@latest add button
+```bash
+# devenv shell 内 (direnv 自動アクティベート含む)
+nlx shadcn@latest add button     # = bunx shadcn@latest add button
 ```
+
+> 開発サーバを動かしながら追加したい場合は別ターミナルで `dev-web` を起動しておく。
 
 ## TailwindCSS 4 - CSS Variables (MANDATORY)
 

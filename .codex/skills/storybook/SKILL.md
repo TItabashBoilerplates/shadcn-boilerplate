@@ -18,19 +18,17 @@ description: Storybook Docker 環境でのコンポーネント開発ガイダ�
 
 ## 起動方法
 
-**MANDATORY**: Storybook は基本的に **Docker コンテナ上で実行**する。
+**MANDATORY**: Storybook は **devenv の軽量セット** に含まれており、`devenv up` で自動起動する。Makefile / docker-compose は **deprecated**（削除済み）。
 
 ```bash
-# Docker での起動（必須）
-docker-compose -f docker-compose.frontend.yaml up --build
+# 軽量セット (Supabase + backend + storybook) を起動
+devenv up
 
-# または Makefile 経由
-make storybook
+# または Storybook 単独 (devenv 外 / 必要時のみ)
+nr storybook                     # devenv shell 内、`bun run storybook` と同等
 ```
 
-ブラウザで `http://localhost:6006` にアクセス。
-
-> **Note**: ローカル実行（`cd frontend && bun run storybook`）は Docker が使用できない特殊な状況でのみ使用。
+ブラウザで `http://localhost:6006` にアクセス。devenv up の TUI 内で再起動・ログ閲覧が可能。
 
 ## Story ファイルの配置
 
@@ -284,11 +282,8 @@ volumes:
 **重要**: Story 追加・変更後は **ビルドチェックを実行する**。UI でのデバッグは非効率。
 
 ```bash
-# ビルドチェック（推奨）
-docker exec storybook bun run build-storybook
-
-# ローカル実行
-cd frontend && bun run build-storybook
+# ビルドチェック (devenv script、PATH 直結。Docker / Makefile は使わない)
+build-storybook
 ```
 
 ## チェックリスト

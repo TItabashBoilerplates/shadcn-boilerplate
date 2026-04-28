@@ -112,15 +112,20 @@ import { cn } from '@/shared/lib/utils'
 
 ## コマンド
 
+すべて devenv の **scripts** (PATH 直結)。Makefile は **deprecated**（削除済み）、`cd frontend && bun run X` の直接実行も禁止。
+
 ```bash
 # 開発
-cd frontend && bun run dev       # 全apps dev (Turbo)
-make frontend                    # Web のみ
+dev-all                          # 軽量セット + 全 frontend apps (web + mobile)
+dev-web                          # Web のみ + 軽量セット
+dev-mobile                       # Mobile (Metro non-interactive) + 軽量セット
+frontend                         # `cd frontend && turbo dev` (devenv 外、対話的 TUI)
 
 # ビルド・チェック
-cd frontend && bun run build     # 全体ビルド
-cd frontend && bun run type-check
-cd frontend && bun run lint
+build-frontend                   # Next.js production build
+type-check-frontend              # TypeScript 型チェック
+lint-frontend                    # Biome lint
+ci-check                         # 全プロジェクト CI チェック
 ```
 
 ## 新規パッケージ vs FSDスライス

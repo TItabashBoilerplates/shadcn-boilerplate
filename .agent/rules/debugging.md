@@ -1,52 +1,50 @@
 # Debugging Policy
 
-**MANDATORY**: フロントエンド・バックエンドのデバッグは **process-compose MCP ツールを最優先**で使用する。
+**MANDATORY**: フロントエンド・バックエンドのデバッグは **devenv 2.0 の native process manager の TUI** を主インターフェースとして使用する。`devenv up` を対話端末で実行すると TUI が自動起動し、プロセス状態・リアルタイムログ・個別再起動がキーボード操作で完結する。process-compose は **撤去済み**。
 
-## process-compose MCP ツール（推奨）
+## 対話環境（推奨）
 
-process-compose MCP サーバーは port 8090 (SSE) で常時稼働しており、AI エージェントから直接呼び出せる。
-CLI コマンドを使う前に、必ず以下の MCP ツールを試みること。
+```bash
+devenv up                # 軽量セット起動 → TUI が自動起動
+# TUI 内で:
+#   - プロセス一覧表示
+#   - 個別プロセスのリアルタイムログ閲覧
+#   - 個別プロセスの再起動
+```
 
-### 利用可能な MCP ツール
-
-| ツール | 用途 | 引数 |
-|--------|------|------|
-| `get-process-status` | 全サービス死活確認（backend/storybook/web/supabase） | なし |
-| `get-process-logs` | 指定プロセスの最新ログ取得 | `process_name`, `lines` |
-| `restart-process` | クラッシュ・停止プロセスの再起動 | `process_name` |
-| `start-process` | 停止中プロセスの起動 | `process_name` |
-
-### 対象プロセス名
+## 対象プロセス名
 
 | プロセス名 | サービス | ポート |
 |-----------|----------|-------|
 | `backend` | FastAPI バックエンド | 4040 |
 | `storybook` | Storybook | 6006 |
-| `web` | Next.js | 3000 |
+| `web` | Next.js (opt-in、`devenv up web` 必須) | 3000 |
+| `mobile` | Expo Metro (opt-in、`devenv up mobile` 必須) | 8081 |
 
-## 典型的なデバッグフロー
+## 非対話環境（CI / AI エージェント）
 
-```
-1. get-process-status      → 全サービスの死活を確認
-2. get-process-logs        → 問題プロセスのログを確認（lines: 50〜100 推奨）
-3. restart-process         → クラッシュしていれば再起動
-4. get-process-logs (再度) → 再起動後のログを確認
-```
-
-## CLI フォールバック（MCP が使えない場合のみ）
+TUI が使えないので、ログファイルを直接 tail する:
 
 ```bash
-# ログ確認
-process-compose logs --tail 100 backend
-tail -f .devenv/state/process-compose/process-compose.log
+# devenv processes のログは /tmp/devenv-*/processes/logs/ 配下
+tail -100 /tmp/devenv-*/processes/logs/backend.stderr.log
+tail -100 /tmp/devenv-*/processes/logs/storybook.stderr.log
+tail -100 /tmp/devenv-*/processes/logs/web.stderr.log
 
-# 全サービス再起動
-make stop && make run
+# detached モード起動 → ログを後追い
+devenv up -d
+# 全プロセス停止
+devenv processes down
 ```
 
-## Supabase ログ（MCP 対象外 → Docker）
+## 全停止
 
-Supabase は Docker で管理しているため MCP ツール対象外。
+```bash
+stop          # devenv プロセス + Supabase Docker を両方停止
+supabase-stop # Supabase Docker のみ停止
+```
+
+## Supabase ログ（Docker）
 
 ```bash
 docker logs -f supabase_db_<project_name>
@@ -56,9 +54,13 @@ docker logs -f supabase_edge_runtime_<project_name>
 
 ## 品質チェック
 
+devenv の **scripts** (PATH 直結) を使用する。Makefile は **deprecated**（削除済み）。
+
 ```bash
-make lint
-make type-check
-make test
-make ci-check
+lint
+type-check
+test
+ci-check
 ```
+
+正典: `/.claude/CLAUDE.md`, `/.claude/skills/debugging/`

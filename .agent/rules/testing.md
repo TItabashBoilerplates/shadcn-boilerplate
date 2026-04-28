@@ -33,7 +33,7 @@
 RLS policies, DB functions, triggers, and constraints are verified with **pgTAP** via `supabase test db`. All RLS tests live in `supabase/tests/` as `.sql` files and run with:
 
 ```bash
-make test-db   # = supabase test db --local
+test-db   # = supabase test db --local (devenv script)
 ```
 
 詳細は `.claude/skills/pgtap/SKILL.md` を参照。ここではポリシーだけを示す。
@@ -57,7 +57,7 @@ FSD の `api/` セグメント（supabase-js を叩く薄いクエリ関数）�
 
 | レイヤー | テスト手段 | 目的 |
 |----------|-----------|------|
-| RLS / DB 関数 / 制約 | pgTAP (`make test-db`) | DB 層の境界保証 |
+| RLS / DB 関数 / 制約 | pgTAP (`test-db` script) | DB 層の境界保証 |
 | `model/` のビジネスロジック | Vitest 単体テスト (TDD) | 純粋関数・reducer・state derivation |
 | `lib/` ユーティリティ | Vitest 単体テスト (TDD) | 関数の入出力 |
 | UI コンポーネント | Storybook | 見た目・状態分岐（単体テスト不要） |
@@ -77,8 +77,8 @@ RLS を設定したテーブルは以下すべてを検証する:
 
 ### TDD ワークフロー（pgTAP）
 
-1. **Red**: RLS ポリシーが未実装の状態で拒否テストを書き、`make test-db` で FAIL することを確認
-2. **Green**: `drizzle/schema/` にポリシーを追加 → `make migrate-dev` → `make test-db` で PASS
+1. **Red**: RLS ポリシーが未実装の状態で拒否テストを書き、`test-db` で FAIL することを確認
+2. **Green**: `drizzle/schema/` にポリシーを追加 → `devenv tasks run app:migrate-dev` → `test-db` で PASS
 3. **Refactor**: ポリシー式を整理。テストは触らない
 
 **NEVER**:
@@ -102,7 +102,7 @@ RLS を設定したテーブルは以下すべてを検証する:
 
 ### 作業終了前チェックリスト
 
-1. **全テスト実行**: `make test` を実行
+1. **全テスト実行**: `test` script を実行
 2. **失敗テストの対応**:
    - 原因分析を実施
    - 実装の修正（テストは変更しない）

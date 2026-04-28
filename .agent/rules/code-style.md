@@ -24,10 +24,10 @@
   - Async/await for all I/O operations
   - Clean architecture dependency rules enforced
   - Maximum function complexity: 3 (McCabe)
-- **Commands**:
-  - `make lint-backend-py` - Ruff lint (auto-fix)
-  - `make format-backend-py` - Ruff format (auto-fix)
-  - `make type-check-backend-py` - MyPy type checking
+- **Commands** (devenv scripts on PATH。Makefile は削除済み):
+  - `lint-backend-py` - Ruff lint (auto-fix)
+  - `format-backend-py` - Ruff format (auto-fix)
+  - `type-check-backend-py` - MyPy type checking
 
 ## Edge Functions
 

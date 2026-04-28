@@ -4,8 +4,10 @@ pgTAP による RLS・DB 関数・制約のテストを配置するディレク�
 
 ## 実行
 
+devenv の **script** (PATH 直結)。Makefile は **deprecated**（削除済み）。
+
 ```bash
-make test-db
+test-db          # = supabase test db --local
 ```
 
 ## ファイル配置

@@ -317,39 +317,44 @@ class RAGService:
 
 ## Development
 
+すべて devenv の **scripts** (PATH 直結) または **tasks** (`devenv tasks run <name>`) を使用する。Makefile は **deprecated**（削除済み）。直接 `uv run X` / `cd backend-py && ...` での実行は禁止。
+
 ### Getting Started
 
 ```bash
-# Install dependencies (from project root)
-make init
+# Setup
+# `devenv shell` 進入 (direnv 経由含む) で setup:install-backend task が
+# uv sync --frozen --group dev を自動実行する。明示的な init コマンドは不要。
 
-# Start backend services
-make run
-
-# Or manually with Docker
-cd backend-py
-docker-compose up
+# Start backend services (軽量セット = Supabase + backend + storybook)
+devenv up
+# 別組み合わせ: dev-web / dev-mobile / dev-all / `devenv up backend web` 等
 ```
 
 ### Common Commands
 
 ```bash
-# Linting & Formatting
-make lint-backend-py         # Ruff lint (auto-fix)
-make lint-backend-py-ci      # Ruff lint (CI, no fix)
-make format-backend-py       # Ruff format (auto-fix)
-make format-backend-py-check # Ruff format check
+# Linting & Formatting (devenv scripts on PATH)
+lint-backend-py              # Ruff lint (auto-fix)
+lint-backend-py-ci           # Ruff lint (CI, no fix)
+format-backend-py            # Ruff format (auto-fix)
+format-backend-py-check      # Ruff format check
 
 # Type Checking
-make type-check-backend-py   # MyPy type check (strict mode)
+type-check-backend-py        # MyPy type check (strict mode)
 
 # Testing
-cd backend-py/app
-pytest                       # Run all tests
-pytest --cov                 # Run with coverage
-pytest -v                    # Verbose output
-pytest -k test_name          # Run specific test
+test-backend-py              # pytest (all tests via devenv)
+test                         # 全 unit test (frontend + backend-py)
+
+# 詳細な pytest オプション (devenv shell 内で uv 経由)
+cd "$DEVENV_ROOT/backend-py/app"
+uv run pytest --cov          # Run with coverage
+uv run pytest -v             # Verbose output
+uv run pytest -k test_name   # Run specific test
 ```
+
+正典: `/.claude/rules/commands.md`
 
 ### Package Management (uv)
 

@@ -397,8 +397,8 @@ appId: com.example.app
 ### 作業終了前チェック
 
 ```bash
-# 全テスト実行
-make test
+# 全テスト実行 (devenv script、PATH 直結。Makefile は削除済み)
+test
 
 # 結果確認
 # - すべて PASS であること

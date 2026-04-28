@@ -17,10 +17,14 @@ globs: []
 
 ## 正しいワークフロー
 
+すべて devenv の **tasks** (`devenv tasks run <name>`) を使用する。Makefile は **deprecated**（削除済み）。
+
 1. **Drizzleスキーマを編集**: `drizzle/schema/*.ts`
-2. **マイグレーション実行**: `make migrate-dev`
-3. **型自動再生成**: `make build-model`
-4. **Backendモデル再生成**: `make run` (コンテナ再起動時)
+2. **マイグレーション実行**: `devenv tasks run app:migrate-dev` (= migration + 型生成のフルフロー)
+3. **型のみ再生成**: `devenv tasks run model:build`
+4. **Backendモデル再生成**: `stop && devenv up` (コンテナ再起動時)
+
+正典: `/.claude/rules/commands.md`, `/.claude/rules/database.md`
 
 ## 禁止事項
 

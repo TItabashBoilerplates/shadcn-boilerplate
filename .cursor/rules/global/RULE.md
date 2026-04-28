@@ -23,25 +23,28 @@ globs: []
 |---------|--------|
 | Research-First | `@research` - 実装前に公式ドキュメント確認 |
 | TDD | `@tdd` - テスト駆動開発、All Green必須 |
-| Commands | `@commands` - Makefileコマンド使用必須 |
+| Commands | `@commands` - devenv scripts/tasks 使用必須 (Makefile は削除済み) |
 | Auto-Generated | `@auto-generated` - 自動生成ファイル編集禁止 |
 | Supabase-First | `@supabase-first` - supabase-js優先 |
 | i18n | `@i18n` - 多言語対応必須 |
 | DateTime | `@datetime` - UTC保存、Frontend変換 |
-| Debugging | `@debugging` - ログ確認・再起動は process-compose MCP 最優先 |
+| Debugging | `@debugging` - devenv 2.0 native process manager の TUI 最優先 |
 
 ## Commands
 
+devenv の **scripts** (PATH 直結) を使用する。Makefile は **deprecated**（削除済み）。
+
 ```bash
-make lint           # 全プロジェクトlint
-make format         # 全プロジェクトformat
-make type-check     # 型チェック
-make test           # 全テスト
-make ci-check       # CI用全チェック
+lint           # 全プロジェクトlint
+format         # 全プロジェクトformat
+type-check     # 型チェック
+test           # 全テスト
+ci-check       # CI用全チェック (lint + format-check + type-check)
 ```
+
+正典: `/.claude/rules/commands.md`
 
 ## i18n (MANDATORY)
 
 - All UI text via next-intl
 - Both `en.json` and `ja.json` required
-

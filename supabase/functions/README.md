@@ -290,8 +290,10 @@ Deno.serve(async (req: Request) => {
 
 ### Step 4: Test Locally
 
+> **NOTE**: 以下の `supabase functions serve` は **local 動作確認 / デバッグ用** の Supabase CLI 直叩きです。本リポジトリでの**デプロイの正規経路は `devenv tasks run -P <profile> deploy:functions`** で、CLI を直接呼んではいけません（`/.claude/rules/commands.md`）。
+
 ```bash
-# Serve function locally
+# Serve function locally (local debug only)
 supabase functions serve my-function
 
 # In another terminal, test with curl
@@ -303,8 +305,15 @@ curl -i --location --request POST 'http://localhost:54321/functions/v1/my-functi
 
 ### Step 5: Deploy
 
+> **正規経路**: 以下は背景理解のための CLI 例。**実際のデプロイは必ず devenv tasks 経由で行うこと**（`scripts/supabase/deploy.sh` が config push / buckets / functions / secrets を順序実行する）:
+>
+> ```bash
+> devenv tasks run -P staging    deploy:functions   # ステージング
+> devenv tasks run -P production deploy:functions   # 本番
+> ```
+
 ```bash
-# Deploy to Supabase
+# (Reference only — equivalent CLI calls executed by the devenv task)
 supabase functions deploy my-function
 
 # Or deploy all functions
@@ -513,19 +522,30 @@ deno test --allow-env --allow-net
 
 ## Deployment
 
-### Deploy Single Function
+> **正規経路**: 本リポジトリでは **必ず devenv tasks 経由でデプロイする**。`scripts/supabase/deploy.sh` が link / config push / buckets / functions / secrets の順序を保証する。Supabase CLI 直叩き (`supabase functions deploy`) は禁止 (`/.claude/rules/commands.md`)。
+>
+> ```bash
+> devenv tasks run -P staging    deploy:functions   # 単発 functions のみデプロイ (staging)
+> devenv tasks run -P production deploy:functions   # 単発 functions のみデプロイ (production)
+> devenv tasks run -P production deploy:supabase    # config + buckets + functions + secrets フルデプロイ
+> ```
+>
+> 以下の `supabase functions deploy` 例は背景理解のための **reference only**。
+
+### Deploy Single Function (reference)
 
 ```bash
+# Equivalent CLI call wrapped by `deploy:functions` task
 supabase functions deploy my-function
 ```
 
-### Deploy All Functions
+### Deploy All Functions (reference)
 
 ```bash
 supabase functions deploy
 ```
 
-### Deploy with Environment Variables
+### Deploy with Environment Variables (reference)
 
 ```bash
 # Set secrets before deploying

@@ -222,4 +222,4 @@ Detailed guidance available in `.codex/skills/`:
 - `datetime/` - DateTime handling patterns
 - `i18n/` - next-intl internationalization
 - `shadcn-ui/` - shadcn/ui + TailwindCSS
-- `debugging/` - デバッグ手順（process-compose MCP 優先）
+- `debugging/` - デバッグ手順（devenv 2.0 native process manager の TUI 優先）

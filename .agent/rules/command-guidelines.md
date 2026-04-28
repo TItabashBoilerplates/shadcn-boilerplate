@@ -177,9 +177,10 @@ devenv test
 - `execIfModified` で **mtime + content hash** チェック → 変更なしならスキップ
 - キャッシュ: `.devenv/` 配下、`devenv-tasks` Rust binary が管理
 - 何も変更してなければ全 task キャッシュヒット → 数秒で完了
-- ローカルと CI で **`devenv test` 一本** に統一 (環境差ゼロ)
+- **ローカル**: `devenv test` (= ci:check aggregator) を主に使う
+- **CI** (`.github/workflows/ci.yml`): Supabase Docker / Storybook 起動を避けるため、`devenv test` ではなく verify task (`lint-ci:* / format-check:* / type-check:*`) を直接列挙して呼ぶ
 
-> **使い分け**: 日常の auto-fix は `lint` / `format` script (シンプル sequential、execIfModified なし → 副作用ループ回避)。CI 相当の verify は `ci-check` または `devenv test`。
+> **使い分け**: 日常の auto-fix は `lint` / `format` script (シンプル sequential、execIfModified なし → 副作用ループ回避)。CI 相当の verify はローカルでは `ci-check` または `devenv test`、CI では verify task の直接列挙。
 
 ## Enforcement
 

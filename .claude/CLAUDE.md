@@ -178,13 +178,15 @@ stop                          # devenv プロセス + Supabase をすべて停�
 # Quality
 # 公式推奨の 2 段階構成:
 #   - コミット時 → git-hooks (biome/ruff/ruff-format/mypy/denofmt/denolint) が変更ファイルだけ実行 (<200ms)
-#   - CI / 手動 → `devenv test` (= ci:check aggregator) が execIfModified キャッシュで incremental skip
+#   - 手動 / ローカル verify → `devenv test` (= ci:check aggregator) が execIfModified キャッシュで incremental skip
+#   - CI (.github/workflows/ci.yml) → Supabase Docker / Storybook の起動を避けるため `devenv test` ではなく
+#                                      verify task (lint-ci:* / format-check:* / type-check:*) を直接列挙
 lint                         # 全プロジェクトの lint (auto-fix、シンプル sequential)
 format                       # 全プロジェクトの format (auto-fix)
 format-check                 # 各 sub-project の format-check sequential
 type-check                   # 各 sub-project の type-check sequential
-ci-check                     # = `devenv test`、ci:check aggregator 経由 (キャッシュ込み)
-devenv test                  # ci-check と同等。ローカル/CI で同じコマンド
+ci-check                     # = `devenv test`、ci:check aggregator 経由 (キャッシュ込み、ローカル用)
+devenv test                  # ci-check と同等 (ローカル用)。CI では process phase 回避のため使わず verify task を直接呼ぶ
 
 # 個別サブプロジェクト
 lint-frontend / lint-drizzle / lint-backend-py / lint-functions / lint-fsd

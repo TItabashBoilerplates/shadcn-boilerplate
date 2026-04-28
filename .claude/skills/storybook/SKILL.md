@@ -19,11 +19,11 @@ description: Storybook ローカル環境でのコンポーネント開発ガイ
 Storybook は `frontend` で Next.js と同時にバックグラウンドで起動します。
 
 ```bash
-# Storybook + Next.js を同時起動（推奨）
-frontend
+# 軽量セット (Supabase + backend + storybook) を起動 → TUI 内で Storybook ログ閲覧・再起動可能
+devenv up
 
-# Storybook 単独起動
-make storybook-local
+# Storybook + Next.js (web) を同時起動
+dev-web
 ```
 
 ブラウザで `http://localhost:6006` にアクセス。
@@ -782,10 +782,8 @@ const preview: Preview = {
 **重要**: Story 追加・変更後は **ビルドチェックを実行する**。UI でのデバッグは非効率。
 
 ```bash
-# ビルドチェック
+# ビルドチェック (devenv script、PATH 直結)
 build-storybook
-# または
-cd frontend && bun run build-storybook
 ```
 
 ビルドエラーがあれば、詳細なエラーメッセージがターミナルに表示される。
@@ -793,8 +791,9 @@ cd frontend && bun run build-storybook
 **キャッシュクリアが必要な場合**:
 
 ```bash
-cd frontend && rm -rf node_modules/.cache/storybook node_modules/.vite
-make storybook-local
+# devenv shell 内で
+rm -rf "$DEVENV_ROOT"/frontend/node_modules/.cache/storybook "$DEVENV_ROOT"/frontend/node_modules/.vite
+stop && devenv up    # 再起動して Storybook を作り直し
 ```
 
 ---

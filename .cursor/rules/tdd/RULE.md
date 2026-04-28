@@ -17,11 +17,17 @@ globs: []
 
 ## コマンド
 
+devenv の **scripts** (PATH 直結) を使用する。Makefile は **deprecated**（削除済み）。
+
 | 操作 | コマンド |
 |------|---------|
-| Frontend | `make test-frontend` |
-| Backend | `make test-backend-py` |
-| All | `make test` |
+| Frontend | `test-frontend` (Vitest) |
+| Backend | `test-backend-py` (pytest) |
+| All | `test` |
+| DB (pgTAP) | `test-db` |
+| E2E | `e2e` / `e2e-web` / `e2e-mobile` |
+
+正典: `/.claude/rules/commands.md`
 
 ## 禁止事項
 
@@ -69,7 +75,7 @@ globs: []
 
 **作業終了時は必ず全テスト通過を確認**
 
-1. `make test` を実行
+1. `test` script を実行
 2. 失敗テストがあれば実装を修正
 3. All Greenまで繰り返す
 

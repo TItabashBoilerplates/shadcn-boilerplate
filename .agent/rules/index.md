@@ -12,7 +12,7 @@ This directory contains guidelines for Antigravity Agent when working in this re
    - Research checklist
 
 2. **[Development Command Guidelines](./command-guidelines.md)** ⚠️ **MUST READ**
-   - Makefile command usage policy
+   - devenv scripts/tasks usage policy (Makefile は削除済み)
    - Database migration policy
    - Type generation policy
 
@@ -78,8 +78,8 @@ This directory contains guidelines for Antigravity Agent when working in this re
 ### Debugging
 
 13. **[Debugging Policy](./debugging.md)** ⚠️ **MUST READ**
-    - process-compose MCP ツール最優先（get-process-status / get-process-logs / restart-process / start-process）
-    - MCP が使えない場合のみ CLI にフォールバック
+    - devenv 2.0 native process manager の TUI 最優先（`devenv up` で TUI 自動起動）
+    - 非対話環境では `/tmp/devenv-*/processes/logs/<process>.{stdout,stderr}.log` を tail
     - Supabase は Docker ログで確認
 
 ### Environment Configuration
@@ -108,11 +108,11 @@ For detailed information, refer to the following documentation:
 ### Non-Negotiable Policies
 
 1. **Pre-implementation research is mandatory** - No implementation based on assumptions
-2. **Use Makefile commands** - Do not execute tools directly
-3. **Database migrations require manual approval** - No automatic execution
+2. **Use devenv scripts/tasks** - Do not execute tools directly. Makefile は deprecated（削除済み）
+3. **Database migrations require manual approval (production)** - Local migration は AI 実行可
 4. **Test-Driven Development (TDD) is mandatory** - Write tests before implementation
 5. **UI components use Storybook, not unit tests** - See `ui-testing.md`
 6. **Use pgTAP (`supabase test db`) for RLS / DB-layer testing** - Tests live in `supabase/tests/*.sql`
 7. **Clean Code Policy** - No backward compatibility, no duplication, no unused code
 8. **Use TailwindCSS CSS variables** - No hardcoded colors
-9. **Debugging via process-compose MCP** - Use MCP tools first for log/status/restart
+9. **Debugging via devenv 2.0 native TUI** - `devenv up` で TUI 起動、非対話環境は logs tail

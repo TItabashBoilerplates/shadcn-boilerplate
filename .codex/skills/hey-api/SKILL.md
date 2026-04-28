@@ -25,13 +25,15 @@ frontend/packages/api-client/
 
 ## 生成コマンド
 
-```bash
-# 手動生成
-cd frontend && bun run generate:api
+devenv 経由で生成。直接 `bun run` は禁止。
 
-# dev/build 時に自動実行
-bun run dev    # generate:api → dev
-bun run build  # generate:api → build
+```bash
+# 手動生成 (devenv tasks)
+devenv tasks run model:frontend       # Hey API client + Supabase types を一括生成
+
+# dev/build 時に自動実行 (turbo の dependsOn 経由で generate:api が走る)
+dev-web                                # 軽量セット + Next.js (web)
+build-frontend                         # Next.js production build
 ```
 
 ## 使用方法

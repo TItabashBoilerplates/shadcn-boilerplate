@@ -24,15 +24,17 @@ description: Maestro E2Eテストフレームワークガイダンス。フロ�
 
 ## コマンド
 
+すべて devenv の **scripts** (PATH 直結)。Makefile は **deprecated**（削除済み）。
+
 ```bash
 # 全 E2E テスト実行
-make e2e
+e2e
 
 # Web テストのみ
-make e2e-web
+e2e-web
 
 # Mobile テストのみ
-make e2e-mobile
+e2e-mobile
 ```
 
 ## ディレクトリ構造

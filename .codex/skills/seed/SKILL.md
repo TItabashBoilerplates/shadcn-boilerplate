@@ -7,17 +7,17 @@ description: データベース・ストレージのシードデータ管理ガ�
 
 ## 概要
 
-`make seed` コマンドでデータベース（Drizzle）とストレージ（Supabase Storage）のシードデータを投入する。
+`devenv tasks run seed:all` でデータベース（Drizzle）とストレージ（Supabase Storage）のシードデータを投入する。Makefile は **deprecated**（削除済み）。
 
 ## コマンド一覧
 
 | コマンド | 説明 |
 |---------|------|
-| `make seed` | DB + Storage 両方をシード |
-| `make seed-db` | データベースのみ |
-| `make seed-storage` | ストレージのみ |
-| `ENV=staging make seed` | staging環境にシード |
-| `ENV=production make seed` | production環境（確認プロンプト付き） |
+| `devenv tasks run seed:all` | DB + Storage 両方をシード |
+| `devenv tasks run seed:db` | データベースのみ |
+| `devenv tasks run seed:storage` | ストレージのみ |
+| `devenv tasks run -P staging    seed:all` | staging 環境にシード |
+| `devenv tasks run -P production seed:all` | production 環境（要ユーザー承認） |
 
 ## ディレクトリ構成
 
@@ -173,7 +173,7 @@ objects_path = "./seeds/storage/avatars"
 ### production での実行
 
 ```bash
-$ ENV=production make seed
+$ devenv tasks run -P production seed:all
 
 WARNING: You are about to seed PRODUCTION!
 

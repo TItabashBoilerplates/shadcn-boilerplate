@@ -24,9 +24,17 @@
 
 ## Commands
 
+すべて devenv の **scripts** (PATH 直結) または **tasks** (`devenv tasks run <name>`) を使用する。Makefile は **deprecated**（削除済み）。直接 `bun run` / `npx` / `cd frontend && ...` での実行は禁止。
+
 ```bash
-make lint-frontend
-make format-frontend
-make type-check-frontend
-make test-frontend
+# Lint / Format / Type-check (scripts on PATH)
+lint-frontend           # Biome lint (auto-fix)
+format-frontend         # Biome format (auto-fix)
+type-check-frontend     # tsc --noEmit
+lint-fsd                # FSD boundary check (web + mobile, ESLint)
+
+# Test
+test-frontend           # Vitest
 ```
+
+正典: `/.claude/rules/commands.md`

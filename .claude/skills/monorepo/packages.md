@@ -126,9 +126,10 @@ type UserProfile = Tables<'user_profiles'>
 type UserStatus = Enums<'user_status'>
 ```
 
-**型生成**:
+**型生成** (devenv tasks 経由):
 ```bash
-cd frontend/packages/types && bun run generate
+devenv tasks run model:frontend       # Frontend types を再生成
+devenv tasks run model:build          # 全 model 再生成 (frontend + functions)
 ```
 
 ---
@@ -179,9 +180,9 @@ import { Button, Card, Input } from '@workspace/ui/components'
 </Card>
 ```
 
-**コンポーネント追加**:
+**コンポーネント追加** (devenv shell 内で nlx 経由):
 ```bash
-cd frontend && bun run ui:add button card input
+nlx shadcn@latest add button card input        # = bunx shadcn@latest add ...
 ```
 
 ---

@@ -51,23 +51,39 @@ frontend/
 
 ### Frontend Development
 
-```bash
-bun install                 # Install dependencies
-bun run dev                 # Next.js development server with Turbopack
-bun run build               # Build production application
-bun run start               # Start production server
-bun run lint                # Run Biome linting and formatting (auto-fix)
-bun run lint:ci             # Run Biome in CI mode (no auto-fix)
-bun run format              # Format code with Biome
-bun run format-check        # Check code formatting with Biome
-bun run type-check          # TypeScript type checking
+すべて devenv の **scripts** (PATH 直結) または **tasks** (`devenv tasks run <name>`) を使用する。Makefile は **deprecated**（削除済み）。直接 `cd frontend && bun run X` での実行は禁止。
 
-# Package management with Bun
-bun add <package-name>      # Add runtime dependency
-bun add -d <package-name>   # Add development dependency
-bun remove <package-name>   # Remove dependency
-bun update                  # Update all dependencies
+```bash
+# Services（軽量 default = supabase + backend + storybook）
+devenv up               # 軽量セット起動 (TUI 付き)
+dev-web                 # 軽量 + Next.js (web)
+dev-mobile              # 軽量 + Expo Metro (mobile, non-interactive)
+dev-all                 # 全部入り
+devenv up backend web   # 任意組み合わせ
+stop                    # devenv プロセス + Supabase 全停止
+
+# Quality
+lint-frontend           # Biome lint (auto-fix)
+format-frontend         # Biome format (auto-fix)
+type-check-frontend     # tsc --noEmit
+lint-fsd                # FSD boundary check (web + mobile, ESLint)
+test-frontend           # Vitest
+
+# Build
+build-frontend          # Next.js production build
+build-storybook         # Storybook static build
+
+# Package management
+# `devenv shell` 進入時 (direnv 経由含む) に `setup:install-frontend` task が
+# lockfile 変更を検知して bun install を自動実行するので手動実行は通常不要。
+# 個別パッケージ追加は ni / nr / nlx を使う:
+ni package              # 依存追加 (= bun add package)
+ni -D package           # 開発依存追加 (= bun add -d package)
+nr <script>             # package.json scripts 実行 (= bun run <script>)
+nlx <command>           # 一時実行 (= bunx <command>)
 ```
+
+正典: `/.claude/rules/commands.md`
 
 ### Component Management
 
@@ -778,7 +794,7 @@ Always use Context7 MCP when working with external libraries or frameworks:
 
 #### Testing Process:
 
-1. Start development server: `bun run dev`
+1. Start development server: `dev-web` (or `devenv up web`)
 2. Use `mcp__playwright__browser_navigate` to access pages
 3. Use `mcp__playwright__browser_snapshot` to verify page state
 4. Use `mcp__playwright__browser_click`, `mcp__playwright__browser_type` for interactions

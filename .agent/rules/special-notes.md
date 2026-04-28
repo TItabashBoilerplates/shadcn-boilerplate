@@ -4,11 +4,11 @@
 
 Generate types for each platform from Drizzle schema:
 
-- **Frontend**: Supabase TypeScript type generation (`make build-model-frontend`)
+- **Frontend**: Supabase TypeScript type generation (`devenv tasks run model:frontend`)
 - **Backend Python**: SQLModel (generated directly from database with sqlacodegen)
 - **Edge Functions**:
-  - Supabase TypeScript type generation (`supabase gen types typescript`)
-  - **NEW**: Copy Drizzle schema to `supabase/functions/shared/drizzle/` (`make build-model-functions`)
+  - Supabase TypeScript type generation (= `devenv tasks run model:functions` 内部で `supabase gen types typescript`)
+  - Copy Drizzle schema to `supabase/functions/shared/drizzle/` (`devenv tasks run model:functions`)
   - Type inference possible with `InferSelectModel` / `InferInsertModel`
 
 ## AI/ML Features
@@ -36,7 +36,7 @@ For a detailed list of integrated libraries, see the "AI/ML Integration Details"
 
 ## Development Workflow
 
-- Use `make` commands for consistency across team
-- Environment variables managed through dotenvx
-- Docker compose for service orchestration
-- Supports multiple development environments (local, staging, production)
+- Use **devenv** scripts/tasks for consistency across team (Makefile は deprecated・削除済み)
+- Environment variables managed through devenv profiles (`-P local | dev | staging | production`)
+- Supabase Docker for local DB / Auth / Storage; FastAPI managed via devenv 2.0 native process manager
+- Supports multiple development environments (local, staging, production) via profile switching

@@ -111,7 +111,7 @@ By adopting these environments, we can ensure efficient development and maintain
 - **Python Backend**: FastAPI application in `backend-py/` using clean architecture patterns
 - **Edge Functions**: Supabase Edge Functions using Deno's native `Deno.serve` API for lightweight serverless functions
 - **Database**: PostgreSQL with **Drizzle ORM** for schema management, includes pgvector extension for embeddings
-- **Infrastructure**: Supabase for auth/database (Docker), FastAPI managed via devenv processes (process-compose)
+- **Infrastructure**: Supabase for auth/database (Docker, managed by Supabase CLI), FastAPI managed via devenv 2.0 native process manager (TUI)
 
 #### Configuration Management
 

@@ -12,11 +12,13 @@ globs: ["drizzle/**/*.ts"]
 
 ## Migration Policy (CRITICAL)
 
-**自動マイグレーション禁止**
+ローカルマイグレーションは AI 自動実行可、本番は **ユーザー承認必須**。Makefile は **deprecated**（削除済み）。
 
 1. スキーマ編集: `drizzle/schema/*.ts`
-2. ユーザーに確認依頼
-3. ユーザーが `make migrate-dev` を実行
+2. ローカル: `devenv tasks run app:migrate-dev` (AI 実行可)
+3. 本番: ユーザーに確認依頼 → `devenv tasks run -P production db:migrate-deploy` (要承認)
+
+正典: `/.claude/rules/commands.md`, `/.claude/rules/database.md`
 
 ## Primary Key: UUID (MANDATORY)
 

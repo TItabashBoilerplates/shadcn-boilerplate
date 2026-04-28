@@ -1,77 +1,90 @@
 # Development Commands
 
+すべて devenv の **scripts** (PATH 直結) または **tasks** (`devenv tasks run <name>`) を使用する。Makefile は **deprecated**（削除済み）。直接 `bun run` / `uv run` / `cd frontend && ...` 等での実行は禁止。
+
+正典: `/.claude/rules/commands.md`
+
 ## Initial Setup
 
-```bash
-make init                    # Full project initialization (run once)
-```
+`devenv shell` 進入 (direnv 経由含む) で `setup:*` task が自動実行され、依存・secrets が同期される。明示的な init コマンドは不要。
 
 ## Running Services
 
 ```bash
-make run                     # Start backend services with Docker
-make frontend                # Start frontend (web) development server
-make stop                    # Stop all services
+devenv up                       # 軽量セット起動 (Supabase + backend + storybook、TUI 付き)
+dev-web                         # 軽量セット + Next.js (web)
+dev-mobile                      # 軽量セット + Expo Metro (mobile, non-interactive)
+dev-all                         # 軽量セット + 全 frontend apps
+devenv up backend web           # 任意組み合わせ
+stop                            # devenv プロセス + Supabase Docker 全停止
+supabase-start / supabase-stop  # Supabase Docker 単独制御
 ```
 
 ## Lint & Format
 
+すべて devenv の **scripts** (PATH 直結):
+
 ```bash
 # Frontend (Biome)
-make lint-frontend           # Biome lint (auto-fix)
-make lint-frontend-ci        # Biome lint (CI mode, no fixes)
-make format-frontend         # Biome format (auto-fix)
-make format-frontend-check   # Biome format check (check only)
-make type-check-frontend     # TypeScript type checking
+lint-frontend           # Biome lint (auto-fix)
+lint-frontend-ci        # Biome lint (CI mode, no fixes)
+format-frontend         # Biome format (auto-fix)
+format-frontend-check   # Biome format check (check only)
+type-check-frontend     # TypeScript type checking
 
 # Drizzle (Biome)
-make lint-drizzle            # Biome lint (auto-fix)
-make lint-drizzle-ci         # Biome lint (CI mode, no fixes)
-make format-drizzle          # Biome format (auto-fix)
-make format-drizzle-check    # Biome format check (check only)
+lint-drizzle            # Biome lint (auto-fix)
+lint-drizzle-ci         # Biome lint (CI mode, no fixes)
+format-drizzle          # Biome format (auto-fix)
+format-drizzle-check    # Biome format check (check only)
 
 # Backend Python (Ruff + MyPy)
-make lint-backend-py         # Ruff lint (auto-fix)
-make lint-backend-py-ci      # Ruff lint (CI mode, no fixes)
-make format-backend-py       # Ruff format (auto-fix)
-make format-backend-py-check # Ruff format check (check only)
-make type-check-backend-py   # MyPy type checking (strict mode)
+lint-backend-py         # Ruff lint (auto-fix)
+lint-backend-py-ci      # Ruff lint (CI mode, no fixes)
+format-backend-py       # Ruff format (auto-fix)
+format-backend-py-check # Ruff format check (check only)
+type-check-backend-py   # MyPy type checking (strict mode)
 
 # Edge Functions (Deno)
-make lint-functions          # Deno lint
-make format-functions        # Deno format (auto-fix)
-make format-functions-check  # Deno format check (check only)
-make check-functions         # Deno type checking (auto-detect all functions)
+lint-functions          # Deno lint
+format-functions        # Deno format (auto-fix)
+format-functions-check  # Deno format check (check only)
+check-functions         # Deno type checking (auto-detect all functions)
+
+# FSD Boundary Check
+lint-fsd                # FSD boundary check (web + mobile, ESLint)
 
 # Integrated Commands (Recommended)
-make lint                    # Lint all (Frontend + Drizzle + Backend Python + Edge Functions)
-make format                  # Format all (auto-fix)
-make format-check            # Format check all (CI mode)
-make type-check              # Type check all
-make ci-check                # All CI checks (lint + format + type)
+lint                    # Lint all (Frontend + Drizzle + Backend Python + Edge Functions)
+format                  # Format all (auto-fix)
+format-check            # Format check all (CI mode)
+type-check              # Type check all
+ci-check                # All CI checks (= devenv test、ローカル用 ci:check aggregator)
 ```
 
 ## Database Operations
 
-```bash
-# Development Migration
-make migrate-dev           # Generate + apply migration + type generation (local only)
-make migration             # Alias for migrate-dev
+ローカルマイグレーションは AI 自動実行可、本番 / staging は **ユーザー承認必須**。
 
-# Production Migration Apply
-make migrate-deploy        # Apply migration files (all environments)
-ENV=staging make migrate-deploy    # Staging environment
-ENV=production make migrate-deploy # Production environment
+```bash
+# Development Migration (local) — AI 実行可
+devenv tasks run app:migrate-dev    # Generate + apply migration + 型生成（フルフロー、推奨）
+devenv tasks run db:migrate-dev     # マイグレーション生成 + 適用のみ
+
+# Production Migration Apply — ユーザー承認必須
+devenv tasks run -P staging    db:migrate-deploy
+devenv tasks run -P production db:migrate-deploy
 
 # Type Generation (usually included in migrate-dev)
-make build-model           # Generate Supabase types and SQLModel
+devenv tasks run model:build        # Generate Supabase types + Drizzle schema (frontend + functions)
 ```
 
 ## Model Generation
 
 ```bash
-make build-model-frontend  # Generate Supabase types for frontend
-make build-model-functions # Generate types + copy Drizzle schema for Edge Functions
+devenv tasks run model:frontend     # Frontend: Supabase types + Hey API client + Drizzle schema copy
+devenv tasks run model:functions    # Edge Functions: Supabase types + Drizzle schema copy
+devenv tasks run model:build        # All models (= model:frontend + model:functions)
 ```
 
 **Generated for Edge Functions**:
@@ -79,15 +92,35 @@ make build-model-functions # Generate types + copy Drizzle schema for Edge Funct
 - `supabase/functions/shared/types/supabase/schema.ts` - Supabase TypeScript types
 - `supabase/functions/shared/drizzle/` - Drizzle schema (TypeScript)
 
-## Frontend Development
+## Test
 
 ```bash
-cd frontend
-bun run dev                 # Next.js web development (Turbo)
-bun run build              # Build all packages
-bun run lint               # Run Biome lint (auto-fix)
-bun run format             # Format code with Biome
-bun run type-check         # TypeScript type checking
+test                # 全 unit test (frontend + backend-py)
+test-frontend       # Vitest
+test-backend-py     # pytest
+test-db             # pgTAP DB tests
+e2e / e2e-web / e2e-mobile  # Maestro E2E
+```
+
+## Build / Deploy
+
+```bash
+build-frontend       # Next.js production build
+build-storybook      # Storybook static build
+
+devenv tasks run -P staging    deploy:functions   # Edge Functions (staging)
+devenv tasks run -P production deploy:functions   # Edge Functions (production)
+devenv tasks run -P production deploy:supabase    # config + buckets + functions + secrets フルデプロイ
+```
+
+## Frontend Development (Editor / 個別パッケージ追加)
+
+```bash
+# 依存追加 (devenv shell 内で ni / nr / nlx 経由)
+ni package           # = bun add package
+ni -D package        # = bun add -d package
+nr <script>          # = bun run <script> (package.json scripts 経由)
+nlx <command>        # = bunx <command>
 ```
 
 ## Backend Development (Python)
@@ -150,7 +183,7 @@ Deno.serve(async (req) => {
 **Benefits**:
 
 - TypeScript type safety
-- Types auto-update when schema changes (when running `make build-model`)
+- Types auto-update when schema changes (when running `devenv tasks run model:build`)
 - Can use both Supabase-generated types and Drizzle types
 
 **→ For detailed Edge Functions documentation, see [`supabase/functions/README.md`](../../supabase/functions/README.md)**
