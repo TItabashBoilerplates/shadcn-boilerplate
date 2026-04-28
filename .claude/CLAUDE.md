@@ -53,6 +53,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     ├── storybook/        # Storybook 10 コンポーネントカタログ
     ├── pgtap/            # RLS・DB 関数テスト（pgTAP + supabase test db）
     ├── python-testing/   # Python単体テスト（外部SDK/TypeError検知）
+    ├── fastapi/          # FastAPI ベストプラクティス（公式）
     ├── i18n/             # next-intl 多言語対応
     ├── langchain/        # LangChain/LangGraph/LangSmith
     └── maestro/          # Maestro E2Eテスト

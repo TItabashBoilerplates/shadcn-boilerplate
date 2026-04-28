@@ -56,6 +56,7 @@
 | Storybook | `storybook` |
 | Maestro / E2E | `maestro` |
 | 単体テスト (Python) | `python-testing` |
+| FastAPI / backend-py / API ルーティング・Pydantic | `fastapi` |
 | 開発チェック / CI 通し | `dev-check` |
 | ロギング | `logger` |
 | 日時処理 / タイムゾーン | `datetime` |

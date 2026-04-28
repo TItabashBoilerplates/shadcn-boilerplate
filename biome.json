@@ -20,7 +20,8 @@
 			"!.github/skills",
 			"!.shared",
 			"!.vscode",
-			"!supabase/functions"
+			"!supabase/functions",
+			"!skills-lock.json"
 		]
 	}
 }

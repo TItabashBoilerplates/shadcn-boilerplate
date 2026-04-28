@@ -868,7 +868,9 @@ in
     #     pre-commit の役割は「壊れたコードを通さないゲート」で十分。
     biome = {
       enable = true;
-      entry = lib.mkForce "${pkgs.biome}/bin/biome check";
+      # --no-errors-on-unmatched: biome.json で除外されたファイル
+      # (skills-lock.json 等) のみが渡されたケースで exit 1 になるのを抑止。
+      entry = lib.mkForce "${pkgs.biome}/bin/biome check --no-errors-on-unmatched";
     };
 
     # ----- Python: Ruff (lint) -----

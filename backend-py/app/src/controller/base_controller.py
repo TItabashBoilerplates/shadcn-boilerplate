@@ -1,8 +1,17 @@
-from fastapi import APIRouter
+"""Liveness / health probe endpoint."""
 
-router = APIRouter()
+from fastapi import APIRouter
+from pydantic import BaseModel
+
+router = APIRouter(tags=["base"])
+
+
+class HealthCheckResponse(BaseModel):
+    """Response payload for the health check endpoint."""
+
+    message: str
 
 
 @router.get("/healthcheck")
-async def healthcheck() -> dict[str, str]:
-    return {"message": "OK"}
+async def healthcheck() -> HealthCheckResponse:
+    return HealthCheckResponse(message="OK")

@@ -9,15 +9,13 @@ from fastapi.testclient import TestClient
 @pytest.fixture
 def client():
     """Create a test client for the FastAPI application."""
-    # Set required environment variables for testing
     os.environ.setdefault(
-        "DATABASE_URL",
+        "POSTGRES_URL",
         "postgresql://postgres:postgres@localhost:54322/postgres",
     )
     os.environ.setdefault("SUPABASE_URL", "http://localhost:54321")
-    os.environ.setdefault("SUPABASE_ANON_KEY", "test-key")
+    os.environ.setdefault("SUPABASE_PUBLISHABLE_KEY", "test-key")
 
-    # Import here to avoid circular imports
     from app import app
 
     return TestClient(app)

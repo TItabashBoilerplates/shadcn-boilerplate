@@ -169,12 +169,14 @@
 		"shadcn": {
 			"source": "shadcn/ui",
 			"sourceType": "github",
+			"skillPath": "skills/shadcn/SKILL.md",
 			"computedHash": "2bc6cf38ec7b4a5778a43fabb3e87642c9897ad45e9eb42438b57fd2def6cca8"
 		},
 		"stripe-best-practices": {
-			"source": "exceptionless/exceptionless",
+			"source": "stripe/ai",
 			"sourceType": "github",
-			"computedHash": "91b23c09854900c0ed1e85a8a3856b4a7294af2076f20b2cf9ca97f6f21dcb7b"
+			"skillPath": "skills/stripe-best-practices/SKILL.md",
+			"computedHash": "c89653e4f3a289ecdf1a51b3696ee7b18e172131c9803a981088c8d70536c85e"
 		},
 		"supabase": {
 			"source": "supabase/agent-skills",

@@ -69,8 +69,13 @@ convention = "google"
 quote-style = "double"
 docstring-code-format = true
 
-[lint.mccabe]
+[tool.ruff.lint.mccabe]
 max-complexity = 3
+
+[tool.fastapi]
+# Used by `fastapi dev` / `fastapi run`. The src layout requires
+# PYTHONPATH=src (see devenv.nix backendExec) for `app:app` to resolve.
+entrypoint = "app:app"
 
 [project]
 name = "backend-py"
@@ -82,7 +87,11 @@ dependencies = [
     "fastapi",
     "starlette",
     "uvicorn[standard]",
-    "orjson ==3.10.14",
+    # orjson is used by structlog's JSONRenderer in production
+    # (see util/logging.py). The == pin existed for a transient ASGI bug
+    # that was fixed upstream; use a floor-only constraint so security
+    # patches land automatically.
+    "orjson >=3.10.14",
 
     # Auth / DB
     "supabase",

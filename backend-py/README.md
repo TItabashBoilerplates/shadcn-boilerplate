@@ -226,9 +226,11 @@ devenv container copy backend
 `env/backend/.env.local` で管理する。
 
 ```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:54322/postgres
+POSTGRES_URL=postgresql://postgres:postgres@localhost:54322/postgres
 SUPABASE_URL=http://127.0.0.1:54321
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx
+# Optional: enable verbose SQLModel query echo (default off)
+# SQL_ECHO=1
 ```
 
 LLM などの追加サービスを使うときに、対応する API key 等を都度追加する。
@@ -246,10 +248,10 @@ FastAPI が自動生成する:
 ### Database Connection
 
 ```bash
-echo $DATABASE_URL
+echo $POSTGRES_URL
 
 cd backend-py/app
-python -c "from src.infra.db_client import get_engine; print(get_engine())"
+python -c "from src.infra.db_client import engine; print(engine)"
 ```
 
 ### Type Check Failures
