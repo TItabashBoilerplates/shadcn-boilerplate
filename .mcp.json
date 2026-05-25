@@ -40,6 +40,10 @@
 		"figma": {
 			"type": "http",
 			"url": "https://mcp.figma.com/mcp"
+		},
+		"gemini-api-docs-mcp": {
+			"type": "http",
+			"url": "https://gemini-api-docs-mcp.dev"
 		}
 	}
 }
