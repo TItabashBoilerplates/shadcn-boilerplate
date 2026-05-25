@@ -21,6 +21,12 @@
       "sourceType": "github",
       "computedHash": "342df93f481a0dba919f372d6c7b40d2b4bf5b51dd24363aea2e5d0bae27a6fa"
     },
+    "claude-api": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/claude-api/SKILL.md",
+      "computedHash": "3d1c50b50f7640b225dcd9b3b29a3983406b342c22e9f0ed4cb65a92451b7bf2"
+    },
     "create-auth-skill": {
       "source": "better-auth/skills",
       "sourceType": "github",
@@ -91,6 +97,24 @@
       "source": "langchain-ai/langchain-skills",
       "sourceType": "github",
       "computedHash": "4077205bed91c048ba47f0db1bd66930bdbdd04e5195dc3d5b265272c5059cd1"
+    },
+    "gemini-api-dev": {
+      "source": "google-gemini/gemini-skills",
+      "sourceType": "github",
+      "skillPath": "skills/gemini-api-dev/SKILL.md",
+      "computedHash": "e358693ab81864c2ed8fae87dd404ee41173e615f0d04834161cc1343bff1354"
+    },
+    "gemini-interactions-api": {
+      "source": "google-gemini/gemini-skills",
+      "sourceType": "github",
+      "skillPath": "skills/gemini-interactions-api/SKILL.md",
+      "computedHash": "dec60481e9f1948b84904622f1444765eefba2809726893428c7c65c0cd435fc"
+    },
+    "gemini-live-api-dev": {
+      "source": "google-gemini/gemini-skills",
+      "sourceType": "github",
+      "skillPath": "skills/gemini-live-api-dev/SKILL.md",
+      "computedHash": "5cc49b0dcefb59b52577118a7898b51fa1913e1a7fd2986b5735796c3aa81030"
     },
     "gluestack-ui-v4": {
       "source": "gluestack/agent-skills",
