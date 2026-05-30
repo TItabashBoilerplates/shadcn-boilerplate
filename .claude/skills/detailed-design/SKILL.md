@@ -39,7 +39,7 @@ $ARGUMENTS が指定された場合、まず以下を確認する:
 1. **既存スキーマ**: `drizzle/schema/schema.ts`, `drizzle/schema/types.ts`
 2. **既存RLS**: 現行のポリシーパターン
 3. **既存FSD構造**: `frontend/apps/web/src/` の entities/features/widgets
-4. **既存API**: `backend-py/app/src/controller/`, `supabase/functions/`
+4. **既存API**: `backend-py/apps/api/src/api/controller/`, `supabase/functions/`
 5. **既存i18nキー**: `frontend/apps/web/src/shared/config/i18n/messages/`
 
 ### Phase 3: テンプレート読み込みと記入

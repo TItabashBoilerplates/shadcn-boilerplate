@@ -327,7 +327,7 @@ Deno.serve(async (req: Request) => {
 ### リクエスト/レスポンス型
 
 ```python
-# backend-py/app/src/controller/{feature}/schema.py
+# backend-py/apps/api/src/api/controller/{feature}/schema.py
 from pydantic import BaseModel
 
 class {Action}Request(BaseModel):
@@ -342,7 +342,7 @@ class {Action}Response(BaseModel):
 ### Controller
 
 ```python
-# backend-py/app/src/controller/{feature}/router.py
+# backend-py/apps/api/src/api/controller/{feature}/router.py
 from fastapi import APIRouter, Depends
 from sqlmodel import Session
 

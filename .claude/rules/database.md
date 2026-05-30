@@ -111,7 +111,7 @@ export const profiles = pgTable('profiles', {
 `sqlacodegen` で SQLModel を自動生成する際、**同じテーブルへの複数の外部キー参照**があると `AmbiguousForeignKeysError` が発生する。
 
 **原因**: sqlacodegen Issue [#376](https://github.com/agronholm/sqlacodegen/issues/376)（未解決）
-**発生箇所**: `devenv up` 時の SQLModel 自動生成 (`backend-py/app/src/domain/entity/models.py`)
+**発生箇所**: `devenv up` 時の SQLModel 自動生成 (`backend-py/apps/api/src/api/domain/entity/models.py`)
 
 #### 問題のあるパターン
 

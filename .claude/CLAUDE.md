@@ -37,11 +37,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 │   ├── render-optimization.md # 再描画最小化（FSDスライス単位のステート局所化）
 │   ├── error-handling.md     # エラーハンドリング（握りつぶし禁止・フォールバック最小化）
 │   ├── page-navigation.md    # ページ遷移（loading.tsx + Suspense によるストリーミング必須）
-│   └── mcp-supabase.md       # Supabase インフラ操作は MCP（supabase / supabase-prod）必須
+│   ├── mcp-supabase.md       # Supabase インフラ操作は MCP（supabase / supabase-prod）必須
+│   └── python-monorepo.md    # backend-py の uv workspace 構造（apps/+packages/、src-layout、単一uv.lock）必須
 │
 └── skills/         # 質問時に参照するガイダンス
     ├── fsd/              # Feature Sliced Design
-    ├── monorepo/         # Bun workspace 構成
+    ├── monorepo/         # Bun workspace 構成 (frontend)
+    ├── python-monorepo/  # uv workspace 構成 (backend-py: apps + packages, src-layout)
     ├── tanstack-query/   # TanStack Query v5
     ├── supabase/         # Supabase 認証・RLS
     ├── drizzle/          # Drizzle ORM スキーマ
@@ -57,7 +59,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     ├── i18n/             # next-intl 多言語対応
     ├── langchain/        # LangChain/LangGraph/LangSmith
     ├── maestro/          # Maestro E2Eテスト
-    └── devenv-cicd/      # GitHub Actions × devenv 2.0 CI/CD（enterShell hook / .devenv キャッシュ / concurrency）
+    ├── devenv-cicd/      # GitHub Actions × devenv 2.0 CI/CD（enterShell hook / .devenv キャッシュ / concurrency）
+    └── edge-functions-mcp/ # Supabase Edge Functions 上に MCP サーバを構築（BYO MCP: @hono/mcp + @modelcontextprotocol/sdk）
 ```
 
 ## Domain Documentation
@@ -163,7 +166,7 @@ TUI が主なので、ログ閲覧・個別プロセス再起動・状態確認�
 #   - setup:secrets         → env/.env.secrets を雛形からコピー (無ければ)
 #   - setup:install-frontend → bun install (frontend) ※ lockfile 変更検知時のみ
 #   - setup:install-drizzle  → bun install (drizzle)
-#   - setup:install-backend  → uv sync (backend-py/app)
+#   - setup:install-backend  → uv sync --all-packages (backend-py workspace: apps/api + apps/mcp + packages/core)
 # 明示的なブートストラップタスクは不要。
 
 # Services

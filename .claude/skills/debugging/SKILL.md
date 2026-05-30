@@ -230,15 +230,18 @@ docker logs -f supabase_edge_runtime_<project_name>
 ## backend-py 内でのデバッグ
 
 ```bash
-# backend-py ディレクトリで直接 Python REPL
-cd backend-py/app
-uv run python
+# backend-py workspace ルートで Python REPL
+cd backend-py
+uv run --package api python
 
 # 特定のスクリプトを実行
-uv run python -c "from src.infra.logging import get_logger; print('OK')"
+uv run --package api python -c "from core.logging import get_logger; print('OK')"
 
-# テストを実行
-uv run pytest src/tests/ -v
+# テストを実行（workspace 全体）
+uv run pytest -v
+
+# 特定 member のテストのみ
+uv run pytest apps/api/tests/ -v
 
 # 依存関係の確認
 uv pip list

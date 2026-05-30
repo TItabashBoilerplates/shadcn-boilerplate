@@ -51,7 +51,7 @@ cd frontend && bun run --filter @workspace/api-client generate
 
 ```python
 # ❌ WRONG: Editing models.py directly
-# backend-py/app/src/domain/entity/models.py
+# backend-py/apps/api/src/api/domain/entity/models.py
 class User(SQLModel):
     custom_field: str  # DO NOT add fields here!
 

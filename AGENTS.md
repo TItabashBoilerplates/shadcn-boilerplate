@@ -123,7 +123,7 @@ type-check-frontend
 **NEVER manually edit**:
 - `frontend/packages/types/schema.ts`
 - `supabase/functions/shared/types/supabase/schema.ts`
-- `backend-py/app/src/domain/entity/models.py`
+- `backend-py/apps/api/src/api/domain/entity/models.py`
 
 **Correct workflow**: Edit `drizzle/schema/*.ts` → run `devenv tasks run app:migrate-dev`
 

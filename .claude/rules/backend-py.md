@@ -6,21 +6,31 @@ paths: backend-py/**/*.py
 
 ## Architecture
 
-- **Pattern**: Clean Architecture
+- **Pattern**: Clean Architecture (apps/<service> 内)
 - **Framework**: FastAPI
-- **Package Manager**: uv
+- **Package Manager**: uv workspace（モノレポ構造の詳細・強制ポリシーは [`.claude/rules/python-monorepo.md`](python-monorepo.md) を参照）
+- **詳細ガイド**: `.claude/skills/python-monorepo/SKILL.md`（新規 service / packages 追加、命名衝突回避、IDE 設定、出典付き）
 
-## Directory Structure
+## Directory Structure (uv Workspace)
+
+`backend-py/` は uv workspace。`apps/<service>` の実行可能サービスと `packages/<name>` の共有
+ライブラリで構成される。`apps/api` が FastAPI HTTP サーバ、`apps/mcp` は MCP サーバ雛形、
+`packages/core` は logger / Supabase client / 共通例外を提供する。
 
 ```
-backend-py/app/src/
-├── controller/       # HTTP request/response only
-├── usecase/          # Business logic
-├── gateway/          # Data access interfaces
-├── domain/           # Entities, models (sqlacodegen generated)
-├── infra/            # External system connections (DB, API, Supabase)
-├── util/             # Cross-cutting utilities (logging, etc.)
-└── middleware/       # Auth, CORS, request processing
+backend-py/
+├── pyproject.toml                  # workspace root（共通 tooling: ruff/mypy/pytest）
+├── apps/
+│   ├── api/src/api/                # FastAPI サーバ
+│   │   ├── controller/             # HTTP request/response only
+│   │   ├── usecase/                # Business logic
+│   │   ├── gateway/                # Data access interfaces
+│   │   ├── domain/                 # Entities, services, 固有例外 (sqlacodegen 生成は entity/)
+│   │   ├── infra/                  # External system connections (DB)
+│   │   └── middleware/             # Auth, CORS, request processing
+│   └── mcp/src/mcp_server/         # MCP server skeleton
+└── packages/
+    └── core/src/core/              # 共有: logging.py / exceptions.py / supabase_client.py
 ```
 
 ## Responsibility Separation

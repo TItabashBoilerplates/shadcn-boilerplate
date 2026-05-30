@@ -184,7 +184,7 @@ defaults:
 ```yaml
 # ❌ NG: setup task の execIfModified キャッシュを無視して毎回 install してしまう
 - run: cd frontend && bun install --frozen-lockfile
-- run: cd backend-py/app && uv sync --frozen
+- run: cd backend-py && uv sync --all-packages --all-groups --frozen
 ```
 
 setup task が lockfile 変更を検知して必要なときだけ install する設計なので、CI で重ねて install を呼ばない。`devenv shell` 経由にして hook に任せる。

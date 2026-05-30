@@ -15,9 +15,13 @@ let
     set +a
   '';
 
-  # backend service の exec body。
+  # backend (api) service の exec body。
   # local profile の `processes.backend` と base の `containers.backend` の両方から
   # 参照したいので let-binding で一度だけ定義する。
+  #
+  # backend-py は uv workspace 化済み (apps/api, apps/mcp, packages/core)。
+  # ワークスペースルートで `uv sync --all-packages` すれば api と core が editable install
+  # されるため、`api.app:app` は PYTHONPATH 操作なしで解決できる。
   #
   # 末尾を `exec "$UV_PROJECT_ENVIRONMENT/bin/uvicorn"` にすることで
   # bash → uvicorn を直接置換し、uvicorn 自体を session leader にする
@@ -28,12 +32,22 @@ let
   # `uv sync` は idempotent なワンショットなので exec の前に普通に実行する。
   backendExec = ''
     set -euo pipefail
-    cd "$DEVENV_ROOT/backend-py/app"
-    export PYTHONPATH="$DEVENV_ROOT/backend-py/app/src''${PYTHONPATH:+:$PYTHONPATH}"
-    uv sync --group dev
-    exec "$UV_PROJECT_ENVIRONMENT/bin/uvicorn" app:app \
+    cd "$DEVENV_ROOT/backend-py"
+    uv sync --all-packages --group dev
+    exec "$UV_PROJECT_ENVIRONMENT/bin/uvicorn" api.app:app \
       --proxy-headers --reload \
       --host 0.0.0.0 --port 4040
+  '';
+
+  # MCP server skeleton の exec body。`apps/mcp/` は雛形のみで実装はまだない。
+  # `processes.backend-mcp` は `start.enable = false` (opt-in)。
+  # 実装後は `uv run --package mcp-server mcp-server` 等に差し替え、ready probe を設定する。
+  backendMcpExec = ''
+    set -euo pipefail
+    cd "$DEVENV_ROOT/backend-py"
+    uv sync --all-packages --group dev
+    exec uv run --package mcp-server python -c \
+      'print("mcp-server placeholder; implement apps/mcp/src/mcp_server/main.py")'
   '';
 
   # ===== Frontend monorepo apps =====
@@ -209,6 +223,14 @@ in
         path = "/";
       };
     };
+
+    # ----- Opt-in: backend-py モノレポの追加サーバ -----
+
+    # MCP server (skeleton)。実装後 `start.enable = true` に切り替え + ready probe 追加。
+    backend-mcp = {
+      exec = backendMcpExec;
+      start.enable = false;
+    };
   } // lib.mapAttrs mkAppProcess frontendApps;
   # ↑ frontendApps から opt-in process 群を自動生成（start.enable = false）。
 
@@ -303,21 +325,26 @@ in
       before = [ "devenv:enterShell" ];
     };
 
-    # backend-py deps 同期。
+    # backend-py workspace deps 同期。
+    # uv workspace 化したので `--all-packages` で apps/api, apps/mcp, packages/core の
+    # editable install をまとめて行う。`--all-groups` で root の dev group も入る。
     "setup:install-backend" = {
       exec = ''
-        cd "$DEVENV_ROOT/backend-py/app"
-        echo "📦 Installing backend-py dependencies..."
-        uv sync --frozen --group dev || {
+        cd "$DEVENV_ROOT/backend-py"
+        echo "📦 Installing backend-py workspace dependencies..."
+        uv sync --all-packages --all-groups --frozen || {
           echo ""
           echo "⚠️  uv sync failed (lockfile may be out of sync)."
-          echo "   Run 'cd backend-py/app && uv lock && uv sync --group dev' manually."
+          echo "   Run 'cd backend-py && uv lock && uv sync --all-packages --all-groups' manually."
           exit 1
         }
       '';
       execIfModified = [
-        "backend-py/app/uv.lock"
-        "backend-py/app/pyproject.toml"
+        "backend-py/uv.lock"
+        "backend-py/pyproject.toml"
+        "backend-py/apps/api/pyproject.toml"
+        "backend-py/apps/mcp/pyproject.toml"
+        "backend-py/packages/core/pyproject.toml"
       ];
       before = [ "devenv:enterShell" ];
     };
@@ -496,11 +523,13 @@ in
       ];
     };
     "lint-ci:backend-py" = {
-      exec = ''cd "$DEVENV_ROOT/backend-py/app" && uv run ruff check src/'';
+      exec = ''cd "$DEVENV_ROOT/backend-py" && uv run ruff check apps packages'';
       execIfModified = [
-        "backend-py/app/src/**/*.py"
-        "backend-py/app/pyproject.toml"
-        "backend-py/app/ruff.toml"
+        "backend-py/apps/*/src/**/*.py"
+        "backend-py/packages/*/src/**/*.py"
+        "backend-py/pyproject.toml"
+        "backend-py/apps/*/pyproject.toml"
+        "backend-py/packages/*/pyproject.toml"
       ];
     };
     "lint-ci:functions" = {
@@ -545,11 +574,13 @@ in
       ];
     };
     "format-check:backend-py" = {
-      exec = ''cd "$DEVENV_ROOT/backend-py/app" && uv run ruff format --check src/'';
+      exec = ''cd "$DEVENV_ROOT/backend-py" && uv run ruff format --check apps packages'';
       execIfModified = [
-        "backend-py/app/src/**/*.py"
-        "backend-py/app/pyproject.toml"
-        "backend-py/app/ruff.toml"
+        "backend-py/apps/*/src/**/*.py"
+        "backend-py/packages/*/src/**/*.py"
+        "backend-py/pyproject.toml"
+        "backend-py/apps/*/pyproject.toml"
+        "backend-py/packages/*/pyproject.toml"
       ];
     };
     "format-check:functions" = {
@@ -580,10 +611,13 @@ in
       ];
     };
     "type-check:backend-py" = {
-      exec = ''cd "$DEVENV_ROOT/backend-py/app" && uv run mypy src/'';
+      exec = ''cd "$DEVENV_ROOT/backend-py" && uv run mypy apps packages'';
       execIfModified = [
-        "backend-py/app/src/**/*.py"
-        "backend-py/app/pyproject.toml"
+        "backend-py/apps/*/src/**/*.py"
+        "backend-py/packages/*/src/**/*.py"
+        "backend-py/pyproject.toml"
+        "backend-py/apps/*/pyproject.toml"
+        "backend-py/packages/*/pyproject.toml"
       ];
     };
     "type-check:functions" = {
@@ -709,7 +743,7 @@ in
     # auto-fix 系: scripts に直接処理 (シンプル sequential、execIfModified なし → 副作用ループ回避)
     "lint-frontend"     = { exec = ''cd "$DEVENV_ROOT/frontend" && nr lint''; description = "Biome lint (frontend, auto-fix)"; };
     "lint-drizzle"      = { exec = ''cd "$DEVENV_ROOT/drizzle" && nr lint''; description = "Biome lint (drizzle, auto-fix)"; };
-    "lint-backend-py"   = { exec = ''cd "$DEVENV_ROOT/backend-py/app" && uv run ruff check --fix src/''; description = "Ruff lint (backend-py, auto-fix)"; };
+    "lint-backend-py"   = { exec = ''cd "$DEVENV_ROOT/backend-py" && uv run ruff check --fix apps packages''; description = "Ruff lint (backend-py workspace, auto-fix)"; };
 
     # CI 系: tasks (lint-ci:*) の wrapper → execIfModified キャッシュが効く
     "lint-frontend-ci"   = { exec = ''exec devenv tasks run lint-ci:frontend''; description = "Biome lint (frontend, CI, cached)"; };
@@ -734,7 +768,7 @@ in
     # auto-fix 系: scripts に直接処理
     "format-frontend"   = { exec = ''cd "$DEVENV_ROOT/frontend" && nr format''; description = "Biome format (frontend, auto-fix)"; };
     "format-drizzle"    = { exec = ''cd "$DEVENV_ROOT/drizzle" && nr format''; description = "Biome format (drizzle, auto-fix)"; };
-    "format-backend-py" = { exec = ''cd "$DEVENV_ROOT/backend-py/app" && uv run ruff format src/''; description = "Ruff format (backend-py, auto-fix)"; };
+    "format-backend-py" = { exec = ''cd "$DEVENV_ROOT/backend-py" && uv run ruff format apps packages''; description = "Ruff format (backend-py workspace, auto-fix)"; };
     "format-functions"  = { exec = ''deno fmt "$DEVENV_ROOT/supabase/functions/"''; description = "Deno fmt (edge functions, auto-fix)"; };
 
     # check 系: tasks (format-check:*) の wrapper
@@ -790,7 +824,7 @@ in
 
     # ---------- Tests ----------
     "test-frontend"   = { exec = ''cd "$DEVENV_ROOT/frontend" && nr test''; description = "Vitest (frontend)"; };
-    "test-backend-py" = { exec = ''cd "$DEVENV_ROOT/backend-py/app" && uv run pytest''; description = "pytest (backend-py)"; };
+    "test-backend-py" = { exec = ''cd "$DEVENV_ROOT/backend-py" && uv run pytest''; description = "pytest (backend-py workspace)"; };
     "test-db"         = { exec = ''supabase test db --local''; description = "pgTAP DB tests"; };
     # NOTE: `test` という名前は bash 組み込みコマンド（`[` と等価）と衝突し、
     # PATH 上の同名スクリプトより builtin が優先される。CI で `run: test` を呼ぶと
@@ -878,18 +912,19 @@ in
     };
 
     # ----- Python: Ruff (lint) -----
-    # backend-py 配下のみ対象。リポジトリ root 直下や .claude/skills 等にある
-    # Python ファイル（外部ツール同期由来）は backend-py の ruff 設定を意図しないため
-    # 対象から外す。プロジェクト単位の verify は `lint-backend-py` task で行う。
+    # backend-py workspace の apps/<name>/src と packages/<name>/src のみ対象。
+    # リポジトリ root 直下や .claude/skills 等にある Python ファイル（外部ツール同期由来）は
+    # backend-py の ruff 設定を意図しないため対象から外す。
+    # プロジェクト単位の verify は `lint-backend-py` task で行う。
     ruff = {
       enable = true;
-      files = "^backend-py/.*\\.py$";
+      files = "^backend-py/(apps|packages)/[^/]+/src/.*\\.py$";
     };
 
     # ----- Python: Ruff (format) -----
     ruff-format = {
       enable = true;
-      files = "^backend-py/.*\\.py$";
+      files = "^backend-py/(apps|packages)/[^/]+/src/.*\\.py$";
     };
 
     # ----- Python: Mypy (type check) -----
@@ -901,16 +936,16 @@ in
     # は CLI 個別ファイル渡しでは効かないので、ここでも明示除外する）。
     #
     # ビルトインの mypy フックは project root から `mypy` を直接呼ぶため、
-    # backend-py/app の uv venv にインストールされたパッケージ (fastapi, sqlmodel,
-    # sqlalchemy, pydantic 等) を解決できず import-not-found が大量に出る。
-    # `cd backend-py/app && uv run mypy src/` の形に上書きすることで venv 内の
+    # backend-py の uv venv (workspace 共有) にインストールされたパッケージを解決できず
+    # import-not-found が大量に出る。
+    # `cd backend-py && uv run mypy apps packages` の形に上書きすることで venv 内の
     # mypy + 全依存を見つけられるようにする。pass_filenames=false でファイル列を
-    # 受け取らずプロジェクト単位で実行 (= type-check:backend-py task と同じ挙動)。
+    # 受け取らずワークスペース全体で実行 (= type-check:backend-py task と同じ挙動)。
     mypy = {
       enable = true;
-      files = "^backend-py/app/src/.*\\.py$";
+      files = "^backend-py/(apps|packages)/[^/]+/src/.*\\.py$";
       pass_filenames = false;
-      entry = lib.mkForce ''${pkgs.bash}/bin/bash -c 'cd "$(git rev-parse --show-toplevel)/backend-py/app" && uv run mypy src/' '';
+      entry = lib.mkForce ''${pkgs.bash}/bin/bash -c 'cd "$(git rev-parse --show-toplevel)/backend-py" && uv run mypy apps packages' '';
     };
 
     # ----- Edge Functions: Deno format -----

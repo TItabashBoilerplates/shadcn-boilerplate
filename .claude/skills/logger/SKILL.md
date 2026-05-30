@@ -13,7 +13,7 @@ description: 統一ロギング戦略ガイダンス。Frontend (Pino + loglevel
 |----------|-----------|----------|
 | **Frontend (Server)** | Pino | `frontend/packages/logger/server/` |
 | **Frontend (Client)** | loglevel | `frontend/packages/logger/client/` |
-| **Backend-py** | structlog | `backend-py/app/src/infra/logging.py` |
+| **Backend-py** | structlog | `backend-py/packages/core/src/core/logging.py` |
 | **Edge Functions** | 独自実装 | `supabase/functions/shared/logger/` |
 
 ## 共通仕様

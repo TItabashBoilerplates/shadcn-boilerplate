@@ -69,7 +69,7 @@ if [[ "$file_path" =~ /frontend/.*\.(ts|tsx|js|jsx|json)$ ]]; then
 fi
 
 # Backend Python
-if [[ "$file_path" =~ /backend-py/app/.*\.py$ ]]; then
+if [[ "$file_path" =~ /backend-py/(apps|packages)/[^/]+/src/.*\.py$ ]]; then
   echo "🔍 Running quality checks for backend-py..." >&2
 
   if ! run lint-backend-py 2>&1; then

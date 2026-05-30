@@ -141,7 +141,7 @@ export { {Entity}Card } from './ui/{Entity}Card'
 <!-- この機能でBackend APIが必要な場合のみ記述 -->
 
 ```
-backend-py/app/src/
+backend-py/apps/api/src/api/
 ├── controller/{feature}/
 │   └── router.py          # HTTP エンドポイント
 ├── usecase/{feature}/
