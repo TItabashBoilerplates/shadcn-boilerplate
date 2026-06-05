@@ -38,6 +38,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 │   ├── error-handling.md     # エラーハンドリング（握りつぶし禁止・フォールバック最小化）
 │   ├── page-navigation.md    # ページ遷移（loading.tsx + Suspense によるストリーミング必須）
 │   ├── mcp-supabase.md       # Supabase インフラ操作は MCP（supabase / supabase-prod）必須
+│   ├── supabase-config.md    # Supabase 設定は config.toml に集約（DB のみ Drizzle 例外）・メールテンプレートは [auth.email.template.*]
 │   └── python-monorepo.md    # backend-py の uv workspace 構造（apps/+packages/、src-layout、単一uv.lock）必須
 │
 └── skills/         # 質問時に参照するガイダンス
@@ -113,6 +114,8 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 **MANDATORY**: フロントエンド・バックエンドのデバッグは **devenv 2.0 の native process manager の TUI** を主インターフェースとして使用する。`devenv up` を対話端末で実行すると TUI が自動起動し、プロセス一覧・ログ閲覧・再起動がキーボード操作で可能。詳細は `.claude/skills/debugging/SKILL.md` を参照。
 
 **MANDATORY**: Supabase 上のインフラ（DB / Storage / Auth / Edge Functions / Logs / Migrations / Advisors / 設定）を**調査・操作**する場合は、必ず **`supabase` MCP**（ローカル）または **`supabase-prod` MCP**（本番、read-only）を使用する。`psql` / `curl` / `supabase` CLI を Bash で直接叩くのは禁止。本番への書き込みが必要な場合は必ずユーザーに判断をあおぐこと。詳細は `.claude/rules/mcp-supabase.md` を参照。
+
+**MANDATORY**: Supabase の**サービス設定値はすべて `supabase/config.toml` を single source of truth として Git 管理する**（Auth / Storage / API / Realtime サービス / Edge Runtime / Functions のデプロイ設定 / メールテンプレート）。Dashboard での手動変更は禁止。**唯一の例外は DB（スキーマ / RLS / Realtime publication / migration）で、これは Drizzle が source of truth**。認証メールテンプレートは `supabase/templates/email/*.html` に置き、`[auth.email.template.*]` の `content_path` で配線する。Secret は必ず `env()`。本番反映は GitHub 連携（config 同期）に委譲。詳細は `.claude/rules/supabase-config.md` を参照。
 
 **Supabase の Docker コンテナ自体は Supabase CLI が所有**（devenv の native process supervisor は backend / storybook のみ監視）。**起動連動**: `supabase:start` task が backend の `before` に登録されているため `devenv up` 起動時は Supabase → backend の順で立ち上がる。**停止は手動運用**: devenv 2.0 native process manager は task の `after` も `process.manager.after` も動作しない（前者は shutdown 時に cancel、後者は assertion でブロック、native の Rust shutdown パスに task runner 呼び出しが無いため）。auto-stop の中途半端な実装は持たず、停止は `supabase-stop` / `stop` script で明示的に行う運用に統一している。`stop` script は devenv プロセスと Supabase 両方を停止する。
 
@@ -258,15 +261,19 @@ nr build
 
 ## Supabase Configuration
 
-| Setting                | Location                                |
-| ---------------------- | --------------------------------------- |
-| Auth (OAuth, JWT, MFA) | `supabase/config.toml`                  |
-| Storage buckets        | `supabase/config.toml`                  |
-| API settings           | `supabase/config.toml`                  |
-| Tables                 | `drizzle/schema/`                       |
-| RLS policies           | `drizzle/schema/`                       |
-| Realtime               | `drizzle/config/post-migration/`        |
-| Migrations             | `drizzle/migrations/` (drizzle-kit 出力) |
+| Setting                  | Location                                                              |
+| ------------------------ | -------------------------------------------------------------------- |
+| Auth (OAuth, JWT, MFA)   | `supabase/config.toml`                                               |
+| Auth email templates     | `supabase/config.toml` (`[auth.email.template.*]`) + `supabase/templates/email/*.html` |
+| Storage buckets          | `supabase/config.toml`                                               |
+| API settings             | `supabase/config.toml`                                               |
+| Functions deploy config  | `supabase/config.toml` (`[functions.*]`: `verify_jwt` 等)            |
+| Tables                   | `drizzle/schema/`                                                    |
+| RLS policies             | `drizzle/schema/`                                                    |
+| Realtime publication     | `drizzle/config/post-migration/`                                     |
+| Migrations               | `drizzle/migrations/` (drizzle-kit 出力)                             |
+
+> **Config-as-Code**: Supabase のサービス設定は `config.toml` を source of truth として Git 管理する（DB のみ Drizzle 例外）。メールテンプレートは HTML を `supabase/templates/email/` に置き `content_path` で配線。詳細は `.claude/rules/supabase-config.md`。
 
 > **マイグレーションは Drizzle に集約**: 出力先は `drizzle/migrations/`（v3 フォルダ形式）。`supabase/migrations/` は使用せず、Supabase の GitHub 連携によるマイグレーション自動適用も利用しない（GitHub 連携自体は Edge Functions / config 同期のため維持）。
 
