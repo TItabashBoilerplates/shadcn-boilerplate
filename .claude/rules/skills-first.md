@@ -65,6 +65,7 @@
 | シードデータ | `seed` |
 | Hey API / OpenAPI クライアント生成 | `hey-api` |
 | デバッグ手順 (devenv / Supabase) | `debugging` |
+| Doppler / シークレット管理 / secret manager / .env 暗号化 / トークン取り扱い | `doppler` |
 | 多言語対応 / next-intl | `i18n` |
 | Figma 連携 | `figma:figma-*` |
 | UI 一般 / レビュー / アクセシビリティ | `ui-ux-pro-max`, `web-design-guidelines`, `vercel-react-best-practices`, `vercel-composition-patterns` |
@@ -110,6 +111,7 @@ Claude: → `rls` Skill を起動 → `supabase` Skill を確認 → ガイダ�
 | `.claude/rules/research.md` | Skill で足りない部分を Context7 MCP / WebSearch / WebFetch で補完 |
 | `.claude/rules/commands.md` | コマンド実行時は devenv の scripts / tasks を使用 |
 | `.claude/rules/mcp-supabase.md` | Supabase インフラ操作は `supabase` / `supabase-prod` MCP |
+| `.claude/rules/mcp-doppler.md` | Doppler シークレットの読み書きは `doppler` MCP（書込はフェーズ制: 初期構築=full / 本番=prd 承認制・値の露出禁止） |
 
 **起動順は: Skill → Research（公式ドキュメント） → 実装（devenv コマンド / MCP） → All Green 確認**。
 

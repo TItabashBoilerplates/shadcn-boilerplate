@@ -29,8 +29,10 @@ echo ""
 # Step 4: Functions
 "$SCRIPT_DIR/deploy-functions.sh"
 
-# Step 5: Secrets
-"$SCRIPT_DIR/deploy-secrets.sh"
+# Secrets: Doppler ネイティブ連携（Doppler→Supabase sync）で自動 sync するため、ここでは push しない。
+# 連携の設定手順は .claude/skills/doppler/references/cicd.md を参照。
+echo ""
+echo "ℹ️  Supabase secrets は Doppler ネイティブ連携で sync 済み（このスクリプトでは push しない）"
 
 echo ""
 echo "✅ Supabase deployment complete!"

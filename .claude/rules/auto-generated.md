@@ -13,6 +13,8 @@
 | `frontend/packages/db-schema/src/schema/` | Copy from `drizzle/schema/` | `devenv tasks run model:frontend` |
 | `supabase/functions/shared/types/supabase/schema.ts` | Supabase CLI | `devenv tasks run model:functions` |
 | `supabase/functions/shared/drizzle/` | Copy from `drizzle/schema/` | `devenv tasks run model:functions` |
+| `.codex/config.toml` | `scripts/sync-mcp.ts` (正本: `.mcp.json`) | `mcp-sync` |
+| `.cursor/mcp.json` | `scripts/sync-mcp.ts` (正本: `.mcp.json`) | `mcp-sync` |
 
 ## Generation Mechanism
 

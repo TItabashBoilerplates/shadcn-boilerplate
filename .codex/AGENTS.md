@@ -87,7 +87,6 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 ```bash
 # Setup
 # `devenv shell` 進入（direnv 経由含む）で setup:* タスクが自動実行:
-#   - setup:secrets         → env/.env.secrets を雛形からコピー（無ければ）
 #   - setup:install-frontend → bun install (frontend) ※ lockfile 変更検知時のみ
 #   - setup:install-drizzle  → bun install (drizzle)
 #   - setup:install-backend  → uv sync (backend-py/app)
@@ -132,12 +131,15 @@ devenv tasks run -P production db:migrate-deploy   # 本番: ⚠️ ユーザー
 
 ```
 env/
-├── backend/.env.local         # Backend service
-├── frontend/.env.local        # Frontend (Next.js)
-├── migration/.env.local       # Database migration
-├── .env.secrets               # Secrets (.gitignore)
-└── .env.secrets.example       # Template
+├── README.md                  # 構成・方針（canonical）
+├── backend/.env.local         # Backend 非機密 config
+├── frontend/.env.local        # Frontend (Next.js) 非機密 config
+├── migration/.env.local       # Database migration 非機密 config
+└── .env.secrets               # 旧シークレット (.gitignore・非ロード・doppler-import 用)
 ```
+
+> シークレットは **Doppler 管理**（`$ENV` 駆動・ファイルフォールバック廃止）。詳細は
+> `env/README.md` / `.claude/skills/doppler/SKILL.md`。
 
 ---
 

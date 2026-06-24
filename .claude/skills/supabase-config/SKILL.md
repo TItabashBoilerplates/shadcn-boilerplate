@@ -198,9 +198,11 @@ env:
 | Config 反映 | `devenv tasks run -P <env> deploy:config` | `deploy-config.sh` | `supabase config push` |
 | Bucket 同期 | `devenv tasks run -P <env> deploy:buckets` | `deploy-buckets.sh` | `supabase seed buckets --linked` |
 | Function デプロイ | `devenv tasks run -P <env> deploy:functions` | `deploy-functions.sh` | `supabase functions deploy --project-ref` |
-| Secrets 注入 | `devenv tasks run -P <env> deploy:secrets` | `deploy-secrets.sh` | `supabase secrets set --env-file` |
+| Secrets 注入 | （Doppler ネイティブ連携で自動 sync） | — | Doppler → Supabase Integration |
 
-`env/backend/.env.{local,stg,prod}` を `dotenvx` 経由で注入する構成。詳細は `multi-environment.md`。
+シークレットは **Doppler ネイティブ連携（Doppler→Supabase sync）** で供給する（旧 `deploy-secrets.sh` /
+dotenvx は廃止）。設定手順は `.claude/skills/doppler/references/cicd.md`。非機密の env は
+`env/backend/.env.<ENV>`（ファイル）。詳細は `multi-environment.md`。
 
 ---
 

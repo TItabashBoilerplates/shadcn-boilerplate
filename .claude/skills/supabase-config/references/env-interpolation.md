@@ -169,14 +169,10 @@ supabase secrets unset STRIPE_SECRET_KEY --project-ref $REF
 
 ### 本プロジェクトでの注入
 
-```bash
-# scripts/supabase/deploy-secrets.sh
-dotenvx run -f "env/backend/.env.${ENV}" -- \
-    bash -c 'supabase secrets set --env-file env/backend/.env.${ENV} --project-ref $SUPABASE_PROJECT_REF'
-
-dotenvx run -f "env/backend/.env.${ENV}" -- \
-    bash -c 'supabase secrets set --env-file env/.env.secrets --project-ref $SUPABASE_PROJECT_REF'
-```
+シークレットは **Doppler ネイティブ連携（Doppler→Supabase sync）** で Supabase secrets に自動
+反映する（旧 `scripts/supabase/deploy-secrets.sh` / dotenvx は廃止）。`supabase secrets list` で
+確認でき、Edge Functions / config.toml の `env()` から参照できる。設定手順は
+`.claude/skills/doppler/references/cicd.md`、方針は `.claude/skills/doppler/SKILL.md`。
 
 ---
 

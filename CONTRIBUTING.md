@@ -28,14 +28,17 @@ shadcn-boilerplateへのコントリビューションに興味を持ってい�
    `cd` するだけで以下が **自動実行** されます (`devenv` の `setup:*` task / `before = [ "devenv:enterShell" ]` + `execIfModified`):
 
    - Node.js / Bun / Python / Deno / uv のツールチェーン提供
-   - `env/.env.secrets` の雛形コピー (`env/.env.secrets.example` ベース、初回のみ)
    - `bun install --frozen-lockfile` (frontend / drizzle、lockfile 変更検知時)
    - `uv sync --frozen --group dev` (backend-py)
 
-3. シークレットを設定
+   シークレットは **Doppler 管理**（ファイルフォールバック廃止）。利用には `doppler login` +
+   `doppler setup` が必要（詳細は `env/README.md` / `.claude/skills/doppler/SKILL.md`）。
+
+3. 初回セットアップ（Doppler login+setup 等・対話）
    ```bash
-   $EDITOR env/.env.secrets   # API key 等の値を実値に書き換え
+   init     # Doppler login + setup（API key 等のシークレットは Doppler 管理）
    ```
+   ※ 事前に `doppler.yaml` の `<doppler-project>` を実プロジェクト名に置換しておく。
 
 4. 開発サーバーを起動
 

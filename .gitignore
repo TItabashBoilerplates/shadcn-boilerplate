@@ -16,10 +16,13 @@ venv/
 !.env.example
 
 # Environment files directory
+# commit するのは 非機密の .env.local / ドキュメントのみ。
+# シークレットは Doppler 管理（ファイルフォールバック廃止）。.env.secrets と
+# .env.<dev|staging|production> は機密・環境固有値のため gitignore。
 env/**
 !env/*/
 !env/**/.env.local
-!env/.env.secrets.example
+!env/README.md
 
 # =============================================================================
 # Build Outputs

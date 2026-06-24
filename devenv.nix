@@ -1,18 +1,71 @@
 { pkgs, config, lib, ... }:
 
 let
-  # 環境ごとの env file 読み込み処理。
-  # profile 名（= 環境名）を引数に取り、当該環境の全サービスの env file を
-  # bash の `set -a; source` で読み込む。
-  # bash パーサがクォート・エスケープ・コメントを正しく処理する。
-  # `dotenvx -f X -f Y` と同じく後勝ち（secrets が後ろなので secrets が conflict を上書き）。
-  loadEnvForProfile = profileName: ''
+  # 環境ごとの **非機密** env ファイル読み込み（ENV 駆動）。Doppler（loadDopplerByEnv）と同じく
+  # 環境変数 ENV を見て読み込む対象を切り替える。env/ の構成は env/README.md を参照。
+  #
+  # ここで読むのは非機密 config（URL/port 等）の env/<svc>/.env.$ENV のみ。
+  # **シークレットは Doppler が唯一のソース**（loadDopplerByEnv）。`.env.secrets` のファイル
+  # フォールバックは廃止した（ユーザー方針）。bash パーサがクォート・エスケープを正しく処理する。
+  # `[ -f X ] && . X` で gard しているので env ファイル未配置でもエラーにならない。
+  loadEnvFilesForEnv = ''
     set -a
-    [ -f "$DEVENV_ROOT/env/backend/.env.${profileName}" ]   && . "$DEVENV_ROOT/env/backend/.env.${profileName}"
-    [ -f "$DEVENV_ROOT/env/frontend/.env.${profileName}" ]  && . "$DEVENV_ROOT/env/frontend/.env.${profileName}"
-    [ -f "$DEVENV_ROOT/env/migration/.env.${profileName}" ] && . "$DEVENV_ROOT/env/migration/.env.${profileName}"
-    [ -f "$DEVENV_ROOT/env/.env.secrets" ]                  && . "$DEVENV_ROOT/env/.env.secrets"
+    for _svc in backend frontend migration; do
+      _f="$DEVENV_ROOT/env/$_svc/.env.''${ENV:-local}"
+      [ -f "$_f" ] && . "$_f"
+    done
+    unset _svc _f
     set +a
+  '';
+
+  # Doppler からのシークレット読み込み（Doppler-first・ファイルフォールバック付き・ENV 駆動）。
+  #
+  # 方針: **シークレットだけ Doppler、非機密 config はファイル**。
+  #   - シークレット（API キー等）→ **Doppler が唯一のソース**。ファイルフォールバックは廃止。
+  #   - 非機密の環境変数（ローカル Supabase URL / backend URL / port 等。
+  #     env/{backend,frontend,migration}/.env.$ENV）→ 引き続きファイルで管理（loadEnvFilesForEnv）。
+  #
+  # **どの Doppler config を参照するかは環境変数 ENV で切り替える**。本リポジトリの deploy
+  # スクリプト（scripts/supabase/*.sh）も `ENV="${ENV:-}"` で local/staging/production を
+  # 切り替えており、その ENV 規約にそのまま合わせる:
+  #   ENV=local（または未設定） → --config を付けず `doppler setup` のローカル紐付け config
+  #                               （公式推奨は dev_personal）を使う。
+  #   ENV=dev                   → --config dev
+  #   ENV=staging               → --config stg
+  #   ENV=production            → --config prd
+  #   それ以外                  → --config "$ENV"（そのまま config 名として扱う）
+  #
+  # 動作: doppler が認証・setup 済みなら secrets を取得して env に注入する。
+  # **取得できない場合（未ログイン / 未 setup / token 無し）はフォールバックが無いので、
+  # シークレット未ロードを明示警告する**（.claude/rules/error-handling.md: 唯一のソースが
+  # 失敗したらサイレントにしない）。shell 自体は止めない（doppler login を打てるように）。
+  # `--format env` は KEY="value" 形式なので bash パーサがクォート・エスケープを正しく扱う。
+  loadDopplerByEnv = ''
+    if command -v doppler >/dev/null 2>&1; then
+      _dpl_args=""
+      _dpl_label="local scope (doppler setup)"
+      case "''${ENV:-local}" in
+        local|"") ;;
+        dev|development)     _dpl_args="--config dev"; _dpl_label="config: dev (ENV=$ENV)" ;;
+        stg|staging)         _dpl_args="--config stg"; _dpl_label="config: stg (ENV=$ENV)" ;;
+        prd|prod|production) _dpl_args="--config prd"; _dpl_label="config: prd (ENV=$ENV)" ;;
+        *)                   _dpl_args="--config ''${ENV}"; _dpl_label="config: ''${ENV} (ENV=$ENV)" ;;
+      esac
+      if _doppler_env="$(cd "$DEVENV_ROOT" && doppler secrets download --no-file --format env $_dpl_args 2>/dev/null)"; then
+        set -a
+        eval "$_doppler_env"
+        set +a
+        unset _doppler_env
+        echo "🔐 Doppler secrets loaded ($_dpl_label)"
+      else
+        echo "⚠️  シークレット未ロード: Doppler から取得できません（$_dpl_label）。" >&2
+        echo "    フォールバックは廃止済み。'doppler login' → 'doppler setup'（CI は DOPPLER_TOKEN）を実行してください。" >&2
+        echo "    詳細: .claude/skills/doppler/SKILL.md" >&2
+      fi
+      unset _dpl_args _dpl_label
+    else
+      echo "⚠️  doppler CLI が見つかりません（devenv shell 内で実行していますか）。" >&2
+    fi
   '';
 
   # backend (api) service の exec body。
@@ -155,6 +208,9 @@ in
     pkgs.supabase-cli
     pkgs.ni
     pkgs.maestro
+    # Doppler CLI（シークレット管理）。secrets の単一ソース化に向けた下準備。
+    # 使い方・移行方針は .claude/skills/doppler/SKILL.md を参照。
+    pkgs.doppler
   ];
 
   languages.javascript = {
@@ -178,7 +234,7 @@ in
   # devenv 2.0 native process manager。process-compose は使わない（native がデフォルト）。
   #
   # local 環境がデフォルト。`devenv up`（profile 指定なし）で base enterShell が
-  # loadEnvForProfile "local" を実行し、`start.enable = true` のプロセスが立ち上がる。
+  # ENV=local として loadEnvFilesForEnv を実行し、`start.enable = true` のプロセスが立ち上がる。
   # `supabase:start` task は backend process の `before` に登録されているので、
   # `devenv up` 一発で Supabase → backend の順に起動する。
   #
@@ -247,22 +303,32 @@ in
   #   devenv shell -P staging -- supabase status   # staging env で確認
   #   devenv tasks run -P production deploy:functions
   #
-  # `loadEnvForProfile` は `[ -f X ] && . X` で gard されているので env ファイル未配置でも
-  # エラーにならない。env ファイルを `env/{backend,frontend,migration}/.env.<profile>` に
-  # 配置すれば即 `-P <profile>` で読み込まれる（env/ 配下は .env.local 以外 gitignore 対象）。
+  # `loadEnvFilesForEnv` は `[ -f X ] && . X` で gard されているので env ファイル未配置でも
+  # エラーにならない。env ファイルを `env/{backend,frontend,migration}/.env.<ENV>` に
+  # 配置すれば即 `-P <profile>`（= 該当 ENV）で読み込まれる。env/ の構成は env/README.md。
   #
   # 新環境を追加したい場合:
   #   1. env/{backend,frontend,migration}/.env.<name> を作成（任意・後置きでも OK）
-  #   2. このブロックに `<name>.module.enterShell = loadEnvForProfile "<name>";` を追加
+  #   2. このブロックに profile を 1 つ追加（`export ENV="<name>"` + 各ローダ）
+  #
+  # 各 profile は `export ENV=<name>` してから loadEnvFilesForEnv（ENV 別の非機密 config）→
+  # loadDopplerByEnv（ENV 別の Doppler シークレット）を呼ぶ。profile の enterShell は base
+  # enterShell の後に走るので、ここで設定した ENV・config・Doppler が後勝ちで最終値になる。
   profiles = {
     # dev 環境（共有開発インスタンス・チーム用ステージなど）。
-    dev.module.enterShell = loadEnvForProfile "dev";
+    dev.module.enterShell = ''
+      export ENV="dev"
+    '' + loadEnvFilesForEnv + loadDopplerByEnv;
 
     # staging 環境（マイグレーション・デプロイ等のリモート操作用）。
-    staging.module.enterShell = loadEnvForProfile "staging";
+    staging.module.enterShell = ''
+      export ENV="staging"
+    '' + loadEnvFilesForEnv + loadDopplerByEnv;
 
     # production 環境（マイグレーション・デプロイ等のリモート操作用）。
-    production.module.enterShell = loadEnvForProfile "production";
+    production.module.enterShell = ''
+      export ENV="production"
+    '' + loadEnvFilesForEnv + loadDopplerByEnv;
   };
 
   # ===== Tasks（多段 pipeline・依存関係あり）=====
@@ -276,14 +342,18 @@ in
     # `--frozen-lockfile` / `--frozen` を使うことで lockfile の意図しない書き換えを防止
     # （issue #2497 の fork bomb 回避）。
 
-    # secrets 雛形のコピー（一度だけ）。
-    "setup:secrets" = {
+    # Doppler 初期セットアップ（init）。supabase:start 等と同様にブートストラップに組み込む。
+    # `doppler setup` は doppler.yaml に基づきローカルを project/config に紐付ける（idempotent）。
+    # `doppler login`（ブラウザ認証）は対話操作なので自動化しない → 未ログイン時はこの task は
+    # 静かに no-op し、enterShell の loadDopplerByEnv が「⚠️ シークレット未ロード」で login を促す。
+    # 旧 setup:secrets（.env.secrets 雛形コピー）は廃止済み（シークレットは Doppler 管理）。
+    "setup:doppler" = {
       exec = ''
-        echo "📋 Creating env/.env.secrets from example..."
-        cp "$DEVENV_ROOT/env/.env.secrets.example" "$DEVENV_ROOT/env/.env.secrets"
-        echo "✅ env/.env.secrets created. Edit it with your real secrets."
+        command -v doppler >/dev/null 2>&1 || exit 0
+        # login 済みなら doppler.yaml の紐付けを適用（未 login / placeholder project なら静かに諦める）
+        doppler setup --no-interactive --silent >/dev/null 2>&1 || true
+        exit 0
       '';
-      status = ''test -f "$DEVENV_ROOT/env/.env.secrets"'';
       before = [ "devenv:enterShell" ];
     };
 
@@ -677,6 +747,38 @@ in
   # devenv shell に入った状態（または direnv 経由）で、コマンド名で直接実行できる。
   # 例: `frontend`, `lint-frontend`, `test-db`
   scripts = {
+    # ---------- Init（初回セットアップ・対話）----------
+    # 開発開始前に一度だけ実行する初期化コマンド。外部サービスの対話認証（Doppler login 等）を
+    # 含むため、自動 bootstrap（setup:* task）ではなくこの明示コマンドで行う。
+    # 依存インストール等の非対話セットアップは `devenv shell` 進入時の setup:* task が自動実行する。
+    "init" = {
+      exec = ''
+        echo "🚀 プロジェクト初期化（初回のみ）"
+        echo ""
+        echo "── 1) Doppler（シークレット管理）─────────────"
+        if ! command -v doppler >/dev/null 2>&1; then
+          echo "  ⚠️  doppler が見つかりません。devenv shell 内で実行してください。"
+        else
+          if doppler me >/dev/null 2>&1; then
+            echo "  ✓ Doppler ログイン済み"
+          else
+            echo "  → ブラウザ認証を開きます（doppler login）"
+            doppler login
+          fi
+          echo "  → ローカルを project/config に紐付けます（doppler setup）"
+          echo "    ※ doppler.yaml の <doppler-project> を実プロジェクト名に置換してから実行"
+          doppler setup || echo "  ⚠️  doppler setup 未完了（doppler.yaml の project 名を確認してください）"
+        fi
+        echo ""
+        echo "── 2) Supabase ローカル ───────────────────────"
+        echo "  → 'supabase-start' で起動（Docker 必須）。'devenv up' でも自動起動します。"
+        echo ""
+        echo "✅ 初期化完了。'devenv up' / 'dev-web' / 'dev-all' で開発を開始できます。"
+        echo "   シークレットは Doppler から自動ロードされます（成功時 '🔐 Doppler secrets loaded'）。"
+      '';
+      description = "初回セットアップ（Doppler login+setup 等。一度だけ対話実行）";
+    };
+
     # ---------- Lifecycle shortcuts ----------
     "stop" = {
       exec = ''exec devenv tasks run app:stop'';
@@ -691,6 +793,48 @@ in
     "supabase-stop" = {
       exec = ''exec devenv tasks run supabase:stop'';
       description = "Stop Supabase (Docker)";
+    };
+
+    # ---------- Doppler（シークレット管理・移行下準備）----------
+    # 完全移行に向けた補助 script。詳細・移行手順は .claude/skills/doppler/SKILL.md。
+    "doppler-setup" = {
+      exec = ''
+        set -e
+        echo "🔐 Doppler セットアップ"
+        echo "  1) ブラウザ認証: doppler login"
+        echo "  2) ローカルを project/config に紐付け: doppler setup"
+        echo "     （リポジトリ root の doppler.yaml に基づく場合）: doppler setup --no-interactive"
+        echo ""
+        echo "現在の設定:"
+        doppler configure 2>/dev/null || echo "  （未設定）"
+      '';
+      description = "Doppler login / setup の案内 + 現在の設定表示";
+    };
+
+    # 取得確認用。実際の env への注入は enterShell（Doppler-first）が自動で行う。
+    "doppler-pull" = {
+      exec = ''exec doppler secrets download --no-file --format env "$@"'';
+      description = "Doppler の secrets を dotenv 形式で表示（--config <name> でconfig指定）";
+    };
+
+    # 移行用: 現行 env/.env.secrets を Doppler の config に一括投入する。
+    # 例: doppler-import --config dev   （事前に doppler login + doppler setup が必要）
+    # 非機密の .env.local は Doppler に載せない（ファイル管理のまま）。
+    "doppler-import" = {
+      exec = ''exec doppler secrets upload "$DEVENV_ROOT/env/.env.secrets" "$@"'';
+      description = "現行 env/.env.secrets を Doppler に一括アップロード（--config <name>）";
+    };
+
+    # ---------- MCP 設定の一元管理 ----------
+    # 正本 = ルートの .mcp.json（Claude が直読）。これを編集して mcp-sync を実行すると
+    # Codex(.codex/config.toml) と Cursor(.cursor/mcp.json) へ形式変換して投影する。
+    # 生成物は手動編集禁止（.claude/rules/auto-generated.md）。
+    "mcp-sync" = {
+      exec = ''
+        cd "$DEVENV_ROOT"
+        exec deno run --allow-read --allow-write scripts/sync-mcp.ts
+      '';
+      description = "Sync .mcp.json (正本) → Codex / Cursor の MCP 設定を再生成";
     };
 
     # ---------- Dev preset（モノレポのアプリ別起動プリセット）----------
@@ -972,9 +1116,17 @@ in
 
   # base enterShell。profile 未指定（= local 既定）で local 環境 env を読み込む。
   # `-P staging` / `-P production` を付けた場合は、profile の enterShell が後追いで実行され、
-  # `set -a; source` の後勝ち動作で staging/production の値が local を上書きする。
+  # `set -a; source` の後勝ち動作で staging/production の値（と ENV / Doppler）が local を上書きする。
+  #
+  # ENV 既定: 外部から `ENV=...` を渡していなければ local（deploy スクリプトの規約と同じ）。
+  # シークレットは loadDopplerByEnv が ENV に応じた Doppler config から読む（local→ローカル参照、
+  # 未接続時はファイル .env.secrets にフォールバック）。ローカルは公式推奨の dev_personal を
+  # `doppler setup`/doppler.yaml で紐付ける。非機密 config（URL/port 等）は .env.local のまま。
+  # 詳細は .claude/skills/doppler/SKILL.md。
   enterShell = ''
-    ${loadEnvForProfile "local"}
+    export ENV="''${ENV:-local}"
+    ${loadEnvFilesForEnv}
+    ${loadDopplerByEnv}
     echo "devenv: Node $(node -v), Python $(python3 -V), Deno $(deno -v), Bun $(bun -v), uv $(uv -V)"
     echo ""
     echo "📋 Quick start:"

@@ -39,6 +39,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 │   ├── page-navigation.md    # ページ遷移（loading.tsx + Suspense によるストリーミング必須）
 │   ├── mcp-supabase.md       # Supabase インフラ操作は MCP（supabase / supabase-prod）必須
 │   ├── supabase-config.md    # Supabase 設定は config.toml に集約（DB のみ Drizzle 例外）・メールテンプレートは [auth.email.template.*]
+│   ├── mcp-doppler.md        # Doppler シークレットの読み書きは doppler MCP 必須（書込はフェーズ制: 初期構築=full / 本番=prd 承認制・値の露出禁止）
 │   └── python-monorepo.md    # backend-py の uv workspace 構造（apps/+packages/、src-layout、単一uv.lock）必須
 │
 └── skills/         # 質問時に参照するガイダンス
@@ -61,7 +62,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     ├── langchain/        # LangChain/LangGraph/LangSmith
     ├── maestro/          # Maestro E2Eテスト
     ├── devenv-cicd/      # GitHub Actions × devenv 2.0 CI/CD（enterShell hook / .devenv キャッシュ / concurrency）
-    └── edge-functions-mcp/ # Supabase Edge Functions 上に MCP サーバを構築（BYO MCP: @hono/mcp + @modelcontextprotocol/sdk）
+    ├── edge-functions-mcp/ # Supabase Edge Functions 上に MCP サーバを構築（BYO MCP: @hono/mcp + @modelcontextprotocol/sdk）
+    └── doppler/          # Doppler シークレット管理（CLI / devenv 統合 / 公式 MCP / .env.secrets からの移行）
 ```
 
 ## Domain Documentation
@@ -117,6 +119,8 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 
 **MANDATORY**: Supabase の**サービス設定値はすべて `supabase/config.toml` を single source of truth として Git 管理する**（Auth / Storage / API / Realtime サービス / Edge Runtime / Functions のデプロイ設定 / メールテンプレート）。Dashboard での手動変更は禁止。**唯一の例外は DB（スキーマ / RLS / Realtime publication / migration）で、これは Drizzle が source of truth**。認証メールテンプレートは `supabase/templates/email/*.html` に置き、`[auth.email.template.*]` の `content_path` で配線する。Secret は必ず `env()`。本番反映は GitHub 連携（config 同期）に委譲。詳細は `.claude/rules/supabase-config.md` を参照。
 
+**MANDATORY**: Doppler 上のシークレット（projects / configs / secrets）を**調査・作成・更新**する場合は、必ず **`doppler` MCP**（read-write）を使用する。Bash で `doppler secrets set` / `doppler secrets delete` を直接叩くのは禁止。書き込み許可は**フェーズ制**（`.claude/rules/mcp-doppler.md` 冒頭の `PHASE:` を書き込み前に必ず確認）: **初期構築（full-access）= 全 config 可** / **本番（protected）= `prd` 書き込みは明示承認制**。フェーズ不明時は本番（protected）として扱う。**シークレットの値をチャット / ログ / コミットに出さない**（キー名のみで会話）。詳細は `.claude/rules/mcp-doppler.md`。
+
 **Supabase の Docker コンテナ自体は Supabase CLI が所有**（devenv の native process supervisor は backend / storybook のみ監視）。**起動連動**: `supabase:start` task が backend の `before` に登録されているため `devenv up` 起動時は Supabase → backend の順で立ち上がる。**停止は手動運用**: devenv 2.0 native process manager は task の `after` も `process.manager.after` も動作しない（前者は shutdown 時に cancel、後者は assertion でブロック、native の Rust shutdown パスに task runner 呼び出しが無いため）。auto-stop の中途半端な実装は持たず、停止は `supabase-stop` / `stop` script で明示的に行う運用に統一している。`stop` script は devenv プロセスと Supabase 両方を停止する。
 
 `devenv shell` 進入時 (direnv 経由含む) に `setup:install-*` task が lockfile 変更を検知して `bun install` / `uv sync` を自動同期する (`--frozen-lockfile` / `--frozen` 使用)。
@@ -166,7 +170,6 @@ TUI が主なので、ログ閲覧・個別プロセス再起動・状態確認�
 ```bash
 # Setup
 # `devenv shell` 進入 (direnv 経由含む) で setup:* タスクが自動実行:
-#   - setup:secrets         → env/.env.secrets を雛形からコピー (無ければ)
 #   - setup:install-frontend → bun install (frontend) ※ lockfile 変更検知時のみ
 #   - setup:install-drizzle  → bun install (drizzle)
 #   - setup:install-backend  → uv sync --all-packages (backend-py workspace: apps/api + apps/mcp + packages/core)
@@ -225,12 +228,15 @@ devenv tasks list --mode after  supabase:start    # 下流影響の確認
 
 ```
 env/
-├── backend/.env.local         # Backend service
-├── frontend/.env.local        # Frontend (Next.js)
-├── migration/.env.local       # Database migration
-├── .env.secrets               # Secrets (.gitignore)
-└── .env.secrets.example       # Template
+├── README.md                  # env/ の構成・方針（canonical）
+├── backend/.env.local         # Backend 非機密 config
+├── frontend/.env.local        # Frontend (Next.js) 非機密 config
+├── migration/.env.local       # Database migration 非機密 config
+└── .env.secrets               # 旧シークレット (.gitignore・非ロード・doppler-import 用)
 ```
+
+> シークレットは **Doppler 管理**（`$ENV` 駆動・ファイルフォールバック廃止）。`env/<svc>/.env.<ENV>`
+> は非機密 config のみ。詳細は `env/README.md` / `.claude/skills/doppler/SKILL.md`。
 
 ### ni Commands (Package Manager Abstraction)
 

@@ -215,13 +215,19 @@ cd shadcn-boilerplate
 
 ### 4. プロジェクトの初期化
 
-devenv shell に入っただけで以下が **自動実行** される（`setup:*` task / `before = [ "devenv:enterShell" ]` + `execIfModified`）:
+**初回のみ**、対話セットアップを実行します:
 
-- `env/.env.secrets` のテンプレートコピー（無ければ）
+```bash
+init   # Doppler login + setup（シークレット管理）等の初回セットアップ（対話）
+```
+
+`devenv shell` に入っただけで以下は **自動実行** される（`setup:*` task / `before = [ "devenv:enterShell" ]` + `execIfModified`）:
+
+- Doppler 紐付け（`setup:doppler` → `doppler setup --no-interactive`。ログイン済みなら project/config を idempotent に紐付け）
 - Frontend / Drizzle 依存関係のインストール（`bun install --frozen-lockfile`）
 - Backend Python 依存関係のインストール（`uv sync --frozen --group dev`）
 
-> 明示的な init コマンドは不要。Nix が tool chain を提供し、devenv の setup:* task が依存・secrets を自動同期する。Docker (Supabase ローカル用) は外部依存なので `docker info` で動作確認しておくこと。
+> 依存・Doppler 紐付けの**非対話**部分は setup:* task が自動同期する。`doppler login`（ブラウザ認証）のような**対話**部分は `init` コマンドで一度だけ行う（`doppler.yaml` の `<doppler-project>` を実プロジェクト名に置換してから）。詳細は `env/README.md` / `.claude/skills/doppler/SKILL.md`。Docker (Supabase ローカル用) は外部依存なので `docker info` で動作確認しておくこと。
 
 ### 5. 環境変数の設定
 
@@ -229,16 +235,18 @@ devenv shell に入っただけで以下が **自動実行** される（`setup:
 
 ```
 env/
-├── backend/.env.local         # Backend (Supabase URL 等)
-├── frontend/.env.local        # Frontend (Next.js)
-├── migration/.env.local       # Database migration (DATABASE_URL)
-├── .env.secrets               # シークレット (.gitignore)
-└── .env.secrets.example       # テンプレート
+├── README.md                  # env/ の構成・方針（詳細はこちら）
+├── backend/.env.local         # Backend 非機密 config (Supabase URL 等)
+├── frontend/.env.local        # Frontend 非機密 config (Next.js)
+├── migration/.env.local       # Database migration 非機密 config (DATABASE_URL)
+└── .env.secrets               # 旧シークレット (.gitignore・読み込まれない・doppler-import 用)
 ```
 
-devenv shell 進入時に `setup:secrets` task が `env/.env.secrets` を雛形からコピーする（既にあればスキップ）。コピー後、`env/.env.secrets.example` に列挙されているキー（Supabase / 各種 API キー等）を実際の値で埋めてください。
-
-profile (`local` / `dev` / `staging` / `production`) ごとに `env/<service>/.env.<profile>` を用意し、`-P <profile>` 指定時に該当 profile の enterShell が `set -a; source` で env を上書きする (`local` は base enterShell に組み込まれているので `-P local` 不要)。env ファイルは `.env.local` 以外すべて gitignore 対象。
+**シークレットは Doppler 管理**（ファイルフォールバックは廃止）。`env/<service>/.env.<ENV>` には
+**非機密 config のみ**を置く。読み込みは環境変数 `ENV`（既定 `local`）駆動で、`env/<service>/.env.$ENV`
+を source し、シークレットは Doppler の対応 config から注入する（未接続なら警告）。詳細は
+[`env/README.md`](env/README.md) と `.claude/skills/doppler/SKILL.md`。`-P <profile>` は対応する `ENV`
+を export する。env ファイルは `.env.local` 以外すべて gitignore 対象。
 
 ### 6. データベースセットアップ
 
