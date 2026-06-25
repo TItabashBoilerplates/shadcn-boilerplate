@@ -81,9 +81,13 @@ echo "新しい値は sk_live_xxx です"
 
 | 操作 | 使うもの |
 |---|---|
-| 既存 `env/.env.secrets` の一括投入（移行・一度きり） | `doppler-import`（devenv script） |
+| **人手**でのシークレット登録（開発者が手で打つ） | `doppler-set <KEY>`（1キー・非表示入力）/ `doppler-import <file>`（一括）= devenv script |
 | ローカル紐付け | `init` / `doppler setup`（devenv） |
 | アプリ実行時のシークレット注入 | `doppler run` / devenv の `loadDopplerByEnv` |
+
+> `doppler-set` / `doppler-import` は **開発者（人）が手で使う糖衣**（内部で `doppler secrets set/upload`）。
+> **エージェント（AI）がシークレットを書き込むときは引き続き `doppler` MCP を使う**（Bash で
+> `doppler-set` / `doppler secrets set` を叩かない）。フェーズ制と値の非露出は全経路で守る。
 
 ## なぜこのポリシーが必要か
 

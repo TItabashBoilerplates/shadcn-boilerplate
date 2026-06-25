@@ -77,26 +77,36 @@ doppler setup                      # ローカルを project/config に紐付け
 doppler setup --no-interactive     # doppler.yaml ベースで自動（CI/モノレポ）
 doppler run -- <command>           # secrets を env 注入して実行
 doppler-pull --config dev          # 取得確認（= doppler secrets download --no-file --format env）
-doppler-import --config dev        # 移行: 現行 env/.env.secrets を Doppler に一括投入
+doppler-set OPENAI_API_KEY         # 推奨: 1キーを非表示入力で dev/stg/prd へ一括 upsert
+doppler-set STRIPE_SECRET_KEY dev  #   config を絞る場合は列挙（dev に入れると local は継承で反映）
+doppler-import <file.env> --config dev  # 複数キーを .env から一括 upload（投入後ファイルは削除）
 doppler configure                  # 現在の紐付け確認（doppler-setup script でも表示）
 ```
 
-`doppler-pull` / `doppler-import` / `doppler-setup` / `mcp-sync` は devenv script（PATH 上）。
+`doppler-pull` / `doppler-set` / `doppler-import` / `doppler-setup` / `mcp-sync` は devenv script（PATH 上）。
 
-## 移行（env/.env.secrets → Doppler）
+**シークレット登録（人手・ブラウザ不要）**: `doppler login` は keyring に一度だけ保存されるので
+以降ブラウザは開かない。新規キーは **`doppler-set <KEY>`**（値は非表示入力・他キーを消さない upsert）が
+最小手順。`doppler-import <file>` は複数キーをまとめて upload（merge/upsert。ファイルに無い既存キーは
+消えない。削除は明示的に `doppler secrets delete`）。**エージェントが書き込む場合は `doppler` MCP**
+（`mcp-doppler.md` のフェーズ制、値は出さない）。
 
-最短フロー（詳細は [references/migration-plan.md](references/migration-plan.md)）:
+## 移行（env/.env.secrets → Doppler）※ 一度きり・多くのプロジェクトでは完了済み
+
+旧 `env/.env.secrets` がまだ残っている場合の最短フロー（詳細は
+[references/migration-plan.md](references/migration-plan.md)）:
 
 ```bash
 doppler login
 # doppler.yaml の <doppler-project> を実プロジェクト名に置換してから:
-doppler setup                 # local を project + dev_personal に紐付け
-doppler-import --config dev    # 現行の env/.env.secrets を dev root config に投入
-devenv shell                  # "🔐 Doppler secrets loaded" を確認（警告が消える）
+doppler setup                                   # local を project + dev_personal に紐付け
+doppler-import env/.env.secrets --config dev    # 旧 .env.secrets を dev root config に投入
+devenv shell                                    # "🔐 Doppler secrets loaded" を確認（警告が消える）
 ```
 
 `setup:secrets` task と `.env.secrets` フォールバック・`.env.secrets.example` は撤去済み。
 投入確認後、ローカルの `env/.env.secrets` は削除してよい。非機密の `.env.local` は対象外。
+移行後の通常運用は上の **`doppler-set`**（新規キー）/ `doppler-import <file>`（一括）を使う。
 
 ## MCP（公式 Doppler MCP サーバ・read-write）
 

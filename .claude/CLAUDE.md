@@ -231,9 +231,10 @@ env/
 ├── README.md                  # env/ の構成・方針（canonical）
 ├── backend/.env.local         # Backend 非機密 config
 ├── frontend/.env.local        # Frontend (Next.js) 非機密 config
-├── migration/.env.local       # Database migration 非機密 config
-└── .env.secrets               # 旧シークレット (.gitignore・非ロード・doppler-import 用)
+└── migration/.env.local       # Database migration 非機密 config
 ```
+
+> シークレット・リモート値は Doppler 一本（ファイルに置かない）。新規キーは `doppler-set <KEY>`。
 
 > シークレットは **Doppler 管理**（`$ENV` 駆動・ファイルフォールバック廃止）。`env/<svc>/.env.<ENV>`
 > は非機密 config のみ。詳細は `env/README.md` / `.claude/skills/doppler/SKILL.md`。

@@ -147,7 +147,7 @@ By adopting these environments, we can ensure efficient development and maintain
 | ni / nr / nlx | パッケージマネージャー抽象化 |
 | Maestro | E2E テスト |
 
-> 環境変数は devenv の **profiles** で管理する。**local が既定**（`-P` 指定なしで base enterShell が `env/<service>/.env.local` + `env/.env.secrets` をロードする）。`-P dev` / `-P staging` / `-P production` を付けると後勝ちで env を上書きする。dotenvx は不要。env ファイル (`env/<service>/.env.<profile>`) は `.env.local` 以外 gitignore 対象。配置されていなくても profile アクティベーション自体はエラーにならず（`[ -f ] && . ` ガードのため）、後で env ファイルを置けば即読み込まれる。
+> 環境変数は devenv の **profiles** で管理する。**local が既定**（`-P` 指定なしで base enterShell が `env/<service>/.env.local`（非機密）をロードし、シークレットは Doppler から注入する）。`-P dev` / `-P staging` / `-P production` を付けると後勝ちで env を上書きする。dotenvx は不要。**シークレット・リモートの値は Doppler 一本**（ファイルフォールバックは廃止。新規キーは `doppler-set <KEY>`）。ローカル非機密の env ファイル (`env/<service>/.env.local`) は配置されていなくても profile アクティベーション自体はエラーにならず（`[ -f ] && . ` ガードのため）、後で置けば即読み込まれる。
 
 ## Setup
 
@@ -238,9 +238,10 @@ env/
 ├── README.md                  # env/ の構成・方針（詳細はこちら）
 ├── backend/.env.local         # Backend 非機密 config (Supabase URL 等)
 ├── frontend/.env.local        # Frontend 非機密 config (Next.js)
-├── migration/.env.local       # Database migration 非機密 config (DATABASE_URL)
-└── .env.secrets               # 旧シークレット (.gitignore・読み込まれない・doppler-import 用)
+└── migration/.env.local       # Database migration 非機密 config (DATABASE_URL)
 ```
+
+> シークレット・リモート値は Doppler 一本（ファイルに置かない）。新規キーは `doppler-set <KEY>`。
 
 **シークレットは Doppler 管理**（ファイルフォールバックは廃止）。`env/<service>/.env.<ENV>` には
 **非機密 config のみ**を置く。読み込みは環境変数 `ENV`（既定 `local`）駆動で、`env/<service>/.env.$ENV`
