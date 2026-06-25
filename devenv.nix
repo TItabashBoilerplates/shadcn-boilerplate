@@ -842,12 +842,49 @@ in
       description = "Doppler の secrets を dotenv 形式で表示（--config <name> でconfig指定）";
     };
 
-    # 移行用: 現行 env/.env.secrets を Doppler の config に一括投入する。
-    # 例: doppler-import --config dev   （事前に doppler login + doppler setup が必要）
-    # 非機密の .env.local は Doppler に載せない（ファイル管理のまま）。
+    # 指定した .env ファイルを Doppler の config に一括投入する（汎用アップローダ）。
+    # 例: doppler-import /tmp/secrets.dev.env --config dev
+    #     （事前に doppler login + doppler setup、または DOPPLER_TOKEN が必要）
+    # 非機密の .env.local は Doppler に載せない（ファイル管理のまま）。投入後は元 .env を削除する。
     "doppler-import" = {
-      exec = ''exec doppler secrets upload "$DEVENV_ROOT/env/.env.secrets" "$@"'';
-      description = "現行 env/.env.secrets を Doppler に一括アップロード（--config <name>）";
+      exec = ''
+        set -euo pipefail
+        if [ "$#" -lt 1 ]; then
+          echo "usage: doppler-import <file.env> [--config <name>] [--project <name>]" >&2
+          echo "  例: doppler-import /tmp/secrets.dev.env --config dev" >&2
+          exit 1
+        fi
+        _file="$1"; shift
+        [ -f "$_file" ] || { echo "file not found: $_file" >&2; exit 1; }
+        exec doppler secrets upload "$_file" "$@"
+      '';
+      description = "指定した .env ファイルを Doppler に一括アップロード（doppler-import <file> --config <name>）";
+    };
+
+    # 1 キーを最小タイプで投入する糖衣。値は **非表示入力**（argv/履歴に残さない）。
+    #   doppler-set OPENAI_API_KEY            # → dev stg prd へ一括（同じ値）
+    #   doppler-set STRIPE_SECRET_KEY dev     # → dev だけ
+    #   doppler-set STRIPE_SECRET_KEY stg prd # → 任意の config を列挙
+    # dev に入れるとローカル(dev_personal)は継承で自動反映。prd 投入はフェーズ制に注意。
+    "doppler-set" = {
+      exec = ''
+        set -euo pipefail
+        if [ "$#" -lt 1 ]; then
+          echo "usage: doppler-set <KEY> [config...]   （config 省略時は dev stg prd）" >&2
+          exit 1
+        fi
+        _key="$1"; shift
+        if [ "$#" -ge 1 ]; then _cfgs="$*"; else _cfgs="dev stg prd"; fi
+        printf 'value for %s (入力は非表示, Enter で確定): ' "$_key" >&2
+        IFS= read -rs _val; echo >&2
+        [ -n "$_val" ] || { echo "空の値のため中止" >&2; exit 1; }
+        for _c in $_cfgs; do
+          printf '%s' "$_val" | doppler secrets set "$_key" --config "$_c" --no-interactive --silent >/dev/null
+          echo "✓ $_key → $_c" >&2
+        done
+        unset _val
+      '';
+      description = "Doppler に1キーを複数 config へ一括セット（値は非表示入力。config 省略=dev stg prd）";
     };
 
     # ---------- MCP 設定の一元管理 ----------
@@ -1144,9 +1181,9 @@ in
   # `set -a; source` の後勝ち動作で staging/production の値（と ENV / Doppler）が local を上書きする。
   #
   # ENV 既定: 外部から `ENV=...` を渡していなければ local（deploy スクリプトの規約と同じ）。
-  # シークレットは loadDopplerByEnv が ENV に応じた Doppler config から読む（local→ローカル参照、
-  # 未接続時はファイル .env.secrets にフォールバック）。ローカルは公式推奨の dev_personal を
-  # `doppler setup`/doppler.yaml で紐付ける。非機密 config（URL/port 等）は .env.local のまま。
+  # シークレットは loadDopplerByEnv が ENV に応じた Doppler config から読む（local→ローカル参照）。
+  # ファイルフォールバックは廃止（未接続時は警告のみ・shell は止めない）。ローカルは公式推奨の
+  # dev_personal を `doppler setup`/doppler.yaml で紐付ける。ローカル非機密（URL/port 等）は .env.local。
   # 詳細は .claude/skills/doppler/SKILL.md。
   enterShell = ''
     export ENV="''${ENV:-local}"

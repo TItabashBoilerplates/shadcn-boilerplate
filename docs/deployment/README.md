@@ -157,15 +157,11 @@ infra-bootstrap supabase github # 一部だけ再実行も可
 3. **外部 API キー（OpenAI/Stripe 等）を Doppler の各 config に投入**（doppler MCP。値は露出しない）。
    ※ **Supabase の URL/keys/DB接続・Railway endpoint は Phase 1 の `wire` が Doppler に自動投入済み**
      （手動不要）。ここで入れるのは「外部から持ち込む secret」だけ。
-4. **（任意）真に静的な非機密 env ファイル**:
-   ```
-   env/backend/.env.{dev,staging,production}
-   env/frontend/.env.{dev,staging,production}
-   env/migration/.env.{dev,staging,production}
-   ```
-   ※ **Supabase URL / publishable key・Railway エンドポイントは `wire` が自動配線するので手動不要**。
-     ここに置くのは「生成されない真に静的な非機密値」だけ（例: ログレベル等）。多くの環境で空でよい。
-   ※ gitignore 対象（各自ローカル/CI で用意）。キーの考え方は `env/README.md`。
+4. **env ファイルは不要**（リモートは Doppler 一本）:
+   - **リモート(dev/stg/prd)** の非機密も秘密もすべて Doppler に集約される（生成値=`wire` が投入、
+     外部 secret=手順3）。`.env.<dev|staging|production>` ファイルは**作らない**（gitignore 済みで
+     デプロイ先に届かず配信手段にならない）。
+   - **ローカル**のみ `env/<svc>/.env.local`（well-known なローカル既定値）を使う。詳細は `env/README.md`。
 
 ---
 
