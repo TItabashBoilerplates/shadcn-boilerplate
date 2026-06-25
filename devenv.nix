@@ -211,6 +211,14 @@ in
     # Doppler CLI（シークレット管理）。secrets の単一ソース化に向けた下準備。
     # 使い方・移行方針は .claude/skills/doppler/SKILL.md を参照。
     pkgs.doppler
+    # infra-bootstrap（scripts/infra/*）が使う CLI。
+    #   - gh : GitHub environments / 承認ゲート / secret 設定（github.sh）
+    #   - jq : 各 API レスポンスの JSON 整形（supabase/vercel/github）
+    # Vercel は CLI バグ回避のため REST API(curl) 直叩き → vercel CLI は不要。
+    # Railway CLI は nixpkgs の attr が安定しないため devenv では入れず、
+    # docs/deployment/README.md の導入手順（公式 installer / nlx）に従って用意する。
+    pkgs.gh
+    pkgs.jq
   ];
 
   languages.javascript = {
@@ -793,6 +801,23 @@ in
     "supabase-stop" = {
       exec = ''exec devenv tasks run supabase:stop'';
       description = "Stop Supabase (Docker)";
+    };
+
+    # ---------- 外部 PaaS プロビジョニング（一度きりの初期構築）----------
+    # scripts/infra/* を `doppler run` で包み、bootstrap config のトークン
+    # （VERCEL_TOKEN / RAILWAY_API_TOKEN / SUPABASE_ACCESS_TOKEN / SUPABASE_DB_PASSWORD /
+    #  GH_TOKEN 等）を環境変数として注入する。値は露出しない。
+    #
+    # ⚠️ これは「コマンド一発で全自動」ではない。各 PaaS の GitHub 連携 OAuth・repo 接続・
+    #    Doppler→PaaS の secret 連携は dashboard 専用（docs/deployment/README.md の Phase 0/2）。
+    #    本 script は scriptable な部分（project/env/GitHub 承認ゲート）のみを冪等に作る。
+    # 事前に scripts/infra/config.env（config.example.env をコピー）を用意すること。
+    "infra-bootstrap" = {
+      exec = ''
+        cd "$DEVENV_ROOT"
+        exec doppler run -- bash scripts/infra/bootstrap.sh "$@"
+      '';
+      description = "外部 PaaS の project/env/承認ゲートを冪等プロビジョニング（要 config.env + dashboard 事前 OAuth）";
     };
 
     # ---------- Doppler（シークレット管理・移行下準備）----------

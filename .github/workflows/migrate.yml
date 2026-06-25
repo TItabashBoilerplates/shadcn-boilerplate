@@ -1,0 +1,99 @@
+name: DB Migrate (Drizzle)
+
+# PaaS ネイティブ Git 連携が config.toml / Edge Functions / Storage buckets を担うのに対し、
+# **Drizzle マイグレーションだけ**はどの PaaS でも流せない（native は supabase/migrations/*.sql
+# しか読まず、Drizzle は drizzle/migrations/ のフォルダ形式 = 対象外）。公式も「自前 ORM の
+# migration は GitHub Actions で流せ」と明記。よってこの最小ワークフローが唯一の Actions
+# デプロイ部品。設計の背景は docs/deployment/README.md / .claude/rules/database.md を参照。
+#
+# branch→env: main=production / staging=staging / develop=dev
+# 本番(production)のみ GitHub Environment の required reviewers で手動承認ゲート（database.md 準拠）。
+# dev/staging は自動適用。
+
+on:
+  push:
+    branches: [main, staging, develop]
+    # スキーマ/マイグレに関係する変更時のみ起動（無駄な run を避ける）
+    paths:
+      - "drizzle/schema/**"
+      - "drizzle/migrations/**"
+      - "drizzle/config/**"
+      - ".github/workflows/migrate.yml"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "対象環境（手動実行時）"
+        type: choice
+        options: [dev, staging, production]
+        default: dev
+
+concurrency:
+  group: migrate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: db:migrate-deploy
+    runs-on: ubuntu-latest
+    # production を選んだ run のみ承認ゲートがかかる（dev/staging は reviewers 無し = 自動）。
+    # env スコープの DOPPLER_TOKEN secret もここで選択した environment から解決される。
+    environment: >-
+      ${{ github.event_name == 'workflow_dispatch' && inputs.environment
+        || (github.ref == 'refs/heads/main' && 'production')
+        || (github.ref == 'refs/heads/staging' && 'staging')
+        || 'dev' }}
+    env:
+      # 各 GitHub Environment に紐づく read-only Doppler service token（infra-bootstrap が投入）。
+      # token がスコープ config（prd/stg/dev）を決めるので loadDopplerByEnv が secret を取得できる。
+      DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+    defaults:
+      run:
+        shell: devenv shell bash -- -e {0}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            keep-outputs = true
+            keep-env-derivations = true
+      - uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('devenv.nix', 'devenv.lock', 'devenv.yaml') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+          gc-max-store-size-linux: 5G
+          purge: true
+          purge-prefixes: nix-${{ runner.os }}-
+          purge-created: 0
+          purge-primary-key: never
+      - uses: cachix/cachix-action@v16
+        with:
+          name: devenv
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            drizzle/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('drizzle/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-node-modules-
+      - name: Install devenv.sh
+        shell: bash
+        run: nix profile add nixpkgs#devenv
+      # branch / 手動入力 → devenv profile を解決し、既存の db:migrate-deploy task を実行。
+      # （raw drizzle-kit ではなく devenv task を使う: .claude/rules/commands.md 準拠）
+      - name: Resolve profile
+        id: profile
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            ENVIRON="${{ inputs.environment }}"
+          else
+            case "${{ github.ref }}" in
+              refs/heads/main)    ENVIRON=production ;;
+              refs/heads/staging) ENVIRON=staging ;;
+              *)                  ENVIRON=dev ;;
+            esac
+          fi
+          echo "profile=$ENVIRON" >> "$GITHUB_OUTPUT"
+          echo "対象 profile: $ENVIRON"
+      - name: Run Drizzle migrations
+        run: devenv tasks run -P ${{ steps.profile.outputs.profile }} db:migrate-deploy

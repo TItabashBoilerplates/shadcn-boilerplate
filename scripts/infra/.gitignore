@@ -1,0 +1,5 @@
+# 非機密だが環境固有の入力（各自ローカルで作成）
+config.env
+# bootstrap が生成する outputs（ref / URL。非機密だが生成物なので追跡しない）
+.outputs
+.outputs.tmp
