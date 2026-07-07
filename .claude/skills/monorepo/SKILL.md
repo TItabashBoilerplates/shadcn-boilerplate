@@ -130,6 +130,8 @@ ci-check                         # 全プロジェクト CI チェック
 
 ## マイクロフロントエンド運用（Vercel Microfrontends）
 
+> **公式スキル**: Vercel 公式の **`vercel-microfrontends` Skill** を導入済み。マイクロフロントエンドの実装・設定・デプロイに着手する際は **まず `vercel-microfrontends` Skill を起動**すること（skills-first）。本節はその要点＋本リポジトリ固有の運用（admin=Better Auth 等）。
+
 Web は **Vercel Microfrontends**（`@vercel/microfrontends` + `microfrontends.json` + `withMicrofrontends`）で運用する。各 `apps/*` は**独立した Vercel project** としてデプロイしつつ、**単一ドメイン配下でパスベース合成**する（`/` = web = default application、`/admin/*` = admin = child application）。
 
 ```

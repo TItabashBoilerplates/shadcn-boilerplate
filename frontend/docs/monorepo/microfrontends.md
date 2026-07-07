@@ -2,6 +2,8 @@
 
 このドキュメントは、`frontend/` モノレポの **Web を Vercel Microfrontends（マネージド製品）でマイクロフロントエンドとして運用する**ための正本ガイドです。**管理者アプリ（admin）とメインアプリ（web）で認証・認可を分離する**構造を、単一ドメイン合成の中でどう維持するかまで含めて解説します。
 
+> **公式スキル導入済み**: Vercel 公式の `vercel-microfrontends` Skill を導入済み（`.claude/skills/vercel-microfrontends/`、source: `vercel/microfrontends`）。マイクロフロントエンドの実装・設定・デプロイに着手する際は、**まずこの公式 Skill を起動**し、`references/`（configuration / path-routing / local-development / managing-microfrontends / security / troubleshooting）を参照すること（skills-first ポリシー）。本ドキュメントは、その公式ガイダンスを**本リポジトリの構成（Bun workspace + Turborepo / FSD / devenv / admin=Better Auth）に落とし込んだ**運用方針の正本。
+>
 > **調査の出典**: このドキュメントの構成・API・制約はすべて一次情報に基づきます。詳細な調査ログ（バージョン実測値・引用付き）は [`docs/_research/2026-07-07-vercel-microfrontends.md`](../../../docs/_research/2026-07-07-vercel-microfrontends.md) を参照してください。
 
 ---
