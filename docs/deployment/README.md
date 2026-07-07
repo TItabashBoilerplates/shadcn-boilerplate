@@ -73,7 +73,11 @@ Vercel（Web + FastAPI backend）/ Supabase（DB・Edge Functions・config）を
 CLI では代替できない前提づくり。
 
 1. **アカウント / org / 課金**: Supabase org 作成＋課金プラン、Vercel / Doppler / GitHub。
-   Vercel の Container Images（Dockerfile.vercel）は Beta 機能のため、対象アカウントで利用可能か確認する。
+   Vercel の **Container Images / Services**（`vercel.json` の `services` + `runtime:"container"` + `Dockerfile.vercel`）は
+   **GA だが「Permissions Required（🔒）」** の機能 → 対象アカウント/チームで**有効化されているか事前確認**する
+   （[Services](https://vercel.com/docs/services) / [Container Images](https://vercel.com/docs/functions/container-images)）。
+   ⚠️ **制約**: container Services では **Static IP / Secure Compute が非対応**。backend の egress 固定 IP を要求する
+   外部サービス（IP 許可リスト等）がある場合は要注意（Supabase 接続は固定 IP 不要なので通常は問題なし）。
 2. **各 PaaS の GitHub 連携を dashboard で認可**（対象は単一 repo `owner/repo`）:
    - **Vercel**: GitHub App を install（repo を許可）。web / backend の 2 project がこの repo を監視する。
    - **Supabase**: **1 project**（独立所有）の *Project Settings > Integrations > Authorize GitHub* で Branching を有効化。
@@ -201,7 +205,7 @@ git push origin main       # → prd:  各 PaaS 反映 + migrate は GitHub で�
 | 事象 | 対応 |
 |---|---|
 | Vercel preview env が CI でハング | CLI bug #15763。本構成は **REST API** で投入済み（`vercel.sh`）。手動時も API を使う。 |
-| backend project が Dockerfile を検出しない / runtime が違う | ① `vercel.json` の `services.<app>` に **`"runtime": "container"`** があるか（無いと Vercel が runtime 自動検出し entrypoint を module:app と誤解する）。② Root Directory が `backend-py` で `services.<app>.root` が `"."`、`entrypoint` が `apps/<app>/Dockerfile.vercel` か。③ Container Images(Beta) が有効か。※ `root:"."` が受け付けられない場合は project の Root Directory を repo ルートにし `root:"backend-py"` にする代替も可。 |
+| backend project が Dockerfile を検出しない / runtime が違う | ① `vercel.json` の `services.<app>` に **`"runtime": "container"`** があるか（無いと Vercel が runtime 自動検出し entrypoint を module:app と誤解する）。② Root Directory が `backend-py` で `services.<app>.root` が `"."`、`entrypoint` が `apps/<app>/Dockerfile.vercel` か。③ container Services（Permissions Required 機能）がアカウントで有効か。※ `root:"."` が受け付けられない場合は project の Root Directory を repo ルートにし `root:"backend-py"` にする代替も可。 |
 | backend が起動直後に落ちる / 502 | サーバが `$PORT`（既定 80）で listen しているか確認。`api.main` は `PORT` 環境変数を読む。Doppler→Vercel(backend) で `SUPABASE_URL` / `POSTGRES_URL` 等が届いているかも確認。 |
 | `wire` が backend の preview URL を取れない | team/personal の slug 取得に失敗している可能性。`VERCEL_TEAM_ID` を確認（個人アカウントは空）。best-effort のため warn のみで継続する。 |
 | persistent branch 作成 API が失敗 | project の GitHub Integration(Branching) が dashboard で有効か確認（Phase 0）。CLI の git 紐付けフラグは `supabase branches create --help` で確認、確実なのは Management API の `git_branch`。 |
