@@ -500,7 +500,7 @@ example.com
 ```
 
 - 合成設定は default app（web）の `microfrontends.json` に集約（`@vercel/microfrontends` + `withMicrofrontends`）。
-- **管理者アプリ（admin）とメインアプリ（web）は認証・認可を分離**する。単一ドメイン合成でも Supabase の cookie 名（= storageKey）をアプリ別にスコープしてセッションを物理的に分離する。
+- **管理者アプリ（admin）とメインアプリ（web）は認証・認可を分離**する。分離は「アプリごとに認証スタックを分ける」方針で、メイン（web）= Supabase Auth、管理者（admin）= **Better Auth** とする（別システム・別 cookie なので単一ドメインでも自然に分離）。Supabase Auth 単独でアプリ間分離することは基本しない。
 - **Next.js の `basePath` は使わない**（Vercel Microfrontends 非対応）。`/admin` の割り当ては `microfrontends.json` の `routing.paths` で行う。
 
 👉 詳細な設定・認証分離の手順は **[マイクロフロントエンド運用ガイド](./microfrontends.md)** を参照。

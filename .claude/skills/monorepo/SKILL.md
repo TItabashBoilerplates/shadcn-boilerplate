@@ -145,12 +145,12 @@ example.com
 | 合成設定 | `microfrontends.json` は **default app（web）にのみ**置く。child は `routing.paths`（例 `["/admin/:path*"]`）で登録 |
 | next.config | 各アプリを `withMicrofrontends(...)` でラップ（本リポジトリの web は `withMicrofrontends(withNextIntl(config))`） |
 | `basePath` | **使わない**（Vercel Microfrontends 非対応）。パス割り当ては `microfrontends.json` で行う |
-| **認証・認可の分離** | 管理者(admin)とメイン(web)は分離。単一ドメインでも **Supabase の cookie 名（= storageKey）をアプリ別にスコープ**（web = 既定 `sb-<ref>-auth-token` / admin = `sb-admin`）。`createServerClient` / `createBrowserClient` の `cookieOptions.name` で指定 |
-| 認可 | admin の認可ガードは admin アプリ内に閉じて実装し、必ず `getUser()` でトークン検証（`getSession` だけに頼らない） |
+| **認証・認可の分離** | **アプリごとに認証スタックを分ける**。メイン(web) = Supabase Auth、管理者(admin) = **Better Auth**（追加）。別システム = 別 cookie（`sb-<ref>-auth-token` / `better-auth.session_token`）で単一ドメインでも自然分離。**Supabase Auth 単独でアプリ間分離することは基本しない** |
+| admin の Better Auth | `basePath` を `/admin/api/auth`（admin 専有パス配下）に。route handler は `app/admin/api/auth/[...all]/`。DB は Supabase Postgres を Drizzle で共有（`generate` → drizzle migration）。認可は `admin`/`organization` プラグイン + `auth.api.getSession()` でガード。着手前に `better-auth-best-practices` Skill を起動 |
 | ローカル開発 | Turborepo 統合で proxy 自動起動（既定 `http://localhost:3024`）。`dev-web` / `dev-all` を使う |
 | devenv | `devenv.nix` の `frontendApps` に 1 行追加すると process / `dev-<name>` / `dev-all` が自動連動 |
 
-**やってはいけないこと:** admin に `basePath` を設定する / web と admin を同じ cookie 名のまま単一ドメインに出す / `microfrontends.json` を child 側にも置く / admin 専用 UI・feature を `packages/` に置く。
+**やってはいけないこと:** admin に Next.js `basePath` を設定する（Better Auth の `basePath` は別物で使う）/ 認証を Supabase Auth 単独でアプリ間分離しようとする（admin は Better Auth を追加）/ Better Auth の認証 API を admin 専有パス外に置く / `@better-auth/cli migrate` で DB に直接当てる（Drizzle 経由）/ `microfrontends.json` を child 側にも置く / admin 専用 UI・feature を `packages/` に置く。
 
 → 詳細・一次情報・コード例は [microfrontends.md](../../../frontend/docs/monorepo/microfrontends.md)、調査ログは [`docs/_research/2026-07-07-vercel-microfrontends.md`](../../../docs/_research/2026-07-07-vercel-microfrontends.md)。
 

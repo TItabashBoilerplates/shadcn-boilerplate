@@ -45,7 +45,7 @@ Web を **Vercel Microfrontends（マネージド製品）** で運用するた�
 **内容:**
 - Vercel Microfrontends セットアップ（`microfrontends.json` / `@vercel/microfrontends` / `withMicrofrontends`）
 - 単一ドメインでのパスベース合成（`/` = web、`/admin` = admin）
-- **管理者アプリとメインアプリの認証・認可の分離**（Supabase cookie 名 = storageKey スコープ）
+- **管理者アプリとメインアプリの認証・認可の分離**（アプリごとに認証スタックを分ける: web=Supabase Auth / admin=Better Auth）
 - `basePath` を使わない理由・ローカル proxy・独立デプロイ
 - devenv 連携（`frontendApps`）
 

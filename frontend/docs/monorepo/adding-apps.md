@@ -83,11 +83,10 @@ cd admin
   },
   "dependencies": {
     "@vercel/microfrontends": "^2.3.6",
+    "better-auth": "^1.2.0",
     "@workspace/ui": "workspace:*",
     "@workspace/types": "workspace:*",
-    "@workspace/auth": "workspace:*",
     "@workspace/client-supabase": "workspace:*",
-    "@supabase/ssr": "^0.7.0",
     "next": "^16.0.8",
     "next-intl": "^4.4.0",
     "react": "19.2.1",
@@ -98,8 +97,9 @@ cd admin
 
 **ポイント:**
 - `name` を `@workspace/admin` に変更（`microfrontends.json` の application 名 or `packageName` と一致させる）
-- 共有パッケージは実在するもの（`@workspace/client-supabase` / `@workspace/auth` / `@workspace/ui` / `@workspace/types`）を使う
-- `@vercel/microfrontends` を追加（Vercel Microfrontends の child app として必須）
+- `@vercel/microfrontends` を追加（child app として必須）
+- **認証は Better Auth**（`better-auth`）。Supabase の認証専用パッケージ（`@workspace/auth`）は admin では使わない
+- `@workspace/client-supabase` は admin が Supabase の**データ**（DB/Storage）にアクセスする場合のみ。認証は Better Auth が担う
 - `dev` はローカル proxy とポート同期させる → `"dev": "next dev --port $(microfrontends port)"`
 
 ### Step 3: 不要なファイルの削除
@@ -187,81 +187,78 @@ export default withMicrofrontends(withNextIntl(nextConfig))
 
 > `microfrontends.json` は **default app（web）にのみ**置く。詳細は [microfrontends.md §1](./microfrontends.md#1-vercel-microfrontends-セットアップ)。
 
-### Step 8: 認証・認可の分離（必須）
+### Step 8: 認証・認可の分離（必須 / Better Auth を追加）
 
-管理者アプリ（admin）とメインアプリ（web）は**認証・認可を分離**する。単一ドメイン合成では、Supabase の cookie 名（= storageKey）を admin だけ `sb-admin` にスコープして web とセッションを物理的に分離する（理由は [microfrontends.md §2](./microfrontends.md#2-認証認可の分離supabase-cookie-名スコープ)）。
+**このリポジトリでは、認証・認可はアプリごとに認証スタック自体を分ける**。メイン（web）は Supabase Auth のまま、**管理者（admin）は Better Auth を追加**する（Supabase Auth 単独でアプリ間分離することは基本しない）。別システム = 別 cookie（web=`sb-<ref>-auth-token` / admin=`better-auth.session_token`）なので単一ドメインでも自然に分離される。全体像・DB・環境変数は [microfrontends.md §2](./microfrontends.md#2-認証認可の分離アプリごとに認証スタックを分ける) を必読。
 
-admin 用の Server クライアントは cookie 名を固定する:
+> 着手前に `better-auth-best-practices` / `better-auth-security-best-practices` Skill を起動し、[better-auth.com/docs](https://better-auth.com/docs) で最新 API を確認すること。
 
-```typescript
-// apps/admin/src/shared/lib/supabase/server.ts
-import { createServerClient } from '@supabase/ssr'
-import type { Database } from '@workspace/types/schema'
-import { cookies } from 'next/headers'
+**8-1. Better Auth を導入**
 
-export async function createClient() {
-  const cookieStore = await cookies()
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-  if (!url || !key) throw new Error('Missing Supabase environment variables.')
-
-  return createServerClient<Database>(url, key, {
-    cookieOptions: { name: 'sb-admin' }, // ← web と分離（storageKey も sb-admin に）
-    cookies: {
-      getAll: () => cookieStore.getAll(),
-      setAll: (toSet) => {
-        try {
-          for (const { name, value, options } of toSet) cookieStore.set(name, value, options)
-        } catch {
-          // Server Component からの書き込みは proxy がセッション更新を担うため無視
-        }
-      },
-    },
-  })
-}
+```bash
+cd frontend/apps/admin && ni better-auth
 ```
 
-認可ガードは admin アプリ内に閉じて実装する:
+```ts
+// apps/admin/src/shared/lib/auth/auth.ts
+import { betterAuth } from 'better-auth'
+import { nextCookies } from 'better-auth/next-js'
 
-```typescript
-// apps/admin/src/shared/lib/auth-guard.ts
+export const auth = betterAuth({
+  basePath: '/admin/api/auth', // admin が専有する /admin 配下に置く（Next.js basePath とは別物）
+  emailAndPassword: { enabled: true },
+  // database: Supabase Postgres を Drizzle adapter で。テーブルは generate → drizzle migration
+  plugins: [nextCookies()], // ← 必ず最後
+})
+```
+
+**8-2. ルートハンドラを admin 専有パス配下に置く**
+
+```ts
+// apps/admin/app/admin/api/auth/[...all]/route.ts
+import { auth } from '@/shared/lib/auth/auth'
+import { toNextJsHandler } from 'better-auth/next-js'
+
+export const { GET, POST } = toNextJsHandler(auth)
+```
+
+**8-3. 認可ガード（サーバー側でセッション検証）**
+
+```ts
+// apps/admin/src/shared/lib/auth/guard.ts
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { createClient } from './supabase/server'
+import { auth } from './auth'
 
 export async function requireAdmin() {
-  const supabase = await createClient()
+  const session = await auth.api.getSession({ headers: await headers() })
 
-  // 認証はトークンの真正性まで検証する getUser() を必ず使う（getSession だけに頼らない）
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser()
-
-  if (error || !user) {
+  if (!session) {
     redirect('/admin/login')
     return
   }
-
-  // 認可: 管理者ロールの検証（プロジェクトのロール設計に合わせる）
-  if (user.app_metadata?.role !== 'admin') {
+  // 認可: 管理者ロール（admin / organization プラグインの設計に合わせる）
+  if (session.user.role !== 'admin') {
     redirect('/admin/login')
     return
   }
-
-  return user
+  return session
 }
 ```
 
-```typescript
-// apps/admin/app/dashboard/page.tsx
-import { requireAdmin } from '@/shared/lib/auth-guard'
+```ts
+// apps/admin/app/admin/dashboard/page.tsx
+import { requireAdmin } from '@/shared/lib/auth/guard'
 
 export default async function DashboardPage() {
-  const user = await requireAdmin()
-
+  const session = await requireAdmin()
   return <div>Admin Dashboard</div>
 }
 ```
+
+**8-4. DB（Drizzle 一元管理）**: Better Auth のテーブル（`user`/`session`/`account`/`verification`）は `npx @better-auth/cli generate` でスキーマ化し、**Drizzle（`drizzle/schema/`）に取り込んでマイグレーション**する（`.claude/rules/database.md`）。`@better-auth/cli migrate` で直接 DB に当てない。
+
+**8-5. 環境変数**: `BETTER_AUTH_SECRET` / `BETTER_AUTH_URL`（= 共有ドメイン）/ `trustedOrigins`。**Secret は Doppler 管理**（`.claude/rules/mcp-doppler.md`）。
 
 ### Step 9: devenv `frontendApps` に登録
 
@@ -501,7 +498,7 @@ dev-all
 - [ ] 型エラーがない
 - [ ] ビルドエラーがない
 - [ ] ローカル proxy（`http://localhost:3024`）で `/` = web、`/admin` = admin に合成される
-- [ ] web と admin でセッションが分離している（admin は cookie `sb-admin`）
+- [ ] web（Supabase Auth）と admin（Better Auth）でセッションが分離している（別 cookie: `sb-*` / `better-auth.session_token`）
 - [ ] admin の未認証・非管理者アクセスが `/admin/login` にリダイレクトされる
 
 ---
@@ -569,10 +566,12 @@ frontend/
 - [ ] 実際に共有されるコードのみ `packages/` に置く
 - [ ] FSD構造を維持する
 - [ ] `package.json` の name（`microfrontends.json` の application 名 / `packageName` と一致）を変更する
-- [ ] `@vercel/microfrontends` を導入し `next.config` を `withMicrofrontends` でラップした（basePath は使わない）
+- [ ] `@vercel/microfrontends` を導入し `next.config` を `withMicrofrontends` でラップした（Next.js basePath は使わない）
 - [ ] default app（web）の `microfrontends.json` に child の `routing.paths` を登録した
-- [ ] admin は Supabase cookie 名（`sb-admin`）でセッションを web と分離した
-- [ ] 認可ガードを admin 内に実装し `getUser()` で検証している
+- [ ] admin は **Better Auth** を追加し、web（Supabase Auth）と認証スタックを分離した
+- [ ] Better Auth の `basePath` を `/admin/api/auth` にし、route handler を admin 専有パス配下に置いた
+- [ ] Better Auth のテーブルは generate → Drizzle マイグレーションで一元管理した
+- [ ] 認可ガードを admin 内に実装し `auth.api.getSession()` で検証している
 - [ ] `devenv.nix` の `frontendApps` に登録した
 - [ ] Turborepo / デプロイ（Vercel Microfrontends group）設定を確認する
 
