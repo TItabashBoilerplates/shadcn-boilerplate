@@ -29,12 +29,27 @@
 複数アプリへの拡張手順を解説しています。
 
 **内容:**
-- 管理画面の追加方法
+- 管理画面の追加方法（Vercel Microfrontends の child app として）
 - モバイルアプリの追加方法
 - 共有コンポーネントの判断基準
 - デプロイ設定
 
 👉 **管理画面やモバイルアプリを追加する際に参照してください**
+
+---
+
+### 2.5 [マイクロフロントエンド運用ガイド](./microfrontends.md) 🧩 **【Web の運用方針】**
+
+Web を **Vercel Microfrontends（マネージド製品）** で運用するための正本ガイドです。
+
+**内容:**
+- Vercel Microfrontends セットアップ（`microfrontends.json` / `@vercel/microfrontends` / `withMicrofrontends`）
+- 単一ドメインでのパスベース合成（`/` = web、`/admin` = admin）
+- **管理者アプリとメインアプリの認証・認可の分離**（Supabase cookie 名 = storageKey スコープ）
+- `basePath` を使わない理由・ローカル proxy・独立デプロイ
+- devenv 連携（`frontendApps`）
+
+👉 **Web の合成方式・admin との認証分離を理解するときに必ず参照してください**
 
 ---
 

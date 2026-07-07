@@ -20,6 +20,15 @@
 - アプリ専用のコードも `packages/` に置く
 - 過度な抽象化・細分化
 
+### apps は独立デプロイのマイクロフロントエンド
+
+各 `apps/*` は **Vercel Microfrontends の独立した Vercel project** として運用する（web = default application、admin = child application を単一ドメインでパス合成）。この前提が `packages/` と `apps/` の責務分担を規定する:
+
+- **`packages/*`（`@workspace/*`）**: 複数のマイクロフロントエンドで**実際に共有される**コード（UI / types / query / client-supabase / auth）。
+- **`apps/{app}/src/`（FSD）**: そのマイクロフロントエンド固有のコード。
+
+**認証・認可はアプリ（マイクロフロントエンド）ごとに分離する。** 特に管理者アプリ（admin）とメインアプリ（web）は、単一ドメイン合成でも Supabase の cookie 名（= storageKey）をアプリ別にスコープしてセッションを物理的に分ける。**共有するのはコード（packages）であって、認証セッションではない。** 詳細は [マイクロフロントエンド運用ガイド](./microfrontends.md) を参照。
+
 ---
 
 ## 📂 パッケージ配置の判断基準

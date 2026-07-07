@@ -5,7 +5,7 @@ description: Frontend モノレポ + FSD アーキテクチャガイダンス。
 
 # Frontend モノレポ + FSD アーキテクチャ
 
-このプロジェクトは **Bun workspace モノレポ** と **Feature Sliced Design (FSD)** を組み合わせた構成です。
+このプロジェクトは **Bun workspace モノレポ** と **Feature Sliced Design (FSD)** を組み合わせた構成です。Web は **Vercel Microfrontends（マネージド製品）でマイクロフロントエンドとして運用**します（各 `apps/*` を独立した Vercel project としてデプロイし、単一ドメインでパス合成）。合成方式と**管理者アプリ/メインアプリの認証・認可の分離**は下記「マイクロフロントエンド運用」節と [microfrontends.md](../../../frontend/docs/monorepo/microfrontends.md) を参照。
 
 ## 全体構成
 
@@ -128,6 +128,32 @@ lint-frontend                    # Biome lint
 ci-check                         # 全プロジェクト CI チェック
 ```
 
+## マイクロフロントエンド運用（Vercel Microfrontends）
+
+Web は **Vercel Microfrontends**（`@vercel/microfrontends` + `microfrontends.json` + `withMicrofrontends`）で運用する。各 `apps/*` は**独立した Vercel project** としてデプロイしつつ、**単一ドメイン配下でパスベース合成**する（`/` = web = default application、`/admin/*` = admin = child application）。
+
+```
+example.com
+├── /         → apps/web   (default app, project: web, microfrontends.json を保持)
+└── /admin/*  → apps/admin (child app,  project: admin)
+```
+
+**要点（着手前に必ず守る）:**
+
+| 項目 | ルール |
+|------|--------|
+| 合成設定 | `microfrontends.json` は **default app（web）にのみ**置く。child は `routing.paths`（例 `["/admin/:path*"]`）で登録 |
+| next.config | 各アプリを `withMicrofrontends(...)` でラップ（本リポジトリの web は `withMicrofrontends(withNextIntl(config))`） |
+| `basePath` | **使わない**（Vercel Microfrontends 非対応）。パス割り当ては `microfrontends.json` で行う |
+| **認証・認可の分離** | 管理者(admin)とメイン(web)は分離。単一ドメインでも **Supabase の cookie 名（= storageKey）をアプリ別にスコープ**（web = 既定 `sb-<ref>-auth-token` / admin = `sb-admin`）。`createServerClient` / `createBrowserClient` の `cookieOptions.name` で指定 |
+| 認可 | admin の認可ガードは admin アプリ内に閉じて実装し、必ず `getUser()` でトークン検証（`getSession` だけに頼らない） |
+| ローカル開発 | Turborepo 統合で proxy 自動起動（既定 `http://localhost:3024`）。`dev-web` / `dev-all` を使う |
+| devenv | `devenv.nix` の `frontendApps` に 1 行追加すると process / `dev-<name>` / `dev-all` が自動連動 |
+
+**やってはいけないこと:** admin に `basePath` を設定する / web と admin を同じ cookie 名のまま単一ドメインに出す / `microfrontends.json` を child 側にも置く / admin 専用 UI・feature を `packages/` に置く。
+
+→ 詳細・一次情報・コード例は [microfrontends.md](../../../frontend/docs/monorepo/microfrontends.md)、調査ログは [`docs/_research/2026-07-07-vercel-microfrontends.md`](../../../docs/_research/2026-07-07-vercel-microfrontends.md)。
+
 ## 新規パッケージ vs FSDスライス
 
 | 追加したいもの | 配置場所 | 理由 |
@@ -142,4 +168,6 @@ ci-check                         # 全プロジェクト CI チェック
 
 - パッケージ詳細: [packages.md](packages.md)
 - 実装例: [examples.md](examples.md)
+- マイクロフロントエンド運用・認証分離: [microfrontends.md](../../../frontend/docs/monorepo/microfrontends.md)
+- 新しいアプリの追加手順: [adding-apps.md](../../../frontend/docs/monorepo/adding-apps.md)
 - FSD詳細: [../fsd/SKILL.md](../fsd/SKILL.md)

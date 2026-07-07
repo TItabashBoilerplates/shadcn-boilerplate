@@ -227,6 +227,8 @@ import { createClient } from '@workspace/client-supabase/client'
 const supabase = createClient()
 ```
 
+**マイクロフロントエンドでの認証分離**: 管理者アプリ(admin)とメインアプリ(web)を単一ドメインで合成する場合、Supabase の cookie 名（= storageKey）をアプリ別にスコープしてセッションを分離する。クライアントファクトリは cookie 名を引数で受け取れるよう一般化し、`createServerClient` / `createBrowserClient` の `cookieOptions.name` に渡す（web = 既定 / admin = `sb-admin`）。詳細は [microfrontends.md §2](../../../frontend/docs/monorepo/microfrontends.md#2-認証認可の分離supabase-cookie-名スコープ)。
+
 ---
 
 ## @workspace/app

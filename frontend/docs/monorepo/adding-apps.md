@@ -53,13 +53,19 @@
 
 ## 🚀 管理画面の追加
 
-### Step 1: アプリのコピー
+> **前提（必読）**: 管理画面（admin）は **Vercel Microfrontends の child application** として、メインアプリ（web = default application）と**単一ドメイン配下でパス合成**（`/admin/*`）し、**認証・認可は分離**する方針です。合成設定（`microfrontends.json` / `withMicrofrontends`）と Supabase cookie 名スコープによるセッション分離の全体像は先に **[マイクロフロントエンド運用ガイド](./microfrontends.md)** を読んでください。本節はその前提での具体手順です。
+
+### Step 1: アプリのひな形作成
+
+web をベースにディレクトリを作成する（コピー後に admin 固有へ書き換える）:
 
 ```bash
 cd frontend/apps
 cp -r web admin
 cd admin
 ```
+
+> **注**: admin は basePath を使わずルート `/` で実装し、`/admin` への割り当ては後述の `microfrontends.json` で行います（Vercel Microfrontends は `basePath` 非対応）。
 
 ### Step 2: `package.json` の編集
 
@@ -76,21 +82,25 @@ cd admin
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
+    "@vercel/microfrontends": "^2.3.6",
     "@workspace/ui": "workspace:*",
     "@workspace/types": "workspace:*",
-    "@workspace/utils": "workspace:*",
-    "@workspace/api-client": "workspace:*",
-    "@supabase/supabase-js": "^2.55.0",
-    "next": "^16.0.0",
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "@workspace/auth": "workspace:*",
+    "@workspace/client-supabase": "workspace:*",
+    "@supabase/ssr": "^0.7.0",
+    "next": "^16.0.8",
+    "next-intl": "^4.4.0",
+    "react": "19.2.1",
+    "react-dom": "19.2.1"
   }
 }
 ```
 
 **ポイント:**
-- `name` を `@workspace/admin` に変更
-- `dev` のポート番号を変更（`3001`など）
+- `name` を `@workspace/admin` に変更（`microfrontends.json` の application 名 or `packageName` と一致させる）
+- 共有パッケージは実在するもの（`@workspace/client-supabase` / `@workspace/auth` / `@workspace/ui` / `@workspace/types`）を使う
+- `@vercel/microfrontends` を追加（Vercel Microfrontends の child app として必須）
+- `dev` はローカル proxy とポート同期させる → `"dev": "next dev --port $(microfrontends port)"`
 
 ### Step 3: 不要なファイルの削除
 
@@ -106,22 +116,22 @@ mkdir -p src/features/user-management
 
 ### Step 4: 依存関係のインストール
 
+`devenv shell`（direnv 経由含む）進入時に `setup:install-frontend` task が lockfile 変更を検知して `bun install` を自動実行するため、通常は手動不要。個別追加は `ni`（= `bun add`）を使う（`.claude/rules/commands.md`）。
+
 ```bash
-cd frontend
-bun install
+cd frontend/apps/admin && ni @vercel/microfrontends
 ```
 
 ### Step 5: 開発サーバーの起動
 
-```bash
-# 管理画面のみ起動
-cd apps/admin
-bun run dev
+フロント dev は devenv scripts を使う（`cd frontend && bun run X` の直接実行は禁止）。`devenv.nix` の `frontendApps` に admin を追加すると `dev-admin` / `dev-all` が自動生成される（後述の devenv 連携 / [microfrontends.md §3](./microfrontends.md#3-devenv-との連携プロセススクリプト)）。
 
-# または、すべてのアプリを並列起動（Turborepo）
-cd frontend
-bun run dev
+```bash
+dev-admin        # 軽量セット + admin dev サーバー
+dev-all          # 軽量セット + 全 frontendApps（web + admin + mobile）
 ```
+
+Turborepo が dev タスク実行時に Vercel Microfrontends の local proxy を自動起動する。proxy URL（既定 `http://localhost:3024`）で `/` = web、`/admin` = admin の合成状態を確認できる。
 
 ### Step 6: 管理画面専用UIの作成
 
@@ -141,19 +151,101 @@ export function DataTable<T>({ data, columns }: DataTableProps<T>) {
 
 **重要:** 管理画面専用UIは `packages/ui/` ではなく、`apps/admin/src/shared/ui/` に配置してください。
 
-### Step 7: 認証ガード（オプション）
+### Step 7: マイクロフロントエンド合成の配線
+
+admin を web（default app）に child として合成する。
+
+**7-1. `next.config` を `withMicrofrontends` でラップ**（basePath は使わない）:
+
+```ts
+// apps/admin/next.config.ts
+import { withMicrofrontends } from '@vercel/microfrontends/next/config'
+import type { NextConfig } from 'next'
+import createNextIntlPlugin from 'next-intl/plugin'
+
+const withNextIntl = createNextIntlPlugin('./src/shared/config/i18n/request.ts')
+const nextConfig: NextConfig = {}
+
+export default withMicrofrontends(withNextIntl(nextConfig))
+```
+
+**7-2. default app（web）の `microfrontends.json` に admin を登録**:
+
+```jsonc
+// apps/web/microfrontends.json
+{
+  "$schema": "https://openapi.vercel.sh/microfrontends.json",
+  "applications": {
+    "web": { "development": { "fallback": "your-web-app.vercel.app" } },
+    "admin": {
+      "packageName": "@workspace/admin",
+      "routing": [{ "paths": ["/admin/:path*"] }]
+    }
+  }
+}
+```
+
+> `microfrontends.json` は **default app（web）にのみ**置く。詳細は [microfrontends.md §1](./microfrontends.md#1-vercel-microfrontends-セットアップ)。
+
+### Step 8: 認証・認可の分離（必須）
+
+管理者アプリ（admin）とメインアプリ（web）は**認証・認可を分離**する。単一ドメイン合成では、Supabase の cookie 名（= storageKey）を admin だけ `sb-admin` にスコープして web とセッションを物理的に分離する（理由は [microfrontends.md §2](./microfrontends.md#2-認証認可の分離supabase-cookie-名スコープ)）。
+
+admin 用の Server クライアントは cookie 名を固定する:
+
+```typescript
+// apps/admin/src/shared/lib/supabase/server.ts
+import { createServerClient } from '@supabase/ssr'
+import type { Database } from '@workspace/types/schema'
+import { cookies } from 'next/headers'
+
+export async function createClient() {
+  const cookieStore = await cookies()
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  if (!url || !key) throw new Error('Missing Supabase environment variables.')
+
+  return createServerClient<Database>(url, key, {
+    cookieOptions: { name: 'sb-admin' }, // ← web と分離（storageKey も sb-admin に）
+    cookies: {
+      getAll: () => cookieStore.getAll(),
+      setAll: (toSet) => {
+        try {
+          for (const { name, value, options } of toSet) cookieStore.set(name, value, options)
+        } catch {
+          // Server Component からの書き込みは proxy がセッション更新を担うため無視
+        }
+      },
+    },
+  })
+}
+```
+
+認可ガードは admin アプリ内に閉じて実装する:
 
 ```typescript
 // apps/admin/src/shared/lib/auth-guard.ts
 import { redirect } from 'next/navigation'
-import { createClient } from '@workspace/api-client'
+import { createClient } from './supabase/server'
 
 export async function requireAdmin() {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const supabase = await createClient()
 
-  if (!user || user.role !== 'admin') {
-    redirect('/login')
+  // 認証はトークンの真正性まで検証する getUser() を必ず使う（getSession だけに頼らない）
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
+
+  if (error || !user) {
+    redirect('/admin/login')
+    return
+  }
+
+  // 認可: 管理者ロールの検証（プロジェクトのロール設計に合わせる）
+  if (user.app_metadata?.role !== 'admin') {
+    redirect('/admin/login')
+    return
   }
 
   return user
@@ -169,6 +261,18 @@ export default async function DashboardPage() {
 
   return <div>Admin Dashboard</div>
 }
+```
+
+### Step 9: devenv `frontendApps` に登録
+
+`devenv.nix` の `frontendApps` attrset に 1 行追加すると process / `dev-admin` script / `dev-all` が自動連動する:
+
+```nix
+frontendApps = {
+  web   = { port = 3000; };
+  admin = { port = 3001; };   # ← 追加
+  mobile = { port = 8081; ready = "/status"; exec = ''…''; };
+};
 ```
 
 ---
@@ -302,24 +406,28 @@ import { PricingCard } from '@workspace/ui/components/pricing-card'
 
 ## ⚙️ デプロイ設定
 
-### Vercel（Next.js）
+### Vercel Microfrontends（web + admin）
 
-#### 管理画面
+web と admin は**それぞれ独立した Vercel project** としてデプロイし、同一の microfrontends group に所属させて**単一ドメインでパス合成**する。事前に group を作成し（`vercel microfrontends create-group` または Dashboard の Settings → Microfrontends）、**default application に web** を指定しておく。
 
-**Vercel Project Settings:**
-- **Root Directory:** `frontend/apps/admin`
-- **Build Command:** `cd ../.. && turbo build --filter=@workspace/admin`
-- **Output Directory:** `apps/admin/.next`
-- **Environment Variables:**
-  - `NEXT_PUBLIC_SUPABASE_URL`
-  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-
-#### ユーザー向けアプリ
+#### ユーザー向けアプリ（web = default application）
 
 **Vercel Project Settings:**
 - **Root Directory:** `frontend/apps/web`
 - **Build Command:** `cd ../.. && turbo build --filter=@workspace/web`
 - **Output Directory:** `apps/web/.next`
+- **Environment Variables:** `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `microfrontends.json` は **この project にのみ**デプロイされる（合成ルーティングの source of truth）
+
+#### 管理画面（admin = child application）
+
+**Vercel Project Settings:**
+- **Root Directory:** `frontend/apps/admin`
+- **Build Command:** `cd ../.. && turbo build --filter=@workspace/admin`
+- **Output Directory:** `apps/admin/.next`
+- **Environment Variables:** `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+
+> **独立デプロイの注意**: web と admin は lockstep で出ない。`microfrontends.json` のパス割り当てを変える前に受け手アプリが対応済みであることを確認し、まず Preview で検証してから production へ。詳細は [microfrontends.md §1.5](./microfrontends.md#15-デプロイ各アプリ独立の-vercel-project)。
 
 ### Expo EAS（モバイル）
 
@@ -370,22 +478,21 @@ turbo build
 
 ### アプリが正しく動作するか確認
 
+すべて devenv scripts を使う（`.claude/rules/commands.md`）:
+
 ```bash
-# 1. 依存関係のインストール
-cd frontend
-bun install
+# 1. 依存関係は devenv shell 進入時に自動同期（setup:install-frontend）
 
-# 2. 型チェック
-turbo type-check
+# 2. 品質チェック（型・lint・format）
+type-check-frontend
+lint-frontend
+ci-check                 # 全プロジェクト CI チェック
 
-# 3. Lint
-turbo lint
+# 3. ビルド
+build-frontend
 
-# 4. ビルド
-turbo build
-
-# 5. 開発サーバー起動
-turbo dev
+# 4. 開発サーバー起動（Vercel Microfrontends proxy 込み）
+dev-all
 ```
 
 **確認項目:**
@@ -393,6 +500,9 @@ turbo dev
 - [ ] 共有パッケージが正しくインポートできる
 - [ ] 型エラーがない
 - [ ] ビルドエラーがない
+- [ ] ローカル proxy（`http://localhost:3024`）で `/` = web、`/admin` = admin に合成される
+- [ ] web と admin でセッションが分離している（admin は cookie `sb-admin`）
+- [ ] admin の未認証・非管理者アクセスが `/admin/login` にリダイレクトされる
 
 ---
 
@@ -453,14 +563,18 @@ frontend/
 
 新しいアプリを追加する前に確認：
 
-- [ ] [設計原則](./design-principles.md)を読んだ
+- [ ] [設計原則](./design-principles.md) と [マイクロフロントエンド運用ガイド](./microfrontends.md) を読んだ
 - [ ] アプリ専用UIは `src/shared/ui/` に配置する
 - [ ] アプリ専用パッケージ（`ui-{app}`）は作らない
 - [ ] 実際に共有されるコードのみ `packages/` に置く
 - [ ] FSD構造を維持する
-- [ ] `package.json` の name とポート番号を変更する
-- [ ] Turborepo設定を確認する
-- [ ] デプロイ設定を確認する
+- [ ] `package.json` の name（`microfrontends.json` の application 名 / `packageName` と一致）を変更する
+- [ ] `@vercel/microfrontends` を導入し `next.config` を `withMicrofrontends` でラップした（basePath は使わない）
+- [ ] default app（web）の `microfrontends.json` に child の `routing.paths` を登録した
+- [ ] admin は Supabase cookie 名（`sb-admin`）でセッションを web と分離した
+- [ ] 認可ガードを admin 内に実装し `getUser()` で検証している
+- [ ] `devenv.nix` の `frontendApps` に登録した
+- [ ] Turborepo / デプロイ（Vercel Microfrontends group）設定を確認する
 
 ---
 

@@ -489,13 +489,21 @@ apps/
 └── docs/        # ドキュメント（新規）
 ```
 
-#### 3. マイクロフロントエンド
+#### 3. マイクロフロントエンド（Vercel Microfrontends）
 
-各`apps/*`を独立してデプロイ可能：
+Web は **Vercel Microfrontends（マネージド製品）** で運用する。各`apps/*`を**独立した Vercel project** としてデプロイしつつ、**単一ドメイン配下でパスベース合成**する（`/` = web、`/admin` = admin）。これにより Vercel のネットワークレベルルーティング（追加ホップなし）・Instant Rollback 連動・prefetch 最適化といった **Vercel Services の恩恵を最大限**受けられる。
 
-- `apps/web` → Vercel
-- `apps/docs` → Cloudflare Pages
-- `apps/admin` → 別のホスティング
+```
+example.com
+├── /         → apps/web   (default application, Vercel project: web)
+└── /admin/*  → apps/admin (child application,  Vercel project: admin)
+```
+
+- 合成設定は default app（web）の `microfrontends.json` に集約（`@vercel/microfrontends` + `withMicrofrontends`）。
+- **管理者アプリ（admin）とメインアプリ（web）は認証・認可を分離**する。単一ドメイン合成でも Supabase の cookie 名（= storageKey）をアプリ別にスコープしてセッションを物理的に分離する。
+- **Next.js の `basePath` は使わない**（Vercel Microfrontends 非対応）。`/admin` の割り当ては `microfrontends.json` の `routing.paths` で行う。
+
+👉 詳細な設定・認証分離の手順は **[マイクロフロントエンド運用ガイド](./microfrontends.md)** を参照。
 
 ---
 
