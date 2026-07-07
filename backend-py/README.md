@@ -236,38 +236,35 @@ async def get_user(
 
 ## Container / Deploy
 
-### Railway (Production — apps/api)
+### Vercel (Production — apps/api)
 
-Railpack（ゼロコンフィグビルダー）を使用。Dockerfile 不要。
+`backend-py/Dockerfile.vercel` を使う。Vercel は project の **Root Directory 直下の
+`Dockerfile.vercel` を自動検出**し、全トラフィックをコンテナへ rewrite する
+（[公式ドキュメント](https://vercel.com/docs/functions/container-images)）。
 
-> **重要**: Railway のサービス設定で **Root Directory を `backend-py`**（モノレポルート）に指定する。
-> `apps/api/railway.toml` の `startCommand` は `uv run --package api uvicorn api.app:app …` で
-> workspace 解決を前提としているため、`backend-py/apps/api/` ではなく **`backend-py/` をルート**にする必要がある。
+> **重要**: Vercel の backend project は **Root Directory を `backend-py`**（uv workspace ルート）に
+> 設定する。`Dockerfile.vercel` はビルドコンテキストとして `apps/` `packages/` `uv.lock` を
+> 参照するため、`backend-py/apps/api/` ではなく **`backend-py/` をルート**にする必要がある。
+> project の作成・Root Directory 設定は `scripts/infra/vercel.sh`（`infra-bootstrap vercel`）が行う。
 
-```toml
-# backend-py/apps/api/railway.toml
-[build]
-builder = "RAILPACK"
+ポイント:
 
-[deploy]
-startCommand = "uv run --package api uvicorn api.app:app --host 0.0.0.0 --port ${PORT:-8000}"
-```
+| 項目 | 内容 |
+|------|------|
+| ポート | サーバは `$PORT`（Vercel 既定 80）で listen。`api.main` が `$PORT` を読む（ローカルは 4040 fallback） |
+| ビルド | uv 公式 multi-stage（cache mount / `--no-editable` / bytecode プリコンパイル）。Python 3.13 |
+| 起動 | `CMD ["api"]`（`[project.scripts] api = "api.main:main"`） |
+| shutdown | scale-in 時は SIGTERM + 30s grace。uvicorn が graceful shutdown |
+| ヘルスチェック | `GET /healthcheck` |
+| runtime secret | Doppler→Vercel ネイティブ連携（`SUPABASE_URL` / `POSTGRES_URL` 等）。詳細は `docs/deployment/README.md` |
 
-#### railpack.json によるカスタマイズ
+システムライブラリ（LiveKit / PyAV 等の音声・映像系 = devenv の `libopus` / `libvpx`）を導入した
+場合は `Dockerfile.vercel` の final stage に runtime 共有ライブラリを追記する（ファイル内コメント参照）。
 
-通常はゼロコンフィグで動作するため `railpack.json` は空（スキーマのみ）で問題ない。以下のケースで設定を追加する:
+### devenv dockerTools (Other platforms / ローカル OCI — apps/api)
 
-| ケース | 設定例 |
-|--------|--------|
-| システムパッケージが必要（libpq, ffmpeg 等） | `"buildAptPackages": ["libpq-dev"]`, `"deploy": { "aptPackages": ["libpq5"] }` |
-| スタートコマンドのカスタマイズ（ワーカー数等） | `"deploy": { "startCommand": "..." }` |
-| ビルドステップの追加（DB migration 等） | `"steps": { "build": { "commands": ["..."] } }` |
-| ビルド時シークレットが必要 | `"secrets": ["DATABASE_URL"]` |
-| ファイナルイメージの最小化 | `"steps": { "install": { "deployOutputs": ["/app/**"] } }` |
-
-> 参考: https://railpack.com/config/file/
-
-### devenv dockerTools (Other platforms — apps/api)
+Vercel 以外へ配布したい場合や、ローカルで OCI イメージを検証したい場合に使う
+（Vercel 本番デプロイは上記 `Dockerfile.vercel` 経路で、この経路は使わない）。
 
 ```bash
 devenv container build backend

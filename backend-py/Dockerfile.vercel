@@ -1,0 +1,75 @@
+# syntax=docker/dockerfile:1
+#
+# Vercel 用 Dockerfile（FastAPI backend = backend-py workspace の apps/api）。
+#
+# Vercel は project の Root Directory 直下にある `Dockerfile.vercel` を自動検出し、
+# 全トラフィックをこのコンテナへ rewrite する（https://vercel.com/docs/functions/container-images）。
+#   - Root Directory は `backend-py`（= このファイルがある場所 / uv workspace ルート）。
+#     ビルドコンテキストも `backend-py/` になるため `apps/` `packages/` `uv.lock` を参照できる。
+#   - サーバは `$PORT`（Vercel 既定 80）で listen する必要がある。api.main が $PORT を読む。
+#   - scale-in 時は SIGTERM + 30s grace。uvicorn が SIGTERM で graceful shutdown する。
+#
+# devenv の定義（languages.python = 3.13 / uv workspace）と揃えている。
+# uv の公式 Docker ベストプラクティス（multi-stage / cache mount / --no-editable）に準拠。
+
+ARG PYTHON_VERSION=3.13
+
+# ---------- builder: uv workspace を /app/.venv に解決・インストール ----------
+FROM python:${PYTHON_VERSION}-slim AS builder
+
+# 公式イメージから uv バイナリだけ持ち込む（pip で uv を入れない）
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# 本番最適化: bytecode プリコンパイル / copy link mode（bind mount 跨ぎで安全） /
+# コンテナ内で Python を追加ダウンロードしない（base image の python を使う）
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=0
+
+WORKDIR /app
+
+# wheel の無い sdist をビルドするための保険（final stage には持ち込まない）
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends build-essential
+
+# 1) 依存だけ先に解決（プロジェクト本体は含めない）。
+#    依存は安定・本体は頻繁に変わるので層を分けてキャッシュ効率を最大化する。
+#    workspace の全 member の pyproject を bind mount する（uv がグラフを解決するのに必要）。
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    --mount=type=bind,source=apps/api/pyproject.toml,target=apps/api/pyproject.toml \
+    --mount=type=bind,source=apps/mcp/pyproject.toml,target=apps/mcp/pyproject.toml \
+    --mount=type=bind,source=packages/core/pyproject.toml,target=packages/core/pyproject.toml \
+    uv sync --frozen --no-dev --no-install-workspace
+
+# 2) ソースを入れて api service（+ workspace dep の core）を non-editable でインストール。
+#    --no-editable で site-packages にコピーされるため、final stage は .venv だけで完結する。
+COPY . /app
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-editable --package api
+
+# ---------- final: slim ランタイム。venv だけコピー ----------
+FROM python:${PYTHON_VERSION}-slim AS final
+
+# 現状の依存（fastapi / uvicorn[standard] / psycopg2-binary / supabase 等）はすべて
+# manylinux wheel で完結し、追加の共有ライブラリは不要。
+# LiveKit / PyAV 等の音声・映像系（devenv の libopus / libvpx）を導入した際は、
+# ここに runtime 共有ライブラリ（例: libopus0 / libvpx*）を追記すること。
+
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PORT=80
+
+COPY --from=builder /app/.venv /app/.venv
+
+# 非 root 実行
+RUN useradd --create-home --uid 10001 appuser
+USER appuser
+
+EXPOSE 80
+
+# [project.scripts] api = "api.main:main"。main() が $PORT を読んで uvicorn を起動する。
+CMD ["api"]

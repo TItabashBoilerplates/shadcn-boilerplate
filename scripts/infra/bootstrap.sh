@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 外部 PaaS プロビジョニングのオーケストレーター（冪等・再実行可）。
-#   doppler → supabase → vercel → railway → github の順に実行する。
+#   doppler → supabase → vercel → github の順に実行する。
+#   （web / backend とも Vercel project。backend は Dockerfile.vercel コンテナ。）
 #
 # 使い方:
 #   infra-bootstrap            # 全ステップ（devenv script 経由でトークン注入）
@@ -19,8 +20,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/infra/lib.sh
 . "$SCRIPT_DIR/lib.sh"
 
-# wire は supabase/vercel/railway の生成値を Vercel に配線するため最後に置く。
-ALL_STEPS=(doppler supabase vercel railway github wire)
+# wire は supabase/vercel の生成値を Vercel(web) に配線するため最後に置く。
+ALL_STEPS=(doppler supabase vercel github wire)
 
 run_step() {
   local step="$1"

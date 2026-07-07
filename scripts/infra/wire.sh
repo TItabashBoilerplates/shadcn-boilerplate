@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
 # サービス間で「生成される値」を取得し、Doppler の各 config(dev/stg/prd) に格納する。
-# 以降は Doppler ネイティブ連携が Railway / Supabase(edge) 等へ fan-out し、
+# 以降は Doppler ネイティブ連携が Vercel(backend) / Supabase(edge) 等へ fan-out し、
 # migration(GitHub Actions) は Doppler から読む。= 生成値を手動管理しない。
 #
 # アーキテクチャ（ユーザー決定）:
-#   - Supabase は独立所有。Vercel へは Marketplace の「Connect Account」で Supabase env が
+#   - Supabase は独立所有。Vercel(web) へは Marketplace の「Connect Account」で Supabase env が
 #     自動注入される（NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY 等）
-#     → ここでは Vercel に Supabase 値を入れない（二重化回避）。
-#   - Vercel 以外（Railway backend / Expo mobile / Drizzle migration / edge）への配線は Doppler 経由。
-#     よって本スクリプトは「Supabase 生成値 + Railway endpoint を Doppler に格納」する。
-#   - Railway の公開ドメインは Marketplace 経由では Vercel に入らないため、Doppler に入れて配り、
-#     Vercel には直接も set する（フォールバック）。
+#     → ここでは Vercel(web) に Supabase 値を入れない（二重化回避）。
+#   - backend も Vercel project（Dockerfile.vercel コンテナ）。その公開ドメインを取得して
+#     web/mobile に配る（NEXT_PUBLIC_BACKEND_PY_URL / EXPO_PUBLIC_BACKEND_PY_URL）。
+#   - Vercel(web) 以外（Vercel backend / Expo mobile / Drizzle migration / edge）への配線は Doppler 経由。
+#     よって本スクリプトは「Supabase 生成値 + backend endpoint を Doppler に格納」する。
+#   - backend の公開ドメインは Marketplace 経由では web に入らないため、Doppler に入れて配り、
+#     Vercel(web) には直接も set する（フォールバック）。
 #
 # ⚠️ 外部 API キー（OpenAI 等）は対象外（ユーザーが Doppler に直接投入）。ここで扱うのは
 #    「プロビジョニングの結果生成される値」だけ。値は stdin 渡しで stdout/ログに出さない。
@@ -70,29 +72,27 @@ resolve_supabase() {
   [ -n "$SB_URL" ] && [ -n "$SB_PUB" ] || { warn "[$env] Supabase URL/publishable を取得できず"; return 1; }
 }
 
-# Railway の各環境ドメイン（best-effort）→ "https://<domain>"
-resolve_railway_domain() {
-  local env="$1"
-  have railway || { warn "[$env] railway CLI 無し → endpoint 配線 skip（runbook 手動）"; return 1; }
-  railway environment "$env" >/dev/null 2>&1 || true
-  local d; d="$(railway domain --json 2>/dev/null | jq -r '.domain // .domains[0].domain // empty' 2>/dev/null)"
-  [ -n "$d" ] || { warn "[$env] Railway domain 取得できず（dashboard/GraphQL 確認）"; return 1; }
-  printf 'https://%s' "$d"
+# backend(Vercel) の各環境公開ドメイン（best-effort）→ "https://<domain>"
+resolve_backend_domain() {
+  local env="$1" url
+  url="$(vercel_backend_url "$VERCEL_BACKEND_PROJECT" "$env")" || true
+  [ -n "$url" ] || { warn "[$env] backend(Vercel) domain 取得できず（project/team slug/token を確認）"; return 1; }
+  printf '%s' "$url"
 }
 
 main() {
   require_tool curl; require_tool jq; require_tool supabase; require_tool doppler
   load_config; load_outputs
   require_env SUPABASE_ACCESS_TOKEN
-  require_env VERCEL_TOKEN          # web の Supabase 期待名を Vercel に直接 set するため
-  : "${DOPPLER_PROJECT:?}"; : "${APP_NAME:?}"
+  require_env VERCEL_TOKEN          # web の Supabase 期待名を Vercel に直接 set / backend domain 取得
+  : "${DOPPLER_PROJECT:?}"; : "${APP_NAME:?}"; : "${VERCEL_BACKEND_PROJECT:?}"
 
   local env slug backend
   for env in $INFRA_ENVS; do
     slug="$(doppler_config_for "$env")"
     printf '\n'; log "── 配線(→Doppler[%s]): %s ──" "$slug" "$env"
 
-    # Supabase 生成値 → Doppler（Railway/edge/migration/mobile が Doppler から受け取る）
+    # Supabase 生成値 → Doppler（Vercel backend/edge/migration/mobile が Doppler から受け取る）
     if resolve_supabase "$env"; then
       doppler_put "$slug" "SUPABASE_URL" "$SB_URL"
       doppler_put "$slug" "SUPABASE_PUBLISHABLE_KEY" "$SB_PUB"
@@ -109,8 +109,8 @@ main() {
       vercel_env_set "${APP_NAME:?}" "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" "$SB_PUB" "$env"
     fi
 
-    # Railway endpoint → Doppler（+ Vercel に直接も set。Marketplace は Supabase だけ面倒を見る）
-    if backend="$(resolve_railway_domain "$env")"; then
+    # backend endpoint → Doppler（+ Vercel(web) に直接も set。Marketplace は Supabase だけ面倒を見る）
+    if backend="$(resolve_backend_domain "$env")"; then
       doppler_put "$slug" "NEXT_PUBLIC_BACKEND_PY_URL" "$backend"
       doppler_put "$slug" "EXPO_PUBLIC_BACKEND_PY_URL" "$backend"
       vercel_env_set "${APP_NAME:?}" "NEXT_PUBLIC_BACKEND_PY_URL" "$backend" "$env"
@@ -118,7 +118,7 @@ main() {
   done
 
   printf '\n'
-  ok "生成値の配線完了（→ Doppler、Railway endpoint は Vercel にも直接）。"
+  ok "生成値の配線完了（→ Doppler、backend endpoint は Vercel(web) にも直接）。"
   warn "Vercel の Supabase env は Marketplace『Connect Account』で同期（runbook Phase 0/2）。"
 }
 

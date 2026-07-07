@@ -32,7 +32,7 @@
 **まだやっていないこと（要ユーザー操作）**:
 - 実 Doppler project / config の作成・シークレット投入
 - ローカル `env/.env.secrets` の削除（doppler-import で投入確認後）
-- 各プラットフォーム連携の作成（Vercel / Railway / Supabase のダッシュボード設定）
+- 各プラットフォーム連携の作成（Vercel(web/backend) / Supabase のダッシュボード設定）
 - CI で secrets が必要になったら GitHub Secrets に `DOPPLER_TOKEN`（service token）を登録
 
 ## 2. 移行のゴール

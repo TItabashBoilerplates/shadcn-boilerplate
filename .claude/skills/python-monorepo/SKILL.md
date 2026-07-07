@@ -19,12 +19,11 @@ backend-py/
 ├── uv.lock                         # 単一ルート lockfile
 ├── .python-version                 # 3.13
 ├── pyrightconfig.json
+├── Dockerfile.vercel               # Vercel 用コンテナ（Root Directory = backend-py で自動検出）
 ├── README.md / AGENTS.md
 ├── apps/
 │   ├── api/                        # FastAPI サーバ
 │   │   ├── pyproject.toml          # name="api", [project.scripts] api = "api.main:main"
-│   │   ├── railway.toml            # uv run --package api uvicorn ...
-│   │   ├── railpack.json
 │   │   ├── README.md
 │   │   ├── src/api/
 │   │   │   ├── app.py              # FastAPI()
@@ -408,16 +407,16 @@ class ResourceNotFoundError(Exception):   # API 固有
 
 ---
 
-## 9. デプロイ（Railway example）
+## 9. デプロイ（Vercel / Dockerfile.vercel）
 
-`apps/api/railway.toml`:
+backend は `backend-py/Dockerfile.vercel`（Vercel が自動検出するコンテナ）で Vercel にデプロイする
+（[Vercel Container Images](https://vercel.com/docs/functions/container-images)）。uv 公式の multi-stage
+パターン（cache mount / `--no-editable` / bytecode プリコンパイル）で workspace を解決し、`$PORT`
+（Vercel 既定 80）で uvicorn を起動する。詳細は `backend-py/README.md` / `docs/deployment/README.md`。
 
-```toml
-[deploy]
-startCommand = "uv run --package api uvicorn api.app:app --host 0.0.0.0 --port ${PORT:-8000}"
-```
-
-**Railway サービスの Root Directory を `backend-py/`**（モノレポルート）に設定する。`backend-py/apps/api/` を Root にすると workspace 解決が効かない（`uv run --package api` の参照範囲が member 単体になる）。
+**Vercel の backend project は Root Directory を `backend-py/`**（モノレポルート）に設定する。
+`backend-py/apps/api/` を Root にするとビルドコンテキストが member 単体に狭まり workspace 解決が効かない
+（`Dockerfile.vercel` が `uv.lock` / 他 member の `pyproject.toml` を参照できなくなる）。
 
 ---
 

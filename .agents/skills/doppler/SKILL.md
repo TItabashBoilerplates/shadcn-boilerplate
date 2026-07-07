@@ -142,12 +142,13 @@ MCP 設定は `.mcp.json` を編集して `mcp-sync` で Codex/Cursor に投影�
 
 ## CI/CD・デプロイ（詳細は references/cicd.md）
 
-デプロイは **各プラットフォーム（Vercel / Supabase / Railway）が GitHub 連携で直接ビルド**する
+デプロイは **各プラットフォーム（Vercel(web/backend) / Supabase）が GitHub 連携で直接ビルド**する
 構成。シークレットは GitHub Actions ではなく **Doppler 公式ネイティブ連携（sync）で各プラット
-フォームへ直接届ける**（3 つともネイティブ連携あり・ダッシュボード設定）。
+フォームへ直接届ける**（いずれもネイティブ連携あり・ダッシュボード設定）。
 
-- **Vercel / Railway / Supabase**: Doppler の Integrations で config → 各プラットフォームの
+- **Vercel(web/backend) / Supabase**: Doppler の Integrations で config → 各プラットフォームの
   env vars / secrets に自動 sync。config↔環境 = `prd`→Production / `stg`→Preview(Staging) / `dev`→Dev。
+  web と backend は別 Vercel project なので、それぞれに連携を作る。
 - **GitHub Actions CI**（`.github/workflows/ci.yml`）: lint/test のみで**シークレット不要**。
   必要時は read-only service token を GitHub Secrets `DOPPLER_TOKEN` に登録（CI は既に env で渡す）。
 - 旧 `scripts/supabase/deploy-secrets.sh`（dotenvx）は廃止し Supabase ネイティブ連携に置換。
@@ -192,7 +193,7 @@ MCP 設定は `.mcp.json` を編集して `mcp-sync` で Codex/Cursor に投影�
 
 ## 関連ドキュメント
 
-- [references/cicd.md](references/cicd.md) — CI/CD・デプロイ（Vercel/Railway/Supabase ネイティブ連携・CI token）
+- [references/cicd.md](references/cicd.md) — CI/CD・デプロイ（Vercel(web/backend)/Supabase ネイティブ連携・CI token）
 - [references/best-practices.md](references/best-practices.md) — Doppler 公式ベストプラクティス
 - [references/migration-plan.md](references/migration-plan.md) — 完全移行ランブック
 - `.claude/rules/commands.md` / `mcp-supabase.md` / `error-handling.md` / `auto-generated.md`

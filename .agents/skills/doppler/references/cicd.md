@@ -1,14 +1,15 @@
-# Doppler × CI/CD（Vercel / Supabase / Railway / GitHub Actions）
+# Doppler × CI/CD（Vercel(web/backend) / Supabase / GitHub Actions）
 
 このプロジェクトのデプロイは **各プラットフォームが GitHub 連携で直接ビルド/デプロイ**する
 （GitHub Actions でデプロイしない）。よってシークレットは GitHub Actions ではなく
-**Doppler から各プラットフォームへ直接 sync** する。3 つとも Doppler 公式ネイティブ連携がある。
+**Doppler から各プラットフォームへ直接 sync** する。Vercel（web / backend の 2 project）と
+Supabase いずれも Doppler 公式ネイティブ連携がある。
 
 目次:
 1. 全体像
 2. config ↔ 環境の対応
-3. Vercel（ネイティブ連携）
-4. Railway（ネイティブ連携）
+3. Vercel web（ネイティブ連携）
+4. Vercel backend（ネイティブ連携）
 5. Supabase（ネイティブ連携）
 6. GitHub Actions CI（service token）
 7. サービストークン運用
@@ -22,8 +23,8 @@
             └───┬─────────────┬──────────────┬─────────────────────┘
    native sync  │             │              │  native sync
                 ▼             ▼              ▼
-            Vercel        Railway         Supabase
-         (env vars)    (env vars)     (Functions secrets)
+         Vercel web     Vercel backend    Supabase
+         (env vars)    (env vars/コンテナ) (Functions secrets)
                 ▲             ▲              ▲
                 └──── GitHub 連携で push → 各プラットフォームがビルド/デプロイ ────┘
 ```
@@ -33,34 +34,41 @@
 
 ## 2. config ↔ 環境の対応
 
-| Doppler config | Vercel | Railway | Supabase | devenv profile |
+| Doppler config | Vercel web | Vercel backend | Supabase | devenv profile |
 |---|---|---|---|---|
-| `prd` | Production | Production env | 本番 project | `-P production` |
-| `stg` | Preview | Staging env | staging project | `-P staging` |
-| `dev` | Development | dev env | dev project | `-P dev` |
+| `prd` | Production | Production | 本番 project | `-P production` |
+| `stg` | Preview | Preview | staging project | `-P staging` |
+| `dev` | Development | Development | dev project | `-P dev` |
 
-Vercel は環境ごとに**別々の連携**が必要（Development / Preview / Production）。
+Vercel は環境ごとに**別々の連携**が必要（Development / Preview / Production）。web / backend は
+別 project なので、それぞれに対して連携を作る。
 
-## 3. Vercel（ネイティブ連携）
+## 3. Vercel web（ネイティブ連携）
 
 ダッシュボード操作（ユーザー）:
-1. Doppler の対象 project → **Integrations** → **Vercel** → 認可。
+1. Doppler の対象 project → **Integrations** → **Vercel** → 認可し、**web project** を選ぶ。
 2. **環境ごとに連携を作成**: `prd`→Production / `stg`→Preview / `dev`→Development。
 3. sync 対象の Doppler config と Vercel 環境を選択。Doppler は Vercel 同期を既定で
    **Sensitive** として扱う。
 
 以降、Doppler の値を更新すると Vercel の env vars に反映され（webhook で再デプロイも可）、
 Vercel の GitHub 連携ビルドがその値を使う。`NEXT_PUBLIC_*` のような**非機密**は引き続き
-`env/frontend/.env.<ENV>`（リポジトリ）で管理してもよい（責務分離）。
+`env/frontend/.env.<ENV>`（リポジトリ）で管理してもよい（責務分離）。web の Supabase env は
+Marketplace「Connect Account」でも入る（`scripts/infra/wire.sh` が期待名を直接 set するため
+注入名には依存しない）。
 
-## 4. Railway（ネイティブ連携）
+## 4. Vercel backend（ネイティブ連携）
 
-1. Railway で API Token を発行。
-2. Doppler の対象 project → **Integrations** → **Railway** → API Token を貼り付け。
-3. Railway の project / environment と、sync する Doppler config を選択。
+FastAPI backend も Vercel project（`backend-py/Dockerfile.vercel` のコンテナ）。web と同じ
+Vercel ネイティブ連携を **backend project** に向けて作る:
 
-選択した config の secrets が Railway の env vars に継続 sync され、Railway の GitHub 連携
-ビルド/ランタイムが使う（コード変更不要）。
+1. Doppler の対象 project → **Integrations** → **Vercel** → 認可し、**backend project** を選ぶ。
+2. **環境ごとに連携を作成**: `prd`→Production / `stg`→Preview / `dev`→Development。
+3. sync 対象の Doppler config を選択。
+
+選択した config の secrets（`SUPABASE_URL` / `SUPABASE_SECRET_KEY` / `POSTGRES_URL` 等）が
+backend コンテナの env vars に継続 sync され、Vercel の GitHub 連携ビルド/ランタイムが使う
+（コード変更不要）。service_role を使う処理があるため、secret は backend project 側に配る。
 
 ## 5. Supabase（ネイティブ連携）
 
@@ -98,6 +106,6 @@ CI でシークレットが要るジョブ（将来の統合テスト等）を�
 ## 8. 検証
 
 - **連携 sync**: Doppler で値を変更 → 各プラットフォームの env vars に反映されるか
-  （Vercel/Railway は project settings、Supabase は `supabase secrets list`）。
+  （Vercel(web/backend) は project settings、Supabase は `supabase secrets list`）。
 - **CI**: `DOPPLER_TOKEN` 未登録でも CI（lint/test）が green。登録後は secrets を要するジョブが通る。
 - **デプロイ**: 各プラットフォームの GitHub 連携ビルドが sync された値で成功する。
