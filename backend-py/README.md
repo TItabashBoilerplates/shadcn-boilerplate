@@ -236,38 +236,56 @@ async def get_user(
 
 ## Container / Deploy
 
-### Railway (Production — apps/api)
+### Vercel (Production — アプリごとに 1 コンテナ)
 
-Railpack（ゼロコンフィグビルダー）を使用。Dockerfile 不要。
+**モノレポ = アプリ 1 つにつき Dockerfile 1 つ**。各アプリの Dockerfile を
+`apps/<app>/Dockerfile.vercel` に置き、`backend-py/vercel.json` の [`services`](https://vercel.com/docs/functions/container-images)
+から entrypoint として参照する。Vercel は **service ごとに別コンテナ**をビルドし、`rewrites` で
+パスを振り分ける。
 
-> **重要**: Railway のサービス設定で **Root Directory を `backend-py`**（モノレポルート）に指定する。
-> `apps/api/railway.toml` の `startCommand` は `uv run --package api uvicorn api.app:app …` で
-> workspace 解決を前提としているため、`backend-py/apps/api/` ではなく **`backend-py/` をルート**にする必要がある。
-
-```toml
-# backend-py/apps/api/railway.toml
-[build]
-builder = "RAILPACK"
-
-[deploy]
-startCommand = "uv run --package api uvicorn api.app:app --host 0.0.0.0 --port ${PORT:-8000}"
+```jsonc
+// backend-py/vercel.json
+{
+  "services": {
+    // runtime: "container" で Docker イメージとしてビルド（公式 Services 仕様。これが無いと
+    // Vercel が runtime を自動検出し、entrypoint を Dockerfile ではなく module:app と誤解する）。
+    "api": { "runtime": "container", "root": ".", "entrypoint": "apps/api/Dockerfile.vercel" }
+    // アプリ追加時はここに service を足す（例: "mcp": { "runtime": "container", "root": ".", "entrypoint": "apps/mcp/Dockerfile.vercel" }）
+  },
+  "rewrites": [{ "source": "/(.*)", "destination": { "service": "api" } }]
+}
 ```
 
-#### railpack.json によるカスタマイズ
+> **重要（uv workspace）**: Vercel の backend project は **Root Directory を `backend-py`**
+> （uv workspace ルート）に設定する。各 Dockerfile の**ビルドコンテキストは workspace ルート**
+> （`services.<app>.root = "."`）なので、`uv.lock` / `packages/core` / 他 member の pyproject を
+> 解決できる。アプリ単体（`backend-py/apps/api`）を Root にすると workspace 解決が壊れる。
+> project 作成・Root Directory 設定は `scripts/infra/vercel.sh`（`infra-bootstrap vercel`）が行う。
 
-通常はゼロコンフィグで動作するため `railpack.json` は空（スキーマのみ）で問題ない。以下のケースで設定を追加する:
+各コンテナ（apps/api）のポイント:
 
-| ケース | 設定例 |
-|--------|--------|
-| システムパッケージが必要（libpq, ffmpeg 等） | `"buildAptPackages": ["libpq-dev"]`, `"deploy": { "aptPackages": ["libpq5"] }` |
-| スタートコマンドのカスタマイズ（ワーカー数等） | `"deploy": { "startCommand": "..." }` |
-| ビルドステップの追加（DB migration 等） | `"steps": { "build": { "commands": ["..."] } }` |
-| ビルド時シークレットが必要 | `"secrets": ["DATABASE_URL"]` |
-| ファイナルイメージの最小化 | `"steps": { "install": { "deployOutputs": ["/app/**"] } }` |
+| 項目 | 内容 |
+|------|------|
+| ポート | サーバは `$PORT`（Vercel 既定 80）で listen。`api.main` が `$PORT` を読む（ローカルは 4040 fallback） |
+| ビルド | uv 公式 multi-stage（cache mount / `--no-editable` / bytecode プリコンパイル）。Python 3.13 |
+| 分離 | `uv sync --package api` で api + `core` だけを入れる（`apps/mcp` は含めない） |
+| 起動 | `CMD ["api"]`（`[project.scripts] api = "api.main:main"`） |
+| shutdown | scale-in 時は SIGTERM + 30s grace。uvicorn が graceful shutdown |
+| ヘルスチェック | `GET /healthcheck` |
+| runtime secret | Doppler→Vercel ネイティブ連携（`SUPABASE_URL` / `POSTGRES_URL` 等）。詳細は `docs/deployment/README.md` |
 
-> 参考: https://railpack.com/config/file/
+**新しいアプリ（例: apps/mcp）をコンテナ化する手順**:
+1. `apps/mcp/Dockerfile.vercel` を作る（`--package mcp-server` で対象アプリだけ入れ、`$PORT` で HTTP listen）。
+2. `backend-py/vercel.json` の `services` に `mcp` を追加し、`rewrites` に振り分けを足す（例: `/mcp/(.*)` → `mcp`）。
+3. provisioning（`vercel.sh` / Root Directory）は変更不要。
 
-### devenv dockerTools (Other platforms — apps/api)
+システムライブラリ（LiveKit / PyAV 等の音声・映像系 = devenv の `libopus` / `libvpx`）を導入した
+場合は該当アプリの `Dockerfile.vercel` の final stage に runtime 共有ライブラリを追記する（ファイル内コメント参照）。
+
+### devenv dockerTools (Other platforms / ローカル OCI — apps/api)
+
+Vercel 以外へ配布したい場合や、ローカルで OCI イメージを検証したい場合に使う
+（Vercel 本番デプロイは上記 `Dockerfile.vercel` 経路で、この経路は使わない）。
 
 ```bash
 devenv container build backend

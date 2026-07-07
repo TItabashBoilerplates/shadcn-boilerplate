@@ -8,7 +8,7 @@
 | 種類 | 例 | 置き場所 |
 |---|---|---|
 | **シークレット**（全環境） | 外部 API キー / トークン / DB パスワード / service_role 等 | **Doppler のみ**（ファイルフォールバック廃止） |
-| **生成される非機密**（リモート） | Supabase URL / publishable key / Railway endpoint 等 | **Doppler**（`scripts/infra/wire.sh` が投入 → ネイティブ連携で配布） |
+| **生成される非機密**（リモート） | Supabase URL / publishable key / backend(Vercel) endpoint 等 | **Doppler**（`scripts/infra/wire.sh` が投入 → ネイティブ連携で配布） |
 | **ローカルの非機密既定値** | local Supabase URL / publishable key / `localhost:54322` の DATABASE_URL / port | **このディレクトリの `.env.local`** |
 
 要点:
@@ -16,7 +16,7 @@
 - **ローカル（`ENV=local`）** = `env/<svc>/.env.local`（コミット・well-known なローカル既定値）
   ＋ Doppler `dev_personal`（実シークレット）。
 - **リモート（dev/stg/prd）** = **Doppler 一本**。非機密も秘密もすべて Doppler に集約し、
-  ネイティブ連携（Doppler→Vercel/Railway/Supabase）と Vercel Marketplace で各サービスへ届く。
+  ネイティブ連携（Doppler→Vercel(web/backend)/Supabase）と Vercel Marketplace で各サービスへ届く。
   **`.env.<dev|staging|production>` ファイルは作らない**（gitignore 済みでデプロイ先に届かず、
   リモート配信手段にならないため）。
 
@@ -66,7 +66,7 @@ doppler-import /tmp/secrets.dev.env --config dev
 ```
 
 - **本番（prd）への write はフェーズ制**（`.claude/rules/mcp-doppler.md`）。
-- **リモートの生成非機密**（Supabase URL / publishable / POSTGRES_URL / Railway endpoint）は
+- **リモートの生成非機密**（Supabase URL / publishable / POSTGRES_URL / backend(Vercel) endpoint）は
   `infra-bootstrap`（`scripts/infra/wire.sh`）が自動投入する（手動不要）。詳細は
   `docs/deployment/README.md`。
 

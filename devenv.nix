@@ -215,8 +215,7 @@ in
     #   - gh : GitHub environments / 承認ゲート / secret 設定（github.sh）
     #   - jq : 各 API レスポンスの JSON 整形（supabase/vercel/github）
     # Vercel は CLI バグ回避のため REST API(curl) 直叩き → vercel CLI は不要。
-    # Railway CLI は nixpkgs の attr が安定しないため devenv では入れず、
-    # docs/deployment/README.md の導入手順（公式 installer / nlx）に従って用意する。
+    # backend も Vercel（Dockerfile.vercel コンテナ）へデプロイするため Railway CLI は不要。
     pkgs.gh
     pkgs.jq
   ];
@@ -805,7 +804,7 @@ in
 
     # ---------- 外部 PaaS プロビジョニング（一度きりの初期構築）----------
     # scripts/infra/* を `doppler run` で包み、bootstrap config のトークン
-    # （VERCEL_TOKEN / RAILWAY_API_TOKEN / SUPABASE_ACCESS_TOKEN / SUPABASE_DB_PASSWORD /
+    # （VERCEL_TOKEN / SUPABASE_ACCESS_TOKEN / SUPABASE_DB_PASSWORD /
     #  GH_TOKEN 等）を環境変数として注入する。値は露出しない。
     #
     # ⚠️ これは「コマンド一発で全自動」ではない。各 PaaS の GitHub 連携 OAuth・repo 接続・
@@ -1080,8 +1079,12 @@ in
   } // lib.mapAttrs' (name: cfg: lib.nameValuePair "dev-${name}" (mkDevScript name cfg)) frontendApps;
   # ↑ frontendApps から `dev-<name>` script を自動生成（dev-web / dev-mobile / dev-admin ...）。
 
-  # OCI コンテナイメージ（devenv container build backend で生成）
-  # Railway は Railpack を使用するため、通常は不要。
+  # OCI コンテナイメージ（`devenv container build backend` で生成 = Nix/nix2container で
+  # イメージを直接ビルド。**Dockerfile は生成しない**）。
+  # Vercel の本番デプロイには使わない: Vercel は git-push でサービスを **自前ビルド**する方式で
+  # （`backend-py/vercel.json` の service = `apps/api/Dockerfile.vercel` をビルド）、ビルド済み
+  # イメージを参照する vercel.json フィールドが無いため、Nix イメージを流し込む経路が無い。
+  # このイメージはローカルでの OCI 検証や他レジストリ（GHCR / fly.io 等）配布用に残している。
   # backendExec を let-binding で共有することで profile に依存せず参照できる。
   containers."backend" = {
     name = "backend-py";

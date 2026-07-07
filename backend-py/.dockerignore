@@ -1,0 +1,16 @@
+# Vercel / Docker ビルドコンテキストから除外（COPY . /app の対象を絞る）。
+# ローカルの .venv を持ち込むと uv sync の結果を汚染するため必ず除外する。
+.venv
+**/.venv
+__pycache__
+**/__pycache__
+*.pyc
+.pytest_cache
+**/.pytest_cache
+.mypy_cache
+**/.mypy_cache
+.ruff_cache
+**/.ruff_cache
+**/tests
+.env
+.env.*

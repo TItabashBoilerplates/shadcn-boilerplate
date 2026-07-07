@@ -19,12 +19,12 @@ backend-py/
 ├── uv.lock                         # 単一ルート lockfile
 ├── .python-version                 # 3.13
 ├── pyrightconfig.json
+├── vercel.json                     # Vercel services: アプリ→Dockerfile の対応 + rewrites
 ├── README.md / AGENTS.md
 ├── apps/
 │   ├── api/                        # FastAPI サーバ
 │   │   ├── pyproject.toml          # name="api", [project.scripts] api = "api.main:main"
-│   │   ├── railway.toml            # uv run --package api uvicorn ...
-│   │   ├── railpack.json
+│   │   ├── Dockerfile.vercel       # api コンテナ（ビルドコンテキストは workspace ルート）
 │   │   ├── README.md
 │   │   ├── src/api/
 │   │   │   ├── app.py              # FastAPI()
@@ -408,16 +408,30 @@ class ResourceNotFoundError(Exception):   # API 固有
 
 ---
 
-## 9. デプロイ（Railway example）
+## 9. デプロイ（Vercel / アプリごとに 1 コンテナ）
 
-`apps/api/railway.toml`:
+**モノレポ = アプリ 1 つにつき Dockerfile 1 つ**。各アプリの Dockerfile を `apps/<app>/Dockerfile.vercel`
+に置き、`backend-py/vercel.json` の `services` から entrypoint として参照する。Vercel は service ごとに
+別コンテナをビルドし、`rewrites` でパスを振り分ける（[Vercel Container Images](https://vercel.com/docs/functions/container-images)）。
 
-```toml
-[deploy]
-startCommand = "uv run --package api uvicorn api.app:app --host 0.0.0.0 --port ${PORT:-8000}"
+```jsonc
+// backend-py/vercel.json （runtime:"container" で Docker ビルドを明示。無いと runtime 自動検出になる）
+{
+  "services": {
+    "api": { "runtime": "container", "root": ".", "entrypoint": "apps/api/Dockerfile.vercel" }
+    // アプリ追加時: "mcp": { "runtime": "container", "root": ".", "entrypoint": "apps/mcp/Dockerfile.vercel" }
+  },
+  "rewrites": [{ "source": "/(.*)", "destination": { "service": "api" } }]
+}
 ```
 
-**Railway サービスの Root Directory を `backend-py/`**（モノレポルート）に設定する。`backend-py/apps/api/` を Root にすると workspace 解決が効かない（`uv run --package api` の参照範囲が member 単体になる）。
+各 Dockerfile は uv 公式の multi-stage（cache mount / `--no-editable` / bytecode プリコンパイル）で
+`--package <app>` に絞ってインストールし、`$PORT`（Vercel 既定 80）で HTTP listen する。
+
+**Vercel の backend project は Root Directory を `backend-py/`**（モノレポルート）に設定し、各 service の
+**ビルドコンテキストも workspace ルート**（`root: "."`）にする。`backend-py/apps/api/` を Root にすると
+コンテキストが member 単体に狭まり workspace 解決が効かない（`uv.lock` / 他 member の `pyproject.toml` /
+`packages/core` を参照できなくなる）。詳細は `backend-py/README.md` / `docs/deployment/README.md`。
 
 ---
 

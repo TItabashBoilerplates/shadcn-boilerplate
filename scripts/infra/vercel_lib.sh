@@ -47,3 +47,34 @@ vercel_env_set() {
     warn "vercel env [${env}] ${key} 設定 skip（project / token / 値を確認）"
   fi
 }
+
+# アカウント slug（team なら team slug、個人なら username）。preview の
+# ブランチ別ドメイン `<project>-git-<branch>-<slug>.vercel.app` の構築に使う。
+# 取得できなければ空を返す（呼び出し側で best-effort 判定）。
+vercel_account_slug() {
+  local tid="${VERCEL_TEAM_ID:-}"
+  if [ -n "$tid" ]; then
+    vapi GET "/v2/teams/${tid}" 2>/dev/null | jq -r '.slug // empty' 2>/dev/null
+  else
+    vapi GET "/v2/user" 2>/dev/null | jq -r '.user.username // .username // empty' 2>/dev/null
+  fi
+}
+
+# vercel_backend_url PROJECT ENVNAME → "https://<domain>"（取得できなければ空文字）。
+#   production → project の本番ドメイン（API で取得、無ければ <project>.vercel.app）。
+#   preview    → ブランチ別の安定エイリアス <project>-git-<branch>-<slug>.vercel.app。
+vercel_backend_url() {
+  local project="$1" env="$2" domain=""
+  if [ "$env" = "production" ]; then
+    domain="$(vapi GET "/v9/projects/${project}/domains?target=production&limit=1" 2>/dev/null \
+      | jq -r '.domains[0].name // empty' 2>/dev/null)"
+    [ -n "$domain" ] || domain="${project}.vercel.app"
+  else
+    local branch slug
+    branch="$(git_branch_for "$env")"          # develop|staging
+    slug="$(vercel_account_slug)"
+    [ -n "$slug" ] || return 0                  # slug 不明 → best-effort で空を返す
+    domain="${project}-git-${branch}-${slug}.vercel.app"
+  fi
+  [ -n "$domain" ] && printf 'https://%s' "$domain"
+}
