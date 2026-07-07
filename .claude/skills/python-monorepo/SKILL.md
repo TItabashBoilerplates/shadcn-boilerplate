@@ -415,11 +415,11 @@ class ResourceNotFoundError(Exception):   # API 固有
 別コンテナをビルドし、`rewrites` でパスを振り分ける（[Vercel Container Images](https://vercel.com/docs/functions/container-images)）。
 
 ```jsonc
-// backend-py/vercel.json
+// backend-py/vercel.json （runtime:"container" で Docker ビルドを明示。無いと runtime 自動検出になる）
 {
   "services": {
-    "api": { "root": ".", "entrypoint": "apps/api/Dockerfile.vercel" }
-    // アプリ追加時: "mcp": { "root": ".", "entrypoint": "apps/mcp/Dockerfile.vercel" }
+    "api": { "runtime": "container", "root": ".", "entrypoint": "apps/api/Dockerfile.vercel" }
+    // アプリ追加時: "mcp": { "runtime": "container", "root": ".", "entrypoint": "apps/mcp/Dockerfile.vercel" }
   },
   "rewrites": [{ "source": "/(.*)", "destination": { "service": "api" } }]
 }

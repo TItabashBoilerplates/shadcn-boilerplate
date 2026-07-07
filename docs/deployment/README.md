@@ -201,7 +201,7 @@ git push origin main       # → prd:  各 PaaS 反映 + migrate は GitHub で�
 | 事象 | 対応 |
 |---|---|
 | Vercel preview env が CI でハング | CLI bug #15763。本構成は **REST API** で投入済み（`vercel.sh`）。手動時も API を使う。 |
-| backend project が Dockerfile を検出しない | Root Directory が `backend-py` か、`backend-py/vercel.json` の `services.<app>.entrypoint`（例 `apps/api/Dockerfile.vercel`）が正しいか、Container Images(Beta) が有効かを確認。 |
+| backend project が Dockerfile を検出しない / runtime が違う | ① `vercel.json` の `services.<app>` に **`"runtime": "container"`** があるか（無いと Vercel が runtime 自動検出し entrypoint を module:app と誤解する）。② Root Directory が `backend-py` で `services.<app>.root` が `"."`、`entrypoint` が `apps/<app>/Dockerfile.vercel` か。③ Container Images(Beta) が有効か。※ `root:"."` が受け付けられない場合は project の Root Directory を repo ルートにし `root:"backend-py"` にする代替も可。 |
 | backend が起動直後に落ちる / 502 | サーバが `$PORT`（既定 80）で listen しているか確認。`api.main` は `PORT` 環境変数を読む。Doppler→Vercel(backend) で `SUPABASE_URL` / `POSTGRES_URL` 等が届いているかも確認。 |
 | `wire` が backend の preview URL を取れない | team/personal の slug 取得に失敗している可能性。`VERCEL_TEAM_ID` を確認（個人アカウントは空）。best-effort のため warn のみで継続する。 |
 | persistent branch 作成 API が失敗 | project の GitHub Integration(Branching) が dashboard で有効か確認（Phase 0）。CLI の git 紐付けフラグは `supabase branches create --help` で確認、確実なのは Management API の `git_branch`。 |

@@ -17,8 +17,21 @@
 # 別アプリを足すときは `apps/<app>/Dockerfile.vercel` を作り、`vercel.json` に service + rewrite を
 # 追加する（詳細は docs/deployment/README.md / backend-py/README.md）。
 #
-# devenv の定義（languages.python = 3.13 / uv workspace）と揃えている。
-# uv の公式 Docker ベストプラクティス（multi-stage / cache mount / --no-editable）に準拠。
+# ── devenv とローカル/本番の環境を揃えるための工夫 ──────────────────────────────
+# ローカルは devenv（devenv.nix）が Nix で環境を作り、本番はこの Dockerfile。両者を drift させない
+# ため、以下を「同じ事実」に固定している:
+#   1. Python 3.13     : ARG PYTHON_VERSION=3.13 = devenv の languages.python(pkgs.python313) = .python-version。
+#   2. uv              : devenv の languages.python.uv.enable と同じ uv を使う（pip で入れない）。
+#   3. **同一 uv.lock**: `uv sync --frozen` で lockfile を厳守 → devenv の `uv sync` と **完全に同じ解決結果**
+#                        （依存バージョンが本番とローカルで一致する。ここが最重要の整合ポイント）。
+#   4. Python 追加DL無 : UV_PYTHON_DOWNLOADS=0 = devenv がベースイメージ/Nix の python を使うのと同じ思想。
+#   5. 起動            : uvicorn api.app:app --proxy-headers（api.main） = devenv の backendExec の起動と同一
+#                        （本番は --reload 無し・$PORT のみ差分）。
+#   6. env             : PYTHONDONTWRITEBYTECODE=1 = env/backend/.env.local と一致。
+#   7. system libs     : devenv の packages(gcc/gnumake/libedit/libopus/libvpx) のうち、ビルドに要る gcc/make は
+#                        builder の build-essential で用意。libopus/libvpx（音声・映像=将来の LiveKit/PyAV 用）は
+#                        現状の依存では不要なので final には入れず、導入時に足す（下の final stage コメント参照）。
+# uv 公式 Docker ベストプラクティス（multi-stage / cache mount / --no-editable）に準拠。
 
 ARG PYTHON_VERSION=3.13
 

@@ -247,8 +247,10 @@ async def get_user(
 // backend-py/vercel.json
 {
   "services": {
-    "api": { "root": ".", "entrypoint": "apps/api/Dockerfile.vercel" }
-    // アプリ追加時はここに service を足す（例: "mcp": { "root": ".", "entrypoint": "apps/mcp/Dockerfile.vercel" }）
+    // runtime: "container" で Docker イメージとしてビルド（公式 Services 仕様。これが無いと
+    // Vercel が runtime を自動検出し、entrypoint を Dockerfile ではなく module:app と誤解する）。
+    "api": { "runtime": "container", "root": ".", "entrypoint": "apps/api/Dockerfile.vercel" }
+    // アプリ追加時はここに service を足す（例: "mcp": { "runtime": "container", "root": ".", "entrypoint": "apps/mcp/Dockerfile.vercel" }）
   },
   "rewrites": [{ "source": "/(.*)", "destination": { "service": "api" } }]
 }
