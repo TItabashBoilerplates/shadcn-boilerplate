@@ -1,13 +1,21 @@
 # syntax=docker/dockerfile:1
 #
-# Vercel 用 Dockerfile（FastAPI backend = backend-py workspace の apps/api）。
+# Vercel 用 Dockerfile（uv workspace の apps/api = FastAPI サーバ **1 アプリ 1 コンテナ**）。
 #
-# Vercel は project の Root Directory 直下にある `Dockerfile.vercel` を自動検出し、
-# 全トラフィックをこのコンテナへ rewrite する（https://vercel.com/docs/functions/container-images）。
-#   - Root Directory は `backend-py`（= このファイルがある場所 / uv workspace ルート）。
-#     ビルドコンテキストも `backend-py/` になるため `apps/` `packages/` `uv.lock` を参照できる。
+# モノレポ構成: backend-py は uv workspace（apps/api, apps/mcp, packages/core）。
+# アプリごとに `apps/<app>/Dockerfile.vercel` を置き、`backend-py/vercel.json` の `services`
+# から entrypoint として参照する（Vercel が service ごとに別コンテナをビルドする。
+# https://vercel.com/docs/functions/container-images）。
+#
+#   - **ビルドコンテキストは workspace ルート（backend-py/）**。Vercel project の Root Directory を
+#     `backend-py` にし、`vercel.json` の `services.api.entrypoint = "apps/api/Dockerfile.vercel"` で
+#     この Dockerfile を指す。コンテキストが workspace ルートなので `uv.lock` / `packages/core` /
+#     他 member の pyproject を解決できる（この Dockerfile 内のパスはすべてコンテキスト基準）。
 #   - サーバは `$PORT`（Vercel 既定 80）で listen する必要がある。api.main が $PORT を読む。
 #   - scale-in 時は SIGTERM + 30s grace。uvicorn が SIGTERM で graceful shutdown する。
+#
+# 別アプリを足すときは `apps/<app>/Dockerfile.vercel` を作り、`vercel.json` に service + rewrite を
+# 追加する（詳細は docs/deployment/README.md / backend-py/README.md）。
 #
 # devenv の定義（languages.python = 3.13 / uv workspace）と揃えている。
 # uv の公式 Docker ベストプラクティス（multi-stage / cache mount / --no-editable）に準拠。
@@ -36,6 +44,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 # 1) 依存だけ先に解決（プロジェクト本体は含めない）。
 #    依存は安定・本体は頻繁に変わるので層を分けてキャッシュ効率を最大化する。
 #    workspace の全 member の pyproject を bind mount する（uv がグラフを解決するのに必要）。
+#    ※ パスはすべてビルドコンテキスト（= workspace ルート backend-py/）基準。
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
@@ -44,8 +53,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=packages/core/pyproject.toml,target=packages/core/pyproject.toml \
     uv sync --frozen --no-dev --no-install-workspace
 
-# 2) ソースを入れて api service（+ workspace dep の core）を non-editable でインストール。
-#    --no-editable で site-packages にコピーされるため、final stage は .venv だけで完結する。
+# 2) ソースを入れて api service（+ workspace dep の core）だけ non-editable でインストール。
+#    --package api で api とその依存のみに絞る。--no-editable で site-packages にコピーされるため
+#    final stage は .venv だけで完結する（他アプリ apps/mcp は含めない = アプリ単位の分離）。
 COPY . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev --no-editable --package api

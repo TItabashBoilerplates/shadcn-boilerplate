@@ -4,9 +4,11 @@ Vercel（Web + FastAPI backend）/ Supabase（DB・Edge Functions・config）を
 ネイティブ Git 連携**で `git push` デプロイし、外部プロジェクトの初期構築を
 `infra-bootstrap`（scriptable な部分）＋一度きりの手動 dashboard 設定で行うための手順。
 
-> **backend も Vercel**: FastAPI backend は `backend-py/Dockerfile.vercel`（Vercel が自動検出する
-> コンテナ）で Vercel に載せる。web(Next.js) とは **別の Vercel project**（Root Directory =
-> `backend-py`）にする。詳細は [Vercel Container Images](https://vercel.com/docs/functions/container-images)。
+> **backend も Vercel（モノレポ = アプリごとに 1 コンテナ）**: backend-py は uv workspace
+> （apps/api, apps/mcp, packages/core）。各アプリの Dockerfile を `apps/<app>/Dockerfile.vercel` に置き、
+> `backend-py/vercel.json` の `services` から参照する（Vercel が service 単位で別コンテナをビルド）。
+> web(Next.js) とは **別の Vercel project**（Root Directory = `backend-py`、ビルドコンテキストは
+> workspace ルート）にする。詳細は [Vercel Container Images](https://vercel.com/docs/functions/container-images)。
 
 > 設計の意思決定ログ: `/Users/titabash/.claude/plans/`（または本リポジトリの PR 説明）。
 > 関連ルール: `.claude/rules/{mcp-doppler,mcp-supabase,database,supabase-config,commands}.md`。
@@ -199,7 +201,7 @@ git push origin main       # → prd:  各 PaaS 反映 + migrate は GitHub で�
 | 事象 | 対応 |
 |---|---|
 | Vercel preview env が CI でハング | CLI bug #15763。本構成は **REST API** で投入済み（`vercel.sh`）。手動時も API を使う。 |
-| backend project が Dockerfile を検出しない | Root Directory が `backend-py` か、ファイル名が **`Dockerfile.vercel`**（`backend-py/` 直下）か、Container Images(Beta) が有効かを確認。 |
+| backend project が Dockerfile を検出しない | Root Directory が `backend-py` か、`backend-py/vercel.json` の `services.<app>.entrypoint`（例 `apps/api/Dockerfile.vercel`）が正しいか、Container Images(Beta) が有効かを確認。 |
 | backend が起動直後に落ちる / 502 | サーバが `$PORT`（既定 80）で listen しているか確認。`api.main` は `PORT` 環境変数を読む。Doppler→Vercel(backend) で `SUPABASE_URL` / `POSTGRES_URL` 等が届いているかも確認。 |
 | `wire` が backend の preview URL を取れない | team/personal の slug 取得に失敗している可能性。`VERCEL_TEAM_ID` を確認（個人アカウントは空）。best-effort のため warn のみで継続する。 |
 | persistent branch 作成 API が失敗 | project の GitHub Integration(Branching) が dashboard で有効か確認（Phase 0）。CLI の git 紐付けフラグは `supabase branches create --help` で確認、確実なのは Management API の `git_branch`。 |

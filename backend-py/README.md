@@ -236,30 +236,49 @@ async def get_user(
 
 ## Container / Deploy
 
-### Vercel (Production — apps/api)
+### Vercel (Production — アプリごとに 1 コンテナ)
 
-`backend-py/Dockerfile.vercel` を使う。Vercel は project の **Root Directory 直下の
-`Dockerfile.vercel` を自動検出**し、全トラフィックをコンテナへ rewrite する
-（[公式ドキュメント](https://vercel.com/docs/functions/container-images)）。
+**モノレポ = アプリ 1 つにつき Dockerfile 1 つ**。各アプリの Dockerfile を
+`apps/<app>/Dockerfile.vercel` に置き、`backend-py/vercel.json` の [`services`](https://vercel.com/docs/functions/container-images)
+から entrypoint として参照する。Vercel は **service ごとに別コンテナ**をビルドし、`rewrites` で
+パスを振り分ける。
 
-> **重要**: Vercel の backend project は **Root Directory を `backend-py`**（uv workspace ルート）に
-> 設定する。`Dockerfile.vercel` はビルドコンテキストとして `apps/` `packages/` `uv.lock` を
-> 参照するため、`backend-py/apps/api/` ではなく **`backend-py/` をルート**にする必要がある。
-> project の作成・Root Directory 設定は `scripts/infra/vercel.sh`（`infra-bootstrap vercel`）が行う。
+```jsonc
+// backend-py/vercel.json
+{
+  "services": {
+    "api": { "root": ".", "entrypoint": "apps/api/Dockerfile.vercel" }
+    // アプリ追加時はここに service を足す（例: "mcp": { "root": ".", "entrypoint": "apps/mcp/Dockerfile.vercel" }）
+  },
+  "rewrites": [{ "source": "/(.*)", "destination": { "service": "api" } }]
+}
+```
 
-ポイント:
+> **重要（uv workspace）**: Vercel の backend project は **Root Directory を `backend-py`**
+> （uv workspace ルート）に設定する。各 Dockerfile の**ビルドコンテキストは workspace ルート**
+> （`services.<app>.root = "."`）なので、`uv.lock` / `packages/core` / 他 member の pyproject を
+> 解決できる。アプリ単体（`backend-py/apps/api`）を Root にすると workspace 解決が壊れる。
+> project 作成・Root Directory 設定は `scripts/infra/vercel.sh`（`infra-bootstrap vercel`）が行う。
+
+各コンテナ（apps/api）のポイント:
 
 | 項目 | 内容 |
 |------|------|
 | ポート | サーバは `$PORT`（Vercel 既定 80）で listen。`api.main` が `$PORT` を読む（ローカルは 4040 fallback） |
 | ビルド | uv 公式 multi-stage（cache mount / `--no-editable` / bytecode プリコンパイル）。Python 3.13 |
+| 分離 | `uv sync --package api` で api + `core` だけを入れる（`apps/mcp` は含めない） |
 | 起動 | `CMD ["api"]`（`[project.scripts] api = "api.main:main"`） |
 | shutdown | scale-in 時は SIGTERM + 30s grace。uvicorn が graceful shutdown |
 | ヘルスチェック | `GET /healthcheck` |
 | runtime secret | Doppler→Vercel ネイティブ連携（`SUPABASE_URL` / `POSTGRES_URL` 等）。詳細は `docs/deployment/README.md` |
 
+**新しいアプリ（例: apps/mcp）をコンテナ化する手順**:
+1. `apps/mcp/Dockerfile.vercel` を作る（`--package mcp-server` で対象アプリだけ入れ、`$PORT` で HTTP listen）。
+2. `backend-py/vercel.json` の `services` に `mcp` を追加し、`rewrites` に振り分けを足す（例: `/mcp/(.*)` → `mcp`）。
+3. provisioning（`vercel.sh` / Root Directory）は変更不要。
+
 システムライブラリ（LiveKit / PyAV 等の音声・映像系 = devenv の `libopus` / `libvpx`）を導入した
-場合は `Dockerfile.vercel` の final stage に runtime 共有ライブラリを追記する（ファイル内コメント参照）。
+場合は該当アプリの `Dockerfile.vercel` の final stage に runtime 共有ライブラリを追記する（ファイル内コメント参照）。
 
 ### devenv dockerTools (Other platforms / ローカル OCI — apps/api)
 
