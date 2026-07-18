@@ -121,7 +121,8 @@ log "devenv 環境を $ENV_FILE に書き出し（BASH_ENV 用）..."
 # direnv export は稀に空を返す（状態依存）。PATH を含む結果が得られるまで最大3回。
 devenv_env_json=""
 for _ in 1 2 3; do
-  devenv_env_json="$( cd "$REPO" && direnv allow . >/dev/null 2>&1; direnv export json 2>/dev/null )"
+  # `|| true`: direnv export が非ゼロ終了しても set -e で落とさずリトライさせる
+  devenv_env_json="$( cd "$REPO" && direnv allow . >/dev/null 2>&1; direnv export json 2>/dev/null )" || true
   if printf '%s' "$devenv_env_json" | jq -e 'has("PATH")' >/dev/null 2>&1; then break; fi
   devenv_env_json=""
 done
