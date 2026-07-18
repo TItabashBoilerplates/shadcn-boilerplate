@@ -39,8 +39,11 @@
 #       edge-runtime に egress 傍受 CA を信頼させる）。CCR は IPv6 が無く HTTPS が
 #       TLS 傍受されるため、素のイメージだと realtime（:eafnosupport）と edge-runtime
 #       （Deno の UnknownIssuer）が boot に失敗し `supabase start` がスタックごと落ちる。
-#       イメージ（ファイル）は環境キャッシュに残るので、調整はセットアップ時の1回で
-#       各セッション有効（＝プロセスと違い毎回やり直す必要がない）。
+#       ※ 環境キャッシュが docker データ（/var/lib/docker）を保持しない場合、`supabase
+#         start` は毎セッション素イメージを pull し直す。そのためパッチは setup 時（下記3）
+#         だけでなく、BASH_ENV ローダ（下記4）が毎セッション `--session-docker` モードで
+#         当て直す。パッチ済みは LABEL で検出しスキップするので冪等。BASH_ENV（上記2）を
+#         設定しないとこの当て直しが走らず realtime/edge-runtime が起動失敗する。
 #   （nix のプロキシ / TLS 設定 NIX_SSL_CERT_FILE 等は CCR が注入済みで追加不要）
 # ==============================================================================
 set -euo pipefail
@@ -140,6 +143,20 @@ DOCKER
 }
 
 # ------------------------------------------------------------------------------
+# セッション時モード（BASH_ENV ローダから呼ばれる）:
+#   dockerd 起動 + Supabase イメージ調整だけを行い、nix/devenv 導入はしない。
+#   CCR は docker データ（/var/lib/docker）をセッション跨ぎで保持しない場合があり、
+#   その場合 `supabase start` が毎セッション素イメージを pull し直す。よってイメージ
+#   パッチ（realtime→IPv4 / edge-runtime→CA）を setup 時（下記3）だけでなく毎セッション
+#   ここでも当て直す。パッチ済みは LABEL で検出しスキップするので冪等。
+# ------------------------------------------------------------------------------
+if [ "${1:-}" = "--session-docker" ]; then
+  ensure_dockerd
+  ensure_supabase_images || log "Supabase イメージ調整でエラー（継続）"
+  exit 0
+fi
+
+# ------------------------------------------------------------------------------
 # 1. nix + devenv + direnv を導入（未導入時のみ / 冪等）
 #    ★ CCR のビルド環境は systemd が無く / が claude 所有のため、Determinate の
 #      既定（--init systemd）だと determinate-nixd の init サービス設定
@@ -203,7 +220,8 @@ ensure_supabase_images || log "Supabase イメージ調整でエラー（継続�
 #      全非対話シェルがこのローダを source し:
 #        - devenv 環境（PATH 等）をセッション内キャッシュ経由で読み込み → lint /
 #          supabase-start 等が裸で通る（初回のみ devenv ビルドで時間がかかる。cachix で緩和可）
-#        - Docker デーモンが未起動なら1回だけ起動（プロセスはセッション跨ぎで残らない）
+#        - Docker デーモンが未起動なら1回だけ起動し、Supabase イメージを当て直す
+#          （--session-docker モード。プロセス／イメージはセッション跨ぎで残らない前提）
 #      _CCR_DEVENV_LOADED を即 export して、ビルド中に派生する子シェルの再入（デッドロック）
 #      を防ぎ、ロックで先着1プロセスだけが生成する。
 # ------------------------------------------------------------------------------
@@ -218,9 +236,19 @@ _ccr_repo="${CLAUDE_PROJECT_DIR:-/home/user/shadcn-boilerplate}"
 _ccr_cache=/root/.ccr-devenv-env.cache.sh
 _ccr_lock=/root/.ccr-devenv-env.lock
 
-# Docker デーモン（プロセスはセッション跨ぎで残らない）を1回だけ起動
+# Docker デーモン（プロセスはセッション跨ぎで残らない）と Supabase イメージ調整を
+# 1セッション1回。dockerd 未起動＝そのセッション初回なので、ここで dockerd 起動と
+# イメージパッチ（realtime→IPv4 / edge-runtime→CA）をまとめて実施する。イメージも
+# セッション跨ぎで保持されない場合があるため、setup 時だけでなく毎セッション当て直す
+# （setup script の --session-docker モードを再利用＝コード重複なし）。
 if command -v dockerd >/dev/null 2>&1 && ! pgrep -x dockerd >/dev/null 2>&1; then
-  ( setsid dockerd >/var/log/ccr-dockerd.log 2>&1 < /dev/null & ) >/dev/null 2>&1 || true
+  _ccr_setup="$_ccr_repo/scripts/claude-code-web-setup.sh"
+  if [ -f "$_ccr_setup" ]; then
+    bash "$_ccr_setup" --session-docker >>/var/log/ccr-dockerd.log 2>&1 || true
+  else
+    ( setsid dockerd >/var/log/ccr-dockerd.log 2>&1 < /dev/null & ) >/dev/null 2>&1 || true
+  fi
+  unset _ccr_setup
 fi
 
 # devenv 環境: キャッシュ未生成なら先着1プロセスだけが生成（初回はビルドで数分）
@@ -248,4 +276,6 @@ unset _ccr_repo _ccr_cache _ccr_lock _ccr_json 2>/dev/null || true
 LOADER
 
 log "完了。環境変数欄に BASH_ENV=$ENV_FILE を設定すれば、clone 後の初回 Bash で"
-log "devenv 環境（裸コマンド）と Docker が有効になります（初回のみ devenv ビルドで時間がかかる）。"
+log "devenv 環境（裸コマンド）/ Docker / Supabase イメージ調整が有効になります"
+log "（初回のみ devenv ビルド + イメージ pull/パッチで時間がかかる）。"
+log "★ BASH_ENV 未設定だとローダが動かず realtime/edge-runtime が起動失敗するので必須。"
