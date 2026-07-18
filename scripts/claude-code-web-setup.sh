@@ -63,17 +63,27 @@ ensure_dockerd() {
 
 # ------------------------------------------------------------------------------
 # 1. nix + devenv + direnv を導入（未導入時のみ / 冪等）
-#    入れ方は本リポジトリ CI 準拠（.github/workflows/ci.yml: nix profile add）
+#    ★ CCR のビルド環境は systemd が無く / が claude 所有のため、Determinate の
+#      既定（--init systemd）だと determinate-nixd の init サービス設定
+#      （systemd-tmpfiles）で "unsafe path transition" により失敗する。
+#      --init none（root-only nix、systemd 不要）で回避する。
 # ------------------------------------------------------------------------------
-if [ ! -e "$NIX_DAEMON_SH" ]; then
-  log "Determinate Nix をインストール..."
-  curl -fsSL https://install.determinate.systems/nix | sh -s -- install --no-confirm
+NIX_BIN=/nix/var/nix/profiles/default/bin/nix
+if [ ! -e "$NIX_BIN" ] && ! command -v nix >/dev/null 2>&1; then
+  log "Determinate Nix をインストール（--init none: systemd 不要 / root-only）..."
+  curl -fsSL https://install.determinate.systems/nix \
+    | sh -s -- install linux --init none --no-confirm \
+        ${NIX_SSL_CERT_FILE:+--ssl-cert-file $NIX_SSL_CERT_FILE}
 fi
 
-# セットアップシェルに nix をロード（NIX_SSL_CERT_FILE 等は CCR が注入済み）
+# セットアップシェルに nix を PATH 追加（--init none でも profile script は作られる）
 unset __ETC_PROFILE_NIX_SOURCED
-# shellcheck disable=SC1091
-. "$NIX_DAEMON_SH"
+for _f in "$NIX_DAEMON_SH" /nix/var/nix/profiles/default/etc/profile.d/nix.sh; do
+  # shellcheck disable=SC1090
+  [ -e "$_f" ] && { . "$_f"; break; }
+done
+# フォールバック: nix が PATH に無ければ profile bin を直接足す
+command -v nix >/dev/null 2>&1 || export PATH="/nix/var/nix/profiles/default/bin:$NIX_PROFILE_BIN:$PATH"
 
 for pkg in devenv direnv cachix; do
   if [ ! -e "$NIX_PROFILE_BIN/$pkg" ]; then
