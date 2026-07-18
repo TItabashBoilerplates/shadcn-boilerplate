@@ -33,6 +33,12 @@
 #   (c) Docker デーモンを起動（supabase-start / Supabase ローカルに必要）。
 #       CCR はプロセスをキャッシュしないため、各セッションでの起動は BASH_ENV
 #       ファイル内の遅延起動が担う。
+#   (d) Supabase ローカルイメージをこの環境向けに調整（realtime を IPv4 バインドに、
+#       edge-runtime に egress 傍受 CA を信頼させる）。CCR は IPv6 が無く HTTPS が
+#       TLS 傍受されるため、素のイメージだと realtime（:eafnosupport）と edge-runtime
+#       （Deno の UnknownIssuer）が boot に失敗し `supabase start` がスタックごと落ちる。
+#       イメージ（ファイル）は環境キャッシュに残るので、調整はセットアップ時の1回で
+#       各セッション有効（＝プロセスと違い毎回やり直す必要がない）。
 #   （nix のプロキシ / TLS 設定 NIX_SSL_CERT_FILE 等は CCR が注入済みで追加不要）
 # ==============================================================================
 set -euo pipefail
@@ -59,6 +65,75 @@ ensure_dockerd() {
     sleep 1
   done
   log "Docker 起動待ちタイムアウト（$DOCKERD_LOG 参照）。継続。"
+}
+
+# Supabase ローカルイメージをこの CCR 環境向けに調整（冪等 / IPv6 無し + TLS 傍受対策）。
+#   realtime     : HTTP エンドポイント/Erlang 分散を IPv6→IPv4（:eafnosupport 回避）
+#   edge-runtime : egress 傍受 CA を信頼ストアへ追加（Deno の UnknownIssuer 回避）
+# 同一タグで上書きビルド → `supabase start` は pull せずパッチ済みを使う。パッチ済みは
+# LABEL で検出してスキップ。イメージ（ファイル）は環境キャッシュに残るため1回で済む。
+ensure_supabase_images() {
+  local ca="${CCR_CA_BUNDLE:-/root/.ccr/ca-bundle.crt}"
+  local edge_default="public.ecr.aws/supabase/edge-runtime:v1.73.3"
+  local rt_default="public.ecr.aws/supabase/realtime:v2.82.0"
+  local marker="ccr.sandbox.patched"
+
+  # IPv6 があれば不要 / egress CA が無ければ別環境（＝ローカル）→ 何もしない
+  [ -e /proc/net/if_inet6 ] && { log "IPv6 あり → Supabase イメージ調整は不要。"; return 0; }
+  [ -f "$ca" ] || { log "egress CA 無し → Supabase イメージ調整をスキップ。"; return 0; }
+  command -v docker >/dev/null 2>&1 || return 0
+  docker info >/dev/null 2>&1 || { log "docker 未起動 → Supabase イメージ調整をスキップ。"; return 0; }
+
+  local ref ctx
+  # --- edge-runtime: egress 傍受 CA を信頼ストアへ ---
+  ref="$(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E 'supabase/edge-runtime:' | grep -v '<none>' | head -1 || true)"
+  ref="${ref:-$edge_default}"
+  docker image inspect "$ref" >/dev/null 2>&1 || { log "pull $ref"; docker pull "$ref" >/dev/null 2>&1 || log "pull 失敗: $ref（継続）"; }
+  if docker image inspect "$ref" >/dev/null 2>&1 \
+     && [ "$(docker image inspect "$ref" --format "{{ index .Config.Labels \"$marker\" }}" 2>/dev/null)" != "true" ]; then
+    ctx="$(mktemp -d)"; cp "$ca" "$ctx/ca-bundle.crt"
+    cat > "$ctx/Dockerfile" <<DOCKER
+FROM $ref
+COPY ca-bundle.crt /etc/ccr-ca-bundle.crt
+RUN cat /etc/ccr-ca-bundle.crt >> /etc/ssl/certs/ca-certificates.crt
+ENV DENO_CERT=/etc/ccr-ca-bundle.crt
+ENV SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+ENV DENO_TLS_CA_STORE=system
+LABEL $marker=true
+DOCKER
+    log "edge-runtime を egress CA 付きで再ビルド ($ref)"
+    docker build -q -t "$ref" "$ctx" >/dev/null || log "edge-runtime 再ビルド失敗（継続）"
+    rm -rf "$ctx"
+  else
+    log "edge-runtime は調整済み/スキップ ($ref)"
+  fi
+
+  # --- realtime: IPv6 → IPv4 バインドへ ---
+  ref="$(docker images --format '{{.Repository}}:{{.Tag}}' | grep -E 'supabase/realtime:' | grep -v '<none>' | head -1 || true)"
+  ref="${ref:-$rt_default}"
+  docker image inspect "$ref" >/dev/null 2>&1 || { log "pull $ref"; docker pull "$ref" >/dev/null 2>&1 || log "pull 失敗: $ref（継続）"; }
+  if docker image inspect "$ref" >/dev/null 2>&1 \
+     && [ "$(docker image inspect "$ref" --format "{{ index .Config.Labels \"$marker\" }}" 2>/dev/null)" != "true" ]; then
+    ctx="$(mktemp -d)"
+    cat > "$ctx/Dockerfile" <<'DOCKER'
+ARG BASE
+FROM ${BASE}
+# Phoenix エンドポイントの listen を IPv6→IPv4（バージョン非依存に runtime.exs 探索）
+RUN set -e; f="$(find /app/releases -maxdepth 2 -name runtime.exs | head -1)"; \
+    sed -i 's/socket_opts: \[:inet6\]/socket_opts: [:inet]/' "$f"; \
+    grep -q 'socket_opts: \[:inet\]' "$f"
+ENV ERL_AFLAGS="-proto_dist inet_tcp"
+ENV ECTO_IPV6=false
+ENV DB_IP_VERSION=ipv4
+LABEL ccr.sandbox.patched=true
+DOCKER
+    log "realtime を IPv4 バインドで再ビルド ($ref)"
+    docker build -q --build-arg "BASE=$ref" -t "$ref" "$ctx" >/dev/null || log "realtime 再ビルド失敗（継続）"
+    rm -rf "$ctx"
+  else
+    log "realtime は調整済み/スキップ ($ref)"
+  fi
+  return 0
 }
 
 # ------------------------------------------------------------------------------
@@ -104,13 +179,17 @@ done
 log "確認: $(command -v devenv) → $(devenv version 2>/dev/null || echo '??')"
 
 # ------------------------------------------------------------------------------
-# 3. Docker デーモンを起動（supabase-start / Supabase ローカル用）
+# 3. Docker デーモンを起動 → Supabase ローカルイメージを調整
 #    ※ CCR の環境キャッシュはファイルのみ保存しプロセスは保存しないため、ここで
 #      起動した dockerd は新規セッションには残らない。各セッションでの起動は下の
 #      BASH_ENV ファイル（毎シェル source）内の遅延起動が担う。ここでの起動は
 #      セットアップ時の事前ビルド／検証用。
+#    ※ Supabase イメージ（realtime / edge-runtime）はこの CCR 環境では素だと boot に
+#      失敗するため調整する。イメージ（ファイル）は環境キャッシュに残るのでここで1回
+#      やれば各セッションで有効（dockerd プロセスと違い毎回やり直す必要がない）。
 # ------------------------------------------------------------------------------
 ensure_dockerd
+ensure_supabase_images || log "Supabase イメージ調整でエラー（継続）"
 
 # ------------------------------------------------------------------------------
 # 4. devenv シェルを事前ビルド（環境キャッシュに焼く → 初回コマンドが速くなる）
