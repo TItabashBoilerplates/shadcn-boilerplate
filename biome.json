@@ -20,6 +20,7 @@
 			"!.shared",
 			"!.vscode",
 			"!supabase/functions",
+			"!e2e",
 			"!skills-lock.json"
 		]
 	}

@@ -1,0 +1,12 @@
+{
+  "name": "shadcn-boilerplate-e2e-ccr",
+  "private": true,
+  "version": "0.0.0",
+  "description": "CCR / web-sandbox E2E harness (Playwright + prebaked Chromium). Not part of the Bun workspace.",
+  "scripts": {
+    "otp-login": "node otp-login.ce2e.js"
+  },
+  "devDependencies": {
+    "playwright-core": "1.56.0"
+  }
+}

@@ -1049,6 +1049,9 @@ in
     "e2e"      = { exec = ''cd "$DEVENV_ROOT/.maestro" && maestro test .''; description = "Maestro E2E (all)"; };
     "e2e-web"  = { exec = ''cd "$DEVENV_ROOT/.maestro" && maestro test web/''; description = "Maestro E2E (web)"; };
     "e2e-mobile" = { exec = ''cd "$DEVENV_ROOT/.maestro" && maestro test mobile/''; description = "Maestro E2E (mobile)"; };
+    # CCR / web-sandbox only: Maestro has no runnable target here (web=0 devices,
+    # mobile=no emulator), so drive the web app via Playwright + prebaked Chromium.
+    "e2e-web-ccr" = { exec = ''exec bash "$DEVENV_ROOT/e2e/run-ccr.sh"''; description = "Web E2E for CCR sandbox (Playwright + Chromium)"; };
 
     # ---------- Drizzle ----------
     "drizzle-push"     = { exec = ''cd "$DEVENV_ROOT/drizzle" && nr push''; description = "Drizzle: push schema (no migration file)"; };

@@ -149,3 +149,7 @@ devenv.local.nix
 devenv.local.yaml
 .direnv/
 .pre-commit-config.yaml
+
+# CCR web-sandbox E2E artifacts
+e2e-results/ccr/
+e2e/node_modules/
