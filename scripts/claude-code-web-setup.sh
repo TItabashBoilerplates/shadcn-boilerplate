@@ -236,19 +236,38 @@ _ccr_repo="${CLAUDE_PROJECT_DIR:-/home/user/shadcn-boilerplate}"
 _ccr_cache=/root/.ccr-devenv-env.cache.sh
 _ccr_lock=/root/.ccr-devenv-env.lock
 
-# Docker デーモン（プロセスはセッション跨ぎで残らない）と Supabase イメージ調整を
-# 1セッション1回。dockerd 未起動＝そのセッション初回なので、ここで dockerd 起動と
-# イメージパッチ（realtime→IPv4 / edge-runtime→CA）をまとめて実施する。イメージも
-# セッション跨ぎで保持されない場合があるため、setup 時だけでなく毎セッション当て直す
-# （setup script の --session-docker モードを再利用＝コード重複なし）。
-if command -v dockerd >/dev/null 2>&1 && ! pgrep -x dockerd >/dev/null 2>&1; then
-  _ccr_setup="$_ccr_repo/scripts/claude-code-web-setup.sh"
-  if [ -f "$_ccr_setup" ]; then
-    bash "$_ccr_setup" --session-docker >>/var/log/ccr-dockerd.log 2>&1 || true
-  else
-    ( setsid dockerd >/var/log/ccr-dockerd.log 2>&1 < /dev/null & ) >/dev/null 2>&1 || true
+# Docker デーモンと Supabase イメージパッチ（realtime→IPv4 / edge-runtime→CA）を確保する。
+#   ★ 修正前は「dockerd が未起動のときだけ」パッチを結線していたため、dockerd が既に
+#     起動済みのセッションではパッチが当たらず、realtime(:eafnosupport) / edge-runtime
+#     (Deno UnknownIssuer) が boot に失敗していた。dockerd の起動有無に依存させず、
+#     「イメージが未パッチなら必ず当て直す」方式にする。両処理とも冪等
+#     （dockerd は docker info で早期 return、イメージは LABEL 検出でスキップ）。
+#   まず軽量なインライン検査（dockerd 稼働 & realtime/edge-runtime が patched=true）で
+#   確定済みなら何もしない。未確定のとき（dockerd 停止 / イメージ未 pull / 未パッチ）だけ
+#   重い --session-docker（pull+build 含む）を1回呼んで収束させる。
+if command -v dockerd >/dev/null 2>&1; then
+  _ccr_need=0
+  pgrep -x dockerd >/dev/null 2>&1 || _ccr_need=1
+  if [ "$_ccr_need" = 0 ]; then
+    for _ccr_img in realtime edge-runtime; do
+      _ccr_ref="$(docker images --format '{{.Repository}}:{{.Tag}}' 2>/dev/null | grep -E "supabase/${_ccr_img}:" | grep -v '<none>' | head -1 || true)"
+      if [ -z "$_ccr_ref" ] || [ "$(docker image inspect "$_ccr_ref" --format '{{ index .Config.Labels "ccr.sandbox.patched" }}' 2>/dev/null || true)" != "true" ]; then
+        _ccr_need=1; break
+      fi
+    done
   fi
-  unset _ccr_setup
+  if [ "$_ccr_need" = 1 ]; then
+    _ccr_setup="$_ccr_repo/scripts/claude-code-web-setup.sh"
+    if [ -f "$_ccr_setup" ]; then
+      bash "$_ccr_setup" --session-docker >>/var/log/ccr-dockerd.log 2>&1 || true
+    else
+      # clone 前など repo 不在時: dockerd だけ確保（イメージパッチは repo が要るため、
+      # repo が見える後続の別 Bash 呼び出しのローダが収束させる）。
+      pgrep -x dockerd >/dev/null 2>&1 || ( setsid dockerd >/var/log/ccr-dockerd.log 2>&1 < /dev/null & ) >/dev/null 2>&1 || true
+    fi
+    unset _ccr_setup
+  fi
+  unset _ccr_need _ccr_img _ccr_ref
 fi
 
 # devenv 環境: キャッシュ未生成なら先着1プロセスだけが生成（初回はビルドで数分）
