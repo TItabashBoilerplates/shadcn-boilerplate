@@ -5,4 +5,12 @@
  */
 export { AnalyticsIdentity } from './AnalyticsIdentity'
 export type { AnalyticsProperties } from './posthog'
-export { captureEvent, identifyUser, resetUser } from './posthog'
+export {
+  captureEvent,
+  hasAnalyticsDecision,
+  identifyUser,
+  isAnalyticsConfigured,
+  optInAnalytics,
+  optOutAnalytics,
+  resetUser,
+} from './posthog'

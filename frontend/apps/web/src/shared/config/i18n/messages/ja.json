@@ -72,5 +72,16 @@
     "backHome": "ホームに戻る",
     "globalTitle": "アプリケーションエラー",
     "globalDescription": "アプリケーションの読み込みに失敗しました。ページを再読み込みしてください。"
+  },
+  "CookieConsent": {
+    "title": "Cookie の同意",
+    "message": "プロダクトの利用状況を把握しサービスを改善するため、Cookie と PostHog 分析を使用します。同意または拒否を選べます。",
+    "accept": "同意する",
+    "decline": "拒否する"
+  },
+  "Metadata": {
+    "title": "shadcn Boilerplate",
+    "description": "認証・多言語対応・分析を備えた Next.js + Supabase のフルスタック・ボイラープレート。",
+    "siteName": "shadcn Boilerplate"
   }
 }

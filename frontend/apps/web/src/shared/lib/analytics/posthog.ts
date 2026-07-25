@@ -61,3 +61,40 @@ export function resetUser(): void {
     })
   }
 }
+
+/** PostHog のプロジェクトキーが設定されているか（未設定なら計測・同意バナーとも不要） */
+export const isAnalyticsConfigured = Boolean(process.env.NEXT_PUBLIC_POSTHOG_KEY)
+
+/**
+ * 計測に同意する（opt-in）。`instrumentation-client.ts` は既定で opt-out のため、
+ * ユーザーが明示的に許可したときにのみ計測・永続化を開始する。
+ */
+export function optInAnalytics(): void {
+  try {
+    posthog.opt_in_capturing()
+  } catch (error) {
+    logger.error('Failed to opt in to analytics', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+  }
+}
+
+/** 計測を拒否する（opt-out）。以降イベントは送信されず、Cookie/localStorage も使わない。 */
+export function optOutAnalytics(): void {
+  try {
+    posthog.opt_out_capturing()
+  } catch (error) {
+    logger.error('Failed to opt out of analytics', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+  }
+}
+
+/** ユーザーが既に同意 / 拒否を決定済みか（未決定なら同意バナーを表示する） */
+export function hasAnalyticsDecision(): boolean {
+  try {
+    return posthog.has_opted_in_capturing() || posthog.has_opted_out_capturing()
+  } catch {
+    return false
+  }
+}

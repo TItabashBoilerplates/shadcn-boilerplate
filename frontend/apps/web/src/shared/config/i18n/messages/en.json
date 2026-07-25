@@ -72,5 +72,16 @@
     "backHome": "Back to home",
     "globalTitle": "Application error",
     "globalDescription": "The application failed to load. Please reload the page."
+  },
+  "CookieConsent": {
+    "title": "Cookie consent",
+    "message": "We use cookies and PostHog analytics to understand product usage and improve your experience. You can accept or decline.",
+    "accept": "Accept",
+    "decline": "Decline"
+  },
+  "Metadata": {
+    "title": "shadcn Boilerplate",
+    "description": "A full-stack Next.js + Supabase boilerplate with authentication, i18n, and analytics.",
+    "siteName": "shadcn Boilerplate"
   }
 }

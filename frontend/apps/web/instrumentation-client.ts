@@ -24,6 +24,10 @@ if (posthogKey) {
     ui_host: 'https://us.posthog.com',
     defaults: '2026-01-30',
     capture_exceptions: true,
+    // 同意管理: 明示的な opt-in まで計測も永続化(Cookie/localStorage)も行わない。
+    // features/cookie-consent のバナーで opt_in_capturing() を呼ぶと計測が開始する。
+    opt_out_capturing_by_default: true,
+    opt_out_persistence_by_default: true,
     debug: process.env.NODE_ENV === 'development',
   })
 }
