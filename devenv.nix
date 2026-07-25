@@ -215,7 +215,7 @@ in
     #   - gh : GitHub environments / 承認ゲート / secret 設定（github.sh）
     #   - jq : 各 API レスポンスの JSON 整形（supabase/vercel/github）
     # Vercel は CLI バグ回避のため REST API(curl) 直叩き → vercel CLI は不要。
-    # backend も Vercel（Dockerfile.vercel コンテナ）へデプロイするため Railway CLI は不要。
+    # backend も Vercel（Dockerfile.vercel コンテナ）へデプロイするため、デプロイ用 CLI は REST API 直叩きで代替。
     pkgs.gh
     pkgs.jq
   ];
