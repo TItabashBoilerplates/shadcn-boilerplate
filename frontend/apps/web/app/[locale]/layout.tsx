@@ -7,6 +7,7 @@ import { notFound } from 'next/navigation'
 import { hasLocale, NextIntlClientProvider } from 'next-intl'
 import { getMessages, setRequestLocale } from 'next-intl/server'
 import { routing } from '@/shared/config/i18n'
+import { AnalyticsIdentity } from '@/shared/lib/analytics'
 import '@workspace/ui/styles/globals.css'
 
 const geistSans = Geist({
@@ -52,6 +53,8 @@ export default async function LocaleLayout({ children, params }: LocaleLayoutPro
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <QueryProvider>
           <AuthProvider>
+            {/* 認証状態を PostHog identify / reset に同期（レンダリングなし） */}
+            <AnalyticsIdentity />
             <OneSignalProvider appId={process.env.NEXT_PUBLIC_ONE_SIGNAL_APP_ID ?? ''}>
               <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
             </OneSignalProvider>

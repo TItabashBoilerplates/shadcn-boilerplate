@@ -121,6 +121,18 @@
       "sourceType": "github",
       "computedHash": "5f00d8934fef415e31bbae36b1cb8bfe59452eeff0e48dea27172d620a00c612"
     },
+    "instrument-integration": {
+      "source": "posthog/skills",
+      "sourceType": "github",
+      "skillPath": "skills/omnibus/instrument-integration/SKILL.md",
+      "computedHash": "76f2947495c432372af3d2113352057df1b8caaaba1fd5b1d8ec925cc1d64569"
+    },
+    "instrument-product-analytics": {
+      "source": "posthog/skills",
+      "sourceType": "github",
+      "skillPath": "skills/omnibus/instrument-product-analytics/SKILL.md",
+      "computedHash": "e674e35145c25ca7aa77b0bd1b32cf094dd1faa86599a1d55fd11573a68a8de2"
+    },
     "langchain-dependencies": {
       "source": "langchain-ai/langchain-skills",
       "sourceType": "github",

@@ -1,6 +1,8 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native'
 import { useColorScheme } from '@workspace/native-ui/hooks'
+import { PostHogProvider } from 'posthog-react-native'
 import type { PropsWithChildren } from 'react'
+import { posthog } from '@/shared/lib/analytics'
 import { OneSignalInitializer } from './OneSignalInitializer'
 
 /**
@@ -25,10 +27,14 @@ export function AppProvider({ children }: PropsWithChildren) {
   // const { user } = useAuth()
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      {/* OneSignal 初期化（認証連携は user?.id を渡す） */}
-      <OneSignalInitializer userId={undefined} />
-      {children}
-    </ThemeProvider>
+    // PostHog: usePostHog() を配下で利用可能にする。画面遷移は _layout で手動計測するため
+    // captureScreens は無効化し、タッチ autocapture のみ有効にする。
+    <PostHogProvider client={posthog} autocapture={{ captureScreens: false, captureTouches: true }}>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        {/* OneSignal 初期化（認証連携は user?.id を渡す） */}
+        <OneSignalInitializer userId={undefined} />
+        {children}
+      </ThemeProvider>
+    </PostHogProvider>
   )
 }

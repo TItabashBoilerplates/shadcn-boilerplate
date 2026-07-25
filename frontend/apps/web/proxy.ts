@@ -29,8 +29,9 @@ export default async function proxy(request: NextRequest) {
 export const config = {
   // 以下のパスを除くすべてのパス名にマッチ:
   // - /api で始まるもの
+  // - /ingest で始まるもの（PostHog リバースプロキシ: next.config.ts の rewrites 宛先）
   // - /_next で始まるもの（Next.js の内部ファイル）
   // - /_vercel で始まるもの（Vercel の内部ファイル）
   // - ドットを含むもの（静的ファイル: favicon.ico など）
-  matcher: ['/((?!api|_next|_vercel|.*\\..*).*)'],
+  matcher: ['/((?!api|ingest|_next|_vercel|.*\\..*).*)'],
 }
