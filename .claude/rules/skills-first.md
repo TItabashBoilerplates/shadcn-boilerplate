@@ -49,7 +49,7 @@
 | マイクロフロントエンド / multi-zones / microfrontends.json / @vercel/microfrontends / 単一ドメイン合成 / パスルーティング | `vercel-microfrontends`（公式）, `monorepo` |
 | Python モノレポ / uv workspace / backend-py の apps・packages / src-layout / MCP サーバ追加 | `python-monorepo` |
 | shadcn/ui / TailwindCSS | `shadcn`, `shadcn-ui`, `web-design-guidelines`, `frontend-design` |
-| gluestack / NativeWind / Expo / RN | `gluestack`（本リポジトリ規約）, `gluestack-ui-v5`（公式・v5 系）, `gluestack-ui-v4`（v4 系）, `tailwind-setup`, `building-ui`, `building-native-ui`, `vercel-react-native-skills`, `use-dom`, `expo-deployment`, `dev-client`, `expo-dev-client`, `upgrading-expo`, `expo-cicd-workflows`, `cicd-workflows`, `expo-tailwind-setup`, `expo-api-routes`, `api-routes` |
+| gluestack / NativeWind / Expo / RN | `gluestack`（本リポジトリ規約）, `gluestack-ui-v5`（公式）, `tailwind-setup`, `building-ui`, `building-native-ui`, `vercel-react-native-skills`, `use-dom`, `expo-deployment`, `dev-client`, `expo-dev-client`, `upgrading-expo`, `expo-cicd-workflows`, `cicd-workflows`, `expo-tailwind-setup`, `expo-api-routes`, `api-routes` |
 | TanStack Query | `tanstack-query` |
 | 状態管理 / 取得 (web) | `data-fetching` |
 | 状態管理 / 取得 (mobile) | `native-data-fetching` |

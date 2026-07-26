@@ -19,8 +19,11 @@ Mobile の UI ライブラリは **gluestack-ui v5 + NativeWind v5**。このス
 | NativeWind v5 / react-native-css のセットアップと制約 | `expo-tailwind-setup` | `expo/skills`（公式） |
 | モノレポ全体の責務分担・デザインシステム階層 | `monorepo` | 本リポジトリ |
 
-> v4 系の `gluestack-ui-v4` スキルも入っているが、**このリポジトリは v5**（`@gluestack-ui/core@^5`）。
-> 迷ったら v5 を見ること。
+> **v4 系のスキル（`gluestack-ui-v4`）は意図的に入れていない。** このリポジトリは v5
+> （`@gluestack-ui/core@^5` / `@gluestack-ui/utils@^5`）で、v4 スキルは
+> 「v4.gluestack.io のドキュメントのみ使え」「`@gluestack-ui/core@alpha` を入れろ」と
+> 指示するため、この構成では誤誘導になる。v4 の情報が必要になったときだけ
+> `npx skills add gluestack/agent-skills` で入れ直すこと。
 
 ## 配置
 

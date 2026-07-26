@@ -116,12 +116,6 @@
       "skillPath": "skills/gemini-live-api-dev/SKILL.md",
       "computedHash": "5cc49b0dcefb59b52577118a7898b51fa1913e1a7fd2986b5735796c3aa81030"
     },
-    "gluestack-ui-v4": {
-      "source": "gluestack/agent-skills",
-      "sourceType": "github",
-      "skillPath": ".agents/skills/gluestack-ui-v4/SKILL.md",
-      "computedHash": "5f00d8934fef415e31bbae36b1cb8bfe59452eeff0e48dea27172d620a00c612"
-    },
     "gluestack-ui-v5": {
       "source": "gluestack/agent-skills",
       "sourceType": "github",
