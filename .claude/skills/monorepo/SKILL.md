@@ -1,6 +1,6 @@
 ---
 name: monorepo
-description: Frontend モノレポ + FSD アーキテクチャガイダンス。Bun workspace構成、apps/packages、@workspace/* インポート、FSDレイヤーとの関係についての質問に使用。共有パッケージとFSD層の責務分担、新しいパッケージ追加の実装支援を提供。
+description: 本リポジトリの Frontend モノレポ実装のベストプラクティス。Bun workspace + Turborepo + FSD の責務分担、packages/ の依存の向き、デザインシステム（@workspace/tokens を正本とし Web/Native でクラス文字列は共有しない）の階層、CSS エントリの持ち方、Vercel Microfrontends 運用、新規パッケージ / 新規アプリ（デスクトップ含む）の追加手順を提供。packages/ や apps/ にコードを足す・移す・共通化する、@workspace/* の import 先に迷う、UI やトークンをプラットフォーム間で共有する、パッケージ間の依存の向きを判断する、といった場面では必ず最初に起動すること。
 ---
 
 # Frontend モノレポ + FSD アーキテクチャ
@@ -23,14 +23,28 @@ frontend/
 │   │       └── shared/         # FSD Shared層
 │   └── mobile/                  # Expo React Native App
 │
-└── packages/                    # 共有パッケージ（クロスプラットフォーム）
-    ├── auth/                    # @workspace/auth - 認証管理
-    ├── query/                   # @workspace/query - TanStack Query
-    ├── types/                   # @workspace/types - Supabase型
-    ├── ui/                      # @workspace/ui - shadcn/ui
-    ├── app/                     # @workspace/app - 共有ロジック
-    └── client/supabase/         # @workspace/client-supabase
+├── packages/                    # 共有パッケージ
+│   ├── tokens/                  # @workspace/tokens - ★デザインシステムの正本
+│   ├── ui/                      # @workspace/ui - shadcn/ui（Web / Desktop）
+│   ├── native-ui/               # @workspace/native-ui - gluestack-ui（Native）
+│   ├── auth/                    # @workspace/auth - 認証ストア
+│   ├── query/                   # @workspace/query - TanStack Query
+│   ├── app/                     # @workspace/app - 共有 entity / feature
+│   ├── types/                   # @workspace/types - Supabase 生成型
+│   ├── db-schema/               # @workspace/db-schema - Drizzle スキーマ（生成）
+│   ├── api-client/              # @workspace/api-client - Hey API 生成クライアント
+│   ├── logger/                  # @workspace/logger
+│   ├── onesignal/               # @workspace/onesignal
+│   └── client/supabase/         # @workspace/client-supabase
+│
+└── tooling/                     # 開発ツール設定（アプリではない）
+    ├── eslint/                  # @workspace/eslint-config（FSD 境界ルール）
+    └── typescript/              # @workspace/typescript-config
 ```
+
+> `packages/` に置いたからといって自動的に「クロスプラットフォーム」ではない。
+> `ui` は Web / Desktop 専用、`native-ui` は Native 専用で、**両者が共有するのは
+> `tokens` の中身だけ**。詳細は [design-system.md](design-system.md)。
 
 ## 責務の分担
 
@@ -91,12 +105,27 @@ import { cn } from '@/shared/lib/utils'
 
 | パッケージ | 名前 | 用途 | 利用先 |
 |-----------|------|------|--------|
+| `packages/tokens/` | @workspace/tokens | 色 / 角丸 / コンポーネント API 契約 | **全プラットフォーム** |
+| `packages/ui/` | @workspace/ui | shadcn/ui コンポーネント | Web, Desktop |
+| `packages/native-ui/` | @workspace/native-ui | gluestack-ui コンポーネント | Mobile |
 | `packages/auth/` | @workspace/auth | Zustand認証ストア | Web, Mobile |
 | `packages/query/` | @workspace/query | TanStack Query wrapper | Web, Mobile |
 | `packages/types/` | @workspace/types | Supabase生成型 | Web, Mobile, Edge |
-| `packages/ui/` | @workspace/ui | shadcn/ui | Web |
 | `packages/app/` | @workspace/app | 共有エンティティ・機能 | Web, Mobile |
 | `packages/client/supabase/` | @workspace/client-supabase | Supabaseクライアント | Web, Mobile |
+
+### 依存の向き（一方向を保つ）
+
+```
+apps/*  →  packages/ui | native-ui | auth | query | app | ...
+                         ↓
+                   packages/tokens        ← 何にも依存しない葉
+```
+
+`tokens` から `ui` / `native-ui` を import してはいけない。逆流させると、
+デザインシステムの正本がプラットフォーム実装に引きずられる。
+そのため**適合テストは各プラットフォームのパッケージが自分で持つ**
+（`packages/ui/src/components/__tests__/`、`packages/native-ui/components/*/__tests__/`）。
 
 ## Workspace Protocol
 
@@ -160,14 +189,27 @@ example.com
 
 | 追加したいもの | 配置場所 | 理由 |
 |---------------|---------|------|
-| Web/Mobile共通のロジック | `packages/` | クロスプラットフォーム共有 |
+| Web/Mobile共通のロジック | `packages/app/` 等 | クロスプラットフォーム共有 |
 | Webのみのページ | `apps/web/src/views/` | FSD Views層 |
 | Webのみの機能 | `apps/web/src/features/` | FSD Features層 |
 | Webのみのエンティティ | `apps/web/src/entities/` | FSD Entities層 |
-| 共通UIコンポーネント | `packages/ui/` | shadcn/ui管理 |
+| Web/Desktop の UI コンポーネント | `packages/ui/` | shadcn/ui |
+| Mobile の UI コンポーネント | `packages/native-ui/` | gluestack-ui |
+| 色・角丸・コンポーネント API 契約 | `packages/tokens/` | 全プラットフォームの正本 |
+
+## 関連スキル（先に起動するもの）
+
+| 目的 | スキル | 出典 |
+|------|--------|------|
+| turbo.json / タスクパイプライン / キャッシュ / `--filter` | **`turborepo`** | `vercel/turborepo`（公式） |
+| FSD のレイヤー・スライス設計 | **`feature-sliced-design`** | `feature-sliced/skills`（公式） |
+| マイクロフロントエンド合成 | **`vercel-microfrontends`** | `vercel-labs`（公式） |
+| Mobile UI の実装規約 | `gluestack` → `gluestack-ui-v5`（公式） | 本リポジトリ / gluestack |
+| Web UI の実装規約 | `shadcn`（公式） | shadcn |
 
 ## 詳細ドキュメント
 
+- **デザインシステムの階層と共有境界: [design-system.md](design-system.md)**
 - パッケージ詳細: [packages.md](packages.md)
 - 実装例: [examples.md](examples.md)
 - マイクロフロントエンド運用・認証分離: [microfrontends.md](../../../frontend/docs/monorepo/microfrontends.md)

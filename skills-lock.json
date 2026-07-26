@@ -119,7 +119,14 @@
     "gluestack-ui-v4": {
       "source": "gluestack/agent-skills",
       "sourceType": "github",
+      "skillPath": ".agents/skills/gluestack-ui-v4/SKILL.md",
       "computedHash": "5f00d8934fef415e31bbae36b1cb8bfe59452eeff0e48dea27172d620a00c612"
+    },
+    "gluestack-ui-v5": {
+      "source": "gluestack/agent-skills",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/gluestack-ui-v5/SKILL.md",
+      "computedHash": "2d7e2ed985d31d2d058d62d3e14c56e3e159c4417d12afc0b22f0ce9702fa0a1"
     },
     "instrument-integration": {
       "source": "posthog/skills",
@@ -235,6 +242,12 @@
       "source": "supabase/agent-skills",
       "sourceType": "github",
       "computedHash": "d606a1146be6d54fb9e73f718b5320b9acac5ff2ba2d7230a555df4b5a923b4a"
+    },
+    "turborepo": {
+      "source": "vercel/turborepo",
+      "sourceType": "github",
+      "skillPath": "skills/turborepo/SKILL.md",
+      "computedHash": "b142dd097207f438a624b9c3468576bac93fe7e4190fdfa48375983b815b29a8"
     },
     "two-factor-authentication-best-practices": {
       "source": "better-auth/skills",

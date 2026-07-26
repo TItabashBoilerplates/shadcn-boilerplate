@@ -43,8 +43,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 │   └── python-monorepo.md    # backend-py の uv workspace 構造（apps/+packages/、src-layout、単一uv.lock）必須
 │
 └── skills/         # 質問時に参照するガイダンス
+                    # 公式提供のものは skills-lock.json 管理（`npx skills add <owner>/<repo>`）。
+                    # 例: turborepo=vercel/turborepo, gluestack-ui-v5=gluestack/agent-skills,
+                    #     feature-sliced-design, supabase, shadcn, expo/skills 各種。
+                    # 独自スキルは .claude/skills/ 直下に SKILL.md を置く（lock 管理外）。
     ├── fsd/              # Feature Sliced Design
-    ├── monorepo/         # Bun workspace 構成 (frontend)
+    ├── monorepo/         # ★ モノレポ実装のベストプラクティス (Bun workspace + Turborepo + FSD)
+    │                     #   └ design-system.md: Web/Native/Desktop の共有境界
     ├── python-monorepo/  # uv workspace 構成 (backend-py: apps + packages, src-layout)
     ├── tanstack-query/   # TanStack Query v5
     ├── supabase/         # Supabase 認証・RLS
@@ -53,7 +58,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     ├── datetime/         # 日時処理
     ├── debugging/        # デバッグ手順（devenv 2.0 native CLI 優先・Supabase）
     ├── shadcn-ui/        # shadcn/ui + TailwindCSS (Web)
-    ├── gluestack/        # gluestack-ui + NativeWind (Mobile)
+    ├── gluestack/        # gluestack-ui 本リポジトリ規約 (Mobile) → 一般論は公式 gluestack-ui-v5
     ├── storybook/        # Storybook 10 コンポーネントカタログ
     ├── pgtap/            # RLS・DB 関数テスト（pgTAP + supabase test db）
     ├── python-testing/   # Python単体テスト（外部SDK/TypeError検知）

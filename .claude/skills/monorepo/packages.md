@@ -134,36 +134,51 @@ devenv tasks run model:build          # 全 model 再生成 (frontend + function
 
 ---
 
+## @workspace/tokens
+
+**目的**: デザインシステムの正本（色 / 角丸 / コンポーネント API 契約）
+
+**配置**: `packages/tokens/`
+
+```
+packages/tokens/
+├── src/
+│   ├── colors.ts       # OKLCh 正本
+│   ├── radius.ts
+│   ├── contract.ts     # バリアント名 / サイズ名 / 既定値 / 要求トークン
+│   ├── oklch.ts        # OKLCh → hex（RN の JS 側 API 用）
+│   └── index.ts
+├── web.css             # 生成物（.dark クラス）
+├── native.css          # 生成物（prefers-color-scheme）
+└── scripts/generate-css.ts
+```
+
+**何にも依存しない葉のパッケージ**。ここから `ui` / `native-ui` を import してはいけない。
+CSS は生成物なので `bun run tokens:build` で再生成する。
+
+→ 階層と共有境界の詳細は [design-system.md](design-system.md)
+
+---
+
 ## @workspace/ui
 
-**目的**: shadcn/ui コンポーネント集
+**目的**: shadcn/ui コンポーネント集（**Web / Desktop 用**）
 
 **配置**: `packages/ui/`
 
 ```
 packages/ui/
-├── components/
-│   ├── ui/                 # Radix UI primitives
-│   │   ├── button.tsx
-│   │   ├── card.tsx
-│   │   ├── input.tsx
-│   │   └── ...
-│   └── index.ts            # Public API
-├── lib/
-│   ├── utils.ts
-│   └── cn.ts
-├── index.ts
+├── src/
+│   ├── components/         # shadcn/ui コンポーネント + index.ts
+│   ├── magicui/            # MagicUI
+│   ├── lib/utils.ts        # cn()
+│   └── styles/globals.css  # 共有スタイルエントリ（@workspace/tokens/web.css を import）
+├── components.json         # shadcn CLI 設定
 └── package.json
 ```
 
-**Public API**:
-```typescript
-// components/index.ts
-export { Button } from './ui/button'
-export { Card, CardContent, CardHeader, CardTitle } from './ui/card'
-export { Input } from './ui/input'
-// ...
-```
+**アプリ固有のパスを `@source` に書かないこと**。書くとこのパッケージが
+特定アプリに結合し、デスクトップアプリ等から使えなくなる。
 
 **使用例**:
 ```typescript
@@ -184,6 +199,22 @@ import { Button, Card, Input } from '@workspace/ui/components'
 ```bash
 nlx shadcn@latest add button card input        # = bunx shadcn@latest add ...
 ```
+
+追加したコンポーネントは**編集してよい**（shadcn 公式が推奨する customization 手順）。
+upstream 更新は `--dry-run` / `--diff` でローカル改変を保ったまま取り込む。
+
+---
+
+## @workspace/native-ui
+
+**目的**: gluestack-ui コンポーネント集（**Mobile 用**）
+
+**配置**: `packages/native-ui/`
+
+クラス定義（`variants.ts`）を RN 非依存の別ファイルに分けることで、
+適合テストと Storybook がコンポーネントを起動せずに検証できる。
+
+→ 実装規約は `gluestack` スキル、gluestack 一般は公式スキル `gluestack-ui-v5`
 
 ---
 
@@ -279,6 +310,7 @@ const { data } = useSupabaseQuery({
 │   └── @workspace/types
 ├── @workspace/query
 ├── @workspace/ui
+│   └── @workspace/tokens          ← 葉
 ├── @workspace/app
 │   ├── @workspace/auth
 │   └── @workspace/client-supabase
@@ -286,10 +318,16 @@ const { data } = useSupabaseQuery({
     └── @workspace/types
 
 @workspace/mobile (apps/mobile)
+├── @workspace/native-ui
+│   └── @workspace/tokens          ← 葉（web と同じものを参照）
+├── @workspace/tokens
 ├── @workspace/auth
 ├── @workspace/app
 └── @workspace/client-supabase
 ```
+
+**`@workspace/tokens` が唯一の共有点**。`ui` と `native-ui` は互いに依存せず、
+tokens も実装側を import しない（一方向）。
 
 ---
 
