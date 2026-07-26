@@ -8,4 +8,5 @@ export {
   ButtonText,
 } from './button'
 export { Collapsible } from './collapsible'
+export { GluestackUIProvider } from './gluestack-ui-provider'
 export { IconSymbol } from './icon-symbol'

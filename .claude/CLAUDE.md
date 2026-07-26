@@ -89,7 +89,7 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 | Layer                 | Technology                                       |
 | --------------------- | ------------------------------------------------ |
 | **Frontend (Web)**    | Next.js 16, React 19, TypeScript, Bun            |
-| **Frontend (Mobile)** | Expo 55, React Native, TypeScript                |
+| **Frontend (Mobile)** | Expo 57, React Native, TypeScript                |
 | **UI (Web)**          | shadcn/ui, Radix UI, TailwindCSS 4               |
 | **UI (Mobile)**       | gluestack-ui, NativeWind 5, TailwindCSS 4        |
 | **State**             | TanStack Query (server), Zustand (global)        |

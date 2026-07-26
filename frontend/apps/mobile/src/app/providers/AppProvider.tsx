@@ -1,4 +1,6 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native'
+import { ThemeProvider } from '@react-navigation/native'
+import { GluestackUIProvider } from '@workspace/native-ui/components'
+import { NavigationDarkTheme, NavigationLightTheme } from '@workspace/native-ui/constants'
 import { useColorScheme } from '@workspace/native-ui/hooks'
 import { PostHogProvider } from 'posthog-react-native'
 import type { PropsWithChildren } from 'react'
@@ -30,10 +32,14 @@ export function AppProvider({ children }: PropsWithChildren) {
     // PostHog: usePostHog() を配下で利用可能にする。画面遷移は _layout で手動計測するため
     // captureScreens は無効化し、タッチ autocapture のみ有効にする。
     <PostHogProvider client={posthog} autocapture={{ captureScreens: false, captureTouches: true }}>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        {/* OneSignal 初期化（認証連携は user?.id を渡す） */}
-        <OneSignalInitializer userId={undefined} />
-        {children}
+      {/* ナビゲーションの配色も @workspace/tokens 由来（Web / Desktop と共通） */}
+      <ThemeProvider value={colorScheme === 'dark' ? NavigationDarkTheme : NavigationLightTheme}>
+        {/* gluestack-ui のオーバーレイ / トーストのポータル */}
+        <GluestackUIProvider>
+          {/* OneSignal 初期化（認証連携は user?.id を渡す） */}
+          <OneSignalInitializer userId={undefined} />
+          {children}
+        </GluestackUIProvider>
       </ThemeProvider>
     </PostHogProvider>
   )

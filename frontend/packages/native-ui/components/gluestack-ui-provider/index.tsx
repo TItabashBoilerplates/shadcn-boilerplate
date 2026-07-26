@@ -1,38 +1,21 @@
 import { OverlayProvider } from '@gluestack-ui/core/overlay/creator'
 import { ToastProvider } from '@gluestack-ui/core/toast/creator'
-import { useColorScheme } from 'nativewind'
-import type React from 'react'
-import { useEffect } from 'react'
-import { View, type ViewProps } from 'react-native'
-import { config } from './config'
+import type { PropsWithChildren } from 'react'
 
-export type ModeType = 'light' | 'dark' | 'system'
-
-export function GluestackUIProvider({
-  mode = 'light',
-  ...props
-}: {
-  mode?: ModeType
-  children?: React.ReactNode
-  style?: ViewProps['style']
-}) {
-  const { colorScheme, setColorScheme } = useColorScheme()
-
-  useEffect(() => {
-    setColorScheme(mode)
-  }, [mode, setColorScheme])
-
+/**
+ * gluestack-ui のオーバーレイ / トーストのポータルを提供する。
+ *
+ * デザイントークン（`--background` / `--primary` ...）はこのプロバイダーではなく
+ * `@workspace/tokens` が生成する CSS（mobile は `global.css` 経由）が single source of truth。
+ * ライト / ダークの切り替えは `@media (prefers-color-scheme: dark)` で行われるため、
+ * ここで色を注入したり color scheme を制御したりはしない。
+ *
+ * @see `.claude/rules/supabase-config.md` と同じ思想で「設定は 1 箇所」に寄せている
+ */
+export function GluestackUIProvider({ children }: PropsWithChildren) {
   return (
-    <View
-      style={[
-        config[colorScheme ?? 'light'],
-        { flex: 1, height: '100%', width: '100%' },
-        props.style,
-      ]}
-    >
-      <OverlayProvider>
-        <ToastProvider>{props.children}</ToastProvider>
-      </OverlayProvider>
-    </View>
+    <OverlayProvider>
+      <ToastProvider>{children}</ToastProvider>
+    </OverlayProvider>
   )
 }

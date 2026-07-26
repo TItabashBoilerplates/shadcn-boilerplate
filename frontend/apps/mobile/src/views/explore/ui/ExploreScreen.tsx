@@ -1,4 +1,5 @@
 import { IconSymbol } from '@workspace/native-ui/components'
+import { Colors } from '@workspace/native-ui/constants'
 import { ParallaxScrollView, ThemedText, ThemedView } from '@workspace/native-ui/layout'
 import { Image } from 'expo-image'
 import { Platform, StyleSheet } from 'react-native'
@@ -15,11 +16,11 @@ export function ExploreScreen() {
 
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
+      headerBackgroundColor={{ light: Colors.light.card, dark: Colors.dark.card }}
       headerImage={
         <IconSymbol
           size={310}
-          color="#808080"
+          color={Colors.light.icon}
           name="chevron.left.forwardslash.chevron.right"
           style={styles.headerImage}
         />
@@ -71,7 +72,6 @@ export function ExploreScreen() {
 
 const styles = StyleSheet.create({
   headerImage: {
-    color: '#808080',
     bottom: -90,
     left: -35,
     position: 'absolute',

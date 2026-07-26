@@ -1,3 +1,4 @@
+import { Colors } from '@workspace/native-ui/constants'
 import { ParallaxScrollView, ThemedText, ThemedView } from '@workspace/native-ui/layout'
 import { Image } from 'expo-image'
 import { Link } from 'expo-router'
@@ -16,7 +17,7 @@ export function HomeScreen() {
 
   return (
     <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
+      headerBackgroundColor={{ light: Colors.light.card, dark: Colors.dark.card }}
       headerImage={
         <Image
           source={require('@/assets/images/partial-react-logo.png')}

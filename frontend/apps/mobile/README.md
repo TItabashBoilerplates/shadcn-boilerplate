@@ -1,17 +1,17 @@
 # Mobile App
 
-Expo 55 React Native application with gluestack-ui and NativeWind styling.
+Expo 57 React Native application with gluestack-ui and NativeWind styling.
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|------------|
-| **Framework** | Expo 55, React Native |
+| **Framework** | Expo 57, React Native 0.86 |
 | **Routing** | Expo Router (file-based) |
 | **UI Library** | gluestack-ui |
 | **Styling** | NativeWind 5 (TailwindCSS for React Native) |
 | **State** | TanStack Query, Zustand |
-| **Icons** | lucide-react-native |
+| **Icons** | @expo/vector-icons / expo-symbols |
 
 ## Project Structure
 
@@ -21,21 +21,26 @@ apps/mobile/
 │   ├── (tabs)/             # Tab navigation
 │   ├── _layout.tsx         # Root layout
 │   └── +not-found.tsx      # 404 page
-├── components/             # App-specific components
-├── constants/              # App constants
-├── hooks/                  # App-specific hooks
-├── global.css              # TailwindCSS styles
-└── tailwind.config.ts      # TailwindCSS configuration
+├── src/                    # FSD layers (app / views / widgets / features / entities / shared)
+├── global.css              # CSS entry (imports @workspace/tokens/native.css)
+└── metro.config.js         # Metro + NativeWind v5
 ```
+
+> NativeWind v5 / TailwindCSS v4 は **CSS-first 設定**なので `tailwind.config.ts` は存在しない。
+> スキャン対象は `global.css` の `@source` で宣言する。
 
 ## UI Components
 
-This app uses **gluestack-ui** components from `@workspace/ui/mobile`:
+This app uses **gluestack-ui** components from `@workspace/native-ui`:
 
 ```typescript
-import { Button, ButtonText } from '@workspace/ui/mobile/components/button'
-import { GluestackUIProvider } from '@workspace/ui/mobile/components/gluestack-ui-provider'
+import { Button, ButtonText, GluestackUIProvider } from '@workspace/native-ui/components'
 ```
+
+`variant` / `size` の値は `@workspace/tokens/variants` が正本で、Web の
+`@workspace/ui` の Button とまったく同じ API になっている
+（`variant`: `default` / `secondary` / `destructive` / `outline` / `ghost` / `link`、
+`size`: `sm` / `default` / `lg` / `icon`）。
 
 ### Adding New Components
 
@@ -47,7 +52,7 @@ bun run ui:add:mobile button card input
 bunx gluestack-ui@latest add button --use-bun
 ```
 
-Components are installed to `packages/ui/mobile/components/`.
+Components are installed to `packages/native-ui/components/`.
 
 ### Available Components
 
@@ -201,9 +206,11 @@ bun run start --clear
 
 ### NativeWind Not Working
 
-1. Ensure `nativewind-env.d.ts` exists in `packages/ui/mobile/`
-2. Check `tailwind.config.ts` content paths include UI packages
-3. Restart Metro bundler
+1. Ensure `nativewind-env.d.ts` exists in `apps/mobile/` and `packages/native-ui/`
+2. Check that `global.css` の `@source` に該当パッケージが含まれているか
+   （`packages/native-ui` / `packages/tokens/src`）
+3. `metro.config.js` が `withNativewind` を使っているか（v4 の `withNativeWind` は deprecated）
+4. Restart Metro bundler (`bunx expo start --clear`)
 
 ### Type Errors
 

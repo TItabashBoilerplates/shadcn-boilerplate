@@ -156,7 +156,7 @@ frontend/
 ├──────────────────────────────────────────────────────────────┤
 │ @workspace/eslint-config                                     │
 │ @workspace/typescript-config                                 │
-│ @workspace/tailwind-config                                   │
+│ @workspace/tokens                                           │
 └──────────────────────────────────────────────────────────────┘
                              ▲
                              │
@@ -177,7 +177,7 @@ frontend/
 | `@workspace/web` | `@workspace/api-client` | APIクライアントを使用 |
 | `@workspace/api-client` | `@workspace/types` | API型を使用 |
 | `@workspace/ui` | `@workspace/typescript-config` | TypeScript設定を継承 |
-| `@workspace/ui` | `@workspace/tailwind-config` | TailwindCSS設定を継承 |
+| `@workspace/ui` | `@workspace/tokens` | TailwindCSS設定を継承 |
 
 ---
 

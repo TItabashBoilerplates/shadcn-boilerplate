@@ -24,7 +24,6 @@ frontend/
     ├── tokens/     # Design tokens
     ├── client-supabase/
     ├── query/      # TanStack Query
-    └── tailwind-config/
 ```
 
 ## DRY Principle (MANDATORY)

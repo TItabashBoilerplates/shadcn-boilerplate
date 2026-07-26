@@ -1,5 +1,11 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "extends": ["//"],
-  "tags": ["infra-pkg"]
+  "tags": ["infra-pkg"],
+  "tasks": {
+    "build": {
+      "inputs": ["src/**", "scripts/**"],
+      "outputs": ["web.css", "native.css"]
+    }
+  }
 }

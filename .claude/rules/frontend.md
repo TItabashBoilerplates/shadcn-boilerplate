@@ -21,10 +21,10 @@ paths: frontend/**/*.{ts,tsx,js,jsx}
 
 | Layer | Technology |
 |-------|------------|
-| Framework | Expo 55, React Native |
+| Framework | Expo 57, React Native |
 | UI Library | gluestack-ui + NativeWind 5 |
 | Styling | tva (Tailwind Variant Authority) |
-| Icons | lucide-react-native |
+| Icons | @expo/vector-icons / expo-symbols |
 
 ## Monorepo Structure
 
@@ -36,14 +36,47 @@ frontend/
 │   ├── web/              # Next.js Web アプリ
 │   └── mobile/           # Expo React Native アプリ
 └── packages/
-    ├── ui/
-    │   ├── web/          # shadcn/ui + MagicUI (Web専用)
-    │   └── mobile/       # gluestack-ui (Native専用)
-    ├── tokens/           # デザイントークン (共有)
-    ├── client-supabase/  # Supabase クライアント
-    ├── query/            # TanStack Query 設定
-    └── tailwind-config/  # TailwindCSS 共通設定
+    ├── tokens/           # ★ デザインシステムの正本 (色 / 角丸 / バリアント契約)
+    ├── ui/               # shadcn/ui + MagicUI (Web / Desktop 用)
+    ├── native-ui/        # gluestack-ui + NativeWind (Native 用)
+    ├── client/supabase/  # Supabase クライアント
+    └── query/            # TanStack Query 設定
 ```
+
+## Design System Sharing (MANDATORY)
+
+**`@workspace/tokens` がデザインシステムの single source of truth。** 色・角丸・
+コンポーネントのバリアント契約はここだけで定義し、各プラットフォームはそれを消費する。
+
+| 層 | 実体 | 消費側 |
+|----|------|--------|
+| トークン正本 (OKLCh) | `packages/tokens/src/colors.ts` `radius.ts` | 全プラットフォーム |
+| バリアント契約 | `packages/tokens/src/variants.ts` (`buttonRecipe`) | Web / Native 双方の Button |
+| CSS 変数 (Web / Desktop) | `packages/tokens/web.css` (`.dark` クラス) | `@workspace/ui` |
+| CSS 変数 (Native) | `packages/tokens/native.css` (`prefers-color-scheme`) | `apps/mobile/global.css` |
+| JS 解決値 (hex) | `packages/tokens/src/oklch.ts` の `resolvedColors` | react-navigation など hex しか受けない API |
+
+CSS は生成物。手で書き換えず `tokens:build`（`bun run tokens:build`）で再生成する。
+
+### 新しいアプリ（デスクトップ等）を足すとき
+
+Web 技術ベースのホスト（Electron / Tauri / 別 Next.js アプリ）は、CSS エントリで
+共有スタイルを import し、自分のソースパスだけ `@source` で足せばよい。
+`@workspace/ui` にアプリ固有パスを書き込んではいけない（パッケージが特定アプリに結合する）。
+
+```css
+/* apps/<new-app>/src/app/styles/globals.css */
+@import "@workspace/ui/styles/globals.css";
+
+@source "../../../app";
+@source "../../../src";
+```
+
+### 禁止事項
+
+- `packages/tokens` の外で色を定義する（`Colors` 定数の再定義、CSS への :root 直書き）
+- `bg-zinc-900` `text-white` `#0a7ea4` のような生のパレット / hex 指定
+- Web と Native で別々のバリアント名を持つ（`variant="solid"` vs `variant="default"` のような分岐）
 
 ## DRY Principle (MANDATORY)
 
@@ -53,12 +86,11 @@ frontend/
 
 | 対象 | 配置場所 | 例 |
 |------|---------|-----|
-| **Web UI コンポーネント** | `packages/ui/` | Button, Card, Input (shadcn/ui) |
+| **Web / Desktop UI コンポーネント** | `packages/ui/` | Button, Card, Input (shadcn/ui) |
 | **Mobile UI コンポーネント** | `packages/native-ui/` | Button, Card (gluestack-ui) |
-| **デザイントークン** | `packages/tokens/` | colors, radius |
+| **デザイントークン / バリアント契約 / Tailwind テーマ** | `packages/tokens/` | colors, radius, buttonRecipe, web.css, native.css |
 | **Supabase クライアント** | `packages/client-supabase/` | createClient, types |
 | **TanStack Query 設定** | `packages/query/` | QueryClient, hooks |
-| **TailwindCSS 設定** | `packages/tailwind-config/` | theme, plugins |
 | **型定義** | `packages/*/types/` | 共通インターフェース |
 | **ユーティリティ** | `packages/ui/lib/` or app の `shared/lib/` | cn, formatDate |
 

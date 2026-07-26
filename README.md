@@ -5,7 +5,7 @@
 This is a full-stack application boilerplate with a multi-platform frontend and backend services:
 
 - **Frontend (Web)**: Next.js 16, React 19, shadcn/ui, TailwindCSS 4, Bun
-- **Frontend (Mobile)**: Expo 55, React Native 0.82, gluestack-ui, NativeWind 5
+- **Frontend (Mobile)**: Expo 57, React Native 0.86, gluestack-ui, NativeWind 5
 - **Backend**: FastAPI (Python) with Supabase Edge Functions (Deno)
 - **Database**: PostgreSQL with Drizzle ORM for schema management and pgvector extension
 
@@ -14,7 +14,7 @@ This is a full-stack application boilerplate with a multi-platform frontend and 
 | Layer                 | Technology                                       |
 | --------------------- | ------------------------------------------------ |
 | **Frontend (Web)**    | Next.js 16, React 19, TypeScript, Bun            |
-| **Frontend (Mobile)** | Expo 55, React Native 0.82, TypeScript           |
+| **Frontend (Mobile)** | Expo 57, React Native 0.86, TypeScript           |
 | **UI (Web)**          | shadcn/ui, MagicUI, Radix UI, TailwindCSS 4      |
 | **UI (Mobile)**       | gluestack-ui, NativeWind 5, TailwindCSS 4        |
 | **State**             | TanStack Query v5 (server), Zustand (global)     |
@@ -98,7 +98,7 @@ By adopting these environments, we can ensure efficient development and maintain
 ### Frontend Architecture
 
 - **Web Application**: Next.js 16 with App Router and Turbopack for development
-- **Mobile Application**: Expo 55 with React Native 0.82 and Expo Router
+- **Mobile Application**: Expo 57 with React Native 0.86 and Expo Router
 - **Architecture**: Feature-Sliced Design (FSD) methodology with strict layer organization
 - **UI Framework (Web)**: shadcn/ui + MagicUI components built on Radix UI with TailwindCSS 4
 - **UI Framework (Mobile)**: gluestack-ui components with NativeWind 5 (TailwindCSS for React Native)
@@ -520,7 +520,7 @@ For details, see `.claude/skills/supabase/deploy.md`.
 The project includes integrations for:
 
 - **[Next.js 16](https://nextjs.org/)**: React framework with App Router and Turbopack
-- **[Expo 55](https://expo.dev/)**: React Native development platform
+- **[Expo 57](https://expo.dev/)**: React Native development platform
 - **[shadcn/ui](https://ui.shadcn.com/)**: UI component library built on Radix UI (Web)
 - **[MagicUI](https://magicui.design/)**: Animated UI components (Web)
 - **[gluestack-ui](https://gluestack.io/)**: UI component library (Mobile)

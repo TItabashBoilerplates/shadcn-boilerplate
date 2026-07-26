@@ -10,7 +10,7 @@
 2. [package.json](#packagejson) - パッケージ定義
 3. [tsconfig.json](#tsconfigjson) - TypeScript設定
 4. [components.json](#componentsjson) - shadcn/ui設定
-5. [tailwind.config.ts](#tailwindconfigts) - TailwindCSS設定
+5. [TailwindCSS (v4 / CSS-first)](#tailwindcss-v4--css-first) - TailwindCSS設定
 6. [eslint.config.mjs](#eslintconfigmjs) - ESLint設定
 
 ---
@@ -280,7 +280,7 @@
   "devDependencies": {
     "@workspace/eslint-config": "workspace:*",
     "@workspace/typescript-config": "workspace:*",
-    "@workspace/tailwind-config": "workspace:*",
+    "@workspace/tokens": "workspace:*",
     "@types/node": "^24.9.1",
     "@types/react": "^19.2.2",
     "typescript": "^5"
@@ -553,79 +553,65 @@
 
 ---
 
-## tailwind.config.ts
+## TailwindCSS (v4 / CSS-first)
 
-### apps/web/tailwind.config.ts
+TailwindCSS 4 は **CSS-first 設定**なので `tailwind.config.ts` は存在しない。
+テーマもスキャン対象も CSS の中で宣言する。
 
-**場所:** `frontend/apps/web/tailwind.config.ts`
+### packages/tokens
 
-```typescript
-import type { Config } from "tailwindcss"
-import { preset } from "@workspace/tailwind-config"
+デザイントークンの正本。`bun run tokens:build` で 2 つの CSS を生成する。
 
-const config: Config = {
-  content: [
-    "./src/**/*.{js,ts,jsx,tsx,mdx}",
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
-    "../../packages/ui/components/**/*.{js,ts,jsx,tsx}"
-  ],
-  presets: [preset],
-  theme: {
-    extend: {
-      // アプリ固有のカスタマイズ
-    },
-  },
-  plugins: [],
-}
+| 生成物 | 用途 | ダークモードの切り替え |
+|--------|------|----------------------|
+| `web.css` | Web / Desktop（`@workspace/ui` が import） | `.dark` クラス |
+| `native.css` | Mobile（`apps/mobile/global.css` が import） | `@media (prefers-color-scheme: dark)` |
 
-export default config
+どちらも同じ `@theme inline` マッピングを持つので、`bg-primary` などの
+ユーティリティ名はプラットフォーム間で完全に共通になる。
+
+### packages/ui/src/styles/globals.css
+
+共有 UI パッケージのスタイルエントリ。**アプリ固有のパスを書いてはいけない。**
+
+```css
+@import "tailwindcss" source(none);
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@workspace/tokens/web.css";
+
+@source "../../";
+@source "../../../tokens/src";
+
+@custom-variant dark (&:is(.dark *));
 ```
 
-#### `content`
+### apps/web/src/app/styles/globals.css
 
-```typescript
-content: [
-  "./src/**/*.{js,ts,jsx,tsx,mdx}",
-  "../../packages/ui/components/**/*.{js,ts,jsx,tsx}"
-]
+アプリ側のエントリ。共有スタイルを import し、自分の `@source` だけを足す。
+デスクトップアプリを追加する場合もこの 3 行を自分のパスで書けばよい。
+
+```css
+@import "@workspace/ui/styles/globals.css";
+
+@source "../../../app";
+@source "../../../src";
 ```
-- Tailwindがスキャンするファイルのパス
-- **重要:** `packages/ui`も含める（共有コンポーネント）
 
----
+### apps/mobile/global.css
 
-### tooling/tailwind/preset.ts
+```css
+@import "@workspace/tokens/native.css";
 
-**場所:** `frontend/tooling/tailwind/preset.ts`
-
-```typescript
-import type { Config } from "tailwindcss"
-
-export const preset: Config = {
-  theme: {
-    extend: {
-      colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
-        },
-        // ...
-      },
-      borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
-      },
-    },
-  },
-  plugins: [require("tailwindcss-animate")],
-}
+@source "./app";
+@source "./src";
+@source "../../packages/native-ui";
+@source "../../packages/tokens/src";
 ```
+
+> `@source` に `packages/tokens/src` を含めるのを忘れないこと。
+> 共有バリアント定義（`buttonRecipe`）のクラス文字列がここにあるため、
+> 外すと Button のスタイルが丸ごと欠落する。
 
 ---
 
@@ -774,7 +760,7 @@ bun run scripts/generate-types.ts
 | `package.json` | パッケージ定義、スクリプト | 各パッケージ |
 | `tsconfig.json` | TypeScript設定 | 各パッケージ |
 | `components.json` | shadcn/ui設定 | apps/web |
-| `tailwind.config.ts` | TailwindCSS設定 | apps/web |
+| `src/app/styles/globals.css` | TailwindCSS エントリ (v4 CSS-first) | apps/web |
 | `eslint.config.mjs` | ESLint設定 | 各パッケージ |
 
 ### 設定の継承関係

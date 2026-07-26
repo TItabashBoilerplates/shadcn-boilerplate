@@ -10,7 +10,7 @@ import { CookieConsentBanner } from '@/features/cookie-consent'
 import { APP_URL } from '@/shared/config/app'
 import { routing } from '@/shared/config/i18n'
 import { AnalyticsIdentity } from '@/shared/lib/analytics'
-import '@workspace/ui/styles/globals.css'
+import '@/app/styles/globals.css'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',

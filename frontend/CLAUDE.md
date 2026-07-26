@@ -653,7 +653,6 @@ frontend/
 ├── package.json          # Dependencies and scripts
 ├── bun.lock              # Bun lockfile (equivalent to package-lock.json)
 ├── postcss.config.mjs    # PostCSS configuration for Tailwind
-├── tailwind.config.ts    # Tailwind CSS configuration
 └── tsconfig.json         # TypeScript configuration with FSD paths
 ```
 

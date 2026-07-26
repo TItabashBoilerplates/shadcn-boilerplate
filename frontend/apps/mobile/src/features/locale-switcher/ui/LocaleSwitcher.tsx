@@ -20,7 +20,7 @@ export function LocaleSwitcher() {
       {supportedLocales.map((loc) => (
         <Button
           key={loc}
-          variant={locale === loc ? 'solid' : 'outline'}
+          variant={locale === loc ? 'default' : 'outline'}
           size="sm"
           onPress={() => changeLocale(loc)}
         >
