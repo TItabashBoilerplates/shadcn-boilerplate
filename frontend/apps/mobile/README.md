@@ -37,7 +37,7 @@ This app uses **gluestack-ui** components from `@workspace/native-ui`:
 import { Button, ButtonText, GluestackUIProvider } from '@workspace/native-ui/components'
 ```
 
-`variant` / `size` の値は `@workspace/tokens/variants` が正本で、Web の
+`variant` / `size` の値は `@workspace/tokens/contract` が正本で、Web の
 `@workspace/ui` の Button とまったく同じ API になっている
 （`variant`: `default` / `secondary` / `destructive` / `outline` / `ghost` / `link`、
 `size`: `sm` / `default` / `lg` / `icon`）。

@@ -5,9 +5,7 @@
     "composite": true,
     "baseUrl": ".",
     "paths": {
-      "@workspace/native-ui/*": ["./*"],
-      "@workspace/tokens": ["../../tokens/src"],
-      "@workspace/tokens/*": ["../../tokens/src/*"]
+      "@workspace/native-ui/*": ["./*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", "nativewind-env.d.ts"],

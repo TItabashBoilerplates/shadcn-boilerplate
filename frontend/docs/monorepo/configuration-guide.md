@@ -606,12 +606,11 @@ TailwindCSS 4 は **CSS-first 設定**なので `tailwind.config.ts` は存在�
 @source "./app";
 @source "./src";
 @source "../../packages/native-ui";
-@source "../../packages/tokens/src";
 ```
 
-> `@source` に `packages/tokens/src` を含めるのを忘れないこと。
-> 共有バリアント定義（`buttonRecipe`）のクラス文字列がここにあるため、
-> 外すと Button のスタイルが丸ごと欠落する。
+> Tailwind のクラス文字列を持つパッケージは必ず `@source` に含めること。
+> `packages/tokens` はトークンと API 契約だけを持ちクラス文字列を持たないので対象外
+> （クラス文字列は `packages/ui` / `packages/native-ui` が各自で所有する）。
 
 ---
 

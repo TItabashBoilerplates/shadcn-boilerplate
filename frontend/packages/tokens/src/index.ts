@@ -1,7 +1,7 @@
 export * from './colors'
+export * from './contract'
 export * from './oklch'
 export * from './radius'
-export * from './variants'
 
 /**
  * Convert camelCase to kebab-case.

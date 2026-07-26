@@ -15,5 +15,3 @@
 @source "./app";
 @source "./src";
 @source "../../packages/native-ui";
-/* 共有バリアント定義（buttonRecipe など）のクラス文字列もスキャン対象に含める */
-@source "../../packages/tokens/src";

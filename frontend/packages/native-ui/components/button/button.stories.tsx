@@ -1,15 +1,15 @@
 import type { Meta, StoryObj } from '@storybook/react'
-import { buttonSize, buttonVariant } from '@workspace/tokens/variants'
+import { BUTTON_SIZES, BUTTON_VARIANTS } from '@workspace/tokens/contract'
 import { View } from 'react-native'
 import { Button, ButtonText } from './index'
 
-const VARIANTS = Object.keys(buttonVariant) as (keyof typeof buttonVariant)[]
-const SIZES = Object.keys(buttonSize) as (keyof typeof buttonSize)[]
+const VARIANTS = BUTTON_VARIANTS
+const SIZES = BUTTON_SIZES
 
 /**
  * Mobile Button。
  *
- * `variant` / `size` の値は `@workspace/tokens/variants` 由来で、
+ * `variant` / `size` の値は `@workspace/tokens/contract` 由来で、
  * Web の `@workspace/ui` の Button とまったく同じ API になっている。
  */
 const meta = {
@@ -19,11 +19,11 @@ const meta = {
   argTypes: {
     variant: {
       control: 'select',
-      options: VARIANTS,
+      options: [...VARIANTS],
     },
     size: {
       control: 'select',
-      options: SIZES,
+      options: [...SIZES],
     },
     isDisabled: {
       control: 'boolean',

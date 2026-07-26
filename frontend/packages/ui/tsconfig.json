@@ -5,9 +5,7 @@
     "composite": true,
     "baseUrl": ".",
     "paths": {
-      "@workspace/ui/*": ["./src/*"],
-      "@workspace/tokens": ["../tokens/src"],
-      "@workspace/tokens/*": ["../tokens/src/*"]
+      "@workspace/ui/*": ["./src/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"],
