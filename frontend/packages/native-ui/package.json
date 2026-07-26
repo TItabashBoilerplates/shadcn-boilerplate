@@ -20,7 +20,6 @@
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",
     "@gluestack-ui/core": "^5.0.15",
-    "@gluestack-ui/nativewind-utils": "^1.0.28",
     "@gluestack-ui/utils": "^5.0.6",
     "@react-navigation/native": "^7.3.14",
     "@workspace/tokens": "workspace:*",
