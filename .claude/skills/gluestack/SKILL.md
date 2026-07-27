@@ -25,6 +25,33 @@ Mobile の UI ライブラリは **gluestack-ui v5 + NativeWind v5**。このス
 > 指示するため、この構成では誤誘導になる。v4 の情報が必要になったときだけ
 > `npx skills add gluestack/agent-skills` で入れ直すこと。
 
+## gluestack MCP（`gluestack`）— props 早見表として使う。import はここを正本にする
+
+`.mcp.json` に `gluestack` MCP を登録している（公式 [gluestack/mcp](https://github.com/gluestack/mcp)）。
+公開ツールは 3 つで、37 コンポーネントの props / バリアント / 画面構成例を返す。
+
+| ツール | 用途 |
+|--------|------|
+| `get_all_components_metadata` | 全コンポーネントの title / description 一覧 |
+| `select_components` | 作りたい画面に必要なコンポーネントを選ぶ |
+| `get_selected_components_docs` | 選んだコンポーネントの props・使用例を取得 |
+
+**CRITICAL — この MCP のドキュメントは v2 世代**で、`@/components/ui/button`（CLI コピー方式）を
+前提にしている。本リポジトリは v5 + `@workspace/native-ui` なので、**MCP の出力をそのまま
+貼ると import と配置を間違える**。責務を次のように分けること。
+
+| 何を知りたいか | 正本 |
+|---------------|------|
+| props 名・variant/action/size の取りうる値・画面の組み立て方 | `gluestack` MCP（参考値） |
+| **import パス・ファイル配置・tva/creator の書き方・トークン契約** | **このスキル + `gluestack-ui-v5`** |
+
+つまり MCP は「どんな props があるか」の早見表に留め、**コードの形は必ずこのスキルに合わせる**。
+props も v5 で変わっている可能性があるため、最終確認は `@gluestack-ui/core` の型に取ること。
+
+> 起動には `git` / `node` / `npm` が必要。初回だけ pinned commit を
+> `~/.cache/gluestack-mcp/<sha>` に clone + install し、以降は再利用する（`scripts/mcp/gluestack-mcp.sh`）。
+> 手動確認は `gluestack-mcp` script。上流を更新するときは同スクリプトの `GLUESTACK_MCP_REF` を差し替える。
+
 ## 配置
 
 ```

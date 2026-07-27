@@ -21,6 +21,12 @@
         "mcp"
       ]
     },
+    "gluestack": {
+      "command": "bash",
+      "args": [
+        "scripts/mcp/gluestack-mcp.sh"
+      ]
+    },
     "maestro": {
       "command": "maestro",
       "args": [

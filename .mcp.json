@@ -16,6 +16,12 @@
 			"command": "npx",
 			"args": ["shadcn@latest", "mcp"]
 		},
+		"gluestack": {
+			"type": "stdio",
+			"command": "bash",
+			"args": ["scripts/mcp/gluestack-mcp.sh"],
+			"env": {}
+		},
 		"maestro": {
 			"command": "maestro",
 			"args": ["mcp"]

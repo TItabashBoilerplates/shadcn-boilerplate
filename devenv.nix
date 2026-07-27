@@ -898,6 +898,17 @@ in
       description = "Sync .mcp.json (正本) → Codex / Cursor の MCP 設定を再生成";
     };
 
+    # gluestack-ui MCP サーバ（stdio）。公式 github.com/gluestack/mcp は npm 未公開・bin なしで
+    # npx から起動できないため、ランチャが pinned commit の clone + install をキャッシュして起動する。
+    # .mcp.json からは `bash scripts/mcp/gluestack-mcp.sh` として呼ばれる。手動確認用に script も公開。
+    "gluestack-mcp" = {
+      exec = ''
+        cd "$DEVENV_ROOT"
+        exec bash scripts/mcp/gluestack-mcp.sh "$@"
+      '';
+      description = "gluestack-ui MCP サーバを stdio で起動（手動確認用。通常は .mcp.json 経由）";
+    };
+
     # ---------- Dev preset（モノレポのアプリ別起動プリセット）----------
     # frontendApps から `dev-<name>` script と `dev-all` を自動生成する。
     # 個別の手書き宣言は不要 — `frontendApps` に 1 行追加すれば連動する。
