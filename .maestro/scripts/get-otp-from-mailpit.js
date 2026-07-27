@@ -13,8 +13,8 @@
  *   - MAX_RETRIES: 最大リトライ回数 (default: 10)
  */
 
-const MAILPIT_API = (MAILPIT_URL || "http://localhost:54324") + "/api/v1";
-const MAX_WAIT_RETRIES = parseInt(MAX_RETRIES) || 10;
+const MAILPIT_API = `${MAILPIT_URL || "http://localhost:54324"}/api/v1`;
+const MAX_WAIT_RETRIES = parseInt(MAX_RETRIES, 10) || 10;
 const RETRY_DELAY_MS = 1000;
 
 /**

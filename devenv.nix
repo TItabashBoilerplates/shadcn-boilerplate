@@ -687,8 +687,17 @@ in
         "frontend/apps/mobile/package.json"
       ];
     };
+    # `--all-packages` は必須。素の `uv run` は virtual workspace root (package = false) の
+    # deps + dev group だけを同期し、**member (api / core / mcp-server) とその依存
+    # (pydantic / fastapi / starlette 等) をインストールしない**。
+    # mypy は `ignore_missing_imports = true` なので、その状態では未解決 import が `Any` に落ち、
+    # `Class cannot subclass "BaseModel" (has type "Any")` のような**実際のコードとは無関係な
+    # 型エラー**が出る。`devenv test` は venv が `.devenv/test-state/venv` に切り替わり
+    # setup:install-backend の execIfModified キャッシュが効いて同期されないため、この経路で
+    # 再現していた。`--all-packages` を付けると mypy 実行前に全 member が入るので、
+    # どの venv でも state に依らず同じ結果になる。
     "type-check:backend-py" = {
-      exec = ''cd "$DEVENV_ROOT/backend-py" && uv run mypy apps packages'';
+      exec = ''cd "$DEVENV_ROOT/backend-py" && uv run --all-packages mypy apps packages'';
       execIfModified = [
         "backend-py/apps/*/src/**/*.py"
         "backend-py/packages/*/src/**/*.py"
@@ -1040,7 +1049,10 @@ in
 
     # ---------- Tests ----------
     "test-frontend"   = { exec = ''cd "$DEVENV_ROOT/frontend" && nr test''; description = "Vitest (frontend)"; };
-    "test-backend-py" = { exec = ''cd "$DEVENV_ROOT/backend-py" && uv run pytest''; description = "pytest (backend-py workspace)"; };
+    # mypy と同じ理由で `--all-packages` が必要。素の `uv run pytest` は workspace member を
+    # インストールしないため、同期済み venv 以外では `ModuleNotFoundError: structlog` 等で
+    # collection error になる（実測）。`--all-packages` で venv の state に依存しなくなる。
+    "test-backend-py" = { exec = ''cd "$DEVENV_ROOT/backend-py" && uv run --all-packages pytest''; description = "pytest (backend-py workspace)"; };
     "test-db"         = { exec = ''supabase test db --local''; description = "pgTAP DB tests"; };
     # NOTE: `test` という名前は bash 組み込みコマンド（`[` と等価）と衝突し、
     # PATH 上の同名スクリプトより builtin が優先される。CI で `run: test` を呼ぶと
@@ -1161,14 +1173,16 @@ in
     # ビルトインの mypy フックは project root から `mypy` を直接呼ぶため、
     # backend-py の uv venv (workspace 共有) にインストールされたパッケージを解決できず
     # import-not-found が大量に出る。
-    # `cd backend-py && uv run mypy apps packages` の形に上書きすることで venv 内の
+    # `cd backend-py && uv run --all-packages mypy apps packages` の形に上書きすることで venv 内の
     # mypy + 全依存を見つけられるようにする。pass_filenames=false でファイル列を
     # 受け取らずワークスペース全体で実行 (= type-check:backend-py task と同じ挙動)。
+    # `--all-packages` の理由は type-check:backend-py task のコメント参照（素の `uv run` は
+    # workspace member を入れないので pydantic 等が未解決 → `Any` 化して偽の型エラーになる）。
     mypy = {
       enable = true;
       files = "^backend-py/(apps|packages)/[^/]+/src/.*\\.py$";
       pass_filenames = false;
-      entry = lib.mkForce ''${pkgs.bash}/bin/bash -c 'cd "$(git rev-parse --show-toplevel)/backend-py" && uv run mypy apps packages' '';
+      entry = lib.mkForce ''${pkgs.bash}/bin/bash -c 'cd "$(git rev-parse --show-toplevel)/backend-py" && uv run --all-packages mypy apps packages' '';
     };
 
     # ----- Edge Functions: Deno format -----
