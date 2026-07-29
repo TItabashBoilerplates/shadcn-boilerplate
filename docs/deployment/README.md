@@ -64,7 +64,7 @@ Vercel（Web + FastAPI backend）/ Supabase（DB・Edge Functions・config）を
 > **マイグレは Drizzle が source of truth（意図的）**。Supabase ネイティブ連携 / Branching が読む
 > migrations は `supabase/migrations/*.sql` のみで、Drizzle の `drizzle/migrations/`（フォルダ形式）は
 > 対象外（branch は production の db dump で初期化される）。Drizzle の追加差分は `migrate.yml` が
-> 各 env の `DATABASE_URL`（= 各 branch の接続情報）へ適用する。
+> 各 env の `POSTGRES_URL`（= 各 branch の接続情報）へ適用する。
 
 ---
 
@@ -86,18 +86,28 @@ CLI では代替できない前提づくり。
      - staging/develop の persistent branch は Phase 1 の `infra-bootstrap`(supabase) が作成する。
      - ⚠️ persistent branch は long-lived＝常時 compute 課金（Micro 約 $0.0134/h, Spend Cap 対象外）。
        develop を常時必要としないなら PR時のみの preview 運用も検討。
-   - **Vercel ⇄ Supabase（Marketplace Connect Account）**: Vercel project の *Settings > Integrations >
-     Browse Marketplace > Supabase > **Connect Account*** で、**上で作った独立 Supabase を接続**する
-     （Native の「新規作成」ではなく **Connect**。`vercel integration add supabase` でも可）。これで
-     `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` 等が **Vercel に自動注入**される。
+   - **Vercel ⇄ Supabase（Marketplace Connect Account）**: **web / backend の両 Vercel project** で
+     *Settings > Integrations > Browse Marketplace > Supabase > **Connect Account*** から、
+     **上で作った独立 Supabase を接続**する（Native の「新規作成」ではなく **Connect**。
+     `vercel integration add supabase` でも可）。これで `SUPABASE_URL` /
+     `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` / `NEXT_PUBLIC_SUPABASE_*` / `POSTGRES_*` が
+     **各 project に自動注入**される。**backend も Vercel project（Services）なので同じ経路で賄える**
+     → Supabase の値を Doppler で配る必要は無い（`.claude/rules/env-naming.md`）。
      - ⚠️ 注入キー名（新 publishable/secret 体系か旧 anon/service_role か）は連携後に Vercel の
-       Environment Variables 画面で実機確認し、アプリ参照名と一致させる。
+       Environment Variables 画面で実機確認し、アプリ参照名と一致させる
+       （web: `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`、
+       backend: `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY`）。ズレていれば **Vercel 側で別名を追加**して合わせる。
 3. **API トークン発行**（値はチャット / コミットに出さない）:
-   - `VERCEL_TOKEN`（Full Access。web / backend 両 project の作成・env 設定・domain 取得に使う）
-   - `SUPABASE_ACCESS_TOKEN`（PAT）/ `SUPABASE_DB_PASSWORD`（単一 project の DB パスワード）
+   - `VC_TOKEN`（Vercel Full Access。web / backend 両 project の作成・env 設定・domain 取得に使う）
+   - `SB_ACCESS_TOKEN`（Supabase PAT）/ `SB_DB_PASSWORD`（単一 project の DB パスワード）
    - `GH_TOKEN`（または `gh auth login` 済み）
    - これらを **Doppler の bootstrap 用 config** に投入（doppler MCP / dashboard）。
      `infra-bootstrap` が `doppler run` でこの config から環境変数として注入する。
+
+   > ⚠️ **キー名から `VERCEL_` / `SUPABASE_` / `GITHUB_` prefix を落としてあるのは意図的**。
+   > 予約 prefix を Doppler に登録すると sync が予約値違反で落ちるため（`.claude/rules/env-naming.md`）。
+   > Supabase CLI が要求する `SUPABASE_ACCESS_TOKEN` へは `scripts/infra/lib.sh` の
+   > `supabase_cli_auth()` がプロセス内で読み替える（Doppler には登録しない）。
 
 > Doppler の書き込みは `.claude/rules/mcp-doppler.md` のフェーズ制に従う（現在 `初期構築(full-access)`）。
 
@@ -128,26 +138,34 @@ infra-bootstrap supabase github # 一部だけ再実行も可
 | `supabase` | **1 project 作成**（ref を `.outputs`）＋ **persistent branch(staging/develop)** を Management API で作成 |
 | `vercel` | **web + backend の 2 project** 作成 + repo 接続 + rootDirectory（web=`frontend/apps/web` / backend=`backend-py`）+ **静的な**非機密 env（REST API, upsert） |
 | `github` | environment(dev/staging/production) + **production 承認ゲート** + 環境別 `DOPPLER_TOKEN`(read-only) |
-| `wire` | **生成値を取得して Doppler に格納**（Doppler が backend/edge へ fan-out）＋ backend(Vercel) endpoint を Vercel(web) にも直接 set |
+| `wire` | **Vercel 外の消費者向けの生成値を Doppler に格納**（migration 用 `POSTGRES_URL` / mobile 用 `EXPO_PUBLIC_*`）＋ backend(Vercel) endpoint を Vercel(web) にも直接 set。Supabase の値は Marketplace 任せで扱わない |
 
 > 出力された `scripts/infra/.outputs`（project ref / URL。非機密）は wire の入力に使う。
 
 ### 生成値の自動配線（手動管理しない）
 
-**所有/配線モデル（ユーザー決定）**: Supabase は独立所有。Vercel(web) へは **Marketplace「Connect Account」**で Supabase env が自動注入される。Vercel(web) 以外（Vercel backend/Expo/migration/edge）へは **Doppler 経由**で配る。よって `wire` ステップは「**生成値を取得 → Doppler の各 config(dev/stg/prd) に格納**」する（外部 API キーは対象外＝ユーザーが Doppler に直接投入）。
+**所有/配線モデル（ユーザー決定）**: Supabase は独立所有。**web / backend はどちらも Vercel project**（backend は Vercel Services のコンテナ）なので、**両方に Marketplace「Connect Account」を張れば Supabase env は Vercel 側へ自動注入**される。したがって **`wire` は Supabase の値を一切扱わない**。`wire` が Doppler に入れるのは「**Vercel の外にいる消費者**が必要とする値」だけ（外部 API キーは対象外＝ユーザーが Doppler に直接投入）。
+
+> ⚠️ **`SUPABASE_` / `VERCEL_` / `GITHUB_` prefix のキーは Doppler に登録禁止**（各 PF の予約名前空間 →
+> sync が予約値違反で落ちる）。詳細は `.claude/rules/env-naming.md`。
 
 | 生成値（Doppler に格納するキー） | 由来 | 受け取る側 |
 |---|---|---|
-| `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` | project本体=`api-keys`＋`https://<ref>.supabase.co` / branch=`branches get -o env` | Vercel backend・edge |
-| `POSTGRES_URL` / `DATABASE_URL` | 直結 DB 接続（branch は `POSTGRES_URL_NON_POOLING`） | backend / Drizzle migration |
-| `EXPO_PUBLIC_SUPABASE_URL` / `..._PUBLISHABLE_KEY` | 同上 | mobile(EAS) |
+| `POSTGRES_URL` | 直結 DB 接続（production=`db.<ref>.supabase.co`、branch=`POSTGRES_URL_NON_POOLING`） | Drizzle migration（GitHub Actions） |
+| `EXPO_PUBLIC_SUPABASE_URL` / `..._PUBLISHABLE_KEY` | project本体=`api-keys`＋`https://<ref>.supabase.co` / branch=`branches get -o env` | mobile(EAS) |
 | `NEXT_PUBLIC_BACKEND_PY_URL` / `EXPO_PUBLIC_BACKEND_PY_URL` | backend(Vercel) project の公開ドメイン（本番=project domain、preview=`<project>-git-<branch>-<slug>.vercel.app`） | web / mobile |
 
 配布経路:
-- **Vercel(web)** … `wire` が **`NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` / `NEXT_PUBLIC_BACKEND_PY_URL` を Vercel に直接 set**。
-  - ⚠️ Marketplace「Connect Account」も Supabase env を注入するが、**注入名が旧 anon 体系**（`NEXT_PUBLIC_SUPABASE_ANON_KEY`）で、リポジトリの期待名（`..._PUBLISHABLE_KEY`）と食い違う。`wire` が期待名を直接 set するため**注入名に依存せず動く**（Marketplace 連携は branching 連携/課金一元化の用途）。
-- **Vercel(backend) / Supabase(edge)** … Doppler ネイティブ連携が config の値を sync（backend は `SUPABASE_URL` / `SUPABASE_SECRET_KEY` / `POSTGRES_URL` 等をランタイムで受け取る）。
-- **migration(GitHub Actions)** … `DATABASE_URL` を Doppler から取得（env スコープ `DOPPLER_TOKEN`）。
+- **Vercel(web) / Vercel(backend) の Supabase env** … **Marketplace「Connect Account」が自動注入**
+  （`SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` / `NEXT_PUBLIC_SUPABASE_*` /
+  `POSTGRES_*`）。**Doppler にも `wire` にも持たせない**（二重管理の禁止）。
+  - ⚠️ 注入されるキー名は新体系（publishable/secret）／旧体系（anon/service_role）で揺れる。
+    **Connect 後に Vercel の Environment Variables 画面で実機確認**し、アプリの参照名
+    （web: `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`、
+    backend: `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY`）と一致させる。ズレていれば
+    **Vercel 側で別名を追加**して合わせる（Doppler には戻さない）。
+- **Vercel(web) の backend endpoint** … Marketplace の管轄外なので `wire` が `NEXT_PUBLIC_BACKEND_PY_URL` を直接 set。
+- **migration(GitHub Actions)** … `POSTGRES_URL` を Doppler から取得（env スコープ `DOPPLER_TOKEN`）。
 - **mobile(EAS)** … Doppler に置いた `EXPO_PUBLIC_*` を EAS 側で取り込む（EAS の env 機構は別途・要設定）。
 - **edge functions の `SUPABASE_URL`/`ANON`/`SERVICE_ROLE`/`SUPABASE_DB_URL`** … Supabase ランタイムが**自動注入**（配線不要）。
 > **外部 API キー（OpenAI 等）は対象外**＝ユーザーが Doppler に直接投入し、各所へ native sync。
@@ -156,16 +174,19 @@ infra-bootstrap supabase github # 一部だけ再実行も可
 
 ## Phase 2 — 手動（dashboard 専用の残り）
 
-1. **Doppler ネイティブ連携（secret sync）**を環境別に接続（*Doppler project > Integrations*）:
-   - **Vercel(backend)**: backend project に Doppler を接続し、config を対応（→ `SUPABASE_URL` /
-     `SUPABASE_SECRET_KEY` / `POSTGRES_URL` 等が backend コンテナのランタイム env に届く）。
-     backend は RLS を跨ぐ処理で service_role を使うため、backend project にのみ secret を配る。
-   - Supabase(edge): Access Token を貼り、**branch 単位**で対応（OneSignal 等 edge secret 用）
-   - Vercel(web): **任意**。Supabase env は Marketplace Connect で入るため、Doppler→Vercel(web) は基本不要
-     （使うなら Supabase キーが二重化しないよう注意。backend URL は wire が Vercel(web) に直接 set 済み）。
-2. **外部 API キー（OpenAI/Stripe 等）を Doppler の各 config に投入**（doppler MCP。値は露出しない）。
-   ※ **Supabase の URL/keys/DB接続・backend(Vercel) endpoint は Phase 1 の `wire` が Doppler に自動投入済み**
+1. **Vercel ⇄ Supabase の Marketplace 連携を web / backend の両 project に張る**（Phase 0-2 の続き）:
+   各 Vercel project の *Settings > Integrations > Supabase > **Connect Account*** で同一 Supabase を接続。
+   これで両 project に Supabase env が自動注入される（Doppler で配らない）。**注入キー名は画面で実機確認**。
+2. **Doppler ネイティブ連携（secret sync）**を環境別に接続（*Doppler project > Integrations*）:
+   - **Vercel(backend)**: 外部 API キー（OpenAI 等）を backend コンテナに届けるために接続。
+     **Supabase の値は Marketplace が入れるので Doppler 側に置かない**。
+   - Supabase(edge): Access Token を貼り、**branch 単位**で対応（OneSignal 等 edge secret 用）。
+     `SUPABASE_*` は platform の default secrets で入るため対象外。
+   - Vercel(web): **任意**（web が必要とする外部 secret がある場合のみ）。
+3. **外部 API キー（OpenAI/Stripe 等）を Doppler の各 config に投入**（doppler MCP。値は露出しない）。
+   ※ **`POSTGRES_URL` / `EXPO_PUBLIC_*` / backend(Vercel) endpoint は Phase 1 の `wire` が Doppler に自動投入済み**
      （手動不要）。ここで入れるのは「外部から持ち込む secret」だけ。
+   ※ **`SUPABASE_` / `VERCEL_` / `GITHUB_` prefix のキーは作らない**（`.claude/rules/env-naming.md`）。
 3. **env ファイルは不要**（リモートは Doppler 一本）:
    - **リモート(dev/stg/prd)** の非機密も秘密もすべて Doppler に集約される（生成値=`wire` が投入、
      外部 secret=手順2）。`.env.<dev|staging|production>` ファイルは**作らない**（gitignore 済みで

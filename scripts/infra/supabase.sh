@@ -5,7 +5,7 @@
 #   - project は **1つだけ**（環境 prefix は付けない）。default branch = git の main = production。
 #   - staging/develop は persistent branch として作成し、git branch に紐付ける（git_branch）。
 #   - branch DB は production の db dump で初期化されるため空にはならない。Drizzle の追加差分は
-#     migrate.yml が各 env の DATABASE_URL（= 各 branch の接続情報を Doppler/env に格納）へ適用。
+#     migrate.yml が各 env の POSTGRES_URL（= 各 branch の接続情報を Doppler に格納）へ適用。
 #
 # - project 作成: `supabase projects create`（CLI、実機 v2.90 でフラグ確認済み）。
 # - branch 作成: Management API `POST /v1/projects/{ref}/branches`（body の git_branch/persistent は
@@ -26,11 +26,11 @@ sb_api() {
   local method="$1" path="$2" body="${3:-}"
   if [ -n "$body" ]; then
     curl -fsS -X "$method" "${SUPABASE_API}${path}" \
-      -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+      -H "Authorization: Bearer ${SB_ACCESS_TOKEN}" \
       -H "Content-Type: application/json" -d "$body"
   else
     curl -fsS -X "$method" "${SUPABASE_API}${path}" \
-      -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}"
+      -H "Authorization: Bearer ${SB_ACCESS_TOKEN}"
   fi
 }
 
@@ -45,11 +45,11 @@ ensure_project() {
   if [ -n "$ref" ]; then
     ok "Supabase project '$name' は存在（ref=$ref）"
   else
-    require_env SUPABASE_DB_PASSWORD
+    require_env SB_DB_PASSWORD
     log "Supabase project '$name'（=production, 単一）を作成..."
     ref="$(supabase projects create "$name" \
             --org-id "$SUPABASE_ORG_ID" \
-            --db-password "$SUPABASE_DB_PASSWORD" \
+            --db-password "$SB_DB_PASSWORD" \
             --region "$SUPABASE_REGION" \
             --size "$SUPABASE_SIZE" \
             --yes -o json 2>/dev/null | jq -r '.id')"
@@ -88,7 +88,7 @@ main() {
   require_tool jq
   require_tool curl
   load_config
-  require_env SUPABASE_ACCESS_TOKEN
+  supabase_cli_auth
   : "${APP_NAME:?config.env に APP_NAME が必要}"
   : "${SUPABASE_ORG_ID:?}"; : "${SUPABASE_REGION:?}"; : "${SUPABASE_SIZE:?}"
 
@@ -106,7 +106,7 @@ main() {
   done
 
   warn "各 persistent branch の接続情報は 'supabase branches get <branch> -o env' の POSTGRES_URL_NON_POOLING。"
-  warn "それを Doppler の stg/dev config（DATABASE_URL 等）に格納すると migrate.yml がそのまま使える（runbook Phase 2）。"
+  warn "それを Doppler の stg/dev config の POSTGRES_URL に格納すると migrate.yml がそのまま使える（runbook Phase 2）。"
 }
 
 main "$@"

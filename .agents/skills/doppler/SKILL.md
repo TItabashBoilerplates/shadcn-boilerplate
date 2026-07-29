@@ -26,6 +26,9 @@ description: Doppler（シークレットマネージャ）の利用ガイダン
      platform が **default secrets** として自動提供。ローカルは `env/*/.env.local`（ファイル＝対象外）。
    - 自前で持つ必要がある場合は prefix を落とす: `SB_ACCESS_TOKEN` / `SB_DB_PASSWORD` / `VC_TOKEN` /
      `VC_TEAM_ID` / `GH_TOKEN`。`NEXT_PUBLIC_SUPABASE_URL` のように**先頭でなければ可**。
+   - **`doppler-set` / `doppler-import` は予約 prefix を検知して拒否する**（登録前に落ちる）。
+     Supabase CLI が要求する `SUPABASE_ACCESS_TOKEN` へは `scripts/infra/lib.sh` の
+     `supabase_cli_auth()` が `SB_ACCESS_TOKEN` からプロセス内で読み替える。
 3. **トークン・シークレットをコミットしない**。`.mcp.json` / `doppler.yaml` / `devenv.nix` の
    いずれにも `DOPPLER_TOKEN` や生のシークレットを書かない。
 4. **本番（prd）への write はフェーズ制**（`.claude/rules/mcp-doppler.md`）。初期構築は full-access、

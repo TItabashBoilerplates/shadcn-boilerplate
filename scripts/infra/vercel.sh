@@ -10,7 +10,7 @@
 #       service + rewrite を足すだけ（provisioning 側の変更不要）。
 #
 # CLI には既知の対話プロンプトバグ(#15763: preview env)や rootDirectory 設定フラグ欠如が
-# あるため、**REST API(https://api.vercel.com) を直叩き**する（VERCEL_TOKEN で Bearer 認証）。
+# あるため、**REST API(https://api.vercel.com) を直叩き**する（VC_TOKEN で Bearer 認証）。
 #
 # ⚠️ 前提: Vercel GitHub App が対象 repo に install 済み（dashboard, 一度きり）でないと
 #    gitRepository 紐付けは失敗する（runbook Phase 0）。
@@ -76,7 +76,7 @@ main() {
   require_tool curl
   require_tool jq
   load_config
-  require_env VERCEL_TOKEN
+  require_env VC_TOKEN
   : "${APP_NAME:?}"; : "${GH_REPO:?}"; : "${VERCEL_ROOT_DIR:?}"
   : "${VERCEL_BACKEND_PROJECT:?}"; : "${VERCEL_BACKEND_ROOT_DIR:?}"
 

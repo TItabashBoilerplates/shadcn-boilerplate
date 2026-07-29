@@ -4,15 +4,19 @@
 # migration(GitHub Actions) は Doppler から読む。= 生成値を手動管理しない。
 #
 # アーキテクチャ（ユーザー決定）:
-#   - Supabase は独立所有。Vercel(web) へは Marketplace の「Connect Account」で Supabase env が
-#     自動注入される（NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY 等）
-#     → ここでは Vercel(web) に Supabase 値を入れない（二重化回避）。
+#   - Supabase は独立所有。**web / backend とも Vercel project** なので、両方に Marketplace の
+#     「Connect Account」を張れば Supabase env（SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY /
+#     SUPABASE_SECRET_KEY / NEXT_PUBLIC_SUPABASE_* / POSTGRES_*）は Vercel 側へ自動注入される。
+#     → **Supabase の値は Doppler にも Vercel にも入れない**（PF 任せ。二重管理の禁止）。
+#       加えて `SUPABASE_` prefix は Doppler に登録すると sync が予約値違反で壊れる
+#       （.claude/rules/env-naming.md）。
+#   - Doppler が要るのは **Vercel の外にいる消費者**だけ:
+#       * Expo mobile (EAS)          → EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+#       * Drizzle migration (Actions) → POSTGRES_URL
+#     いずれも予約 prefix に当たらない名前なので sync できる。
 #   - backend も Vercel project（Dockerfile.vercel コンテナ）。その公開ドメインを取得して
 #     web/mobile に配る（NEXT_PUBLIC_BACKEND_PY_URL / EXPO_PUBLIC_BACKEND_PY_URL）。
-#   - Vercel(web) 以外（Vercel backend / Expo mobile / Drizzle migration / edge）への配線は Doppler 経由。
-#     よって本スクリプトは「Supabase 生成値 + backend endpoint を Doppler に格納」する。
-#   - backend の公開ドメインは Marketplace 経由では web に入らないため、Doppler に入れて配り、
-#     Vercel(web) には直接も set する（フォールバック）。
+#     これは Marketplace の管轄外なので Doppler + Vercel(web) 直接 set の両方で配る。
 #
 # ⚠️ 外部 API キー（OpenAI 等）は対象外（ユーザーが Doppler に直接投入）。ここで扱うのは
 #    「プロビジョニングの結果生成される値」だけ。値は stdin 渡しで stdout/ログに出さない。
@@ -45,28 +49,27 @@ doppler_put() {
   fi
 }
 
-# 出力グローバル: SB_URL / SB_PUB / SB_SECRET / SB_DBURL
+# 出力グローバル: SB_URL / SB_PUB / SB_DBURL
+# （service/secret キーは取得しない。Vercel には Marketplace が注入し、Edge Functions には
+#   platform が default secrets として渡すため、ここで扱う必要が無い）
 resolve_supabase() {
-  local env="$1"; SB_URL=""; SB_PUB=""; SB_SECRET=""; SB_DBURL=""
+  local env="$1"; SB_URL=""; SB_PUB=""; SB_DBURL=""
   if [ "$env" = "production" ]; then
     local ref="${SUPABASE_REF:-}"
     [ -n "$ref" ] || { warn "SUPABASE_REF が outputs に無い"; return 1; }
     SB_URL="https://${ref}.supabase.co"
     local keys
     keys="$(curl -fsS "${SUPABASE_API}/v1/projects/${ref}/api-keys?reveal=true" \
-              -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" 2>/dev/null)" || true
+              -H "Authorization: Bearer ${SB_ACCESS_TOKEN}" 2>/dev/null)" || true
     SB_PUB="$(printf '%s' "$keys" | jq -r 'map(select(.type=="publishable"))[0].api_key // (map(select(.name=="anon"))[0].api_key) // empty' 2>/dev/null)"
-    SB_SECRET="$(printf '%s' "$keys" | jq -r 'map(select(.type=="secret"))[0].api_key // (map(select(.name=="service_role"))[0].api_key) // empty' 2>/dev/null)"
     # 直結(non-pooling) 接続。DDL/migration に適し、安定したホスト形式。
-    SB_DBURL="postgresql://postgres:${SUPABASE_DB_PASSWORD}@db.${ref}.supabase.co:5432/postgres"
+    SB_DBURL="postgresql://postgres:${SB_DB_PASSWORD}@db.${ref}.supabase.co:5432/postgres"
   else
     local gitb out; gitb="$(git_branch_for "$env")"
     out="$(supabase branches get "$gitb" -o env 2>/dev/null)" || { warn "branches get '$gitb' 失敗"; return 1; }
     SB_URL="$(printf '%s\n' "$out" | sed -n 's/^SUPABASE_URL=//p' | tr -d '"' | head -1)"
     SB_PUB="$(printf '%s\n' "$out" | sed -n 's/^SUPABASE_PUBLISHABLE_KEY=//p' | tr -d '"' | head -1)"
     [ -n "$SB_PUB" ] || SB_PUB="$(printf '%s\n' "$out" | sed -n 's/^SUPABASE_ANON_KEY=//p' | tr -d '"' | head -1)"
-    SB_SECRET="$(printf '%s\n' "$out" | sed -n 's/^SUPABASE_SECRET_KEY=//p' | tr -d '"' | head -1)"
-    [ -n "$SB_SECRET" ] || SB_SECRET="$(printf '%s\n' "$out" | sed -n 's/^SUPABASE_SERVICE_ROLE_KEY=//p' | tr -d '"' | head -1)"
     SB_DBURL="$(printf '%s\n' "$out" | sed -n 's/^POSTGRES_URL_NON_POOLING=//p' | tr -d '"' | head -1)"
   fi
   [ -n "$SB_URL" ] && [ -n "$SB_PUB" ] || { warn "[$env] Supabase URL/publishable を取得できず"; return 1; }
@@ -83,8 +86,9 @@ resolve_backend_domain() {
 main() {
   require_tool curl; require_tool jq; require_tool supabase; require_tool doppler
   load_config; load_outputs
-  require_env SUPABASE_ACCESS_TOKEN
-  require_env VERCEL_TOKEN          # web の Supabase 期待名を Vercel に直接 set / backend domain 取得
+  supabase_cli_auth                 # SB_ACCESS_TOKEN → supabase CLI 用の env に橋渡し
+  require_env SB_DB_PASSWORD        # production の non-pooling 接続文字列の組み立てに使う
+  require_env VC_TOKEN              # backend(Vercel) の公開ドメイン取得 / web への endpoint set
   : "${DOPPLER_PROJECT:?}"; : "${APP_NAME:?}"; : "${VERCEL_BACKEND_PROJECT:?}"
 
   local env slug backend
@@ -92,21 +96,12 @@ main() {
     slug="$(doppler_config_for "$env")"
     printf '\n'; log "── 配線(→Doppler[%s]): %s ──" "$slug" "$env"
 
-    # Supabase 生成値 → Doppler（Vercel backend/edge/migration/mobile が Doppler から受け取る）
+    # Vercel の外にいる消費者ぶんだけ Doppler に置く。
+    # web / backend（ともに Vercel project）の Supabase env は Marketplace 連携が注入するので触らない。
     if resolve_supabase "$env"; then
-      doppler_put "$slug" "SUPABASE_URL" "$SB_URL"
-      doppler_put "$slug" "SUPABASE_PUBLISHABLE_KEY" "$SB_PUB"
-      doppler_put "$slug" "SUPABASE_SECRET_KEY" "$SB_SECRET"
-      doppler_put "$slug" "POSTGRES_URL" "$SB_DBURL"     # backend(db_client) 用
-      doppler_put "$slug" "DATABASE_URL" "$SB_DBURL"     # Drizzle migration 用
-      doppler_put "$slug" "EXPO_PUBLIC_SUPABASE_URL" "$SB_URL"
+      doppler_put "$slug" "POSTGRES_URL" "$SB_DBURL"     # Drizzle migration(GitHub Actions) 用
+      doppler_put "$slug" "EXPO_PUBLIC_SUPABASE_URL" "$SB_URL"          # Expo mobile(EAS) 用
       doppler_put "$slug" "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY" "$SB_PUB"
-
-      # web(Vercel) の Supabase env は Marketplace Connect でも入るが、注入名が旧 anon 体系で
-      # リポジトリ期待名(PUBLISHABLE)と食い違うため、**期待名を Vercel に直接 set**して堅牢化する
-      # （Marketplace の注入名に依存しない。frontend/packages/client は PUBLISHABLE を要求）。
-      vercel_env_set "${APP_NAME:?}" "NEXT_PUBLIC_SUPABASE_URL" "$SB_URL" "$env"
-      vercel_env_set "${APP_NAME:?}" "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" "$SB_PUB" "$env"
     fi
 
     # backend endpoint → Doppler（+ Vercel(web) に直接も set。Marketplace は Supabase だけ面倒を見る）
@@ -119,7 +114,8 @@ main() {
 
   printf '\n'
   ok "生成値の配線完了（→ Doppler、backend endpoint は Vercel(web) にも直接）。"
-  warn "Vercel の Supabase env は Marketplace『Connect Account』で同期（runbook Phase 0/2）。"
+  warn "Vercel(web/backend) の Supabase env は Marketplace『Connect Account』が注入する（runbook Phase 0/2）。"
+  warn "→ 両 project で Connect 済みか、注入キー名がアプリの参照名と一致するかを Vercel の画面で確認すること。"
 }
 
 main "$@"

@@ -175,8 +175,8 @@ gh run watch   # production は承認待ち → approve 後に適用
 ```
 
 - production は `main` からのみ実行可（deployment branch policy）＋ **required reviewers の承認が必須**。
-- workflow の中身は `devenv tasks run -P <profile> db:migrate-deploy`。`DATABASE_URL` は env スコープの
-  `DOPPLER_TOKEN` 経由で Doppler から解決される。
+- workflow の中身は `devenv tasks run -P <profile> db:migrate-deploy`。接続先 `POSTGRES_URL` は
+  env スコープの `DOPPLER_TOKEN` 経由で Doppler から解決される。
 
 > ローカルから `devenv tasks run -P production db:migrate-deploy` を直接叩くのは
 > **緊急時のみ**（承認ゲートと監査ログを迂回する）。詳細は `.claude/rules/database.md`。

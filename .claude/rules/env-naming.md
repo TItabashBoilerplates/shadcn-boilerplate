@@ -132,6 +132,14 @@ Doppler に新しいキーを作る前に、**必ず**以下を順に確認す�
 4. **Vercel 予約名（`AWS_*` / `NOW_REGION` / `TZ` / `LAMBDA_*`）でないか？**
 5. 書き込みは **`doppler` MCP** 経由・**フェーズ制**に従う（`.claude/rules/mcp-doppler.md`）。**値はチャット/ログ/コミットに出さない**。
 
+> **ツール側のガード**: 人手用の `doppler-set` / `doppler-import`（devenv script）は予約 prefix を
+> 検知して**登録前に拒否**する。ただし `doppler` MCP や Doppler dashboard にはこのガードが無いため、
+> エージェントは本ルールを自分で守ること。
+>
+> **CLI が予約名を要求する場合の橋渡し**: Supabase CLI は `SUPABASE_ACCESS_TOKEN` しか読まないので、
+> Doppler には `SB_ACCESS_TOKEN` で保持し、`scripts/infra/lib.sh` の `supabase_cli_auth()` が
+> CLI 呼び出し直前にプロセス環境へ写す（§5 のとおり export は本ルールの対象外）。
+
 ---
 
 ## 8. 強制事項

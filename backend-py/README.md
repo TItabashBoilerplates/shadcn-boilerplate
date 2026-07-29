@@ -272,7 +272,7 @@ async def get_user(
 | 起動 | `CMD ["api"]`（`[project.scripts] api = "api.main:main"`） |
 | shutdown | scale-in 時は SIGTERM + 30s grace。uvicorn が graceful shutdown |
 | ヘルスチェック | `GET /healthcheck` |
-| runtime secret | Doppler→Vercel ネイティブ連携（`SUPABASE_URL` / `POSTGRES_URL` 等）。詳細は `docs/deployment/README.md` |
+| runtime env | **Supabase 系（`SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `POSTGRES_*`）は Vercel Marketplace の Supabase 連携が自動注入**。外部 API キーのみ Doppler→Vercel ネイティブ連携で届く。Doppler に `SUPABASE_` prefix のキーを作らないこと（`.claude/rules/env-naming.md`）。詳細は `docs/deployment/README.md` |
 
 **新しいアプリ（例: apps/mcp）をコンテナ化する手順**:
 1. `apps/mcp/Dockerfile.vercel` を作る（`--package mcp-server` で対象アプリだけ入れ、`$PORT` で HTTP listen）。

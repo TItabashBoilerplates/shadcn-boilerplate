@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Vercel REST API の共通ヘルパ（vercel.sh / wire.sh が source する）。
 # lib.sh を先に source しておくこと（log/ok/warn/git_branch_for を使う）。
-# 認証は VERCEL_TOKEN（Bearer）。team スコープは VERCEL_TEAM_ID（任意）。
+# 認証は VC_TOKEN（Bearer）。team スコープは VERCEL_TEAM_ID（任意・config.env のファイル値）。
+# ※ Doppler には `VERCEL_` prefix を登録できないため token は VC_TOKEN で保持する
+#    （.claude/rules/env-naming.md）。
 set -euo pipefail
 
 VERCEL_API="https://api.vercel.com"
@@ -19,10 +21,10 @@ vapi() {
   local url="${VERCEL_API}${path}${tq}"
   if [ -n "$body" ]; then
     curl -fsS -X "$method" "$url" \
-      -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+      -H "Authorization: Bearer ${VC_TOKEN}" \
       -H "Content-Type: application/json" -d "$body"
   else
-    curl -fsS -X "$method" "$url" -H "Authorization: Bearer ${VERCEL_TOKEN}"
+    curl -fsS -X "$method" "$url" -H "Authorization: Bearer ${VC_TOKEN}"
   fi
 }
 

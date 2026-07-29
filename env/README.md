@@ -8,8 +8,9 @@
 | 種類 | 例 | 置き場所 |
 |---|---|---|
 | **シークレット**（全環境） | 外部 API キー / トークン / DB パスワード / service_role 等 | **Doppler のみ**（ファイルフォールバック廃止） |
-| **生成される非機密**（リモート） | Supabase URL / publishable key / backend(Vercel) endpoint 等 | **Doppler**（`scripts/infra/wire.sh` が投入 → ネイティブ連携で配布） |
-| **ローカルの非機密既定値** | local Supabase URL / publishable key / `localhost:54322` の DATABASE_URL / port | **このディレクトリの `.env.local`** |
+| **生成される非機密**（リモート） | migration 用 `POSTGRES_URL` / mobile 用 `EXPO_PUBLIC_*` / backend(Vercel) endpoint | **Doppler**（`scripts/infra/wire.sh` が投入 → ネイティブ連携で配布） |
+| **Vercel 上の Supabase env** | `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `NEXT_PUBLIC_SUPABASE_*` / `POSTGRES_*` | **Vercel Marketplace の Supabase 連携が自動注入**（Doppler にもファイルにも置かない） |
+| **ローカルの非機密既定値** | local Supabase URL / publishable key / `localhost:54322` の `POSTGRES_URL` / port | **このディレクトリの `.env.local`** |
 
 要点:
 
@@ -27,7 +28,7 @@ env/
 ├── README.md              # このファイル
 ├── backend/.env.local     # backend ローカル非機密（Supabase URL / port 等）
 ├── frontend/.env.local    # frontend ローカル非機密（NEXT_PUBLIC_*）
-└── migration/.env.local   # migration ローカル非機密（ローカル DATABASE_URL）
+└── migration/.env.local   # migration ローカル非機密（ローカル POSTGRES_URL）
 ```
 
 `.env.local` のみコミット（非機密）。それ以外の `.env.*` は gitignore。
@@ -81,9 +82,10 @@ doppler-import /tmp/secrets.dev.env --config dev
 ```
 
 - **本番（prd）への write はフェーズ制**（`.claude/rules/mcp-doppler.md`）。
-- **リモートの生成非機密**（Supabase URL / publishable / POSTGRES_URL / backend(Vercel) endpoint）は
-  `infra-bootstrap`（`scripts/infra/wire.sh`）が自動投入する（手動不要）。詳細は
-  `docs/deployment/README.md`。
+- **リモートの生成非機密**（migration 用 `POSTGRES_URL` / mobile 用 `EXPO_PUBLIC_*` / backend(Vercel)
+  endpoint）は `infra-bootstrap`（`scripts/infra/wire.sh`）が自動投入する（手動不要）。
+  **Vercel(web/backend) の Supabase env は Marketplace 連携が注入するので Doppler には入れない**。
+  詳細は `docs/deployment/README.md`。
 
 ## Git 追跡
 

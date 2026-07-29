@@ -238,7 +238,7 @@ env/
 ├── README.md                  # env/ の構成・方針（詳細はこちら）
 ├── backend/.env.local         # Backend 非機密 config (Supabase URL 等)
 ├── frontend/.env.local        # Frontend 非機密 config (Next.js)
-└── migration/.env.local       # Database migration 非機密 config (DATABASE_URL)
+└── migration/.env.local       # Database migration 非機密 config (POSTGRES_URL)
 ```
 
 > シークレット・リモート値は Doppler 一本（ファイルに置かない）。新規キーは `doppler-set <KEY>`。

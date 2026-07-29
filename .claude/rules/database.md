@@ -270,7 +270,7 @@ using: sql`true`
   加えて deployment branch policy により production は `main` からしか実行できない。
 - 各 run は job summary に profile / trigger / ref / actor / result を出す（手動実行の監査痕跡）。
 - ワークフローは raw `drizzle-kit` ではなく **`devenv tasks run -P <profile> db:migrate-deploy`** を呼ぶ
-  （`.claude/rules/commands.md` 準拠）。`DATABASE_URL` は env スコープの `DOPPLER_TOKEN` 経由で Doppler から解決される。
+  （`.claude/rules/commands.md` 準拠）。接続先 `POSTGRES_URL` は env スコープの `DOPPLER_TOKEN` 経由で Doppler から解決される。
 
 ## Enforcement
 

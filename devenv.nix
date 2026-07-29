@@ -804,8 +804,10 @@ in
 
     # ---------- 外部 PaaS プロビジョニング（一度きりの初期構築）----------
     # scripts/infra/* を `doppler run` で包み、bootstrap config のトークン
-    # （VERCEL_TOKEN / SUPABASE_ACCESS_TOKEN / SUPABASE_DB_PASSWORD /
-    #  GH_TOKEN 等）を環境変数として注入する。値は露出しない。
+    # （VC_TOKEN / SB_ACCESS_TOKEN / SB_DB_PASSWORD / GH_TOKEN 等）を環境変数として
+    # 注入する。値は露出しない。
+    # ※ キー名に VERCEL_/SUPABASE_/GITHUB_ prefix を使わないのは Doppler の予約 prefix 制約
+    #   （.claude/rules/env-naming.md）。CLI が要求する名前へは scripts/infra/lib.sh が読み替える。
     #
     # ⚠️ これは「コマンド一発で全自動」ではない。各 PaaS の GitHub 連携 OAuth・repo 接続・
     #    Doppler→PaaS の secret 連携は dashboard 専用（docs/deployment/README.md の Phase 0/2）。
@@ -855,6 +857,18 @@ in
         fi
         _file="$1"; shift
         [ -f "$_file" ] || { echo "file not found: $_file" >&2; exit 1; }
+        # 予約 prefix が 1 つでも混ざると upload 後の sync が config ごと壊れるので事前に弾く
+        # （.claude/rules/env-naming.md）。キー名のみ表示し、値は出さない。
+        if _bad="$(grep -oE '^[[:space:]]*(GITHUB|SUPABASE|VERCEL)_[A-Za-z0-9_]*' "$_file" | tr -d ' ' | sort -u)" \
+           && [ -n "$_bad" ]; then
+          echo "✗ 予約 prefix（GITHUB_/SUPABASE_/VERCEL_）のキーが含まれています:" >&2
+          printf '    %s\n' $_bad >&2
+          echo "  各 PF の予約名前空間で、sync が予約値違反になり config 全体が届かなくなります。" >&2
+          echo "  → Supabase の値は Vercel Marketplace 連携 / default secrets が供給するので不要です。" >&2
+          echo "  → 自前で持つ必要がある場合は SB_* / VC_* / GH_* に改名してください。" >&2
+          echo "  詳細: .claude/rules/env-naming.md" >&2
+          exit 1
+        fi
         exec doppler secrets upload "$_file" "$@"
       '';
       description = "指定した .env ファイルを Doppler に一括アップロード（doppler-import <file> --config <name>）";
@@ -873,6 +887,17 @@ in
           exit 1
         fi
         _key="$1"; shift
+        # 予約 prefix は各 PF の名前空間。登録するとネイティブ連携の sync が予約値違反で
+        # 落ち、その config 全体が届かなくなる（.claude/rules/env-naming.md）。
+        case "$_key" in
+          GITHUB_*|SUPABASE_*|VERCEL_*)
+            echo "✗ '$_key' は予約 prefix（GITHUB_/SUPABASE_/VERCEL_）のため Doppler に登録できません。" >&2
+            echo "  各 PF の予約名前空間で、sync が予約値違反になり config 全体が届かなくなります。" >&2
+            echo "  → Supabase の値は Vercel Marketplace 連携 / Edge Functions の default secrets が供給します。" >&2
+            echo "  → 自前で持つ必要がある場合は SB_* / VC_* / GH_* に改名してください。" >&2
+            echo "  詳細: .claude/rules/env-naming.md" >&2
+            exit 1 ;;
+        esac
         if [ "$#" -ge 1 ]; then _cfgs="$*"; else _cfgs="dev stg prd"; fi
         printf 'value for %s (入力は非表示, Enter で確定): ' "$_key" >&2
         IFS= read -rs _val; echo >&2
