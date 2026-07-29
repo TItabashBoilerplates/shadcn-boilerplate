@@ -17,13 +17,22 @@ description: Doppler（シークレットマネージャ）の利用ガイダン
    - **非機密の環境変数**（ローカル Supabase URL / backend URL / port / publishable key 等。
      `env/{backend,frontend,migration}/.env.<ENV>`）→ **ファイル管理**（`.env.local` はコミット可）
    - 「漏れても害がない設定値」だけをファイルに置く。機密はすべて Doppler。
-2. **トークン・シークレットをコミットしない**。`.mcp.json` / `doppler.yaml` / `devenv.nix` の
+2. **予約 prefix を Doppler に登録しない**（`.claude/rules/env-naming.md`）:
+   - `GITHUB_` / `SUPABASE_` / `VERCEL_` 始まりのキーは**全 config で禁止**。各 PF の予約名前空間
+     なので、ネイティブ連携の sync が**予約値違反でエラー**になり config 全体が届かなくなる。
+   - **Supabase の env は Doppler で管理しない**: Vercel(web/backend) へは **Vercel Marketplace の
+     Supabase 連携（Connect Account）** が `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` /
+     `SUPABASE_SECRET_KEY` / `NEXT_PUBLIC_SUPABASE_*` / `POSTGRES_*` を自動注入。Edge Functions へは
+     platform が **default secrets** として自動提供。ローカルは `env/*/.env.local`（ファイル＝対象外）。
+   - 自前で持つ必要がある場合は prefix を落とす: `SB_ACCESS_TOKEN` / `SB_DB_PASSWORD` / `VC_TOKEN` /
+     `VC_TEAM_ID` / `GH_TOKEN`。`NEXT_PUBLIC_SUPABASE_URL` のように**先頭でなければ可**。
+3. **トークン・シークレットをコミットしない**。`.mcp.json` / `doppler.yaml` / `devenv.nix` の
    いずれにも `DOPPLER_TOKEN` や生のシークレットを書かない。
-3. **本番（prd）への write はフェーズ制**（`.claude/rules/mcp-doppler.md`）。初期構築は full-access、
+4. **本番（prd）への write はフェーズ制**（`.claude/rules/mcp-doppler.md`）。初期構築は full-access、
    本番フェーズは明示承認制。CI/本番ランタイムは **read-only の service token** を使い、CLI/Personal
    トークンは live 環境で使わない（作成者と同じ write 権限を持つ）。
-4. **コマンドは devenv 経由**（`.claude/rules/commands.md`）。`doppler` は `pkgs.doppler` で PATH 上。
-5. **エラーは握りつぶさない**（`.claude/rules/error-handling.md`）。シークレットは Doppler が
+5. **コマンドは devenv 経由**（`.claude/rules/commands.md`）。`doppler` は `pkgs.doppler` で PATH 上。
+6. **エラーは握りつぶさない**（`.claude/rules/error-handling.md`）。シークレットは Doppler が
    唯一のソースで**ファイルフォールバックは廃止**。取得できない（未ログイン/未 setup/token 無し）
    場合は devenv shell が警告する（サイレントにしない。shell 自体は止めない）。
 
@@ -168,6 +177,8 @@ MCP 設定は `.mcp.json` を編集して `mcp-sync` で Codex/Cursor に投影�
 | `DOPPLER_TOKEN` を `.mcp.json` / `devenv.nix` にコミット | keyring ログイン or 実行時 env 注入 |
 | 生シークレットをコードや `.env.local` に直書き | Doppler config に置き、devenv/`doppler run` で注入 |
 | 非機密 URL/port まで Doppler に載せる | 非機密は `.env.local` のまま（責務分離） |
+| `SUPABASE_*` / `VERCEL_*` / `GITHUB_*` を Doppler に登録 | 予約 prefix。`SB_*` / `VC_*` / `GH_*` に改名（`env-naming.md`） |
+| Supabase の URL/キーを Doppler で配る | Vercel Marketplace 連携 + Edge Functions の default secrets に任せる |
 | CI で `doppler login`（user token） | read-only service token を `DOPPLER_TOKEN` で注入 |
 | 本番フェーズで prd を勝手に write | フェーズ制に従う（本番は明示承認） |
 | `doppler run` の失敗を握りつぶす | 失敗はログ + 停止（error-handling.md） |
@@ -180,11 +191,14 @@ MCP 設定は `.mcp.json` を編集して `mcp-sync` で Codex/Cursor に投影�
 | `you must provide a token` | 未ログイン。`doppler login`。CI なら `DOPPLER_TOKEN` 注入 |
 | `doppler: command not found` | devenv shell 内で実行しているか（`pkgs.doppler`） |
 | 値が古い/反映されない | Doppler が後勝ち。`doppler-pull --config <c>` で実値確認 |
+| ネイティブ連携の sync が失敗する / 予約値違反エラー | `GITHUB_` / `SUPABASE_` / `VERCEL_` prefix のキーが混入していないか確認 → 改名 or 削除（`env-naming.md`） |
 | MCP のツールが出ない | `npx @dopplerhq/mcp-server login` 後にクライアント再接続 |
 
 ## チェックリスト
 
 - [ ] シークレットのみ Doppler、非機密 `.env.local` はファイル（責務分離）
+- [ ] `GITHUB_` / `SUPABASE_` / `VERCEL_` prefix のキーが Doppler に 1 つも無い
+- [ ] Supabase の env を Doppler で二重管理していない（Marketplace 連携 / default secrets に委譲）
 - [ ] トークン・シークレットを一切コミットしていない
 - [ ] profile→config 対応が `devenv.nix` / `doppler.yaml` / 本 SKILL.md で一致
 - [ ] CI/本番は read-only service token（CLI/Personal トークン不使用）
@@ -193,6 +207,7 @@ MCP 設定は `.mcp.json` を編集して `mcp-sync` で Codex/Cursor に投影�
 
 ## 関連ドキュメント
 
+- `.claude/rules/env-naming.md` — **予約 prefix 禁止**（`GITHUB_`/`SUPABASE_`/`VERCEL_`）・Supabase env の供給経路
 - [references/cicd.md](references/cicd.md) — CI/CD・デプロイ（Vercel(web/backend)/Supabase ネイティブ連携・CI token）
 - [references/best-practices.md](references/best-practices.md) — Doppler 公式ベストプラクティス
 - [references/migration-plan.md](references/migration-plan.md) — 完全移行ランブック

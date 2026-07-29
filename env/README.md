@@ -51,6 +51,21 @@ devenv shell -P staging -- <cmd>  # ENV=staging: Doppler stg（非機密も秘�
 | `local`（既定） | ローカル紐付け（`dev_personal`） |
 | `dev` / `staging` / `production` | `dev` / `stg` / `prd` |
 
+## ⚠️ Doppler のキー命名（予約 prefix 禁止）
+
+**`GITHUB_` / `SUPABASE_` / `VERCEL_` 始まりのキーを Doppler に登録してはならない。**
+各 PF の予約名前空間なので、ネイティブ連携の sync が予約値違反でエラーになり config 全体が届かなくなる。
+
+- **Supabase の env は Doppler で管理しない**。Vercel(web/backend) へは **Vercel Marketplace の
+  Supabase 連携（Connect Account）** が `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` /
+  `SUPABASE_SECRET_KEY` / `NEXT_PUBLIC_SUPABASE_*` / `POSTGRES_*` を自動注入し、Edge Functions へは
+  Supabase platform が **default secrets** として自動提供する。
+- 自前で持つ必要がある値は prefix を落とす（`SB_ACCESS_TOKEN` / `VC_TOKEN` / `GH_TOKEN`）。
+  `NEXT_PUBLIC_SUPABASE_URL` のように**先頭でなければ可**。
+- **このディレクトリの `.env.local` は対象外**（ファイル管理・sync されないため `SUPABASE_URL=` 等はそのままでよい）。
+
+→ 詳細: `.claude/rules/env-naming.md`
+
 ## シークレット / 値の登録（Doppler）
 
 ```bash

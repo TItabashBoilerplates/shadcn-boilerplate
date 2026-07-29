@@ -114,6 +114,7 @@ Claude: → `rls` Skill を起動 → `supabase` Skill を確認 → ガイダ�
 | `.claude/rules/commands.md` | コマンド実行時は devenv の scripts / tasks を使用 |
 | `.claude/rules/mcp-supabase.md` | Supabase インフラ操作は `supabase` / `supabase-prod` MCP |
 | `.claude/rules/mcp-doppler.md` | Doppler シークレットの読み書きは `doppler` MCP（書込はフェーズ制: 初期構築=full / 本番=prd 承認制・値の露出禁止） |
+| `.claude/rules/env-naming.md` | 環境変数・シークレットの命名（`GITHUB_`/`SUPABASE_`/`VERCEL_` prefix の登録禁止・Supabase env は PF が注入） |
 
 **起動順は: Skill → Research（公式ドキュメント） → 実装（devenv コマンド / MCP） → All Green 確認**。
 

@@ -35,6 +35,10 @@ PHASE: 初期構築（full-access）
 
 ## フェーズに依存しない常時ルール（全フェーズ共通）
 
+- **予約 prefix のキーを作らない**: `GITHUB_` / `SUPABASE_` / `VERCEL_` 始まりのキーは**全 config で
+  登録禁止**（各 PF の予約名前空間 → ネイティブ連携の sync が予約値違反で落ち、その config 全体が
+  届かなくなる）。**Supabase の env は Doppler で管理しない**（Vercel Marketplace の Supabase 連携と
+  Edge Functions の default secrets が供給する）。詳細・代替命名は **`.claude/rules/env-naming.md`**。
 - **`doppler` MCP 経由のみ**で読み書きする（Bash の `doppler secrets set/delete` 直叩き禁止）。
 - **シークレットの値をチャット / ログ / コミット / PR に出さない**。会話は**キー名のみ**で行う
   （例: 「`STRIPE_API_KEY` を dev に追加します」。値は表示しない）。値はファイルや `.env*` にも書かない。
@@ -73,6 +77,10 @@ doppler secrets set STRIPE_API_KEY=sk_live_xxx --config prd
 # ❌ NG: 値をチャットやコミットに出す（全フェーズ）
 echo "新しい値は sk_live_xxx です"
 
+# ❌ NG: 予約 prefix のキーを Doppler に作る（MCP 経由でも同じく禁止。sync が壊れる）
+#    SUPABASE_URL / SUPABASE_SECRET_KEY / VERCEL_TOKEN / GITHUB_TOKEN ...
+#    → env-naming.md の代替命名（SB_* / VC_* / GH_*）を使う。Supabase の値はそもそも登録不要
+
 # ✅ OK: doppler MCP の update ツールでキー名指定（フェーズの許可レベルに従う）
 # ✅ OK: 移行の一括投入は doppler-import（例外、下記）
 ```
@@ -99,5 +107,5 @@ echo "新しい値は sk_live_xxx です"
 ## 強制事項
 
 このポリシーは**交渉の余地なし**。Bash で `doppler secrets set/delete` を直接叩く実装・提案、
-**シークレット値の露出**、および**フェーズ宣言を無視した `prd` 書き込み（本番フェーズ）**は
-**レビューで却下**する。
+**シークレット値の露出**、**予約 prefix（`GITHUB_` / `SUPABASE_` / `VERCEL_`）のキー登録**、
+および**フェーズ宣言を無視した `prd` 書き込み（本番フェーズ）**は**レビューで却下**する。

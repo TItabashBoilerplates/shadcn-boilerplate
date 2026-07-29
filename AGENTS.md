@@ -151,7 +151,37 @@ Both `en.json` and `ja.json` are required.
 
 **Frontend is responsible for all timezone conversions**.
 
-### 7. Storage Policy
+### 7. Secrets & Environment Variable Naming
+
+**NEVER register keys with a `GITHUB_`, `SUPABASE_`, or `VERCEL_` prefix in Doppler** (nor in
+GitHub Actions / Vercel / Supabase secrets). Each platform reserves that namespace, so Doppler's
+native sync fails with a reserved-value error and **the whole config stops syncing**.
+
+| Prefix | Reserved by | What happens |
+|---|---|---|
+| `GITHUB_` | GitHub Actions secrets | "Must not start with the `GITHUB_` prefix" |
+| `SUPABASE_` | Supabase Edge Function secrets | "Env name cannot start with SUPABASE_" |
+| `VERCEL_` | Vercel System Environment Variables | Collides with system-injected `VERCEL_*` |
+
+**Supabase env vars are NOT managed in Doppler.** They are delivered by the platforms:
+
+- **Vercel (web / backend)** → the **Vercel Marketplace Supabase integration** (*Settings >
+  Integrations > Supabase > Connect Account*) auto-injects `SUPABASE_URL`,
+  `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `SUPABASE_JWT_SECRET`,
+  `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `POSTGRES_*`.
+- **Edge Functions** → Supabase platform provides them as **default secrets**.
+- **Local** → `env/{backend,frontend}/.env.local` (files, not synced — prefix rule does not apply).
+
+So "the app needs a Supabase value" is **never** a reason to create a Doppler key. Duplicating
+those keys in Doppler is prohibited (breaks sync *and* causes drift).
+
+**If you must store such a value yourself**, drop the prefix: `SB_ACCESS_TOKEN`, `SB_DB_PASSWORD`,
+`VC_TOKEN`, `VC_TEAM_ID`, `GH_TOKEN`. Names like `NEXT_PUBLIC_SUPABASE_URL` are fine — only the
+**leading** prefix is restricted.
+
+Full policy: `.claude/rules/env-naming.md`
+
+### 8. Storage Policy
 
 **Default: Private buckets** (unless explicitly requested otherwise)
 
