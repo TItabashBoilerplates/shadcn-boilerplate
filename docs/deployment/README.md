@@ -183,8 +183,24 @@ git push origin main       # → prd:  各 PaaS 反映 + migrate は GitHub で�
 ```
 
 - Vercel(web + backend) / Supabase … 各ネイティブ連携が自動ビルド/反映。
-- Drizzle マイグレ … `migrate.yml`。`drizzle/{schema,migrations,config}` 変更時に起動。
+- Drizzle マイグレ … `migrate.yml`。`drizzle/{schema,migrations,config}` / `migrate.ts` /
+  `drizzle.config.ts` / `package.json` / `bun.lock` 変更時に起動。
   **production のみ GitHub Environment の承認待ち**（承認するまで適用されない）。
+
+### マイグレーションの手動実行（push を伴わない再実行 / 任意環境への適用）
+
+Actions タブ > **DB Migrate (Drizzle)** > **Run workflow** で、branch と `environment`
+（`dev` / `staging` / `production`）を選んで実行する。CLI なら:
+
+```bash
+gh workflow run migrate.yml --ref main -f environment=production
+gh run watch   # 承認待ち → GitHub 上で approve すると適用が進む
+```
+
+- production は deployment branch policy により **`main` からのみ**実行でき、required reviewers の
+  **承認後に適用**される（dev / staging は承認なしで即適用）。
+- 中身は push 時と同一（`devenv tasks run -P <profile> db:migrate-deploy`）。job summary に
+  profile / trigger / ref / actor / result が残る。
 
 ---
 

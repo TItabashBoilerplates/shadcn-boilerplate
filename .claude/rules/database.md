@@ -256,7 +256,23 @@ using: sql`true`
 
 ---
 
+## リモート適用は GitHub Actions（`migrate.yml`）が正規経路
+
+**dev / staging / production への migration 適用は、ローカルから `-P <env> db:migrate-deploy` を叩くのではなく
+`.github/workflows/migrate.yml` に集約する**（実行者・対象環境・結果が run に残り、production は承認ゲートを通るため）。
+
+| 実行方法 | 起動条件 | 対象環境 |
+|---|---|---|
+| **自動（push）** | `drizzle/{schema,migrations,config}` / `migrate.ts` / `drizzle.config.ts` / `package.json` / `bun.lock` の変更を push | `main`→production / `staging`→staging / `develop`→dev |
+| **手動（`workflow_dispatch`）** | Actions タブ > **DB Migrate (Drizzle)** > **Run workflow** で branch と `environment`（dev / staging / production）を選択 | 選択した環境 |
+
+- **production は必ず承認待ちになる**（GitHub Environment の required reviewers）。承認するまで適用されない。
+  加えて deployment branch policy により production は `main` からしか実行できない。
+- 各 run は job summary に profile / trigger / ref / actor / result を出す（手動実行の監査痕跡）。
+- ワークフローは raw `drizzle-kit` ではなく **`devenv tasks run -P <profile> db:migrate-deploy`** を呼ぶ
+  （`.claude/rules/commands.md` 準拠）。`DATABASE_URL` は env スコープの `DOPPLER_TOKEN` 経由で Doppler から解決される。
+
 ## Enforcement
 
 - **ローカル**: AI が `app:migrate-dev` / `db:migrate-dev` を自動実行してよい。失敗時はエラーログ確認 → スキーマまたは pre/post SQL の修正 → 再実行のループで自走可能。
-- **本番 / staging**: AI は `db:migrate-deploy` を実行しない。ユーザーに明示確認をしてから手動実行。
+- **本番 / staging**: AI は `db:migrate-deploy` を実行しない。適用は上記 `migrate.yml`（push または手動 `workflow_dispatch`）に委ね、**実行の判断とトリガーはユーザーが行う**。AI が代わりに workflow を dispatch することもしない。

@@ -18,7 +18,15 @@ on:
       - "drizzle/schema/**"
       - "drizzle/migrations/**"
       - "drizzle/config/**"
+      # migration ランナー自体の変更も反映対象（これが無いと runner を直しても流れない）
+      - "drizzle/migrate.ts"
+      - "drizzle/drizzle.config.ts"
+      - "drizzle/package.json"
+      - "drizzle/bun.lock"
       - ".github/workflows/migrate.yml"
+  # 手動実行: Actions タブ > "DB Migrate (Drizzle)" > Run workflow で
+  # branch と対象環境を選ぶ。production は GitHub Environment の
+  # deployment branch policy(main) + required reviewers に従う。
   workflow_dispatch:
     inputs:
       environment:
@@ -97,3 +105,19 @@ jobs:
           echo "対象 profile: $ENVIRON"
       - name: Run Drizzle migrations
         run: devenv tasks run -P ${{ steps.profile.outputs.profile }} db:migrate-deploy
+      # 手動実行（とくに production）の監査痕跡。run 一覧から「誰がどの env に流したか」が見える。
+      - name: Job summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "### DB Migrate (Drizzle)"
+            echo ""
+            echo "| 項目 | 値 |"
+            echo "|---|---|"
+            echo "| profile / env | \`${{ steps.profile.outputs.profile }}\` |"
+            echo "| trigger | \`${{ github.event_name }}\` |"
+            echo "| ref | \`${{ github.ref_name }}\` (\`${{ github.sha }}\`) |"
+            echo "| actor | @${{ github.actor }} |"
+            echo "| result | \`${{ job.status }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -158,17 +158,28 @@ bun run migrate:pre
 bun run migrate:post
 ```
 
-### Remote Environment (CI/CD or Manual)
+### Remote Environment (dev / staging / production)
+
+リモートへの適用は **GitHub Actions の `.github/workflows/migrate.yml`** に集約する
+（実行者・環境・結果が run に残り、production は承認ゲートを通るため）。
+
+**自動**: `drizzle/{schema,migrations,config}` / `migrate.ts` / `drizzle.config.ts` /
+`package.json` / `bun.lock` の変更を push すると起動する
+（`main`→production / `staging`→staging / `develop`→dev）。
+
+**手動**: Actions タブ > **DB Migrate (Drizzle)** > **Run workflow** で branch と環境を選ぶ。CLI なら:
 
 ```bash
-# 1. Pull latest migrations
-git pull
-
-# 2. Apply migrations to remote environment
-devenv tasks run -P staging db:migrate-deploy
-# or for production
-devenv tasks run -P production db:migrate-deploy
+gh workflow run migrate.yml --ref main -f environment=production
+gh run watch   # production は承認待ち → approve 後に適用
 ```
+
+- production は `main` からのみ実行可（deployment branch policy）＋ **required reviewers の承認が必須**。
+- workflow の中身は `devenv tasks run -P <profile> db:migrate-deploy`。`DATABASE_URL` は env スコープの
+  `DOPPLER_TOKEN` 経由で Doppler から解決される。
+
+> ローカルから `devenv tasks run -P production db:migrate-deploy` を直接叩くのは
+> **緊急時のみ**（承認ゲートと監査ログを迂回する）。詳細は `.claude/rules/database.md`。
 
 ## Type Inference
 
