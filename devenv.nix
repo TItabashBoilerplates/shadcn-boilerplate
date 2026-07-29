@@ -41,7 +41,13 @@ let
   # 失敗したらサイレントにしない）。shell 自体は止めない（doppler login を打てるように）。
   # `--format env` は KEY="value" 形式なので bash パーサがクォート・エスケープを正しく扱う。
   loadDopplerByEnv = ''
-    if command -v doppler >/dev/null 2>&1; then
+    if [ -n "''${DOPPLER_SKIP:-}" ]; then
+      # GitHub Actions は **Doppler → GitHub Secrets のネイティブ sync** 済みの値を
+      # workflow の secrets 参照で job env から受け取る。よって Actions 内で doppler CLI を
+      # 叩く必要が無い（token も不要）。取得失敗の警告を出さないよう明示的にスキップする。
+      # 詳細: .claude/skills/doppler/references/cicd.md
+      echo "🔕 Doppler スキップ (DOPPLER_SKIP=''${DOPPLER_SKIP}) — シークレットは実行環境から供給される前提"
+    elif command -v doppler >/dev/null 2>&1; then
       _dpl_args=""
       _dpl_label="local scope (doppler setup)"
       case "''${ENV:-local}" in
@@ -59,7 +65,8 @@ let
         echo "🔐 Doppler secrets loaded ($_dpl_label)"
       else
         echo "⚠️  シークレット未ロード: Doppler から取得できません（$_dpl_label）。" >&2
-        echo "    フォールバックは廃止済み。'doppler login' → 'doppler setup'（CI は DOPPLER_TOKEN）を実行してください。" >&2
+        echo "    フォールバックは廃止済み。'doppler login' → 'doppler setup' を実行してください。" >&2
+        echo "    （GitHub Actions は Doppler→GitHub sync 済みの secrets を使うため DOPPLER_SKIP=1 で本処理をスキップします）" >&2
         echo "    詳細: .claude/skills/doppler/SKILL.md" >&2
       fi
       unset _dpl_args _dpl_label
@@ -464,24 +471,42 @@ in
 
     # 全環境共通: 既存マイグレーションの適用のみ
     #
-    # ⚠️ ガード: ENV が local 以外（= リモート適用のつもり）なのに POSTGRES_URL がローカル値だったら
-    # 中止する。base enterShell は `export ENV="''${ENV:-local}"` なので `-P production` だけを付けて
-    # `ENV=` を前置し忘れると、env/migration/.env.local のローカル POSTGRES_URL を掴んだまま走る。
-    # 「リモートに流したつもりが実はローカル（あるいは接続拒否）」を静かに通さないための保険。
+    # リモート適用時の接続先の受け渡しについて（実測に基づく設計）:
+    #
+    # devenv の enterShell は `set -a; . env/<svc>/.env.$ENV` を行うため、**その ENV の env ファイルが
+    # 存在する場合、外から渡した同名変数は上書きされる**。実測:
+    #   ENV 未指定  → POSTGRES_URL は env/*/.env.local の 127.0.0.1:54322 に上書きされる
+    #   ENV=production → env/*/.env.production が無いので外から渡した値が残る
+    # つまり ENV に依存した「上書きされない」前提は、将来 .env.<ENV> を置いた瞬間に壊れる。
+    #
+    # そこで **devenv が定義しない名前** `MIGRATE_POSTGRES_URL` を輸送用に使い、ここで最後に
+    # POSTGRES_URL へ反映する。この名前は enterShell も env ファイルも触らないため、
+    # ENV の解決結果に関わらず確実に伝わる（実測で確認済み）。
+    #
+    # ガード: リモート適用の意図が明示されている（MIGRATE_POSTGRES_URL あり、または ENV≠local）
+    # のに接続先がローカル値なら中止する。「リモートに流したつもりが実はローカル」を静かに通さない。
     # 値（パスワードを含む）は表示せず host:port だけ出す。
     "db:migrate-deploy".exec = ''
       set -euo pipefail
       cd "$DEVENV_ROOT/drizzle"
+
+      _remote_intent=0
+      if [ -n "''${MIGRATE_POSTGRES_URL:-}" ]; then
+        export POSTGRES_URL="$MIGRATE_POSTGRES_URL"
+        _remote_intent=1
+      fi
+      [ "''${ENV:-local}" != "local" ] && _remote_intent=1
+
       if [ -z "''${POSTGRES_URL:-}" ]; then
-        echo "✗ POSTGRES_URL が未設定です。Doppler から取得できているか確認してください。" >&2
+        echo "✗ 接続先が未設定です（POSTGRES_URL / MIGRATE_POSTGRES_URL のいずれも空）。" >&2
         exit 1
       fi
-      if [ "''${ENV:-local}" != "local" ]; then
+      if [ "$_remote_intent" = "1" ]; then
         case "$POSTGRES_URL" in
           *127.0.0.1*|*localhost*)
-            echo "✗ ENV=''${ENV} なのに POSTGRES_URL がローカル値です（リモートに適用されません）。" >&2
-            echo "  -P だけでなく ENV=''${ENV} を前置して実行してください。" >&2
-            echo "  例: ENV=''${ENV} devenv tasks run -P ''${ENV} db:migrate-deploy" >&2
+            echo "✗ リモート適用の指定（ENV=''${ENV:-local}）なのに接続先がローカル値です。" >&2
+            echo "  リモートに適用されないため中止します。接続先は MIGRATE_POSTGRES_URL で渡してください。" >&2
+            echo "  例: MIGRATE_POSTGRES_URL=\"\$SECRET_URL\" ENV=production devenv tasks run db:migrate-deploy" >&2
             exit 1 ;;
         esac
       fi

@@ -141,7 +141,7 @@ infra-bootstrap supabase github # 一部だけ再実行も可
 | `doppler` | project + config(dev/stg/prd) の存在保証 |
 | `supabase` | **1 project 作成**（ref を `.outputs`）＋ **persistent branch(staging/develop)** を Management API で作成 |
 | `vercel` | **web + backend の 2 project** 作成 + repo 接続 + rootDirectory（web=`frontend/apps/web` / backend=`backend-py`）+ **静的な**非機密 env（REST API, upsert） |
-| `github` | environment(dev/staging/production) + **production 承認ゲート** + 環境別 `DOPPLER_TOKEN`(read-only) |
+| `github` | environment(dev/staging/production) + **production 承認ゲート** + env secret の同期状況チェック |
 | `wire` | **Vercel 外の消費者向けの生成値を Doppler に格納**（migration 用 `POSTGRES_URL` / mobile 用 `EXPO_PUBLIC_*`）＋ backend(Vercel) endpoint を Vercel(web) にも直接 set。Supabase の値は Marketplace 任せで扱わない |
 
 > 出力された `scripts/infra/.outputs`（project ref / URL。非機密）は wire の入力に使う。
@@ -169,7 +169,7 @@ infra-bootstrap supabase github # 一部だけ再実行も可
     backend: `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY`）と一致させる。ズレていれば
     **Vercel 側で別名を追加**して合わせる（Doppler には戻さない）。
 - **Vercel(web) の backend endpoint** … Marketplace の管轄外なので `wire` が `NEXT_PUBLIC_BACKEND_PY_URL` を直接 set。
-- **migration(GitHub Actions)** … `POSTGRES_URL` を Doppler から取得（env スコープ `DOPPLER_TOKEN`）。
+- **migration(GitHub Actions)** … Doppler→GitHub ネイティブ sync で GitHub Environment secrets に届いた `POSTGRES_URL` を job env で受け取る（Actions 内で doppler CLI は使わない）。
 - **mobile(EAS)** … Doppler に置いた `EXPO_PUBLIC_*` を EAS 側で取り込む（EAS の env 機構は別途・要設定）。
 - **edge functions の `SUPABASE_URL`/`ANON`/`SERVICE_ROLE`/`SUPABASE_DB_URL`** … Supabase ランタイムが**自動注入**（配線不要）。
 > **外部 API キー（OpenAI 等）は対象外**＝ユーザーが Doppler に直接投入し、各所へ native sync。
@@ -187,6 +187,12 @@ infra-bootstrap supabase github # 一部だけ再実行も可
    - Supabase(edge): Access Token を貼り、**branch 単位**で対応（OneSignal 等 edge secret 用）。
      `SUPABASE_*` は platform の default secrets で入るため対象外。
    - Vercel(web): **任意**（web が必要とする外部 secret がある場合のみ）。
+   - **GitHub Actions**: `migrate.yml` が使う `POSTGRES_URL` を配るため、**GitHub Environment 単位で
+     sync を作る**（*Doppler project > Integrations > GitHub*）。公式仕様どおり **environment を選べば
+     Repository secrets ではなく Environment secrets に同期**される。config ごとに sync を 1 つずつ作成:
+     `prd`→Environment `production` / `stg`→`staging` / `dev`→`dev`。
+     これにより Actions 内で doppler CLI / service token を使わずに `${{ secrets.POSTGRES_URL }}` で解決できる。
+     確認: `gh secret list --env production`（`infra-bootstrap github` も未同期なら warn を出す）。
 3. **外部 API キー（OpenAI/Stripe 等）を Doppler の各 config に投入**（doppler MCP。値は露出しない）。
    ※ **`POSTGRES_URL` / `EXPO_PUBLIC_*` / backend(Vercel) endpoint は Phase 1 の `wire` が Doppler に自動投入済み**
      （手動不要）。ここで入れるのは「外部から持ち込む secret」だけ。
@@ -226,11 +232,12 @@ gh run watch   # 承認待ち → GitHub 上で approve すると適用が進む
   **承認後に適用**される（dev / staging は承認なしで即適用）。
 - 中身は push 時と同一（`devenv tasks run -P "$ENV" db:migrate-deploy`）。job summary に
   profile / trigger / ref / actor / result が残る。
-- **接続先の解決**: GitHub Environment の env スコープ secret `DOPPLER_TOKEN` → devenv の
-  `loadDopplerByEnv` → 対応 Doppler config の `POSTGRES_URL`。workflow は **job env で `ENV` を渡す**
-  ことでこれを成立させている（渡さないと `devenv shell` が `ENV=local` で起動し
-  `env/migration/.env.local` のローカル値を掴む）。適用前に検証ステップが
-  `DOPPLER_TOKEN` / `POSTGRES_URL` の解決とローカル値混入をチェックして落とす。
+- **接続先の解決**: Doppler → **GitHub ネイティブ sync** → GitHub Environment secrets → job env → task。
+  ⚠️ job env では `POSTGRES_URL` ではなく **`MIGRATE_POSTGRES_URL`** という名前で渡す。devenv の
+  enterShell は `set -a; . env/<svc>/.env.$ENV` を行うため、env ファイルが定義する変数は外から
+  渡した同名の値を**上書きする**（実測: ENV 未指定だと 127.0.0.1:54322 に化ける）。devenv が
+  触らない名前で輸送し、`db:migrate-deploy` task が最後に `POSTGRES_URL` へ反映する。
+  適用前に検証ステップが解決とローカル値混入をチェックして落とす。
 
 ---
 

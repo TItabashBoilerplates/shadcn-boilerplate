@@ -13,8 +13,9 @@ paths: drizzle/**/*.ts, drizzle/migrations/**/*.sql
 | `devenv tasks run app:migrate-dev` | **ローカル** Supabase (localhost:54322) | **可** | スキーマ生成 → 適用 → 型再生成。失敗してもローカルなので安全に再実行可能 |
 | `devenv tasks run db:migrate-dev` | **ローカル** Supabase | **可** | 上記から型生成を除いたサブセット |
 | `devenv tasks run model:*` | (DB 接続を伴わない型生成) | **可** | 元から read-only |
-| `devenv tasks run -P staging db:migrate-deploy` | **共有 staging** | **要承認** | 共有環境への変更。実行前にユーザーへ明示確認 |
-| `devenv tasks run -P production db:migrate-deploy` | **本番** | **要承認** | 不可逆かつデータ損失リスクあり。実行前にユーザーへ明示確認 |
+| `migrate.yml`（staging） | **共有 staging** | **要承認** | 共有環境への変更。実行前にユーザーへ明示確認。AI は workflow を dispatch しない |
+| `migrate.yml`（production） | **本番** | **要承認** | 不可逆かつデータ損失リスクあり。GitHub 側の承認ゲートも通る |
+| `db:migrate-deploy` のローカル直叩き | staging / 本番 | **要承認** | 承認ゲートと監査ログを迂回するため緊急時のみ。接続先は `MIGRATE_POSTGRES_URL` で渡す |
 | `drizzle/migrations/` 内ファイルの**手動編集** | (生成済み migration) | **禁止** | ハッシュ整合性が壊れる。スキーマ側を直して再 generate する |
 
 ## Workflow (Local Development)
@@ -52,10 +53,10 @@ cat drizzle/migrations/<latest>/migration.sql
 gh workflow run migrate.yml --ref main -f environment=production
 
 # ローカルから直接叩く場合（緊急時のみ。承認ゲートを迂回する）:
-#   ⚠️ `ENV=` を必ず前置すること。`-P` だけでは base enterShell が ENV=local のまま走り、
-#      env/migration/.env.local のローカル POSTGRES_URL(127.0.0.1:54322) を掴んでしまう。
-ENV=staging    devenv tasks run -P staging    db:migrate-deploy
-ENV=production devenv tasks run -P production db:migrate-deploy
+#   ⚠️ 接続先は **MIGRATE_POSTGRES_URL** で渡す。POSTGRES_URL のまま渡すと、devenv の
+#      enterShell が env/*/.env.local を source して 127.0.0.1:54322 に上書きしてしまう。
+MIGRATE_POSTGRES_URL="$(doppler secrets get POSTGRES_URL --config prd --plain)" \
+  ENV=production devenv tasks run db:migrate-deploy
 ```
 
 ## Why Local Migrations Can Be Auto-Executed
@@ -277,12 +278,14 @@ using: sql`true`
 - 各 run は job summary に profile / trigger / ref / actor / result を出す（手動実行の監査痕跡）。
 - ワークフローは raw `drizzle-kit` ではなく **`devenv tasks run -P "$ENV" db:migrate-deploy`** を呼ぶ
   （`.claude/rules/commands.md` 準拠）。
-- **接続先の解決経路**: GitHub Environment の env スコープ secret `DOPPLER_TOKEN`
-  → devenv の `loadDopplerByEnv` → 対応 Doppler config（dev/stg/prd）の `POSTGRES_URL`。
-  - ⚠️ そのために **job env で `ENV` を渡すことが必須**。渡さないと `devenv shell` が `ENV=local` で
-    起動して `env/migration/.env.local` のローカル `POSTGRES_URL` を掴む（リモートに適用されない）。
-  - 適用前に **Verify remote credentials resolved** ステップが `DOPPLER_TOKEN` / `POSTGRES_URL` の
-    解決とローカル値混入を検査して落とす（値は出さず host:port のみ表示）。
+- **接続先の解決経路**: Doppler → **GitHub のネイティブ sync** → GitHub Environment の secrets
+  → workflow の job env → task。**Actions 内で doppler CLI は使わない**（token 不要）。
+  - ⚠️ secret は `POSTGRES_URL` ではなく **`MIGRATE_POSTGRES_URL`** という名前で job env に渡す。
+    devenv の enterShell は `set -a; . env/<svc>/.env.$ENV` を行うため、env ファイルが定義する
+    変数は外から渡した同名の値を**上書きする**（実測: ENV 未指定だと 127.0.0.1:54322 に化ける）。
+    devenv が触らない名前で輸送し、task が最後に `POSTGRES_URL` へ反映する。
+  - 適用前に **Verify remote credentials resolved** ステップが解決とローカル値混入を検査して
+    落とす。task 側にも同じガードがあるためローカル実行でも守られる（値は出さず host:port のみ表示）。
 
 ## Enforcement
 

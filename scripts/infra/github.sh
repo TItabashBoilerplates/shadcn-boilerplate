@@ -2,10 +2,10 @@
 # GitHub の deployment environment(dev/staging/production) を作成し、
 #   - production に required reviewers（手動承認ゲート）+ branch policy(main)
 #   - dev/staging は branch policy のみ（自動）
-#   - 各環境に DOPPLER_TOKEN(env スコープ secret) = read-only Doppler service token を注入
-# を冪等に行う。token は pipe で直接 `gh secret set` に渡し、stdout/ファイルに出さない。
+#   - 各環境の secret 同期状況を確認（値の配布は Doppler→GitHub ネイティブ sync の責務）
+# を冪等に行う。secret 値そのものは扱わない（配布は Doppler→GitHub ネイティブ sync）。
 #
-# 認証: gh は `gh auth login` 済み or GH_TOKEN。Doppler は DOPPLER_TOKEN(bootstrap) or login 済み。
+# 認証: gh は `gh auth login` 済み or GH_TOKEN。doppler CLI は使わない。
 # gh api の environments エンドポイントは公式（cli.github.com / REST deployments/environments）。
 set -euo pipefail
 
@@ -55,45 +55,37 @@ ensure_environment() {
   fi
 }
 
-# 環境別 DOPPLER_TOKEN を read-only service token として発行し env secret に注入（idempotent）。
-ensure_doppler_token_secret() {
+# env スコープ secret（POSTGRES_URL 等）が同期済みかを確認する（作成はしない）。
+# 値の配布は **Doppler → GitHub のネイティブ sync**（dashboard, runbook Phase 2）の責務。
+# ここで service token を発行しないのは、Actions 内で doppler CLI を使わない設計のため
+# （workflow は `${{ secrets.* }}` を job env に渡すだけ）。
+check_env_secrets() {
   local repo="$1" env="$2"
-  local ghenv slug token
+  local ghenv slug
   ghenv="$(gh_env_name "$env")"
   slug="$(doppler_config_for "$env")"   # dev|stg|prd
 
-  if gh secret list --env "$ghenv" --repo "$repo" 2>/dev/null | grep -q '^DOPPLER_TOKEN'; then
-    ok "DOPPLER_TOKEN(${ghenv}) は設定済み（skip）"
-    return 0
+  if gh secret list --env "$ghenv" --repo "$repo" 2>/dev/null | grep -q '^POSTGRES_URL'; then
+    ok "env secret POSTGRES_URL(${ghenv}) 同期済み"
+  else
+    warn "env secret POSTGRES_URL(${ghenv}) が未同期。Doppler > Integrations > GitHub で"
+    warn "  config '${slug}' → Environment '${ghenv}' の sync を作成してください（runbook Phase 2）。"
   fi
-
-  # read-only token を発行 → pipe で gh secret set に直接渡す（値は表示しない）
-  token="$(doppler configs tokens create "ci-${slug}" \
-            --project "$DOPPLER_PROJECT" --config "$slug" \
-            --access read --plain 2>/dev/null)" \
-    || { warn "Doppler token 発行 skip(${slug})。手動で DOPPLER_TOKEN(${ghenv}) を設定"; return 0; }
-
-  printf '%s' "$token" | gh secret set DOPPLER_TOKEN --env "$ghenv" --repo "$repo" \
-    && ok "DOPPLER_TOKEN(${ghenv}) を注入（read-only, config=${slug}）" \
-    || warn "gh secret set(${ghenv}) skip"
-  token=""
 }
 
 main() {
   require_tool gh
   require_tool jq
-  require_tool doppler
   load_config
   : "${GH_REPO:?config.env に GH_REPO が必要}"
-  : "${DOPPLER_PROJECT:?config.env に DOPPLER_PROJECT が必要}"
 
   local env
   for env in $INFRA_ENVS; do
     ensure_environment "$GH_REPO" "$env"
-    ensure_doppler_token_secret "$GH_REPO" "$env"
+    check_env_secrets "$GH_REPO" "$env"
   done
 
-  ok "GitHub environments / 承認ゲート / DOPPLER_TOKEN(env) OK"
+  ok "GitHub environments / 承認ゲート OK（secret 配布は Doppler→GitHub sync）"
 }
 
 main "$@"

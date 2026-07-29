@@ -12,14 +12,15 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# Doppler サービストークン（read-only・単一 config スコープ）。GitHub Secrets に
-# DOPPLER_TOKEN を登録すると、devenv shell 進入時の loadDopplerByEnv が CI でも
-# シークレットを取得できる（token がそのスコープの config を決めるため ENV/--config 不要）。
-# 未登録なら空文字 → Doppler 取得は失敗し警告のみ（lint/format/type-check/unit-test は
-# シークレット不要なので CI は通る）。デプロイ先のシークレットは Doppler ネイティブ連携で
-# 各プラットフォームに sync する（.claude/skills/doppler/references/cicd.md 参照）。
+# CI（lint / format / type-check / unit-test）は**シークレット不要**。ローカル既定値は
+# env/<svc>/.env.local から入るため、Doppler へ問い合わせる必要が無い。
+# 仮に必要になっても、Doppler → GitHub のネイティブ sync 済みの値を `${{ secrets.* }}` で
+# job env に渡せばよく、**Actions 内で doppler CLI を叩く必要は無い**
+# （.claude/skills/doppler/references/cicd.md）。
+# DOPPLER_SKIP=1 で devenv の Doppler ロードを明示的にスキップし、毎 run の
+# 「⚠️ シークレット未ロード」警告（＝無視が常態化する類のノイズ）を出さない。
 env:
-  DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+  DOPPLER_SKIP: "1"
 
 # 公式推奨: すべての `run:` を devenv shell 内で実行する。
 # これにより `devenv:enterShell` hook が発火し、`before = [ "devenv:enterShell" ]`

@@ -44,25 +44,28 @@ jobs:
     name: db:migrate-deploy
     runs-on: ubuntu-latest
     # production を選んだ run のみ承認ゲートがかかる（dev/staging は reviewers 無し = 自動）。
-    # env スコープの DOPPLER_TOKEN secret もここで選択した environment から解決される。
+    # env スコープの secret（Doppler が sync 済み）もここで選択した environment から解決される。
     environment: >-
       ${{ github.event_name == 'workflow_dispatch' && inputs.environment
         || (github.ref == 'refs/heads/main' && 'production')
         || (github.ref == 'refs/heads/staging' && 'staging')
         || 'dev' }}
     env:
-      # 各 GitHub Environment に紐づく read-only Doppler service token（infra-bootstrap が投入）。
-      # 上の environment: で選ばれた env スコープの secret が解決される。
-      DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
-      # ⚠️ ENV は **job env で渡すことが必須**。
-      # devenv の base enterShell は `export ENV="${ENV:-local}"` なので、ここで渡さないと
-      # 下の `defaults.run.shell` の `devenv shell` が **local として起動**し、
-      #   1. loadEnvFilesForEnv が env/migration/.env.local を source →
-      #      POSTGRES_URL=postgresql://...@127.0.0.1:54322/postgres（ローカル値）を掴む
-      #   2. loadDopplerByEnv も local scope で走り、リモート config の値を取れない
-      # という状態で migration が走ってしまう（本番に接続せず ECONNREFUSED で落ちる）。
-      # ENV を渡せば env/<svc>/.env.<ENV> は存在しない＝ローカル値が入らず、
-      # Doppler の該当 config（dev/stg/prd）から POSTGRES_URL が解決される。
+      # 接続先 DB。**Doppler → GitHub のネイティブ sync** が、Doppler の各 config を対応する
+      # GitHub Environment の secrets に配っている（prd→production / stg→staging / dev→dev）。
+      # 上の environment: で選ばれた env スコープの secret がここで解決される。
+      # → Actions 内で doppler CLI を叩く必要は無い（service token も不要）。
+      #
+      # ⚠️ 変数名が `POSTGRES_URL` **ではない**のは意図的。devenv の enterShell は
+      # `set -a; . env/<svc>/.env.$ENV` を行うため、その env ファイルが定義する変数は
+      # **外から渡した同名の値を上書きする**（実測: ENV 未指定だと 127.0.0.1:54322 に化ける）。
+      # `MIGRATE_POSTGRES_URL` は devenv も env ファイルも定義しない名前なので確実に伝わり、
+      # db:migrate-deploy task が最後に POSTGRES_URL へ反映する。
+      MIGRATE_POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+      # 値は GitHub Secrets から来るので、devenv の Doppler ロードは行わない（doppler CLI 不使用）。
+      DOPPLER_SKIP: "1"
+      # ENV は Doppler config / env ファイルの選択に使われる。上記の輸送用変数があるので接続先の
+      # 正しさは ENV に依存しないが、profile を明示するために渡す（実測で伝播することを確認済み）。
       ENV: >-
         ${{ github.event_name == 'workflow_dispatch' && inputs.environment
           || (github.ref == 'refs/heads/main' && 'production')
@@ -101,27 +104,23 @@ jobs:
       - name: Install devenv.sh
         shell: bash
         run: nix profile add nixpkgs#devenv
-      # 接続先が Actions secret（DOPPLER_TOKEN）経由で解決できたことを、適用前に検証する。
-      # loadDopplerByEnv は取得失敗しても警告のみで shell を止めないため、ここで明示的に落とす
+      # 接続先が GitHub Secrets（Doppler sync 済み）から解決できたことを、適用前に検証する。
+      # devenv shell を経由する間に env ファイル等で上書きされていないかもここで検出する
       # （.claude/rules/error-handling.md: 握りつぶさない）。
       # ⚠️ POSTGRES_URL は DB パスワードを含むので **絶対に出力しない**。host:port だけ表示する。
       - name: Verify remote credentials resolved
         run: |
-          if [ -z "${DOPPLER_TOKEN:-}" ]; then
-            echo "::error::DOPPLER_TOKEN が空です。GitHub Environment '${ENV}' の env スコープ secret を確認してください（infra-bootstrap github が投入します）。"
+          if [ -z "${MIGRATE_POSTGRES_URL:-}" ]; then
+            echo "::error::MIGRATE_POSTGRES_URL が空です。GitHub Environment '${ENV}' に POSTGRES_URL secret が同期されているか確認してください（Doppler > Integrations > GitHub で該当 config → 該当 Environment の sync を作成）。"
             exit 1
           fi
-          if [ -z "${POSTGRES_URL:-}" ]; then
-            echo "::error::POSTGRES_URL を解決できませんでした。Doppler の該当 config に POSTGRES_URL があるか、token のスコープが一致しているか確認してください。"
-            exit 1
-          fi
-          case "$POSTGRES_URL" in
+          case "$MIGRATE_POSTGRES_URL" in
             *127.0.0.1*|*localhost*)
-              echo "::error::POSTGRES_URL がローカル値です（ENV=${ENV} が効かず env/*/.env.local を読んでいます）。リモート DB に適用されないため中止します。"
+              echo "::error::接続先がローカル値です。GitHub Environment '${ENV}' に同期されている POSTGRES_URL の値を確認してください。"
               exit 1 ;;
           esac
           # 認証情報を落として host:port のみ表示
-          echo "✓ ENV=${ENV} / target=$(printf '%s' "$POSTGRES_URL" | sed -E 's|^[^@]*@||; s|[/?].*$||')"
+          echo "✓ ENV=${ENV} / target=$(printf '%s' "$MIGRATE_POSTGRES_URL" | sed -E 's|^[^@]*@||; s|[/?].*$||')"
       # raw drizzle-kit ではなく devenv task を使う（.claude/rules/commands.md 準拠）。
       # ENV は job env で渡し済みなので -P は profile を明示するための冗長指定。
       - name: Run Drizzle migrations
