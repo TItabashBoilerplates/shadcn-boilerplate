@@ -153,7 +153,8 @@ TUI が主なので、ログ閲覧・個別プロセス再起動・状態確認�
 
 `frontend/apps/<name>` 配下のアプリは **opt-in process** (`start.enable = false`) なので、`devenv up` 単体では起動しない。明示指定または `dev-<name>` script を使う。新規アプリ追加時は `devenv.nix` の `frontendApps` attrset に 1 行追加するだけで、process / `dev-<name>` script / `dev-all` がすべて自動連動する。
 
-> Profile: **local が既定**（base enterShell で env がロードされる）なので `-P local` は不要。`dev` / `staging` / `production` profile は `devenv up -P dev` / `devenv tasks run -P production deploy:functions` のように `-P` 指定で env を上書きする。env ファイル (`env/<service>/.env.<profile>`) は未配置でも profile アクティベーションは成功する（後置き OK）。
+> Profile: **local が既定**（base enterShell で env がロードされる）なので `-P local` は不要。`dev` / `staging` / `production` profile は `devenv up -P dev` / `devenv tasks run -P production deploy:functions` のように `-P` 指定で env を上書きする。
+> ⚠️ **`devenv tasks run` をリモート profile で叩くときは `ENV=<profile>` を前置する**（例: `ENV=production devenv tasks run -P production ...`）。base enterShell が `export ENV="${ENV:-local}"` のため、`-P` だけだと ENV=local のまま `env/<svc>/.env.local` のローカル値を掴む。CI では job env で `ENV` を渡している（`.github/workflows/migrate.yml`）。env ファイル (`env/<service>/.env.<profile>`) は未配置でも profile アクティベーションは成功する（後置き OK）。
 
 > Makefile は **deprecated**。すべて devenv のコマンドへ移行済み。`make X` を叩くと案内メッセージのみ出力する。
 
@@ -224,7 +225,10 @@ e2e / e2e-web / e2e-mobile    # Maestro E2E
 devenv tasks run app:migrate-dev   # ローカル: Generate + apply migration + type 生成（フルフロー、AI 実行可）
 devenv tasks run db:migrate-dev    # ローカル: マイグレーション生成 + 適用のみ（AI 実行可）
 devenv tasks run model:build       # 型のみ再生成（AI 実行可）
-devenv tasks run -P production db:migrate-deploy   # 本番: ⚠️ ユーザー承認必須
+# 本番/staging への適用は GitHub Actions (migrate.yml) が正規経路（承認ゲート + 監査ログ）
+gh workflow run migrate.yml --ref main -f environment=production   # ⚠️ ユーザー承認必須
+# ローカルから直接叩く場合は ENV= を必ず前置（-P だけだと ENV=local のまま = ローカル DB を見る）
+ENV=production devenv tasks run -P production db:migrate-deploy    # ⚠️ 緊急時のみ
 
 # Task graph 確認 (依存・実行順序を可視化)
 devenv tasks list                          # 全 task の階層表示

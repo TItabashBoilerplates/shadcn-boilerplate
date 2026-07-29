@@ -54,9 +54,14 @@ devenv tasks run app:migrate-dev   # Generate + apply migration + types (recomme
 devenv tasks run db:migrate-dev    # Migration only
 devenv tasks run model:build       # Regenerate types only
 
-# Profile switching for remote ops
-devenv tasks run -P staging db:migrate-deploy
-devenv tasks run -P production deploy:functions
+# Remote migration: GitHub Actions (migrate.yml) is the canonical path
+gh workflow run migrate.yml --ref main -f environment=production
+
+# Profile switching for remote ops (local invocation — emergency only)
+#   MUST prefix ENV=. The base enterShell does `export ENV="${ENV:-local}"`, so `-P` alone
+#   leaves ENV=local and the task picks up env/*/.env.local (local POSTGRES_URL).
+ENV=staging    devenv tasks run -P staging    db:migrate-deploy
+ENV=production devenv tasks run -P production deploy:functions
 ```
 
 **NEVER execute tools directly**:

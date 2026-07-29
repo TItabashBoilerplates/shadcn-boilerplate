@@ -40,16 +40,22 @@ cat drizzle/migrations/<latest>/migration.sql
 
 ## Workflow (Remote Deployment, USER APPROVAL REQUIRED)
 
+**正規経路は GitHub Actions（`migrate.yml`）**。承認ゲートと監査ログを通るのでこちらを使う（後述）。
+
 ```bash
 # AI は実行禁止。以下のいずれかでユーザーに確認:
 # - 「staging に migration を適用してよいか」
 # - 「production に migration を適用してよいか」
 # - 「どの profile (staging / production) に対して実行するか」
 
-# ユーザーが実行を承認した場合のみ:
-devenv tasks run -P staging db:migrate-deploy
-# or
-devenv tasks run -P production db:migrate-deploy
+# 通常はこちら（承認ゲート付き・監査ログあり）:
+gh workflow run migrate.yml --ref main -f environment=production
+
+# ローカルから直接叩く場合（緊急時のみ。承認ゲートを迂回する）:
+#   ⚠️ `ENV=` を必ず前置すること。`-P` だけでは base enterShell が ENV=local のまま走り、
+#      env/migration/.env.local のローカル POSTGRES_URL(127.0.0.1:54322) を掴んでしまう。
+ENV=staging    devenv tasks run -P staging    db:migrate-deploy
+ENV=production devenv tasks run -P production db:migrate-deploy
 ```
 
 ## Why Local Migrations Can Be Auto-Executed
@@ -269,8 +275,14 @@ using: sql`true`
 - **production は必ず承認待ちになる**（GitHub Environment の required reviewers）。承認するまで適用されない。
   加えて deployment branch policy により production は `main` からしか実行できない。
 - 各 run は job summary に profile / trigger / ref / actor / result を出す（手動実行の監査痕跡）。
-- ワークフローは raw `drizzle-kit` ではなく **`devenv tasks run -P <profile> db:migrate-deploy`** を呼ぶ
-  （`.claude/rules/commands.md` 準拠）。接続先 `POSTGRES_URL` は env スコープの `DOPPLER_TOKEN` 経由で Doppler から解決される。
+- ワークフローは raw `drizzle-kit` ではなく **`devenv tasks run -P "$ENV" db:migrate-deploy`** を呼ぶ
+  （`.claude/rules/commands.md` 準拠）。
+- **接続先の解決経路**: GitHub Environment の env スコープ secret `DOPPLER_TOKEN`
+  → devenv の `loadDopplerByEnv` → 対応 Doppler config（dev/stg/prd）の `POSTGRES_URL`。
+  - ⚠️ そのために **job env で `ENV` を渡すことが必須**。渡さないと `devenv shell` が `ENV=local` で
+    起動して `env/migration/.env.local` のローカル `POSTGRES_URL` を掴む（リモートに適用されない）。
+  - 適用前に **Verify remote credentials resolved** ステップが `DOPPLER_TOKEN` / `POSTGRES_URL` の
+    解決とローカル値混入を検査して落とす（値は出さず host:port のみ表示）。
 
 ## Enforcement
 

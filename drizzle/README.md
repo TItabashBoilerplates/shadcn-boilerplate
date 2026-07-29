@@ -175,11 +175,14 @@ gh run watch   # production は承認待ち → approve 後に適用
 ```
 
 - production は `main` からのみ実行可（deployment branch policy）＋ **required reviewers の承認が必須**。
-- workflow の中身は `devenv tasks run -P <profile> db:migrate-deploy`。接続先 `POSTGRES_URL` は
-  env スコープの `DOPPLER_TOKEN` 経由で Doppler から解決される。
+- workflow の中身は `devenv tasks run -P "$ENV" db:migrate-deploy`。接続先 `POSTGRES_URL` は
+  **GitHub Environment の env スコープ secret `DOPPLER_TOKEN` → Doppler の該当 config** から解決される
+  （workflow は job env で `ENV` を渡すことでこの解決を成立させている）。適用前に接続先の検証ステップが走る。
 
-> ローカルから `devenv tasks run -P production db:migrate-deploy` を直接叩くのは
-> **緊急時のみ**（承認ゲートと監査ログを迂回する）。詳細は `.claude/rules/database.md`。
+> ローカルから直接叩くのは **緊急時のみ**（承認ゲートと監査ログを迂回する）。その場合は
+> **`ENV=` を必ず前置**すること — `ENV=production devenv tasks run -P production db:migrate-deploy`。
+> `-P` だけだと base enterShell が `ENV=local` のままで `env/migration/.env.local` の
+> ローカル `POSTGRES_URL` を掴む。詳細は `.claude/rules/database.md`。
 
 ## Type Inference
 
@@ -247,7 +250,7 @@ drizzle/config/
 devenv の task ラッパー:
 - `devenv tasks run db:migrate-dev` (ローカル)
 - `devenv tasks run app:migrate-dev` (ローカル + 型生成)
-- `devenv tasks run -P production db:migrate-deploy` (本番)
+- `ENV=production devenv tasks run -P production db:migrate-deploy` (本番・緊急時のみ。通常は migrate.yml)
 
 ### Adding Realtime Tables
 
@@ -302,7 +305,7 @@ POSTGRES_URL=postgresql://postgres:postgres@localhost:54322/postgres
 1. **Development**: `devenv tasks run app:migrate-dev` generates and applies migration locally (with type regeneration)
 2. **Review**: Check generated SQL in `drizzle/migrations/<ts>_<name>/migration.sql`
 3. **Commit**: Add migration files to Git
-4. **Deploy**: `devenv tasks run -P <profile> db:migrate-deploy` applies to remote environments
+4. **Deploy**: push (or run `migrate.yml` manually) — the workflow applies migrations to the remote environment
 
 ### Why not Supabase migrations?
 

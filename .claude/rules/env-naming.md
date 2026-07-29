@@ -38,22 +38,44 @@ Doppler は各 PaaS へ**ネイティブ連携（sync）で fan-out** する設�
 | **Supabase Edge Functions** | Supabase platform が **default secrets** として自動提供（`SUPABASE_URL` / `SUPABASE_DB_URL` / `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` / `SUPABASE_JWKS` / 旧 `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY`） | **何もしない**（`Deno.env.get()` で読むだけ） |
 | **ローカル開発** | `env/{backend,frontend}/.env.local`（**ファイル管理・非機密のローカル既定値**） | 既存ファイルを編集。**Doppler 対象外なので prefix 制約もかからない** |
 
-### Vercel Marketplace 連携が注入する変数（公式）
+### Vercel Marketplace 連携が注入する変数（公式・確定）
 
-`POSTGRES_URL` / `POSTGRES_PRISMA_URL` / `POSTGRES_URL_NON_POOLING` / `POSTGRES_USER` /
-`POSTGRES_HOST` / `POSTGRES_PASSWORD` / `POSTGRES_DATABASE` /
-`SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` / `SUPABASE_JWT_SECRET` /
-`NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+| 変数 | 用途 |
+|---|---|
+| `POSTGRES_URL` / `POSTGRES_PRISMA_URL` / `POSTGRES_URL_NON_POOLING` / `POSTGRES_USER` / `POSTGRES_HOST` / `POSTGRES_PASSWORD` / `POSTGRES_DATABASE` | DB 直接接続 |
+| `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` | サーバサイド（backend-py 等） |
+| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | ブラウザ公開（Next.js） |
+| `SUPABASE_JWT_SECRET` | JWT 検証（Supabase 側ドキュメントにのみ記載） |
 
-> 出典: [Supabase: Vercel Marketplace Integration](https://supabase.com/docs/guides/integrations/vercel-marketplace)
-> —「Supabase Projects created via Vercel Marketplace are automatically synchronized with connected Vercel projects.」
->
+> 出典: [Supabase: Vercel Marketplace Integration](https://supabase.com/docs/guides/integrations/vercel-marketplace) /
+> [Vercel Marketplace: Supabase](https://vercel.com/marketplace/supabase)（「Sync all your Project env vars to
+> your Vercel projects automatically.」）。**外部で作った Supabase を "Connect Account" で接続した場合も
+> 同じく同期される**（Marketplace で新規作成した場合に限らない）。
+
+**本リポジトリの参照名は、この注入名と完全に一致している**（改名も別名追加も不要）:
+
+| 参照箇所 | 参照名 | 注入 |
+|---|---|---|
+| `backend-py/packages/core/src/core/supabase_client.py` | `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` | ✅ |
+| `frontend/packages/client/supabase/client.ts` ほか web | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | ✅ |
+
 > **これらは Vercel が持つ値であり、Doppler に同じキーを作ると (a) `SUPABASE_` prefix で sync が壊れ、
 > (b) 二重管理で値が食い違う**。両方の意味で禁止。
->
-> ⚠️ 注入されるキー名は新体系（publishable/secret）か旧体系（anon/service_role）かで揺れる。
-> **連携後に Vercel の Environment Variables 画面で実機確認**し、アプリの参照名と一致させること
-> （推測で合わせない。`.claude/rules/research.md`）。
+
+#### 補足（誤解しやすい点）
+
+- **`anon` / `service_role` という旧キー名で入るのは、Marketplace 以前の旧 Vercel Integration**。
+  Marketplace 連携は上表のとおり**新体系（publishable / secret）**で注入する。旧名を前提にした
+  ブログ記事・古い手順が多いので混同しないこと。
+- **`NEXT_PUBLIC_` prefix は Supabase ダッシュボードから変更可能**（Next.js 以外のフレームワークで
+  `PUBLIC_` 等にしたい場合）。本リポジトリの web は Next.js で既定のままでよいので**触らない**。
+  ※ 変更できないという報告も残っている（[supabase#37762](https://github.com/supabase/supabase/issues/37762)、open）。
+- **既知の未解決 issue**: 非対称 JWT へ移行済みのアカウントで
+  `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY` が注入されない
+  （[supabase#38984](https://github.com/supabase/supabase/issues/38984)、open）。
+  **本リポジトリはこの名前を参照していないため影響しない**。
+- 上記いずれかで実際に名前がズレた場合の対処は **Vercel 側で別名の env var を追加**すること。
+  **Doppler には戻さない**（`SUPABASE_` prefix は登録できないため）。
 
 ---
 

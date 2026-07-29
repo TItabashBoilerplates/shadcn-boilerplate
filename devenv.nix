@@ -463,10 +463,29 @@ in
     };
 
     # 全環境共通: 既存マイグレーションの適用のみ
+    #
+    # ⚠️ ガード: ENV が local 以外（= リモート適用のつもり）なのに POSTGRES_URL がローカル値だったら
+    # 中止する。base enterShell は `export ENV="''${ENV:-local}"` なので `-P production` だけを付けて
+    # `ENV=` を前置し忘れると、env/migration/.env.local のローカル POSTGRES_URL を掴んだまま走る。
+    # 「リモートに流したつもりが実はローカル（あるいは接続拒否）」を静かに通さないための保険。
+    # 値（パスワードを含む）は表示せず host:port だけ出す。
     "db:migrate-deploy".exec = ''
       set -euo pipefail
       cd "$DEVENV_ROOT/drizzle"
-      echo "🚀 Deploying migrations..."
+      if [ -z "''${POSTGRES_URL:-}" ]; then
+        echo "✗ POSTGRES_URL が未設定です。Doppler から取得できているか確認してください。" >&2
+        exit 1
+      fi
+      if [ "''${ENV:-local}" != "local" ]; then
+        case "$POSTGRES_URL" in
+          *127.0.0.1*|*localhost*)
+            echo "✗ ENV=''${ENV} なのに POSTGRES_URL がローカル値です（リモートに適用されません）。" >&2
+            echo "  -P だけでなく ENV=''${ENV} を前置して実行してください。" >&2
+            echo "  例: ENV=''${ENV} devenv tasks run -P ''${ENV} db:migrate-deploy" >&2
+            exit 1 ;;
+        esac
+      fi
+      echo "🚀 Deploying migrations... (ENV=''${ENV:-local}, target=$(printf '%s' "$POSTGRES_URL" | sed -E 's|^[^@]*@||; s|[/?].*$||'))"
       nr migrate:pre
       nr migrate
       nr migrate:post

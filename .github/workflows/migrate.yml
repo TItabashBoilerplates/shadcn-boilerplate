@@ -52,8 +52,22 @@ jobs:
         || 'dev' }}
     env:
       # 各 GitHub Environment に紐づく read-only Doppler service token（infra-bootstrap が投入）。
-      # token がスコープ config（prd/stg/dev）を決めるので loadDopplerByEnv が secret を取得できる。
+      # 上の environment: で選ばれた env スコープの secret が解決される。
       DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+      # ⚠️ ENV は **job env で渡すことが必須**。
+      # devenv の base enterShell は `export ENV="${ENV:-local}"` なので、ここで渡さないと
+      # 下の `defaults.run.shell` の `devenv shell` が **local として起動**し、
+      #   1. loadEnvFilesForEnv が env/migration/.env.local を source →
+      #      POSTGRES_URL=postgresql://...@127.0.0.1:54322/postgres（ローカル値）を掴む
+      #   2. loadDopplerByEnv も local scope で走り、リモート config の値を取れない
+      # という状態で migration が走ってしまう（本番に接続せず ECONNREFUSED で落ちる）。
+      # ENV を渡せば env/<svc>/.env.<ENV> は存在しない＝ローカル値が入らず、
+      # Doppler の該当 config（dev/stg/prd）から POSTGRES_URL が解決される。
+      ENV: >-
+        ${{ github.event_name == 'workflow_dispatch' && inputs.environment
+          || (github.ref == 'refs/heads/main' && 'production')
+          || (github.ref == 'refs/heads/staging' && 'staging')
+          || 'dev' }}
     defaults:
       run:
         shell: devenv shell bash -- -e {0}
@@ -87,24 +101,31 @@ jobs:
       - name: Install devenv.sh
         shell: bash
         run: nix profile add nixpkgs#devenv
-      # branch / 手動入力 → devenv profile を解決し、既存の db:migrate-deploy task を実行。
-      # （raw drizzle-kit ではなく devenv task を使う: .claude/rules/commands.md 準拠）
-      - name: Resolve profile
-        id: profile
+      # 接続先が Actions secret（DOPPLER_TOKEN）経由で解決できたことを、適用前に検証する。
+      # loadDopplerByEnv は取得失敗しても警告のみで shell を止めないため、ここで明示的に落とす
+      # （.claude/rules/error-handling.md: 握りつぶさない）。
+      # ⚠️ POSTGRES_URL は DB パスワードを含むので **絶対に出力しない**。host:port だけ表示する。
+      - name: Verify remote credentials resolved
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            ENVIRON="${{ inputs.environment }}"
-          else
-            case "${{ github.ref }}" in
-              refs/heads/main)    ENVIRON=production ;;
-              refs/heads/staging) ENVIRON=staging ;;
-              *)                  ENVIRON=dev ;;
-            esac
+          if [ -z "${DOPPLER_TOKEN:-}" ]; then
+            echo "::error::DOPPLER_TOKEN が空です。GitHub Environment '${ENV}' の env スコープ secret を確認してください（infra-bootstrap github が投入します）。"
+            exit 1
           fi
-          echo "profile=$ENVIRON" >> "$GITHUB_OUTPUT"
-          echo "対象 profile: $ENVIRON"
+          if [ -z "${POSTGRES_URL:-}" ]; then
+            echo "::error::POSTGRES_URL を解決できませんでした。Doppler の該当 config に POSTGRES_URL があるか、token のスコープが一致しているか確認してください。"
+            exit 1
+          fi
+          case "$POSTGRES_URL" in
+            *127.0.0.1*|*localhost*)
+              echo "::error::POSTGRES_URL がローカル値です（ENV=${ENV} が効かず env/*/.env.local を読んでいます）。リモート DB に適用されないため中止します。"
+              exit 1 ;;
+          esac
+          # 認証情報を落として host:port のみ表示
+          echo "✓ ENV=${ENV} / target=$(printf '%s' "$POSTGRES_URL" | sed -E 's|^[^@]*@||; s|[/?].*$||')"
+      # raw drizzle-kit ではなく devenv task を使う（.claude/rules/commands.md 準拠）。
+      # ENV は job env で渡し済みなので -P は profile を明示するための冗長指定。
       - name: Run Drizzle migrations
-        run: devenv tasks run -P ${{ steps.profile.outputs.profile }} db:migrate-deploy
+        run: devenv tasks run -P "$ENV" db:migrate-deploy
       # 手動実行（とくに production）の監査痕跡。run 一覧から「誰がどの env に流したか」が見える。
       - name: Job summary
         if: always()
@@ -115,7 +136,7 @@ jobs:
             echo ""
             echo "| 項目 | 値 |"
             echo "|---|---|"
-            echo "| profile / env | \`${{ steps.profile.outputs.profile }}\` |"
+            echo "| profile / env | \`${ENV}\` |"
             echo "| trigger | \`${{ github.event_name }}\` |"
             echo "| ref | \`${{ github.ref_name }}\` (\`${{ github.sha }}\`) |"
             echo "| actor | @${{ github.actor }} |"

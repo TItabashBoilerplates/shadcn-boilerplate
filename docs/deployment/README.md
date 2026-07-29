@@ -89,14 +89,18 @@ CLI では代替できない前提づくり。
    - **Vercel ⇄ Supabase（Marketplace Connect Account）**: **web / backend の両 Vercel project** で
      *Settings > Integrations > Browse Marketplace > Supabase > **Connect Account*** から、
      **上で作った独立 Supabase を接続**する（Native の「新規作成」ではなく **Connect**。
-     `vercel integration add supabase` でも可）。これで `SUPABASE_URL` /
-     `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` / `NEXT_PUBLIC_SUPABASE_*` / `POSTGRES_*` が
-     **各 project に自動注入**される。**backend も Vercel project（Services）なので同じ経路で賄える**
-     → Supabase の値を Doppler で配る必要は無い（`.claude/rules/env-naming.md`）。
-     - ⚠️ 注入キー名（新 publishable/secret 体系か旧 anon/service_role か）は連携後に Vercel の
-       Environment Variables 画面で実機確認し、アプリ参照名と一致させる
-       （web: `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`、
-       backend: `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY`）。ズレていれば **Vercel 側で別名を追加**して合わせる。
+     `vercel integration add supabase` でも可）。**外部で作った Supabase を Connect した場合も env vars は
+     同期される**（[Vercel Marketplace: Supabase](https://vercel.com/marketplace/supabase)）。
+     **backend も Vercel project（Services）なので同じ経路で賄える** → Supabase の値を Doppler で配る
+     必要は無い（`.claude/rules/env-naming.md`）。
+     - 注入される変数（公式・確定）: `POSTGRES_URL` / `POSTGRES_PRISMA_URL` / `POSTGRES_URL_NON_POOLING` /
+       `POSTGRES_USER` / `POSTGRES_HOST` / `POSTGRES_PASSWORD` / `POSTGRES_DATABASE` / `SUPABASE_URL` /
+       `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` / `NEXT_PUBLIC_SUPABASE_URL` /
+       `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`（＋ Supabase 側ドキュメントには `SUPABASE_JWT_SECRET`）。
+     - **本リポジトリの参照名（web=`NEXT_PUBLIC_SUPABASE_URL`/`..._PUBLISHABLE_KEY`、
+       backend=`SUPABASE_URL`/`SUPABASE_PUBLISHABLE_KEY`）とこれは完全一致しているので、通常は調整不要**。
+     - 旧 `anon` / `service_role` 名で入るのは **Marketplace 以前の旧 Integration**。混同しないこと。
+       万一ズレた場合のみ **Vercel 側で別名の env var を追加**して合わせる（Doppler には戻さない）。
 3. **API トークン発行**（値はチャット / コミットに出さない）:
    - `VC_TOKEN`（Vercel Full Access。web / backend 両 project の作成・env 設定・domain 取得に使う）
    - `SB_ACCESS_TOKEN`（Supabase PAT）/ `SB_DB_PASSWORD`（単一 project の DB パスワード）
@@ -220,8 +224,13 @@ gh run watch   # 承認待ち → GitHub 上で approve すると適用が進む
 
 - production は deployment branch policy により **`main` からのみ**実行でき、required reviewers の
   **承認後に適用**される（dev / staging は承認なしで即適用）。
-- 中身は push 時と同一（`devenv tasks run -P <profile> db:migrate-deploy`）。job summary に
+- 中身は push 時と同一（`devenv tasks run -P "$ENV" db:migrate-deploy`）。job summary に
   profile / trigger / ref / actor / result が残る。
+- **接続先の解決**: GitHub Environment の env スコープ secret `DOPPLER_TOKEN` → devenv の
+  `loadDopplerByEnv` → 対応 Doppler config の `POSTGRES_URL`。workflow は **job env で `ENV` を渡す**
+  ことでこれを成立させている（渡さないと `devenv shell` が `ENV=local` で起動し
+  `env/migration/.env.local` のローカル値を掴む）。適用前に検証ステップが
+  `DOPPLER_TOKEN` / `POSTGRES_URL` の解決とローカル値混入をチェックして落とす。
 
 ---
 
