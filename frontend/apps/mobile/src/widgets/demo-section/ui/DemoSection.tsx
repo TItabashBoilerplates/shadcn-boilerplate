@@ -1,5 +1,4 @@
-import { Button, ButtonText } from '@workspace/native-ui/components'
-import { Text, View } from 'react-native'
+import { Box, Button, ButtonText, Text, VStack } from '@workspace/native-ui/components'
 
 import { useI18n } from '@/shared/hooks'
 
@@ -15,16 +14,16 @@ export function DemoSection() {
   return (
     <>
       {/* NativeWind v5 Demo */}
-      <View className="bg-primary p-4 rounded-lg mb-4">
-        <Text className="text-primary-foreground font-bold text-lg">
+      <Box className="mb-4 rounded-lg bg-primary p-4">
+        <Text bold size="lg" className="text-primary-foreground">
           {t('HomeScreen.nativewindDemo')}
         </Text>
         <Text className="text-primary-foreground/80">{t('HomeScreen.nativewindSubtitle')}</Text>
-      </View>
+      </Box>
 
       {/* gluestack-ui Button Demo */}
-      <View className="gap-3 mb-4">
-        <Text className="text-foreground text-lg font-bold">
+      <VStack space="md" className="mb-4">
+        <Text bold size="lg">
           {t('HomeScreen.gluestackButtons')}
         </Text>
         <Button onPress={() => console.log('Primary pressed')}>
@@ -39,7 +38,7 @@ export function DemoSection() {
         <Button size="lg" onPress={() => console.log('Large pressed')}>
           <ButtonText>{t('HomeScreen.largeButton')}</ButtonText>
         </Button>
-      </View>
+      </VStack>
     </>
   )
 }

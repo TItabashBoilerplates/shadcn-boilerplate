@@ -1,5 +1,4 @@
-import { Button, ButtonText } from '@workspace/native-ui/components'
-import { View } from 'react-native'
+import { Button, ButtonText, HStack } from '@workspace/native-ui/components'
 
 import { type Locale, supportedLocales } from '@/shared/config/i18n'
 import { useI18n } from '@/shared/hooks'
@@ -16,7 +15,7 @@ export function LocaleSwitcher() {
   const { locale, changeLocale } = useI18n()
 
   return (
-    <View className="flex-row gap-2">
+    <HStack space="sm">
       {supportedLocales.map((loc) => (
         <Button
           key={loc}
@@ -27,6 +26,6 @@ export function LocaleSwitcher() {
           <ButtonText>{localeLabels[loc]}</ButtonText>
         </Button>
       ))}
-    </View>
+    </HStack>
   )
 }
