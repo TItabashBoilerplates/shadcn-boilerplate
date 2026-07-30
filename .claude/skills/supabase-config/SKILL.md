@@ -1,6 +1,6 @@
 ---
 name: supabase-config
-description: Supabase Config as Code（`supabase/config.toml`）をプロダクション品質で扱うスキル。`supabase config push` による Auth / API / Storage / Functions / Realtime 設定の Git 管理、`env()` / `encrypted:` による Secrets 分離、`[remotes.*]` によるマルチ環境、CI/CD 上の `link → config push → db push → seed buckets → functions deploy → secrets set` パイプライン、Drift 検知、CLI の config 検証エラー回避まで、公式ドキュメントに基づく完全ガイドをトピック別リファレンスで提供。
+description: Supabase Config as Code（`supabase/config.toml`）をプロダクション品質で扱うスキル。`supabase config push` による Auth / API / Storage / Functions / Realtime 設定の Git 管理、`env()` による Secrets 分離、**`[remotes.*]` によるマルチ環境（宣言漏れ・`project_id` 誤りで設定適用が無言でスキップされる最頻出事故を含む）**、CI/CD 上の `link → config push → db push → seed buckets → functions deploy → secrets set` パイプライン、Drift 検知、CLI の config 検証エラー回避まで、公式ドキュメントに基づく完全ガイドをトピック別リファレンスで提供。
 ---
 
 # Supabase Config as Code スキル
@@ -29,18 +29,44 @@ Dashboard 手動変更は **レビュー不能・再現不能・Drift の温床*
 
 ---
 
+## ⚠️ 最初に読む: `[remotes.*]` の書き忘れが最頻出の事故
+
+`config.toml` を**新規生成・更新するときは、リモート環境ごとに `[remotes.<name>]` を必ず書く**。
+
+> 公式: 「**If no remote is declared or the project ID is incorrect, the configuration step is skipped.**」
+> （[Branching: Configuration](https://supabase.com/docs/guides/deployment/branching/configuration)）
+
+**宣言が無い / `project_id` が違うと、その環境への設定適用が丸ごとスキップされる。エラーも警告も
+出ない。** 「メールテンプレートだけ古いまま」「Auth 設定が反映されない」の正体はほぼこれ。
+`config.toml` を生成した AI が `[remotes.*]` を埋め忘れる、という形で繰り返し発生している。
+
+```toml
+[remotes.staging]
+project_id = "<staging branch の BRANCH PROJECT ID>"   # 親 project の ref ではない
+```
+
+- `project_id` は **`supabase --experimental branches list` の BRANCH PROJECT ID**。ブロックごとに別の値。
+- **persistent branch を先に作ってから**書く（「must reference an existing branch」）。
+- 共通設定（メールテンプレート等）は **root に 1 回**。`[remotes.X]` が存在すれば root がベースとして
+  適用されるので、remotes 側にコピーする必要は無い。**必要なのはブロックの存在と正しい `project_id`**。
+
+→ 詳細・本リポジトリの環境マッピング・マージ規則: **[multi-environment.md](references/multi-environment.md)（必読）**
+
+---
+
 ## Top 原則（これだけは必ず守る）
 
 | # | 原則 | 理由 |
 |---|------|------|
+| 0 | **リモート環境の数だけ `[remotes.<name>]` を宣言し、`project_id` を正しく入れる** | 無い／誤ると設定適用が**無言でスキップ**される（上記） |
 | 1 | **Dashboard で設定を手動変更しない** | Drift と「誰が何をいつ変えたか不明」状態を生む |
-| 2 | **Secrets は `env()` か `encrypted:` で分離** | `config.toml` は Git 管理、秘密情報は別ファイル |
+| 2 | **Secrets は `env()` で分離**（値は Doppler が供給） | `config.toml` は Git 管理。平文 Secret を入れない |
 | 3 | **CI は `link → config push → db push → functions deploy → secrets set` の順** | 順序依存がある（Secrets は Functions より後でも可） |
-| 4 | **マルチ環境は `[remotes.{project_id}]` で宣言**、または環境別 `config.toml` | 1 ファイルで staging/prod 差分を管理可能 |
+| 4 | **マルチ環境は `[remotes.<name>]` で宣言**（`<name>` は任意ラベル、中の `project_id` でマッチ） | 1 ファイルで staging/prod 差分を管理可能 |
 | 5 | **CI のために `config.toml` の validate が通る状態を維持** | CLI は常に `config.toml` を読み込んで validate する |
 | 6 | **`supabase secrets set --env-file` は `config push` とは別系統** | Functions 用 Secret と `config.toml` の env() 参照先は別物 |
 | 7 | **`config.toml` 変更時は必ず `supabase stop && supabase start`** | CLI は起動時にのみ config を反映する |
-| 8 | **`config push` は Secrets も上書きする可能性がある → dotenvx で暗号化管理** | 平文 Secret を Git に入れない |
+| 8 | **Secret の供給は Doppler**（`env()` 参照）。`config.toml` に平文を書かない | Git に平文 Secret を入れない。dotenvx は廃止済み |
 
 ---
 
@@ -69,7 +95,7 @@ Dashboard 手動変更は **レビュー不能・再現不能・Drift の温床*
 | リファレンス | 内容 | 優先度 |
 |-------------|------|--------|
 | [cicd-github-actions.md](references/cicd-github-actions.md) | GitHub Actions 完全ワークフロー（staging / production）、`supabase/setup-cli@v2`、必須環境変数（`SUPABASE_ACCESS_TOKEN` / `SUPABASE_DB_PASSWORD` / `SUPABASE_PROJECT_ID`）、デプロイ順序、並列化、PR drift チェック | **CRITICAL** |
-| [multi-environment.md](references/multi-environment.md) | `[remotes.{name}]` / `[remotes.{name}.*]` による環境差分、dotenvx による暗号化 Secrets、`.env.preview` / `.env.production` / `.env.keys`、本プロジェクトの `ENV={local,stg,prod}` 戦略 | **CRITICAL** |
+| [multi-environment.md](references/multi-environment.md) | **`[remotes.<name>]` の必須性とスキップ条件**、`project_id` に入れる値（BRANCH PROJECT ID）、root との マージ規則、本リポジトリの環境マッピング、メールテンプレートが反映される仕組み | **CRITICAL（最重要）** |
 | [drift-and-verification.md](references/drift-and-verification.md) | Drift 検知（Dashboard ↔ `config.toml` 差分）、`config push --dry-run` が無いための工夫、PR で差分レビュー、diff ベースの監視 | HIGH |
 | [common-gotchas.md](references/common-gotchas.md) | CLI の `config.toml` validate 問題（`db push` だけでも config が要る）、`supabase start` しないと反映されない、`config push` が Secrets を意図せず上書きするケース、`--project-ref` 必須の場面、Inbucket の謎ポート衝突 | **CRITICAL** |
 
@@ -82,12 +108,15 @@ Supabase 設定をレビューする際は以下を順に確認。該当リフ�
 ### 設計
 - [ ] **Dashboard での手動変更を禁止** とチーム合意 → `cicd-github-actions.md`
 - [ ] `supabase/config.toml` が Git 管理下にあり、**PR レビュー必須** → `cicd-github-actions.md`
-- [ ] Secrets は **`env()` か `encrypted:`** のいずれかに統一（平文禁止） → `env-interpolation.md`
+- [ ] Secrets は **`env()`** に統一（平文禁止。値は Doppler） → `env-interpolation.md`
 - [ ] `.env` / `.env.*` は `.gitignore` 済み、`.env.example` のみ commit → `env-interpolation.md`
-- [ ] マルチ環境は `[remotes.{project_id}]` か環境別 config.toml のどちらか一方に統一 → `multi-environment.md`
+- [ ] **リモート環境の数だけ `[remotes.<name>]` が宣言されている** → `multi-environment.md`
+- [ ] **各 `project_id` が BRANCH PROJECT ID と一致し、ブロックごとに異なる** → `multi-environment.md`
 
 ### Auth
 - [ ] `site_url` / `additional_redirect_urls` は環境ごとに正しく設定 → `auth-config.md`
+- [ ] メールテンプレートは **root に 1 回**・**`content_path`**（インライン `content` 不可）・
+      パスは**リポジトリルート基準**（`./supabase/templates/email/*.html`） → `multi-environment.md`
 - [ ] OAuth Provider の `secret` は **`env()` 経由** で注入 → `auth-config.md`
 - [ ] `[auth.hook.*]` の `secrets` は **`env()` 経由** で注入 → `auth-config.md`
 - [ ] SMTP 設定（`[auth.email.smtp]`）の `pass` は **`env()` 経由** → `auth-config.md`
@@ -217,10 +246,15 @@ dotenvx は廃止）。設定手順は `.claude/skills/doppler/references/cicd.m
    ├─ [auth] / [auth.email] / [auth.external.*]           → 認証（env() で Secret 分離）
    ├─ [storage] / [storage.buckets.*]                     → Bucket 宣言
    ├─ [functions.*]                                       → Function ごとの verify_jwt / import_map
-   └─ [remotes.{staging_ref}] / [remotes.{prod_ref}]      → マルチ環境差分
+   └─ [remotes.<name>]                                    → ★必須。無いと適用がスキップされる
+       ├─ 先に persistent branch を作る
+       ├─ project_id = BRANCH PROJECT ID（親 project の ref ではない）
+       └─ 共通設定は root に 1 回。remotes へのコピーは不要
 
-3. env/backend/.env.{local,stg,prod} に env() 参照値を置く
-   └─ .env.secrets は dotenvx で暗号化
+3. env() の参照値を供給する
+   ├─ Secret        → Doppler（.claude/skills/doppler/SKILL.md）
+   │                   ⚠️ Doppler のキー名に SUPABASE_ prefix は使えない（env-naming.md）
+   └─ ローカル非機密 → env/backend/.env.local
 
 4. ローカルで supabase start → 挙動確認
 
@@ -271,6 +305,6 @@ dotenvx は廃止）。設定手順は `.claude/skills/doppler/references/cicd.m
 このスキルの内容は **交渉の余地なし**。
 
 - **Dashboard での手動変更を許可しない**。すべて `config.toml` → PR → CI。
-- **Secret を平文で `config.toml` に書かない**。`env()` か `encrypted:`。
+- **Secret を平文で `config.toml` に書かない**。`env()` で外部化し、値は Doppler から供給する。
 - **CI パイプラインは必ず `link → config push → db push → ...` の順**。飛ばすと drift する。
 - 判断に迷う場合は勝手に決定せず、**必ずユーザーに判断をあおぐ**。

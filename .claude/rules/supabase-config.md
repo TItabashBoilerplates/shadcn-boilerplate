@@ -27,6 +27,38 @@
 
 ---
 
+## 1.5. `[remotes.*]` は必須（← 設定が反映されない事故の最頻出原因）
+
+**CRITICAL**: `supabase/config.toml` を**新規生成・更新するときは、リモート環境ごとに
+`[remotes.<name>]` を必ず書く**。
+
+> 公式（[Branching: Configuration](https://supabase.com/docs/guides/deployment/branching/configuration)）:
+> 「**If no remote is declared or the project ID is incorrect, the configuration step is skipped.**」
+
+**宣言が無い / `project_id` が違うと、その環境への設定適用がまるごとスキップされる。
+しかもエラーも警告も出ない**（＝「メールテンプレートだけ反映されない」等の形でしか気づけない）。
+`config.toml` を生成した AI が `[remotes.*]` を埋め忘れる、というのが実際に繰り返し起きている。
+
+```toml
+# ✅ 必須。persistent branch の数だけ書く
+[remotes.staging]
+project_id = "<staging branch の BRANCH PROJECT ID>"   # ← 親 project の ref ではない
+
+[remotes.develop]
+project_id = "<develop branch の BRANCH PROJECT ID>"
+```
+
+| 守ること | 理由 |
+|---|---|
+| `project_id` は **`supabase --experimental branches list` の BRANCH PROJECT ID** | 親 project の ref を貼ると「incorrect」扱いでスキップ |
+| `project_id` は**ブロックごとに別の値** | 使い回しは誤り（[supabase#37794](https://github.com/orgs/supabase/discussions/37794) の maintainer 回答） |
+| **persistent branch を先に作ってから**書く | 「must reference an existing branch」 |
+| ブロック名（`<name>`）は任意ラベル | マッチングは `project_id` で行われる。本リポジトリは git branch 名に揃える |
+| **共通設定（メールテンプレート等）は root に 1 回だけ** | `[remotes.X]` が存在すれば root がベースとして適用される。remotes 側へのコピーは不要 |
+
+> 本リポジトリの環境マッピング（`main`=project 本体 / `staging`・`develop`=persistent branch）と
+> 具体的な記述例・マージ規則は **`.claude/skills/supabase-config/references/multi-environment.md`** を参照。
+
 ## 2. メールテンプレート（Auth Email Templates）
 
 **MANDATORY**: 認証メールのテンプレートは `supabase/templates/email/*.html`（Git 管理）に置き、**必ず `config.toml` の `[auth.email.template.<type>]` から `content_path` で配線する**。Dashboard に手書きしない。
@@ -71,7 +103,24 @@ content_path = "./supabase/templates/email/email_change.html"
 - **ローカル / セルフホスト**: `config.toml` の `content_path` がそのまま適用される。**`config.toml` やテンプレート変更後は `supabase stop && supabase start`（= `stop && supabase-start`）で再起動**しないと反映されない。
 - **本番（hosted）**: **Supabase の GitHub 連携（config 同期）に委譲**する（本リポジトリ方針）。Dashboard での手動コピペ運用はしない。
 
-> ⚠️ 注意（公式仕様）: 公式ドキュメント上、hosted プロジェクトではメールテンプレート**本文**が `supabase config push` 単体では反映されないケースがある（[customizing-email-templates](https://supabase.com/docs/guides/local-development/customizing-email-templates)）。GitHub 連携で本文が同期されない場合のフォールバックは Management API（`PATCH /v1/projects/{ref}/config/auth` の `mailer_subjects_*` / `mailer_templates_*_content`）または Dashboard。**フォールバックが必要になった場合は勝手に実装せずユーザーに判断をあおぐこと**。
+### 追加の制約（CLI 実装由来。必ず守る）
+
+- **`content_path` のみ**。インラインの `content = "<html>…"` は config.toml では使えない
+  （CLI のフィールド定義に `// Only content path is accepted in config.toml`）。
+- **`content_path` は「リポジトリルート」基準**の相対パス。CLI がメールテンプレートだけ
+  `supabase/` の親を基点に解決するため（実装に `// FIXME: only email template is relative to
+  repo directory` と明記）。よって `./supabase/templates/email/*.html` が正しい。
+
+> ✅ **`supabase config push` はテンプレート本文をリモートに反映する**（CLI の `pkg/config/auth.go` が
+> `MailerSubjectsInvite` / `MailerTemplatesInviteContent` 等に subject と本文を詰めて Management API の
+> auth config へ送っている）。Dashboard への手動コピーは不要。
+>
+> [customizing-email-templates](https://supabase.com/docs/guides/local-development/customizing-email-templates)
+> に「hosted は Dashboard にコピーせよ」とあるのは、同ページが冒頭で断っているとおり
+> **ローカル開発向けガイド**だから。CLI/GitHub 連携で config を push する本リポジトリの運用には当たらない。
+>
+> ⚠️ **テンプレートが反映されないときに真っ先に疑うのは Dashboard ではなく `[remotes.*]`**（§1.5）。
+> ブロックが無い / `project_id` が違うと、テンプレートを含む設定適用が**丸ごと・無言でスキップ**される。
 
 ---
 

@@ -1,246 +1,212 @@
-# マルチ環境: `[remotes.*]` と dotenvx
+# マルチ環境: `[remotes.*]` の正しい書き方
 
-本プロジェクトは **`ENV={local, stg, prod}` 戦略** と **`[remotes.<project_id>]`** を組み合わせる。どちらか一方で十分な場合もあるが、併用で再現性が最も高い。
+**この 1 ページが「メールテンプレート等の設定がリモートに反映されない」事故の原因と対処。**
+`config.toml` を新規生成・更新するときは必ず読むこと。
 
-## 戦略 A: `[remotes.<project_id>]` 方式（推奨）
+---
 
-1 個の `supabase/config.toml` にすべての環境差分を書く。**Staging 用設定を本番に適用してしまう事故を構造的に防げる**。
+## 0. 結論（最初に読む）
 
-### 基本形
+> **`[remotes.<name>]` の宣言が無い、または `project_id` が間違っていると、
+> その環境への設定適用ステップは丸ごとスキップされる。**
+>
+> 公式（[Branching: Configuration](https://supabase.com/docs/guides/deployment/branching/configuration)）:
+> 「**If no remote is declared or the project ID is incorrect, the configuration step is skipped.**」
+
+**スキップは静かに起きる**。エラーも警告も出ないので、「`config.toml` に書いたのに反映されない」
+「メールテンプレートだけ古いまま」という形でしか気づけない。**これが本リポジトリで繰り返し
+起きていた不具合の根因**であり、AI エージェントが `config.toml` を生成するときに
+`[remotes.*]` を埋め忘れることが直接の引き金になる。
+
+したがって:
+
+- **`config.toml` を作る／触るときは、`[remotes.*]` を必ずセットで書く。**
+- **`project_id` は「その環境の Supabase project ref」でなければならない**（後述。親 project の
+  ref を貼ると `project id is incorrect` 扱いでスキップされる）。
+
+---
+
+## 1. 構文と「どのブロックが選ばれるか」
 
 ```toml
-# ===== 全環境共通のベース =====
-project_id = "shadcn-boilerplate"
+[remotes.<name>]
+project_id = "<その環境の project ref>"
+```
 
-[api]
-enabled = true
-port = 54321
-schemas = ["public", "graphql_public"]
-max_rows = 1000
+| 項目 | 仕様 |
+|---|---|
+| `<name>` | **任意のラベル**。マッチングには使われない（人間が読むための名前） |
+| `project_id` | **必須**。CLI / Branching runner は**この値**で「今適用しようとしている環境」と突き合わせる |
+| ブロック内に書けるもの | 「**All other configuration options available in the root config are also supported in the remotes block.**」＝ root と同じ全セクションが書ける |
+
+**マッチングはブロック名ではなく `project_id` で行われる。** ラベルは自由だが、混乱を避けるため
+**git branch 名に揃える**（本リポジトリの規約）。
+
+### `project_id` に何を入れるか（最頻出の間違い）
+
+Supabase Branching を使う場合、`project_id` は **branch ごとに払い出される project ref**であって、
+親プロジェクトの ref ではない。公式 discussion での maintainer 回答:
+
+> 「The `project_id` field for your `[remotes.<branch>]` section must match the reference of the
+> **actual branch** you are pointing toward.」
+> （[supabase#37794](https://github.com/orgs/supabase/discussions/37794)）
+
+取得方法:
+
+```bash
+supabase --experimental branches list
+# BRANCH PROJECT ID 列の値を project_id に使う
+```
+
+- **各 `[remotes.*]` の `project_id` はすべて異なる値**になる（同じ値の使い回しは誤り）。
+- **persistent branch を先に作ってから** config を書く。公式:「Since the `project_id` field must
+  reference an existing branch, you need to **create the persistent branch before adding its
+  configuration**.」
+
+---
+
+## 2. root と `[remotes.*]` のマージ規則
+
+```
+root（[auth] / [storage] / [functions.*] ...）      ← ベース。全環境に適用される
+  └─ [remotes.<name>.<section>]                     ← その環境だけ上書き
+```
+
+| ケース | 挙動 |
+|---|---|
+| `[remotes.X]` を宣言し、セクションを書かない | **root の値がそのまま適用される**（＝上書き不要なら書かなくてよい） |
+| `[remotes.X.auth] jwt_expiry = 1800` | その環境だけ 1800。他は root の値 |
+| 配列値（`additional_redirect_urls` 等） | **置換**であってマージではない |
+| `[remotes.X]` 自体が無い | **その環境には何も適用されない**（§0） |
+
+> **重要**: メールテンプレートのような「全環境で同じ内容」の設定は、**root に 1 回書けばよい**。
+> ただし **`[remotes.X]` ブロックの宣言自体は必要**（無いと適用ステップごとスキップされるため）。
+> 「テンプレートを remotes 側にコピーする」必要は無い。**必要なのはブロックの存在と正しい `project_id`**。
+
+---
+
+## 3. 本リポジトリの環境マッピング
+
+`docs/deployment/README.md` のとおり **Supabase は 1 project + persistent branch** 構成:
+
+| git branch | 環境 | Supabase 実体 | config.toml での扱い |
+|---|---|---|---|
+| `main` | production | **project 本体**（default branch） | **root の設定がそのまま適用**（`project_id` は最上部のもの） |
+| `staging` | staging | persistent branch `staging` | **`[remotes.staging]` が必須** |
+| `develop` | dev | persistent branch `develop` | **`[remotes.develop]` が必須** |
+
+```toml
+# ───── ベース（= production に適用される）─────
+project_id = "<production の project ref>"
 
 [auth]
-enabled = true
-jwt_expiry = 3600
-enable_refresh_token_rotation = true
-minimum_password_length = 12
+site_url = "env(SUPABASE_AUTH_SITE_URL)"
 
-# ローカル開発用のデフォルト
-site_url = "http://127.0.0.1:3000"
-additional_redirect_urls = ["http://localhost:3000", "http://127.0.0.1:3000"]
+# メールテンプレートは全環境共通なので root に 1 回だけ書く
+[auth.email.template.confirmation]
+subject = "Confirm Your Signup / サインアップ確認"
+content_path = "./supabase/templates/email/confirmation.html"
+# recovery / magic_link / invite / email_change も同様
 
-[auth.email]
-enable_confirmations = false  # ローカルはメール確認スキップ
-
-# ===== Staging 上書き =====
+# ───── persistent branch: staging ─────
+# ⚠️ このブロックが無いと staging には config が一切適用されない（テンプレートも含めて）
 [remotes.staging]
-project_id = "abcdefghij1234567890"   # ← Supabase Dashboard の Project Ref
+project_id = "<staging branch の BRANCH PROJECT ID>"
 
 [remotes.staging.auth]
 site_url = "https://staging.example.com"
-additional_redirect_urls = [
-  "https://staging.example.com",
-  "https://*-staging.example.com",   # プレビュー URL 等
-]
 
-[remotes.staging.auth.email]
-enable_confirmations = true
+# ───── persistent branch: develop ─────
+[remotes.develop]
+project_id = "<develop branch の BRANCH PROJECT ID>"
 
-[remotes.staging.api]
-max_rows = 500
-
-[remotes.staging.db.seed]
-enabled = true
-sql_paths = ["./seeds/staging.sql"]
-
-# ===== Production 上書き =====
-[remotes.production]
-project_id = "uvwxyzabcd0987654321"
-
-[remotes.production.auth]
-site_url = "https://example.com"
-additional_redirect_urls = ["https://example.com"]
-
-[remotes.production.auth.email]
-enable_confirmations = true
-secure_password_change = true
-
-[remotes.production.auth.rate_limit]
-email_sent = 10           # 本番は厳しめ
-sign_in_sign_ups = 15
-token_refresh = 300
-
-[remotes.production.db]
-major_version = 17
-
-[remotes.production.db.network_restrictions]
-enabled = true
-allowed_cidrs = [
-  "10.0.0.0/8",      # VPC
-  "203.0.113.0/24",  # オフィス
-]
-
-[remotes.production.db.pooler]
-enabled = true
-default_pool_size = 25
-max_client_conn = 200
+[remotes.develop.auth]
+site_url = "https://dev.example.com"
 ```
 
-### `supabase config push` の挙動
-
-- `supabase link --project-ref <ref>` でリンクされた環境を特定
-- `config push` はリンク先の `project_id` に一致する `[remotes.<name>]` を自動マージして適用
-- ルート直下の値がベース、`[remotes.<name>.<section>]` が上書き
-
-### 落とし穴
-
-- `[remotes.staging.auth]` で `enable_signup = false` と書いたが、ルート `[auth]` は `enable_signup = true` のまま → **Staging には false で反映**（上書きが効く）
-- `[remotes.staging.auth]` **セクションごと未定義** のキーはルートのデフォルトが使われる
-- **配列値（`additional_redirect_urls`）は置換、マージではない**
+> `[remotes.staging]` の中に `[remotes.staging.auth.email.template.*]` を**書く必要は無い**。
+> root のテンプレート定義がベースとして適用される。ブロックの存在が本質。
 
 ---
 
-## 戦略 B: 環境別 `.env` + dotenvx 方式（本プロジェクト採用）
+## 4. メールテンプレートは `config push` で本当に反映されるのか
 
-`config.toml` は 1 個。環境差分は **`env()` 参照値のみ** を環境別 `.env` に分離。
+**される。** ただし公式ドキュメントの記述が紛らわしいので整理する。
 
-### ディレクトリ
+| 出典 | 記述 | 解釈 |
+|---|---|---|
+| [Customizing email templates](https://supabase.com/docs/guides/local-development/customizing-email-templates) | 「For hosted projects managed by Supabase, copy the templates into the Email Templates section of the Dashboard.」 | このページは冒頭に「**This guide covers local development and CLI workflows**」とある**ローカル開発向けガイド**。「CLI で config push する運用」を前提にしていない読者向けの案内 |
+| CLI 実装（`supabase/cli` の `pkg/config/auth.go`） | `body.MailerSubjectsInvite` / `body.MailerTemplatesInviteContent` 等に **subject と本文を詰めて Management API の auth config に送っている** | **`config push` はテンプレート本文をリモートに反映する** |
 
-```
-env/
-├── backend/
-│   ├── .env.local              # ローカル（平文 OK、gitignore）
-│   ├── .env.stg                # Staging（dotenvx 暗号化、commit 可）
-│   └── .env.prod               # Production（dotenvx 暗号化、commit 可）
-└── .env.secrets                # Edge Functions 用 Secret
+つまり **Dashboard へ手でコピーする必要は無い**。反映されないときは、まず
+**`[remotes.*]` の有無と `project_id` の正しさ**（§0/§1）を疑うこと。
 
-supabase/
-├── config.toml                 # env() だらけ
-└── ...
-```
-
-### 実行
-
-```bash
-# Staging
-dotenvx run -f env/backend/.env.stg -- supabase config push
-
-# Production
-dotenvx run -f env/backend/.env.prod -- supabase config push
-```
-
-### Make + ENV の慣習（本プロジェクト）
-
-```makefile
-# deploy.sh 内
-devenv tasks run -P staging deploy:supabase
-devenv tasks run -P production deploy:supabase
-```
-
-### 本プロジェクトの `scripts/supabase/link.sh`
-
-```bash
-dotenvx run -f "env/backend/.env.${ENV}" -- \
-  bash -c 'supabase link --project-ref $SUPABASE_PROJECT_REF'
-```
-
-`SUPABASE_PROJECT_REF` を環境別 `.env` に入れておくことで、1 コマンドで正しい環境にリンクされる。
-
----
-
-## 戦略 A と B のハイブリッド（推奨）
-
-両方の良いとこ取り。本プロジェクトに最適:
-
-| 層 | 管理方法 | 例 |
-|----|---------|-----|
-| **静的な差分**（feature flag, rate limit, pool size） | `[remotes.<name>]` で宣言 | `rate_limit.email_sent = 10` |
-| **環境ごとに違う動的値**（URL, Secret） | `env()` + 環境別 `.env` | `site_url = "env(SUPABASE_AUTH_SITE_URL)"` |
+### テンプレート記述の制約（実装由来・必ず守る）
 
 ```toml
-[auth]
-site_url = "env(SUPABASE_AUTH_SITE_URL)"  # 環境ごと
-jwt_expiry = 3600                           # 共通
-
-[remotes.production.auth]
-# site_url は env() で十分なので記述不要
-jwt_expiry = 1800  # 本番だけ短縮
-
-[remotes.production.auth.rate_limit]
-email_sent = 10
+[auth.email.template.confirmation]
+subject      = "..."
+content_path = "./supabase/templates/email/confirmation.html"
 ```
+
+- **`content_path` のみ受け付ける。** CLI のフィールド定義に
+  `// Only content path is accepted in config.toml` とあり、インラインの `content = "<html>..."`
+  は config.toml では使えない。
+- **`content_path` は「`supabase/` の親ディレクトリ（＝リポジトリルート）」基準**の相対パス。
+  CLI 実装が `cwd := filepath.Dir(SupabaseDirPath)` を基点に解決している
+  （他のパス設定と基準が違う。実装にも `// FIXME: only email template is relative to repo
+  directory` と明記されている）。だから `./supabase/templates/...` と書くのが正しく、
+  `./templates/...` ではない。
+- 対応する種別: `invite` / `confirmation` / `recovery` / `magic_link` / `email_change` /
+  `reauthentication`。セキュリティ通知は `[auth.email.notification.<type>]`。
 
 ---
 
-## dotenvx 暗号化パターン
+## 5. Secret の扱い（本リポジトリの現行方式）
 
-### 初期セットアップ
-
-```bash
-# dotenvx で暗号化された値をセット
-# → .env.stg は暗号文（commit 可）、.env.keys は鍵（gitignore）
-npx @dotenvx/dotenvx set \
-  SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET "<plain-secret>" \
-  -f env/backend/.env.stg
-
-# 同じ値を本番向けにも
-npx @dotenvx/dotenvx set \
-  SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET "<plain-secret>" \
-  -f env/backend/.env.prod
-```
-
-### `.env.keys` の扱い
-
-| 環境 | 保管場所 |
-|------|---------|
-| ローカル開発 | `env/backend/.env.keys`（gitignore） |
-| GitHub Actions | `secrets.DOTENVX_PRIVATE_KEY_STG` / `_PROD` |
-
-```yaml
-# CI で .env.keys を復元
-- name: Restore dotenvx keys
-  run: |
-    cat <<EOF > env/backend/.env.keys
-    DOTENVX_PRIVATE_KEY_STG=${{ secrets.DOTENVX_PRIVATE_KEY_STG }}
-    DOTENVX_PRIVATE_KEY_PROD=${{ secrets.DOTENVX_PRIVATE_KEY_PROD }}
-    EOF
-
-- run: dotenvx run -f env/backend/.env.${ENV} -- supabase config push
-```
-
----
-
-## Supabase Branching との関係
-
-Supabase の **Branching 機能**（GitHub 連携で PR ごとに DB を切る）を使う場合:
+環境ごとに違う **秘密値・生成値**は `[remotes.*]` に直書きせず **`env()` で外部化**する。
 
 ```toml
-# supabase/.env.preview   ← preview branch 用 dotenvx 暗号
-SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET="encrypted:..."
-
-# supabase/.env.production ← 本番 branch 用
-SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET="encrypted:..."
-
-# supabase/.env.keys       ← 復号鍵（gitignore、Dashboard Secret に登録）
+[auth.external.github]
+enabled   = true
+client_id = "env(SUPABASE_AUTH_EXTERNAL_GITHUB_CLIENT_ID)"
+secret    = "env(SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET)"
 ```
 
-Branching Executor が `.env.keys` を使って自動復号する（Dashboard に登録済みの鍵を使う）。
+- 値の供給は **Doppler**（`.claude/skills/doppler/SKILL.md`）。**dotenvx は廃止済み**。
+- ⚠️ **Doppler に `SUPABASE_` prefix のキーを登録してはならない**（sync が予約値違反で落ちる。
+  `.claude/rules/env-naming.md`）。`config.toml` の `env()` が参照するのは
+  **プロセス環境変数**なので、Doppler 側は非予約名で持ち、実行時に読み替える。
+- 静的な差分（rate limit / pool size / feature flag 等）は `env()` ではなく
+  **`[remotes.*]` に直接書く**方が可視性が高い。
 
-**本プロジェクトは Branching を使わず `ENV=stg/prod` 手動運用** を採るならこの層は不要。
+| 差分の種類 | 置き場所 |
+|---|---|
+| 環境ごとに違う**秘密値** | `env()` → Doppler |
+| 環境ごとに違う**静的設定** | `[remotes.<name>.<section>]` |
+| 全環境共通（テンプレート等） | **root に 1 回** |
 
 ---
 
-## 比較まとめ
+## 6. チェックリスト（`config.toml` を作る／変更したら必ず）
 
-| 戦略 | 利点 | 欠点 |
-|------|------|------|
-| **A. `[remotes.*]` のみ** | 1 ファイル可視性、静的差分に強い | 動的値（Secret）は別途 env() か encrypted: が必要 |
-| **B. `.env` 環境別のみ** | dotenvx で暗号化された Secret を Git 管理できる | 静的差分の可視性が低い |
-| **A + B ハイブリッド（推奨）** | 静的差分は `[remotes.*]`、動的値は env() | 学習コストがやや高い |
+- [ ] リモート環境（persistent branch）の数だけ **`[remotes.<name>]` が存在する**
+- [ ] 各 `project_id` が **`supabase branches list` の BRANCH PROJECT ID と一致**している
+- [ ] `project_id` が**ブロックごとに異なる**（親 project ref の使い回しをしていない）
+- [ ] persistent branch を**先に作ってから** config を書いた
+- [ ] メールテンプレートは **root に 1 回**（remotes へのコピーは不要）
+- [ ] テンプレートは **`content_path`**（インライン `content` を使っていない）
+- [ ] `content_path` が **リポジトリルート基準**（`./supabase/templates/email/*.html`）
+- [ ] Secret は `env()`。平文なし。Doppler 側のキー名に `SUPABASE_` prefix なし
+- [ ] ローカル反映を確認した（`stop && supabase-start`。config は起動時にのみ読まれる）
 
 ---
 
-## 参照
+## 7. 参照
 
-- [Branching: Configuration（`[remotes.*]` 詳細）](https://supabase.com/docs/guides/deployment/branching/configuration)
-- [Managing Environments](https://supabase.com/docs/guides/deployment/managing-environments)
-- [dotenvx](https://dotenvx.com/)
+- [Branching: Configuration](https://supabase.com/docs/guides/deployment/branching/configuration) — `[remotes.*]` とスキップ条件（**一次情報**）
+- [CLI config reference](https://supabase.com/docs/guides/cli/config) — 全キー・`[remotes.<branch_name>]`
+- [supabase#37794](https://github.com/orgs/supabase/discussions/37794) — `project_id` は branch の ref（maintainer 回答）
+- [Customizing email templates](https://supabase.com/docs/guides/local-development/customizing-email-templates) — ローカル向けガイド（hosted の案内は §4 の注意つきで読む）
+- `supabase/cli` `pkg/config/auth.go` — `MailerSubjectsInvite` / `MailerTemplatesInviteContent`（config push がテンプレートを送る実装）
+- 本リポジトリ: `docs/deployment/README.md`（環境マッピング）/ `.claude/rules/supabase-config.md`（強制ルール）
