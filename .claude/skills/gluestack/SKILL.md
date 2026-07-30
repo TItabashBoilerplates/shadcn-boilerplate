@@ -164,6 +164,8 @@ CLI で雛形を取る場合は `bun run ui:add:mobile <component>`（= `bunx gl
 | `tailwind.config.ts` を探しても無い | v5 / Tailwind v4 は CSS-first。設定は `global.css` にある |
 | ダークモードが効かない | native は `.dark` クラスでなく `@media (prefers-color-scheme: dark)`。`.dark` を書いても無意味 |
 | native バンドルが lightningcss で落ちる | `lightningcss` はルートの `overrides` で 1.30.1 に固定している。外さない |
+| **画面が真っ黒 / 何も描画されない（エラーなし）** | `apps/mobile/babel.config.js` が無いと、`react-native-reanimated` / `react-native-worklets` が要求する **worklets babel plugin が一切登録されない**。`useAnimatedStyle` 等（`ParallaxScrollView` が使用）が動かず、ビルドも通ってしまうため気づきにくい。`babel.config.js` に `presets: ['babel-preset-expo']` + `plugins: ['react-native-worklets/plugin']`（**必ず最後**）が必要。**`nativewind/babel` preset や `jsxImportSource: 'nativewind'` は逆に不要**（v5 は import-rewrite 方式で、公式 v5 移行ガイドが明示的に削除を指示している：https://www.nativewind.dev/v5/guides/migrate-from-v4）。babel.config.js 自体は現在 `apps/mobile/` に配置済み — 削除しないこと |
+| **`SafeAreaView` に `className` を付けても効かない（`flex-1` が消えてツリーが高さ0に潰れる）** | `react-native-css`（NativeWind v5 の実体）は `react-native-safe-area-context` の import を横取りするが、**`SafeAreaProvider` だけをラップし `SafeAreaView` はそのまま re-export**（inset を CSS カスタムプロパティとして注入するだけ）。`SafeAreaView` 自体に `cssInterop` は適用されないため `className` は静かに無視される。安全な代替: 画面ルートは `Box`（gluestack）を使い、余白は `useSafeAreaInsets()` の値を `style` / `padding` に反映する。現状このリポジトリのどの画面も `SafeAreaView` を使っていない（Expo Router の Tabs/Stack ナビゲーターが inset を処理済み）— 新規画面でも `<SafeAreaView className="...">` は書かないこと |
 
 ## 検証
 
