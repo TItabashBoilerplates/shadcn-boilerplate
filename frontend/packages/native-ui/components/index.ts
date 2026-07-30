@@ -23,5 +23,11 @@ export { HStack, type HStackProps } from './hstack'
 export { createIcon, Icon, type IconProps } from './icon'
 export { IconSymbol } from './icon-symbol'
 export { Pressable, type PressableProps } from './pressable'
+export {
+  DEFAULT_SAFE_AREA_EDGES,
+  resolveSafeAreaPadding,
+  SafeAreaView,
+  type SafeAreaViewProps,
+} from './safe-area-view'
 export { Text, type TextProps } from './text'
 export { VStack, type VStackProps } from './vstack'

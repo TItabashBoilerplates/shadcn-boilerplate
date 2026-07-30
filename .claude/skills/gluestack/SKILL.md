@@ -1,6 +1,6 @@
 ---
 name: gluestack
-description: 本リポジトリで gluestack-ui + NativeWind v5 のモバイル UI を書く / 直す / 追加するときの規約。packages/native-ui の構成、@workspace/tokens/contract によるバリアント契約、v5 の正しい import パス（@gluestack-ui/core の creator・@gluestack-ui/utils/nativewind-utils）、tva の書き方、Provider の役割、新規コンポーネント追加手順（適合テスト + Storybook 必須）を提供。Mobile のボタン・カード・モーダル・トースト等の UI 実装、className が効かない、tva/variant の追加、gluestack のバージョン差異でハマったとき、apps/mobile や packages/native-ui のファイルを触るときは必ず最初に起動すること。gluestack 一般の設計原則は公式スキル gluestack-ui-v5 に委譲する。
+description: 本リポジトリで gluestack-ui + NativeWind v5 のモバイル UI を書く / 直す / 追加するときの規約。packages/native-ui の構成、@workspace/tokens/contract によるバリアント契約、v5 の正しい import パス（@gluestack-ui/core の creator・@gluestack-ui/utils/nativewind-utils）、tva の書き方、Provider の役割、SafeAreaView/useSafeAreaInsets の罠、新規コンポーネント追加手順（適合テスト + Storybook 必須）を提供。Mobile のボタン・カード・モーダル・トースト等の UI 実装、className が効かない、SafeArea/inset がおかしい、画面が真っ黒になる、tva/variant の追加、gluestack のバージョン差異でハマったとき、apps/mobile や packages/native-ui のファイルを触るときは必ず最初に起動すること。gluestack 一般の設計原則は公式スキル gluestack-ui-v5 に委譲する。
 ---
 
 # gluestack-ui（本リポジトリ規約）
@@ -62,7 +62,8 @@ frontend/packages/native-ui/          # @workspace/native-ui（Mobile 専用 UI�
 │   │   ├── variants.ts               # クラス定義（RN 非依存＝テスト・Storybook から読める）
 │   │   ├── button.stories.tsx        # Storybook（UI は単体テストでなく Storybook で担保）
 │   │   └── __tests__/variants.test.ts # 契約への適合テスト
-│   ├── gluestack-ui-provider/        # OverlayProvider + ToastProvider だけ
+│   ├── gluestack-ui-provider/        # SafeAreaProvider + OverlayProvider + ToastProvider
+│   ├── safe-area-view/                # 動く SafeAreaView（下の「SafeArea の罠」参照）
 │   └── index.ts                      # Public API
 ├── constants/                        # JS 側テーマ値（hex 解決済み）
 ├── hooks/
@@ -134,10 +135,84 @@ export const buttonStyle = tva({
 
 ## Provider の役割は限定的
 
-`GluestackUIProvider` は **overlay / toast のポータルを張るだけ**。
-デザイントークンは `apps/mobile/global.css`（→ `@workspace/tokens/native.css`）から供給されるので、
-Provider で色を注入したり color scheme を制御したりしない。
-`apps/mobile/src/app/providers/AppProvider.tsx` で `ThemeProvider` の内側に配置済み。
+`GluestackUIProvider` は **overlay / toast のポータルを張り、`SafeAreaProvider` で
+safe-area inset を供給するだけ**。デザイントークンは `apps/mobile/global.css`
+（→ `@workspace/tokens/native.css`）から供給されるので、Provider で色を注入したり
+color scheme を制御したりしない。`apps/mobile/src/app/providers/AppProvider.tsx` で
+`ThemeProvider` の内側に配置済み。
+
+`SafeAreaProvider` が無いと `useSafeAreaInsets()` / `useSafeAreaFrame()` は**例外を投げる**
+（`react-native-safe-area-context` の仕様。フォールバック値は無い）。`GluestackUIProvider` を
+経由せず自前で Provider ツリーを組む場合は、必ずどこかに `SafeAreaProvider` を含めること。
+
+## SafeArea の罠（重要 — 過去に本番が真っ黒になった実例あり）
+
+`react-native-safe-area-context` は NativeWind v5 (`react-native-css`) との相性が悪い。
+**必ず `@workspace/native-ui` の `SafeAreaView` を使い、`react-native-safe-area-context` から
+直接 `SafeAreaView` を import しないこと。**
+
+### 何が起きるか
+
+`react-native-css`（NativeWind v5 の実体）は `react-native-safe-area-context` の import を
+横取りする（`node_modules/react-native-css/src/components/react-native-safe-area-context.native.tsx`）。
+だが中身はこれだけ:
+
+```tsx
+export * from 'react-native-safe-area-context' // ← SafeAreaView はそのまま無加工で再輸出
+
+export function SafeAreaProvider({ children, ...props }) {
+  // SafeAreaProvider だけラップして inset を CSS カスタムプロパティに変換する
+}
+```
+
+つまり **`SafeAreaProvider` だけが `cssInterop` される。`SafeAreaView` はネイティブホスト
+コンポーネントのまま**で、`className` を渡しても実行時に完全に無視される。
+
+### さらに厄介: 型チェックも lint も通ってしまう
+
+`SafeAreaViewProps` は `react-native` の `ViewProps` を extends している。`react-native-css`
+は `declare module "react-native" { interface ViewProps { className?: string } }`
+という**グローバルな型宣言マージ**で `className` を生やしているため、この宣言マージは
+`ViewProps` を継承しているすべての型に伝播する。結果、`<SafeAreaView className="...">` は
+**TypeScript エラーが出ない**（`ViewProps` 由来で型的には正しく見える）。ビルドも通る。
+だが実行時には何も起きない。`className="flex-1 ..."` を書いたつもりが `flex-1` が
+一切効かず、ツリー全体が高さ 0 に潰れて**画面が真っ黒になる**。この不整合（型は通るのに
+実行時だけ壊れる）が過去に長時間の切り分けを要した実際の原因。
+
+公式スキル `gluestack-ui-v5` のサンプルコードは
+`import { SafeAreaView } from '@/components/ui/safe-area-view'` に `className` を渡す例を
+載せているが、**gluestack-ui 公式 CLI が生成する `safe-area-view` の中身もただの
+`export { SafeAreaView } from 'react-native-safe-area-context'` の再輸出**でしかない
+（`bunx gluestack-ui@latest add safe-area-view` で実際に確認済み）。つまり公式サンプルを
+そのまま真似ても本リポジトリの react-native-css バージョンでは動かない。
+
+### 正しい使い方（本リポジトリはすでに直っている）
+
+```tsx
+// ❌ 使わない
+import { SafeAreaView } from 'react-native-safe-area-context'
+
+// ✅ 使う
+import { SafeAreaView } from '@workspace/native-ui/components'
+
+function Screen() {
+  return (
+    <SafeAreaView className="flex-1 bg-background">
+      {/* className は Box に、safe-area padding は useSafeAreaInsets() の実値を
+          style として適用している（packages/native-ui/components/safe-area-view/index.tsx） */}
+    </SafeAreaView>
+  )
+}
+```
+
+この `SafeAreaView` は `Box` + `useSafeAreaInsets()` で実装されており、`SafeAreaProvider`
+（`GluestackUIProvider` が既に供給済み）を前提にする。`edges` prop で対象辺を絞れる
+（既定は 4 辺すべて）。padding の計算は `packages/native-ui/components/safe-area-view/style.ts`
+に純粋関数として切り出してあり、`__tests__/style.test.ts` でテストされている。
+
+現状このリポジトリのどの画面もまだ `SafeAreaView` を使っていない（Expo Router の
+Tabs/Stack ナビゲーターが inset を処理しているため今は困っていない）が、モーダルや
+ナビゲーター外のカスタムレイアウトを足すときは必ずこの `SafeAreaView` を使うこと。
 
 ## 新規コンポーネントを足す手順
 
@@ -165,7 +240,8 @@ CLI で雛形を取る場合は `bun run ui:add:mobile <component>`（= `bunx gl
 | ダークモードが効かない | native は `.dark` クラスでなく `@media (prefers-color-scheme: dark)`。`.dark` を書いても無意味 |
 | native バンドルが lightningcss で落ちる | `lightningcss` はルートの `overrides` で 1.30.1 に固定している。外さない |
 | **画面が真っ黒 / 何も描画されない（エラーなし）** | `apps/mobile/babel.config.js` が無いと、`react-native-reanimated` / `react-native-worklets` が要求する **worklets babel plugin が一切登録されない**。`useAnimatedStyle` 等（`ParallaxScrollView` が使用）が動かず、ビルドも通ってしまうため気づきにくい。`babel.config.js` に `presets: ['babel-preset-expo']` + `plugins: ['react-native-worklets/plugin']`（**必ず最後**）が必要。**`nativewind/babel` preset や `jsxImportSource: 'nativewind'` は逆に不要**（v5 は import-rewrite 方式で、公式 v5 移行ガイドが明示的に削除を指示している：https://www.nativewind.dev/v5/guides/migrate-from-v4）。babel.config.js 自体は現在 `apps/mobile/` に配置済み — 削除しないこと |
-| **`SafeAreaView` に `className` を付けても効かない（`flex-1` が消えてツリーが高さ0に潰れる）** | `react-native-css`（NativeWind v5 の実体）は `react-native-safe-area-context` の import を横取りするが、**`SafeAreaProvider` だけをラップし `SafeAreaView` はそのまま re-export**（inset を CSS カスタムプロパティとして注入するだけ）。`SafeAreaView` 自体に `cssInterop` は適用されないため `className` は静かに無視される。安全な代替: 画面ルートは `Box`（gluestack）を使い、余白は `useSafeAreaInsets()` の値を `style` / `padding` に反映する。現状このリポジトリのどの画面も `SafeAreaView` を使っていない（Expo Router の Tabs/Stack ナビゲーターが inset を処理済み）— 新規画面でも `<SafeAreaView className="...">` は書かないこと |
+| `react-native-safe-area-context` の `SafeAreaView` に `className` を付けても効かない | 型もビルドも通るのに実行時だけ壊れる。詳細と正しい使い方は下の「SafeArea の罠」参照 — 必ず `@workspace/native-ui` の `SafeAreaView` を使う |
+| `useSafeAreaInsets()` が例外を投げる | `SafeAreaProvider` が無い。`GluestackUIProvider` 経由なら供給済み（下の「SafeArea の罠」参照） |
 
 ## 検証
 
