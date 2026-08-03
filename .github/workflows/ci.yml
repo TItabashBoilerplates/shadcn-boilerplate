@@ -88,24 +88,14 @@ jobs:
       - name: Install devenv.sh
         shell: bash
         run: nix profile add nixpkgs#devenv
-      # `devenv test` (= ci:check aggregator) は process phase で Supabase Docker /
-      # Storybook を起動してしまうため CI では使わず、配下の verify task を直接列挙する。
+      # `ci-check` script = `devenv tasks run ci:check`（aggregator）。
+      # `devenv test` は使わない: process phase が Supabase Docker / Storybook を起動し、
+      # かつ prek (git-hooks) が verify task と並行実行されて false failure を出すため
+      # （詳細は devenv.nix の task "ci:check" のコメント）。
+      # verify task の一覧は devenv.nix の ci:check に一本化してあるので、
+      # ここで列挙し直さない（列挙するとローカルと CI で drift する）。
       - name: Run verify tasks
-        run: |
-          devenv tasks run \
-            lint-ci:frontend \
-            lint-ci:drizzle \
-            lint-ci:backend-py \
-            lint-ci:functions \
-            lint-ci:fsd \
-            format-check:frontend \
-            format-check:drizzle \
-            format-check:backend-py \
-            format-check:functions \
-            type-check:frontend \
-            type-check:mobile \
-            type-check:backend-py \
-            type-check:functions
+        run: ci-check
 
   test:
     name: Unit Tests (frontend + backend-py)

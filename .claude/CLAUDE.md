@@ -203,15 +203,17 @@ stop                          # devenv プロセス + Supabase をすべて停�
 # Quality
 # 公式推奨の 2 段階構成:
 #   - コミット時 → git-hooks (biome/ruff/ruff-format/mypy/denofmt/denolint) が変更ファイルだけ実行 (<200ms)
-#   - 手動 / ローカル verify → `devenv test` (= ci:check aggregator) が execIfModified キャッシュで incremental skip
-#   - CI (.github/workflows/ci.yml) → Supabase Docker / Storybook の起動を避けるため `devenv test` ではなく
-#                                      verify task (lint-ci:* / format-check:* / type-check:*) を直接列挙
+#   - 手動 / ローカル verify・CI → どちらも `ci-check` (= `devenv tasks run ci:check` aggregator)。
+#                                    execIfModified キャッシュで incremental skip
+#   - ⚠️ `devenv test` は verify に使わない (git-hooks 専用)。enterTest 経由で process phase が走り
+#     supabase:start → model:frontend が auto-generated な schema.ts を上書きする + prek が
+#     verify task と並行実行されて "files were modified by this hook" で false failure になるため
 lint                         # 全プロジェクトの lint (auto-fix、シンプル sequential)
 format                       # 全プロジェクトの format (auto-fix)
 format-check                 # 各 sub-project の format-check sequential
 type-check                   # 各 sub-project の type-check sequential
-ci-check                     # = `devenv test`、ci:check aggregator 経由 (キャッシュ込み、ローカル用)
-devenv test                  # ci-check と同等 (ローカル用)。CI では process phase 回避のため使わず verify task を直接呼ぶ
+ci-check                     # = `devenv tasks run ci:check` (キャッシュ込み)。ローカルも CI もこれ 1 本
+devenv test                  # git-hooks (prek) を全ファイルに対して実行するだけ。verify は ci-check を使う
 
 # 個別サブプロジェクト
 lint-frontend / lint-drizzle / lint-backend-py / lint-functions / lint-fsd

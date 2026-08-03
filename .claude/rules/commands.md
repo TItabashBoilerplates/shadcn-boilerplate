@@ -33,8 +33,8 @@ scripts は devenv shell（direnv 自動アクティベート含む）下で PAT
 | **Build** | `build-frontend`, `build-storybook`, `build-mobile-ios`, `build-mobile-android` |
 | **Tests (unit)** | `unit-test` (all), `test-frontend` (Vitest), `test-backend-py` (pytest) ※ `test` は bash 組み込みと衝突するため `unit-test` |
 | **Tests (DB / E2E)** | `test-db` (pgTAP), `e2e`, `e2e-web`, `e2e-mobile` |
-| **CI Check (full gate)** | `ci-check` (= `devenv test`、execIfModified キャッシュで incremental) |
-| **CI Check (直叩き)** | `devenv test` (`ci:check` aggregator task が `before = devenv:enterTest`) |
+| **CI Check (full gate)** | `ci-check` (= `devenv tasks run ci:check`、execIfModified キャッシュで incremental)。ローカルも CI もこれ |
+| **git-hooks を全ファイルに実行** | `devenv test` ※ **verify 用途では使わない**（下記「⚠️ `devenv test` を verify に使ってはならない」参照） |
 | **Services (軽量)** | `devenv up` (= Supabase + backend + storybook), `stop` (停止), `supabase-start` / `supabase-stop` |
 | **Services (frontend apps)** | `dev-web`, `dev-mobile`, `dev-all`, または `devenv up <names...>` |
 | **Services (devenv 外)** | `frontend` (turbo dev), `mobile-ios`, `mobile-android`, `mobile-web` (Expo TUI) |
@@ -116,13 +116,13 @@ Direct command execution is allowed ONLY for:
 
 `prek` (Rust 実装) が pre-commit を駆動。**コミット 1 回 < 200ms** が普通。
 
-### 段階 2: CI / 手動 verify (devenv test)
+### 段階 2: CI / 手動 verify (ci-check)
 
-`devenv test` を叩くと `ci:check` aggregator task が起動し、配下の verify task が並列・キャッシュ実行される:
+`ci-check` script = `devenv tasks run ci:check`。aggregator が配下の verify task を並列・キャッシュ実行する:
 
 ```
-devenv test
-└── ci:check (before = [devenv:enterTest])
+ci-check  (= devenv tasks run ci:check)
+└── ci:check
     ├── lint-ci:frontend / drizzle / backend-py / functions / fsd  (execIfModified)
     ├── format-check:frontend / drizzle / backend-py / functions    (execIfModified)
     └── type-check:frontend / mobile / backend-py / functions       (execIfModified)
@@ -131,10 +131,43 @@ devenv test
 - `execIfModified` で **mtime + content hash** チェック → 変更なしならスキップ
 - キャッシュ: `.devenv/` 配下、`devenv-tasks` Rust binary が管理
 - 何も変更してなければ全 task キャッシュヒット → 数秒で完了
-- **ローカル**: `devenv test` (= `ci:check` aggregator、`before = devenv:enterTest` で processes も整える) を主に使う
-- **CI** (`.github/workflows/ci.yml`): Supabase Docker / Storybook を毎回起動したくないため、`devenv test` ではなく **配下の verify task (`lint-ci:* / format-check:* / type-check:*`) を直接列挙**して呼ぶ。verify ロジック（execIfModified キャッシュ含む）は同一だが process phase をスキップする
+- **ローカルも CI も同じ `ci-check`**（`.github/workflows/ci.yml` の verify step は `run: ci-check`）。
+  verify task の一覧は `devenv.nix` の `ci:check` に一本化されているので、CI 側で列挙し直さない（drift 防止）
 
-> **使い分け**: 日常の auto-fix は `lint` / `format` script (シンプル sequential、execIfModified なし → 副作用ループ回避)。CI 相当の verify はローカルでは `ci-check` または `devenv test`、CI では verify task の直接列挙。
+#### ⚠️ `devenv test` を verify に使ってはならない
+
+`ci:check` に `before = [ "devenv:enterTest" ]` を付けて `devenv test` に紐付ける構成は**禁止**。
+過去にこれで `ci-check` がローカルで恒常的に落ちていた。enterTest 経由で以下が道連れになる:
+
+| 巻き込まれるもの | 起きること |
+|---|---|
+| **process phase** (`supabase:start`) | `after` の `model:frontend` が走り、`supabase gen types typescript --local` が **auto-generated な `frontend/packages/types/schema.ts` を上書き**する。ローカル DB が未マイグレーションだと `public.Tables` が空になり `Tables<'users'>` 等が型エラー化（生成物が壊れる破壊的副作用） |
+| **`devenv:git-hooks:run`** (prek) | verify task と**並行実行**され、prek が「hook 実行中に worktree の mtime が変わった」を検知して `files were modified by this hook` の **false failure** を出す。`show_output = false` なので原因が見えない |
+
+そもそも hook (biome/ruff/ruff-format/mypy/denofmt/denolint) の検査内容は verify task と**完全に重複**しており、二重に回す意味がない。`devenv test` は **git-hooks を全ファイルに掛けるだけの用途**に留める。
+
+> **使い分け**: 日常の auto-fix は `lint` / `format` script (シンプル sequential、execIfModified なし → 副作用ループ回避)。CI 相当の verify は**ローカル・CI とも `ci-check`**。
+
+#### backend-py の `uv run` は `--all-packages` 必須（import 解決が要るツール）
+
+`backend-py` は uv の **virtual workspace**（root が `package = false`）。素の `uv run` は root の
+dependency-groups（mypy/ruff/pytest）しか同期せず、member (`apps/api`, `packages/core`) の依存
+= fastapi / pydantic / starlette / structlog を入れない。すると **mypy から third-party が全部 `Any` に見え**、
+strict の `disallow_subclassing_any` / `disallow_untyped_decorators` が誤爆する
+（`Class cannot subclass "BaseModel" (has type "Any")` 等）。
+
+```bash
+# ✅ import 解決が要るツールは --all-packages
+uv run --all-packages mypy apps packages
+uv run --all-packages pytest
+
+# ✅ ruff は import 解決不要なので素の uv run でよい
+uv run ruff check apps packages
+```
+
+「`devenv shell` 進入時に `setup:install-backend` が同期済みだから素の `uv run` でよい」は**成立しない**。
+`UV_PROJECT_ENVIRONMENT` は文脈で切り替わるため（`devenv test` は `.devenv/test-state/venv` を使う）、
+同期済みの venv が使われるとは限らない。
 
 ## devenv script 命名規則（MANDATORY）
 

@@ -617,8 +617,9 @@ in
     # 設計方針 (詳細は docs/_research/2026-04-28-devenv-quality-checks.md):
     #   - **コミット時の差分チェック**は git-hooks (pre-commit) が担当（変更ファイルだけ）
     #   - **CI / 手動 verify** は ここの tasks が担当（execIfModified で incremental skip）
-    #   - `ci:check` は `before = [ "devenv:enterTest" ]` で `devenv test` に紐付け
-    #     → ローカルも CI も `devenv test` 一発で全 verify
+    #   - `ci:check` aggregator が全 verify task を束ねる。`ci-check` script と CI の両方が
+    #     `devenv tasks run ci:check` を呼ぶ → ローカルと CI で検査対象が完全一致
+    #     （`devenv test` には紐付けない。理由は "ci:check" task のコメント参照）
     #   - auto-fix 系 (lint, format) は scripts のまま (副作用ループ回避)
     #
     # status と execIfModified は同時指定不可 (devenv モジュールアサーション)。
@@ -731,8 +732,16 @@ in
         "frontend/apps/mobile/package.json"
       ];
     };
+    # `--all-packages` 必須。backend-py は uv の **virtual workspace** (root は package = false) なので、
+    # 素の `uv run` は root の dependency-groups (mypy/ruff/pytest) しか同期せず、
+    # member (apps/api, packages/core) の依存 = fastapi / pydantic / starlette / structlog を入れない。
+    # すると mypy から見て third-party が全部 `Any` になり、strict の disallow_subclassing_any /
+    # disallow_untyped_decorators が誤爆する（"Class cannot subclass BaseModel (has type Any)" 等）。
+    # `devenv test` は UV_PROJECT_ENVIRONMENT を .devenv/state/venv から **.devenv/test-state/venv** に
+    # 切り替えるため、setup:install-backend が同期した venv は使われない。よって「shell 起動時に
+    # 同期済みだから素の uv run でよい」は成立しない。→ import 解決が要るツールは --all-packages を付ける。
     "type-check:backend-py" = {
-      exec = ''cd "$DEVENV_ROOT/backend-py" && uv run mypy apps packages'';
+      exec = ''cd "$DEVENV_ROOT/backend-py" && uv run --all-packages mypy apps packages'';
       execIfModified = [
         "backend-py/apps/*/src/**/*.py"
         "backend-py/packages/*/src/**/*.py"
@@ -760,12 +769,27 @@ in
       ];
     };
 
-    # ----- Aggregator: devenv test → 全 verify を一発実行 -----
-    # `before = [ "devenv:enterTest" ]` で `devenv test` の依存に組み込む。
+    # ----- Aggregator: 全 verify を一発実行 -----
     # `after = [ ... ]` で配下の verify task をすべて要求 → namespace 内で並列実行 + キャッシュ。
+    #
+    # ⚠️ `before = [ "devenv:enterTest" ]` は **付けない**（= `devenv test` には紐付けない）。
+    # 以前は紐付けていたが、`devenv test` に載せると enterTest 経由で以下 2 つが道連れになり、
+    # ci-check がローカルで恒常的に落ちていた:
+    #
+    #   1. **process phase**: `supabase:start` → `after` の `model:frontend` が走り、
+    #      `supabase gen types typescript --local` で **auto-generated な schema.ts を上書き**する。
+    #      ローカル DB が未マイグレーションだと public.Tables が空になり、
+    #      `Tables<'users'>` 等が型エラーになる（生成物が壊れる破壊的副作用）。
+    #   2. **devenv:git-hooks:run (prek)**: verify task と **並行実行**されるため、
+    #      prek が「hook 実行中に worktree のファイル mtime が変わった」を検知して
+    #      `files were modified by this hook` で false failure を出す
+    #      （mypy 自体は Success。show_output = false なので原因が見えない）。
+    #
+    # そもそも hook (biome/ruff/ruff-format/mypy/denofmt/denolint) の検査内容は
+    # 配下の verify task と完全に重複しており、`devenv test` で二重に回す意味がない。
+    # → `ci-check` script は `devenv tasks run ci:check` を直接叩く（CI と同一経路）。
     "ci:check" = {
       exec = ''echo "✅ All CI checks passed"'';
-      before = [ "devenv:enterTest" ];
       after = [
         "lint-ci:frontend"
         "lint-ci:drizzle"
@@ -1094,14 +1118,15 @@ in
     };
 
     # ---------- CI gate ----------
-    # `devenv test` 経由で `ci:check` aggregator task を起動。
+    # `ci:check` aggregator task を直接起動する（`devenv test` は使わない。
+    # 理由は task "ci:check" のコメント参照 = process phase による生成物破壊 + prek の false failure）。
     # 配下の lint-ci:* / format-check:* / type-check:* が namespace 並列 + execIfModified キャッシュで実行される。
     # → 何も変更してなければ全 task キャッシュヒットで秒で終わる。
     # → 一部だけ変更すれば影響範囲のみ走る (incremental)。
-    # → ローカルと CI で同じコマンド (`devenv test`)、環境差ゼロ。
+    # → CI (.github/workflows/ci.yml) もこの script を呼ぶので、ローカルと CI で検査対象が一致する。
     "ci-check" = {
-      exec = ''exec devenv test'';
-      description = "Full CI gate via `devenv test` (cached, incremental)";
+      exec = ''exec devenv tasks run ci:check'';
+      description = "Full CI gate (ci:check aggregator, cached, incremental)";
     };
 
     # ---------- Build ----------
@@ -1109,7 +1134,9 @@ in
 
     # ---------- Tests ----------
     "test-frontend"   = { exec = ''cd "$DEVENV_ROOT/frontend" && nr test''; description = "Vitest (frontend)"; };
-    "test-backend-py" = { exec = ''cd "$DEVENV_ROOT/backend-py" && uv run pytest''; description = "pytest (backend-py workspace)"; };
+    # pytest は member (api/core) とその依存を import するので `--all-packages` 必須
+    # (type-check:backend-py のコメント参照)。ruff は import 解決不要なので素の uv run でよい。
+    "test-backend-py" = { exec = ''cd "$DEVENV_ROOT/backend-py" && uv run --all-packages pytest''; description = "pytest (backend-py workspace)"; };
     "test-db"         = { exec = ''supabase test db --local''; description = "pgTAP DB tests"; };
     # NOTE: `test` という名前は bash 組み込みコマンド（`[` と等価）と衝突し、
     # PATH 上の同名スクリプトより builtin が優先される。CI で `run: test` を呼ぶと
@@ -1237,7 +1264,10 @@ in
       enable = true;
       files = "^backend-py/(apps|packages)/[^/]+/src/.*\\.py$";
       pass_filenames = false;
-      entry = lib.mkForce ''${pkgs.bash}/bin/bash -c 'cd "$(git rev-parse --show-toplevel)/backend-py" && uv run mypy apps packages' '';
+      # `--all-packages`: virtual workspace の member 依存 (fastapi/pydantic/…) まで同期させる。
+      # 素の `uv run` だと third-party が Any になり strict mypy が誤爆する
+      # (詳細は task "type-check:backend-py" のコメント参照)。
+      entry = lib.mkForce ''${pkgs.bash}/bin/bash -c 'cd "$(git rev-parse --show-toplevel)/backend-py" && uv run --all-packages mypy apps packages' '';
     };
 
     # ----- Edge Functions: Deno format -----

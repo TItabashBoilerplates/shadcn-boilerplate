@@ -22,7 +22,6 @@ export function CookieConsentBanner() {
 
   return (
     <div
-      // biome-ignore lint/a11y/useSemanticElements: 常時表示の同意バナーは dialog ロールが適切
       role="dialog"
       aria-label={t('title')}
       className="fixed inset-x-0 bottom-0 z-50 border-border border-t bg-background/95 p-4 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80"
