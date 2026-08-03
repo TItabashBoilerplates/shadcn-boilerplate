@@ -217,6 +217,33 @@ import { SomeComponent } from './SomeComponent'
 </Card>
 ```
 
+## Form Controls (MANDATORY)
+
+**テキスト入力を受け付けるフォーム要素は、モバイル幅で必ず font-size 16px 以上**にする。
+**iOS Safari は 16px 未満のフォーム要素にフォーカスすると自動でズームイン**するため。
+
+```tsx
+// ✅ Good: モバイル 16px / デスクトップ 14px
+<Textarea className="..." />   // 共有コンポーネントが text-base md:text-sm を持つ
+
+// ❌ Bad: モバイルでも 14px → iOS Safari がズームする
+<textarea className="w-full rounded-md border px-3 py-2 text-sm" />
+
+// ❌ Bad: 各画面にクラス定数をコピペ（重複 → 直し漏れの温床）
+const textareaClass = '... text-sm'
+```
+
+| 対象（16px 必須） | 対象外 |
+|---|---|
+| `<input>`（text / email / password / search / tel / url / number / date 系） | checkbox / radio / file / range / color / submit / button |
+| `<textarea>` | Radix `SelectTrigger`（実体は `<button>`） |
+| ネイティブ `<select>` / `contenteditable` | `<button>` / `<a>` / 通常テキスト |
+
+**`maximum-scale=1` / `user-scalable=no` による回避は WCAG 1.4.4 違反につき禁止。**
+フォーム要素のスタイルは **`@workspace/ui` の共有コンポーネント 1 か所**にのみ定義する。
+
+→ 詳細・チェックリスト・検出コマンドは `.claude/rules/form-controls.md` を参照
+
 ## Date/Time Handling
 
 To prevent hydration errors:

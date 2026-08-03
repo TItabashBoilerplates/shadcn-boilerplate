@@ -167,6 +167,28 @@ CSS 変数は `globals.css` で定義:
 </div>
 ```
 
+### フォーム要素は 16px 以上（iOS Safari オートズーム対策・必須）
+
+**iOS Safari は font-size が 16px 未満のフォーム要素にフォーカスすると自動でズームイン**する。
+`<input>` / `<textarea>` / ネイティブ `<select>` / `contenteditable` を含むコンポーネントを
+**追加・改修するときは必ず `text-base md:text-sm` を className に含める**（`input.tsx` が手本）。
+
+```typescript
+// ✅ Good: モバイル 16px / デスクトップ 14px
+className={cn('... px-3 py-2 text-base md:text-sm', className)}
+
+// ❌ Bad: モバイルでも 14px → iOS Safari がズームする
+className={cn('... px-3 py-2 text-sm', className)}
+```
+
+- **`text-sm` / `text-xs` を入力要素に付けない**（呼び出し側の `className` 上書きも含む）。
+- checkbox / radio / file / Radix `SelectTrigger`（実体は `<button>`）は**対象外**。
+- `maximum-scale=1` / `user-scalable=no` での回避は **WCAG 1.4.4 違反につき禁止**。
+- スタイルは `packages/ui/src/components/` の**共有コンポーネント 1 か所**にのみ定義する
+  （画面ごとの `textareaClass` のようなコピペ定数は禁止）。
+
+→ 詳細は `.claude/rules/form-controls.md`
+
 ## レスポンシブデザイン
 
 TailwindCSS のレスポンシブユーティリティを使用:
@@ -315,5 +337,7 @@ export function ConfirmDialog() {
 - [ ] ハードコードされた色を使用していない
 - [ ] CSS 変数（`text-foreground`, `bg-background` 等）を使用
 - [ ] アクセシビリティ対応（ラベル、ARIA 属性）
+- [ ] **フォーム要素（input / textarea / native select / contenteditable）が `text-base md:text-sm`**（iOS Safari オートズーム対策）
+- [ ] **フォーム要素のスタイルが共有コンポーネントに集約されている**（ローカルの `xxxClass` コピペが無い）
 - [ ] レスポンシブデザイン対応
 - [ ] ダークモード対応

@@ -55,6 +55,16 @@ export type OldType = NewType
 2. packages に共通化すべきか？
 3. shared レイヤーに配置すべきか？
 
+### 実例: クラス定数のコピペが不具合を生んだケース
+
+`<textarea>` の共有コンポーネントを作らず、`textareaClass` 定数を **6 ファイルにコピペ**した結果、
+全部が `text-sm`(14px)（下書き本文だけ `text-xs`）のまま残り、**iOS Safari でフォーカスすると
+オートズームする不具合**になった。共有化されていた `Input` は 1 箇所直すだけで済んでいた。
+
+**Tailwind のクラス文字列も「重複コード」である。** UI のスタイルは `packages/ui` の
+共有コンポーネントに集約し、`const xxxClass = '...'` を各画面に置かない。
+→ フォーム要素の具体的な規約は `.claude/rules/form-controls.md`
+
 ## 未使用コードの削除
 
 **原則: 使われていないコードは即座に削除**
