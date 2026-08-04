@@ -8,3 +8,10 @@ inputs:
         follows: nixpkgs
   nixpkgs:
     url: git+https://github.com/NixOS/nixpkgs?ref=nixpkgs-unstable
+
+# Android SDK (platform / build-tools / NDK / cmake) は Google の SDK ライセンス配下で
+# nixpkgs 上は unfree 扱いになるため、許可しないと `-P android` の評価が
+# "Refusing to evaluate package 'androidsdk' ... unfree license" で失敗する。
+# 実際にダウンロードされるのは android profile を有効にしたときだけ。
+nixpkgs:
+  allow_unfree: true

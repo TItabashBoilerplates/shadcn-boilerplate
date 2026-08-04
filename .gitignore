@@ -150,6 +150,11 @@ devenv.local.yaml
 .direnv/
 .pre-commit-config.yaml
 
+# devenv android profile (`-P android`) が enterShell で CWD に生成する。
+# 中身は /nix/store の SDK/NDK パスなので環境依存 = コミットしない。
+/local.properties
+/.android/
+
 # CCR web-sandbox E2E artifacts
 e2e-results/ccr/
 e2e/node_modules/

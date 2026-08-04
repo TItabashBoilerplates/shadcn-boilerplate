@@ -153,6 +153,8 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 | `stop` (script) | devenv プロセス + Supabase の両方を停止 |
 | `frontend` (script) | モノレポ全体 (`turbo dev` = web + mobile 並列、devenv 外、重い) |
 | `mobile` / `mobile-ios` / `mobile-android` / `mobile-web` (script) | Expo 対話的 TUI (devenv 外) |
+| `devenv shell -P android` | **Android ネイティブビルド toolchain**（JDK 17 + Android SDK + NDK）。**opt-in profile**（数 GB あるので既定では入らない）。有効時のみ `mobile-android-run` / `mobile-android-prebuild` / `build-mobile-android-local` / `android-info` が使える |
+| `devenv shell -P android-emulator` | ↑ + Android エミュレータ + system image（実機も Android Studio も無い場合） |
 
 TUI が主なので、ログ閲覧・個別プロセス再起動・状態確認は TUI 内のキーバインドで操作する（`devenv up` を実行するだけで使える）。
 
@@ -198,6 +200,13 @@ dev-mobile                    # 軽量セット + Expo Metro (mobile, non-intera
 dev-all                       # 軽量セット + 全 frontendApps
 devenv up backend web         # 任意組み合わせ
 mobile-ios / mobile-android / mobile-web   # Expo 対話的 TUI (devenv 外、別ターミナル)
+
+# Android ネイティブビルド (opt-in profile。JDK 17 + Android SDK + NDK は数 GB あるので既定では入らない)
+devenv shell -P android                    # toolchain 入りの shell
+devenv shell -P android -- android-info    # 解決された JDK / SDK / NDK / cmake の確認
+devenv shell -P android -- mobile-android-run          # expo run:android (prebuild → Gradle → adb install)
+devenv shell -P android -- build-mobile-android-local  # eas build --platform android --local
+devenv shell -P android-emulator           # ↑ + エミュレータ + system image
 stop                          # devenv プロセス + Supabase をすべて停止
 
 # Quality

@@ -343,6 +343,131 @@ in
     production.module.enterShell = ''
       export ENV="production"
     '' + loadEnvFilesForEnv + loadDopplerByEnv;
+
+    # ===== android: Expo (React Native) の Android ネイティブビルド toolchain =====
+    #
+    # **opt-in profile にしている理由**: JDK 17 + Android SDK (platform / build-tools /
+    # platform-tools / cmdline-tools / cmake) + NDK r27b で closure が数 GB になる。
+    # base に入れると web / backend しか触らない開発者と CI まで全員がダウンロードする羽目に
+    # なるため、Android を触るときだけ `-P android` で有効化する。
+    #
+    # 使い方（ENV profile とは直交するので併用できる）:
+    #   devenv shell -P android              # Android toolchain 入りの shell に入る
+    #   devenv shell -P android -- mobile-android-run
+    #   devenv shell -P android -P staging   # staging env + Android toolchain
+    #   devenv shell -P android-emulator     # ↑ + エミュレータ + system image（さらに重い）
+    #
+    # バージョンは **react-native 0.86 の版数カタログに厳密に一致させている**
+    # (frontend/node_modules/react-native/gradle/libs.versions.toml):
+    #   minSdk 24 / targetSdk 36 / compileSdk 36 / buildTools 36.0.0 / ndk 27.1.12297006
+    #   / AGP 8.12.0 / Kotlin 2.1.20 / Java 17
+    # nixpkgs の Android SDK は **read-only な /nix/store 上に構成される**ため、Gradle が
+    # 「無いバージョンを sdkmanager で追加インストール」する救済が効かない。**版数がズレると
+    # そのままビルド失敗になる**ので、react-native を上げたら上記 toml を見て必ず追従すること。
+    #
+    # 前提: devenv.yaml の `nixpkgs.allow_unfree: true`（Android SDK は unfree ライセンス）。
+    android.module = {
+      android = {
+        enable = true;
+
+        # JDK 17 (`languages.java.jdk.package`) を既定にする公式スイッチ。
+        # 副作用として `languages.javascript.npm.enable` も立つ（本リポジトリの既定は bun だが、
+        # Expo CLI / autolinking が npx 経由の呼び出しをするので入っていて困らない）。
+        reactNative.enable = true;
+
+        # compileSdk / targetSdk = 36。35 は一部ライブラリが compileSdk 35 のまま参照するため同梱。
+        platforms.version = [ "35" "36" ];
+
+        # 先頭要素が GRADLE_OPTS の aapt2 override と LD_LIBRARY_PATH に使われるので、
+        # react-native が要求する 36.0.0 を必ず先頭に置く。
+        buildTools.version = [ "36.0.0" ];
+
+        # reanimated / worklets / expo-modules-core / screens が externalNativeBuild.cmake を持つので
+        # NDK は必須。バージョンは react-native の ndkVersion と一致させる。
+        ndk.enable = true;
+        ndk.version = [ "27.1.12297006" ];
+
+        # 上記ライブラリはいずれも cmake の version を明示していない = AGP 8.x の既定 3.22.1 が使われる。
+        cmake.version = [ "3.22.1" ];
+
+        # 重い & 実機 / 既存エミュレータでは不要。必要なら `-P android-emulator` を使う。
+        emulator.enable = false;
+        systemImages.enable = false;
+
+        # Android SDK sources と legacy add-on は Expo のビルドに不要（ダウンロード削減）。
+        sources.enable = false;
+        googleAPIs.enable = false;
+        googleTVAddOns.enable = false;
+        extras = [ ];
+      };
+
+      # devenv の android モジュールが設定するのは ANDROID_HOME だけ。Expo CLI / Gradle には
+      # ANDROID_SDK_ROOT を見る経路も残っているので同じ値を明示的に通す（食い違うと AGP が警告する）。
+      #
+      # ⚠️ `env.ANDROID_SDK_ROOT = config.env.ANDROID_HOME` と書いてはいけない。profile module 内から
+      # マージ後の `config.env` を参照しつつ `env` を定義すると評価が循環し、devenv が
+      # **エラーも出さず profile を丸ごと無視する**（`devenv info -P android` が env を一切
+      # 表示しなくなるだけ、という気づきにくい壊れ方をする）。shell 変数として展開すれば回避できる。
+      enterShell = ''
+        export ANDROID_SDK_ROOT="$ANDROID_HOME"
+      '';
+
+      scripts = {
+        # CNG (Continuous Native Generation): android/ はコミットせず毎回生成する。
+        # expo run:android は内部で prebuild → Gradle assembleDebug → adb install まで行う。
+        "mobile-android-run" = {
+          exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && exec nlx expo run:android "$@"'';
+          description = "Build & install the Android app locally (expo run:android)";
+        };
+
+        "mobile-android-prebuild" = {
+          exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && exec nlx expo prebuild --platform android "$@"'';
+          description = "Generate the native Android project (expo prebuild, CNG)";
+        };
+
+        # クラウドを使わないローカル EAS ビルド。frontend/apps/mobile/eas.json の
+        # profile 定義が前提（未作成なら eas-cli が案内を出す）。
+        "build-mobile-android-local" = {
+          exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && exec nlx eas build --platform android --local "$@"'';
+          description = "Build mobile (Android) via EAS on this machine (--local)";
+        };
+
+        # toolchain が期待どおりに解決できているかの自己診断。
+        # 「Gradle が SDK を見つけられない」系の切り分けを最初の 1 コマンドで終わらせる。
+        "android-info" = {
+          exec = ''
+            set -u
+            echo "JAVA_HOME         = ''${JAVA_HOME:-<unset>}"
+            echo "java              = $(java -version 2>&1 | head -1)"
+            echo "ANDROID_HOME      = ''${ANDROID_HOME:-<unset>}"
+            echo "ANDROID_SDK_ROOT  = ''${ANDROID_SDK_ROOT:-<unset>}"
+            echo "ANDROID_NDK_ROOT  = ''${ANDROID_NDK_ROOT:-<unset>}"
+            echo "adb               = $(adb --version 2>/dev/null | head -1)"
+            echo "platforms         = $(ls "$ANDROID_HOME/platforms" 2>/dev/null | tr '\n' ' ')"
+            echo "build-tools       = $(ls "$ANDROID_HOME/build-tools" 2>/dev/null | tr '\n' ' ')"
+            echo "ndk               = $(ls "$ANDROID_HOME/ndk" 2>/dev/null | tr '\n' ' ')"
+            echo "cmake             = $(ls "$ANDROID_HOME/cmake" 2>/dev/null | tr '\n' ' ')"
+          '';
+          description = "Print the resolved Android/JDK toolchain (troubleshooting)";
+        };
+      };
+    };
+
+    # android + エミュレータ / system image。実機も既存の Android Studio エミュレータも無い場合に使う。
+    # system image は 1 プラットフォーム × 1 ABI でも GB 級なので、`android` から分離している。
+    # NOTE: 親 profile が platforms.version を定義しているため、ここで再定義すると listOf が
+    # **連結**されてしまう。system image を絞りたいときは abis / systemImageTypes 側で調整すること。
+    android-emulator = {
+      extends = [ "android" ];
+      module = {
+        android = {
+          emulator.enable = true;
+          systemImages.enable = true;
+          systemImageTypes = [ "google_apis" ];
+          abis = [ "x86_64" ];
+        };
+      };
+    };
   };
 
   # ===== Tasks（多段 pipeline・依存関係あり）=====
@@ -1313,6 +1438,8 @@ in
     echo "  dev-mobile                        #   ↑ + Expo Metro (frontend/apps/mobile)"
     echo "  dev-all                           #   ↑ + 両方"
     echo "  mobile-ios / mobile-android       # Expo TUI 別ターミナル (devenv 外)"
+    echo "  devenv shell -P android           # Android ネイティブビルド toolchain (JDK17 + SDK + NDK)"
+    echo "    └ mobile-android-run            #   expo run:android (ローカル実機ビルド)"
     echo "  devenv tasks run db:migrate-dev   # DB schema migration"
     echo "  ci-check                          # full CI gate"
     echo "  stop                              # stop everything"

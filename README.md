@@ -339,6 +339,42 @@ mobile-android  # Android エミュレータ
 mobile-web      # Web 版
 ```
 
+### Android ネイティブビルド (`-P android` profile)
+
+上記の `mobile-android` は **Metro を起動して既存の Expo Go / dev client に繋ぐ**だけで、
+ネイティブビルドはしません。`expo run:android` や `eas build --local` のように
+**手元で APK をビルドする**には JDK 17 + Android SDK + NDK が必要です。
+
+これらは合計で数 GB あるため、**opt-in の devenv profile** にしてあります
+（web / backend しか触らない開発者と CI がダウンロードしなくて済むように）。
+
+```bash
+devenv shell -P android                    # toolchain 入りの shell に入る
+devenv shell -P android -- android-info    # 解決された JDK / SDK / NDK / cmake を確認
+
+# profile 内で使える script
+mobile-android-run           # expo run:android (prebuild → Gradle → adb install)
+mobile-android-prebuild      # expo prebuild --platform android (CNG)
+build-mobile-android-local   # eas build --platform android --local
+```
+
+実機も Android Studio のエミュレータも無い場合は、エミュレータと system image を含む
+`devenv shell -P android-emulator` を使います（さらに数 GB 増えます）。
+
+ENV profile とは直交するので `devenv shell -P android -P staging` のように併用できます。
+
+| 同梱バージョン | 値 | 出典 |
+|---|---|---|
+| JDK | 17 | Expo SDK 57 / AGP 8.12 の要求 |
+| compileSdk / targetSdk | 36 (+ 35 も同梱) | `react-native/gradle/libs.versions.toml` |
+| build-tools | 36.0.0 | 同上 |
+| NDK | 27.1.12297006 | 同上（reanimated / worklets / expo-modules-core が CMake ビルドを持つため必須） |
+| CMake | 3.22.1 | AGP 8.x の既定（各ライブラリは version を明示していない） |
+
+> nixpkgs の Android SDK は read-only な `/nix/store` 上に構成されるため、Gradle が
+> 「足りないバージョンを sdkmanager で追加取得」する救済が効きません。**react-native を
+> 上げたら `libs.versions.toml` を見て `devenv.nix` の `profiles.android` を必ず追従**させてください。
+
 ## Additional Commands
 
 > 全コマンドは devenv の **scripts** (PATH 直結) または **tasks** (`devenv tasks run <name>`)。Makefile は **deprecated**。
