@@ -2,7 +2,10 @@
   "extends": "../../../tooling/typescript/base.json",
   "compilerOptions": {
     "composite": true,
-    "baseUrl": ".",
+    // `process.env.NEXT_PUBLIC_*` を参照するため node の型が必要。
+    // 以前は @supabase/ssr が undici-types 経由で @types/node を暗黙に読み込んでいたが、
+    // 0.12 系でその依存が外れたため明示的に宣言する。
+    "types": ["node"],
     "paths": {
       "@workspace/client-supabase/*": ["./*"]
     }

@@ -18,7 +18,6 @@
     "noEmit": true,
 
     // Path resolution
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
     }

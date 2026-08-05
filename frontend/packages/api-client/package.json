@@ -19,7 +19,7 @@
     "@hey-api/openapi-ts": "0.89.2",
     "@types/bun": "latest",
     "@types/node": "^22.0.0",
-    "typescript": "^5.8.0"
+    "typescript": "~6.0.3"
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5"

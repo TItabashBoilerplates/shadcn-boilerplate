@@ -3,7 +3,6 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "composite": true,
-    "baseUrl": ".",
     "paths": {
       "@workspace/native-ui/*": ["./*"]
     }
