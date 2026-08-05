@@ -787,18 +787,19 @@ in
     "seed:all".after = [ "seed:db" "seed:storage" ];
 
     # ---------- Deploy ----------
-    "deploy:functions".exec = ''
-      set -euo pipefail
-      if [ "''${ENV:-local}" = "local" ]; then
-        echo "Skipping deploy:functions for local environment"
-        exit 0
-      fi
-      for fn in watermark stripe-checkout stripe-products stripe-webhooks; do
-        supabase functions deploy "$fn" --no-verify-jwt --project-ref "$SUPABASE_PROJECT_REF"
-      done
-    '';
+    # scripts/supabase/deploy-functions.sh に一本化している。
+    # 以前はここに関数名（watermark / stripe-*）を列挙していたが、**このリポジトリに実在しない**
+    # 関数を指しており、実在する helloworld / onesignal-send / onesignal-webhooks は
+    # 一つもデプロイされない状態だった。引数なしの `functions deploy` が
+    # supabase/functions/ 配下を全てデプロイするので、関数追加時の変更も不要。
+    # verify_jwt は関数ごとに config.toml の [functions.<name>] で指定する
+    # （`--no-verify-jwt` を全関数に一律で付けるのは誤り）。
+    "deploy:functions".exec = ''exec ./scripts/supabase/deploy-functions.sh'';
 
-    "deploy:supabase".exec = ''./scripts/supabase/deploy.sh'';
+    "deploy:config".exec = ''exec ./scripts/supabase/deploy-config.sh'';
+    "deploy:buckets".exec = ''exec ./scripts/supabase/deploy-buckets.sh'';
+    "deploy:link".exec = ''exec ./scripts/supabase/link.sh'';
+    "deploy:supabase".exec = ''exec ./scripts/supabase/deploy.sh'';
 
     # ---------- Quality CI gate（execIfModified キャッシュ + namespace 並列）----------
     # 設計方針 (詳細は docs/_research/2026-04-28-devenv-quality-checks.md):

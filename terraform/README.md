@@ -111,15 +111,32 @@ AWS を使わない構成なので **HCP Terraform の無料枠**（5 users ま�
 > **意図的に使っていない**。使うと config.toml と二重書き込みになって drift するため
 > （`.claude/rules/clean-code.md` の重複コード禁止）。
 
-### Terraform の output は config.toml 反映の入力になる
+### Terraform の output が ref の供給元
 
-`supabase config push` / `functions deploy` は対象 project の ref を必要とする。
-persistent branch の ref は Terraform が作るまで存在しないので、`tf-output` から受け取る。
+`config push` / `seed buckets` / `functions deploy` は対象 project の ref を必要とする。
+persistent branch の ref は Terraform が branch を作るまで存在せず、しかも
+**`SUPABASE_` prefix は Doppler に登録できない**（`.claude/rules/env-naming.md`）ので、
+ref は Doppler からは供給されない。**`tf-output` が正規の供給元**:
 
 ```bash
-tf-output myapp                      # supabase_env_refs = { production = "...", staging = "...", dev = "..." }
-supabase config push --project-ref "<staging の ref>"
+export ENV=staging
+export SUPABASE_PROJECT_REF="$(tf-output myapp -json supabase_env_refs | jq -r .staging)"
+devenv tasks run -P staging deploy:supabase   # link → config push → buckets → functions
 ```
+
+`scripts/supabase/lib.sh` の `sb_require_project_ref` が未設定を検出して、上記の取得方法を
+出しつつ止める（env ファイルに ref をハードコードさせないため）。
+
+### この boilerplate は `supabase/config.toml` を持たない
+
+設定の SSOT は config.toml だが、**ファイル自体は各アプリ側で用意する方針**なので
+このリポジトリには置いていない。そのため deploy スクリプトは config.toml の不在を検出して
+**声を出してスキップ**する（`deploy-config.sh` / `deploy-buckets.sh`）。
+
+> ⚠️ これは無視できないガードである。Supabase CLI は **config.toml が無いと既定値をロードする**
+> （`supabase status` がディレクトリ名から project 名を推定して動くのがその証拠）。
+> ガード無しで `config push` を踏むと、リモートの Auth 設定が CLI 既定値で上書きされ、
+> メールテンプレートの配線も `verify_jwt` も失われる。
 
 ### 管理しないもの（Terraform 側）
 
