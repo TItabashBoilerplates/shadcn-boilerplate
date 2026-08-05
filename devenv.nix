@@ -225,6 +225,16 @@ in
     # backend も Vercel（Dockerfile.vercel コンテナ）へデプロイするため、デプロイ用 CLI は REST API 直叩きで代替。
     pkgs.gh
     pkgs.jq
+    # IaC（terraform/）の実行バイナリ。**OpenTofu を既定にしている**。
+    #   - `pkgs.terraform` は BUSL(unfree) のため nixpkgs がバイナリを再配布できず、
+    #     必ず **ソースからの Go ビルド**になる（遅い・ネットワーク前提）。
+    #   - `pkgs.opentofu` は MPL-2.0 なので cache.nixos.org のビルド済みバイナリが降ってくる。
+    # HCL / state / provider はそのまま互換。HashiCorp 製 CLI を使いたい場合は
+    #   ① ここを pkgs.terraform に変更 ② terraform/.terraform.lock.hcl を削除して tf-init
+    #   ③ TF_BIN=terraform を export（tf-* script が参照する）
+    # の 3 手順（registry が registry.opentofu.org → registry.terraform.io に変わるため
+    # lock file の再生成が要る）。詳細は terraform/README.md。
+    pkgs.opentofu
   ];
 
   languages.javascript = {
@@ -837,6 +847,14 @@ in
         "supabase/functions/**/deno.json"
       ];
     };
+    # IaC（terraform/）。TF_BIN で HashiCorp 製 CLI にも切り替えられる（既定は OpenTofu）。
+    "format-check:terraform" = {
+      exec = ''cd "$DEVENV_ROOT/terraform" && ''${TF_BIN:-tofu} fmt -check -recursive'';
+      execIfModified = [
+        "terraform/**/*.tf"
+        "terraform/**/*.tfvars"
+      ];
+    };
 
     # ----- Type check -----
     "type-check:frontend" = {
@@ -893,6 +911,19 @@ in
         "supabase/functions/**/deno.json"
       ];
     };
+    # IaC の静的検証。`-backend=false` で backend への接続なしに provider schema だけ取得して
+    # 構文・型・参照を検査する（credential 不要 = CI でも安全に回せる）。
+    "type-check:terraform" = {
+      exec = ''
+        cd "$DEVENV_ROOT/terraform"
+        ''${TF_BIN:-tofu} init -backend=false -input=false >/dev/null
+        exec ''${TF_BIN:-tofu} validate
+      '';
+      execIfModified = [
+        "terraform/**/*.tf"
+        "terraform/.terraform.lock.hcl"
+      ];
+    };
 
     # ----- Aggregator: 全 verify を一発実行 -----
     # `after = [ ... ]` で配下の verify task をすべて要求 → namespace 内で並列実行 + キャッシュ。
@@ -925,10 +956,12 @@ in
         "format-check:drizzle"
         "format-check:backend-py"
         "format-check:functions"
+        "format-check:terraform"
         "type-check:frontend"
         "type-check:mobile"
         "type-check:backend-py"
         "type-check:functions"
+        "type-check:terraform"
       ];
     };
 
@@ -1012,6 +1045,60 @@ in
         exec doppler run -- bash scripts/infra/bootstrap.sh "$@"
       '';
       description = "外部 PaaS の project/env/承認ゲートを冪等プロビジョニング（要 config.env + dashboard 事前 OAuth）";
+    };
+
+    # ---------- IaC（terraform/）----------
+    # 宣言的プロビジョニング。scripts/infra/tf.sh が
+    #   ① 実行バイナリ解決（既定 tofu / TF_BIN で切替）
+    #   ② トークン読み替え（SB_ACCESS_TOKEN→SUPABASE_ACCESS_TOKEN 等）
+    #   ③ アプリごとの workspace 選択 + apps/<app>.tfvars 指定
+    # を行う。トークンは `doppler run` が bootstrap config から注入する（値は露出しない）。
+    #
+    # 使い方: tf-plan <app>  /  tf-apply <app>  （<app> = terraform/apps/<app>.tfvars）
+    "tf-init" = {
+      exec = ''
+        cd "$DEVENV_ROOT"
+        exec doppler run -- bash scripts/infra/tf.sh init "$@"
+      '';
+      description = "Terraform init + workspace 選択（tf-init <app>）";
+    };
+
+    "tf-plan" = {
+      exec = ''
+        cd "$DEVENV_ROOT"
+        exec doppler run -- bash scripts/infra/tf.sh plan "$@"
+      '';
+      description = "Terraform plan（tf-plan <app>）";
+    };
+
+    "tf-apply" = {
+      exec = ''
+        cd "$DEVENV_ROOT"
+        exec doppler run -- bash scripts/infra/tf.sh apply "$@"
+      '';
+      description = "Terraform apply（tf-apply <app>。本番相当の変更は plan を確認してから）";
+    };
+
+    "tf-output" = {
+      exec = ''
+        cd "$DEVENV_ROOT"
+        exec doppler run -- bash scripts/infra/tf.sh output "$@"
+      '';
+      description = "Terraform output 表示（tf-output <app>）";
+    };
+
+    # fmt / validate は credential 不要なので doppler を挟まない。
+    "tf-fmt" = {
+      exec = ''
+        cd "$DEVENV_ROOT/terraform"
+        exec ''${TF_BIN:-tofu} fmt -recursive "$@"
+      '';
+      description = "Terraform format（terraform/ 配下、auto-fix）";
+    };
+
+    "tf-validate" = {
+      exec = ''exec devenv tasks run type-check:terraform'';
+      description = "Terraform validate（構文・型・参照の静的検証、cached）";
     };
 
     # ---------- Doppler（シークレット管理・移行下準備）----------
@@ -1219,6 +1306,7 @@ in
         format-drizzle
         format-backend-py
         format-functions
+        tf-fmt
       '';
       description = "Format all subprojects (auto-fix)";
     };

@@ -1,0 +1,20 @@
+# provider バイナリ / モジュールキャッシュ
+.terraform/
+
+# state（secret が平文で入る）。ローカル backend を使う場合の出力先。
+.tfstate/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# plan の中間生成物
+*.tfplan
+
+# 実値の入力（config.example.tfvars をコピーして作る）
+*.auto.tfvars
+terraform.tfvars
+apps/*.tfvars
+!apps/*.example.tfvars
+
+# .terraform.lock.hcl は **コミットする**（provider バージョンの再現性）
