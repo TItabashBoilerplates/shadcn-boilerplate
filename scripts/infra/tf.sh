@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Terraform(OpenTofu) ラッパー。devenv の tf-* script から呼ばれる。
+# Terraform ラッパー。devenv の tf-* script から呼ばれる。
 #
 #   tf.sh <subcommand> <app> [extra args...]
 #     例: tf.sh plan myapp
 #         tf.sh apply myapp -auto-approve
 #
 # 役割:
-#   1. 実行バイナリの解決（既定は tofu。TF_BIN で上書き可）
+#   1. 実行バイナリの解決（既定は terraform。TF_BIN で上書き可）
 #   2. **トークンの読み替え**（Doppler の非予約キー名 → provider が読む環境変数）
 #   3. アプリごとの workspace 選択 + tfvars の指定
 #
@@ -22,9 +22,9 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 TF_DIR="$PROJECT_ROOT/terraform"
 
 # ── 1. 実行バイナリ ──────────────────────────────────────────────────────────
-# 既定は OpenTofu（devenv.nix が pkgs.opentofu を入れている）。
-# HashiCorp 製 CLI を使う場合は TF_BIN=terraform（terraform/README.md の手順を参照）。
-TF_BIN="${TF_BIN:-tofu}"
+# 既定は HashiCorp 公式の terraform（devenv.nix が公式配布バイナリを入れている）。
+# OpenTofu に切り替える場合は TF_BIN=tofu（terraform/README.md の手順を参照）。
+TF_BIN="${TF_BIN:-terraform}"
 have "$TF_BIN" || die "'$TF_BIN' が見つかりません。devenv shell 内で実行してください（TF_BIN で切替可）。"
 
 # ── 2. トークンの読み替え ────────────────────────────────────────────────────

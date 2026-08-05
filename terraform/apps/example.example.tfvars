@@ -31,25 +31,11 @@ supabase_organization_id = "your-org-slug"
 supabase_region          = "ap-northeast-1"
 supabase_instance_size   = "micro"
 
-supabase_site_urls = {
-  production = "https://myapp.example.com"
-  staging    = "https://myapp-staging.example.com"
-  dev        = "http://localhost:3000"
-}
-
-supabase_additional_redirect_urls = {
-  production = ["https://myapp.example.com/**"]
-  staging    = ["https://myapp-staging.example.com/**"]
-  dev        = ["http://localhost:3000/**"]
-}
-
-# OAuth provider / MFA / Auth Hooks 等は UpdateAuthConfigBody のキーをそのまま渡す。
-# ⚠️ secret を含む値はここに書かない（state に平文で載る）。
-# supabase_auth_settings_extra = {
-#   external_google_enabled  = true
-#   mfa_totp_enroll_enabled  = true
-#   mailer_autoconfirm       = false
-# }
+# ⚠️ Auth / API / Storage / メールテンプレート / Edge Functions / Storage buckets は
+#    supabase/config.toml が single source of truth（.claude/rules/supabase-config.md）。
+#    Terraform では指定しない。反映は `supabase config push --project-ref <ref>` /
+#    `devenv tasks run deploy:functions` / `supabase seed buckets` が担う。
+#    対象の ref は `tf-output <app>` の supabase_env_refs で取得できる。
 
 # ── Vercel ────────────────────────────────────────────────────────────────
 # 個人アカウントなら空文字のまま。

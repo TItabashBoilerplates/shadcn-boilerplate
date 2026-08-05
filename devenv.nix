@@ -1,6 +1,63 @@
 { pkgs, config, lib, ... }:
 
 let
+  # ===== Terraform（HashiCorp 公式配布バイナリ）=====
+  #
+  # `pkgs.terraform` を使わない理由: Terraform 1.6 以降は BUSL のため nixpkgs が
+  # バイナリを再配布できず、**必ずソースからの Go ビルド**になる（devenv shell の初回が
+  # 数分〜、ネットワーク前提）。ここでは releases.hashicorp.com の公式 zip を
+  # そのまま取り込むことで、ビルド無しで本物の terraform を入れる。
+  #
+  # OpenTofu ではなく Terraform を使うのは、**HCP Terraform の managed run が
+  # terraform バイナリしか実行しない**ため（OpenTofu は state 置き場としては使えるが
+  # run / Sentinel / private module registry は Terraform 専用）。
+  # 詳細は terraform/README.md「実行バイナリ」。
+  #
+  # バージョンを上げるときは:
+  #   curl -sS https://releases.hashicorp.com/terraform/<V>/terraform_<V>_SHA256SUMS
+  #   で hex を取り、SRI（sha256-<base64>）に変換して下表を差し替える。
+  terraformVersion = "1.15.8";
+
+  terraformDist = {
+    "x86_64-linux" = { platform = "linux_amd64"; hash = "sha256-0lzntpAgE62QXbPS6rC+TNkFiH/oi4GmFxuNVQPDHz0="; };
+    "aarch64-linux" = { platform = "linux_arm64"; hash = "sha256-iJHp3O3J47iVC8avnU2K8fTPreMGL1O53EA6ifbOjJw="; };
+    "x86_64-darwin" = { platform = "darwin_amd64"; hash = "sha256-4ugS54N3EVm/dY/U5V1tybsI9j4q8sY9ISchgHoCxdw="; };
+    "aarch64-darwin" = { platform = "darwin_arm64"; hash = "sha256-8hARDFaYuU2AOnpjzbAlG1RVwVCEFHiAjiu7ND+V7Wg="; };
+  };
+
+  terraformCli =
+    let
+      dist = terraformDist.${pkgs.stdenv.hostPlatform.system}
+        or (throw "terraform: 未対応の platform ${pkgs.stdenv.hostPlatform.system}（devenv.nix の terraformDist に追加してください）");
+    in
+    pkgs.stdenvNoCC.mkDerivation {
+      pname = "terraform";
+      version = terraformVersion;
+
+      src = pkgs.fetchurl {
+        url = "https://releases.hashicorp.com/terraform/${terraformVersion}/terraform_${terraformVersion}_${dist.platform}.zip";
+        inherit (dist) hash;
+      };
+
+      nativeBuildInputs = [ pkgs.unzip ];
+      sourceRoot = ".";
+
+      installPhase = ''
+        runHook preInstall
+        install -Dm755 terraform "$out/bin/terraform"
+        runHook postInstall
+      '';
+
+      meta = {
+        description = "HashiCorp Terraform (official prebuilt binary)";
+        homepage = "https://www.terraform.io/";
+        # BUSL-1.1。社内利用は許諾範囲内だが、nixpkgs 的には unfree 扱いになるライセンス。
+        # devenv.yaml で allow_unfree: true 済み。
+        license = lib.licenses.bsl11;
+        mainProgram = "terraform";
+      };
+    };
+
   # 環境ごとの **非機密** env ファイル読み込み（ENV 駆動）。Doppler（loadDopplerByEnv）と同じく
   # 環境変数 ENV を見て読み込む対象を切り替える。env/ の構成は env/README.md を参照。
   #
@@ -225,16 +282,11 @@ in
     # backend も Vercel（Dockerfile.vercel コンテナ）へデプロイするため、デプロイ用 CLI は REST API 直叩きで代替。
     pkgs.gh
     pkgs.jq
-    # IaC（terraform/）の実行バイナリ。**OpenTofu を既定にしている**。
-    #   - `pkgs.terraform` は BUSL(unfree) のため nixpkgs がバイナリを再配布できず、
-    #     必ず **ソースからの Go ビルド**になる（遅い・ネットワーク前提）。
-    #   - `pkgs.opentofu` は MPL-2.0 なので cache.nixos.org のビルド済みバイナリが降ってくる。
-    # HCL / state / provider はそのまま互換。HashiCorp 製 CLI を使いたい場合は
-    #   ① ここを pkgs.terraform に変更 ② terraform/.terraform.lock.hcl を削除して tf-init
-    #   ③ TF_BIN=terraform を export（tf-* script が参照する）
-    # の 3 手順（registry が registry.opentofu.org → registry.terraform.io に変わるため
-    # lock file の再生成が要る）。詳細は terraform/README.md。
-    pkgs.opentofu
+    # IaC（terraform/）の実行バイナリ。公式配布 zip をそのまま取り込む（let 節の terraformCli）。
+    # OpenTofu に切り替えたい場合は pkgs.opentofu に差し替え、
+    # terraform/.terraform.lock.hcl を作り直して TF_BIN=tofu を export する
+    # （registry が registry.terraform.io → registry.opentofu.org に変わるため）。
+    terraformCli
   ];
 
   languages.javascript = {
@@ -847,9 +899,9 @@ in
         "supabase/functions/**/deno.json"
       ];
     };
-    # IaC（terraform/）。TF_BIN で HashiCorp 製 CLI にも切り替えられる（既定は OpenTofu）。
+    # IaC（terraform/）。TF_BIN で OpenTofu にも切り替えられる（既定は terraform）。
     "format-check:terraform" = {
-      exec = ''cd "$DEVENV_ROOT/terraform" && ''${TF_BIN:-tofu} fmt -check -recursive'';
+      exec = ''cd "$DEVENV_ROOT/terraform" && ''${TF_BIN:-terraform} fmt -check -recursive'';
       execIfModified = [
         "terraform/**/*.tf"
         "terraform/**/*.tfvars"
@@ -916,8 +968,8 @@ in
     "type-check:terraform" = {
       exec = ''
         cd "$DEVENV_ROOT/terraform"
-        ''${TF_BIN:-tofu} init -backend=false -input=false >/dev/null
-        exec ''${TF_BIN:-tofu} validate
+        ''${TF_BIN:-terraform} init -backend=false -input=false >/dev/null
+        exec ''${TF_BIN:-terraform} validate
       '';
       execIfModified = [
         "terraform/**/*.tf"
@@ -1049,7 +1101,7 @@ in
 
     # ---------- IaC（terraform/）----------
     # 宣言的プロビジョニング。scripts/infra/tf.sh が
-    #   ① 実行バイナリ解決（既定 tofu / TF_BIN で切替）
+    #   ① 実行バイナリ解決（既定 terraform / TF_BIN で切替）
     #   ② トークン読み替え（SB_ACCESS_TOKEN→SUPABASE_ACCESS_TOKEN 等）
     #   ③ アプリごとの workspace 選択 + apps/<app>.tfvars 指定
     # を行う。トークンは `doppler run` が bootstrap config から注入する（値は露出しない）。
@@ -1091,7 +1143,7 @@ in
     "tf-fmt" = {
       exec = ''
         cd "$DEVENV_ROOT/terraform"
-        exec ''${TF_BIN:-tofu} fmt -recursive "$@"
+        exec ''${TF_BIN:-terraform} fmt -recursive "$@"
       '';
       description = "Terraform format（terraform/ 配下、auto-fix）";
     };

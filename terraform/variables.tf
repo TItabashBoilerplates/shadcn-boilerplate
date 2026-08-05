@@ -12,11 +12,6 @@ variable "app_name" {
   }
 }
 
-variable "repo_root" {
-  description = "リポジトリルートの絶対パス。Edge Functions の entrypoint とメールテンプレートの読み込みに使う。"
-  type        = string
-  default     = ""
-}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # GitHub
@@ -102,57 +97,11 @@ variable "supabase_db_password" {
   sensitive   = true
 }
 
-variable "manage_supabase_settings" {
-  description = <<-EOT
-    true にすると Terraform が Supabase のリモート設定（auth / api / storage）を所有する。
-    GitHub Integration の config 同期を使わない構成での既定。
-    ⚠️ config.toml の GitHub 連携同期と併用すると二重書き込みで drift するので、どちらか一方にすること。
-  EOT
-  type        = bool
-  default     = true
-}
 
-variable "manage_supabase_edge_functions" {
-  description = "true にすると supabase/functions/*/index.ts を Terraform でデプロイする。"
-  type        = bool
-  default     = true
-}
 
-variable "supabase_site_urls" {
-  description = <<-EOT
-    環境ごとの site_url（認証メールのリンク先）。キーは dev / staging / production。
-    未指定の環境は auth 設定の site_url を管理しない。
-  EOT
-  type        = map(string)
-  default     = {}
-}
 
-variable "supabase_additional_redirect_urls" {
-  description = "環境ごとの追加リダイレクト許可 URL（GoTrue の uri_allow_list）。"
-  type        = map(list(string))
-  default     = {}
-}
 
-variable "supabase_auth_settings_extra" {
-  description = <<-EOT
-    auth 設定の追加フィールド（Management API の UpdateAuthConfigBody をそのまま渡す）。
-    OAuth provider・MFA・Auth Hooks・rate limit 等はここで指定する。
-    例: { external_google_enabled = true, mfa_totp_enroll_enabled = true }
-    ⚠️ secret を含む値をここに書かない（state に平文で載る）。
-  EOT
-  type        = any
-  default     = {}
-}
 
-variable "supabase_api_settings" {
-  description = "PostgREST（api）設定。null にすると管理しない。"
-  type = object({
-    db_schema            = optional(string, "public,storage,graphql_public")
-    db_extra_search_path = optional(string, "public,extensions")
-    max_rows             = optional(number, 1000)
-  })
-  default = {}
-}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Vercel

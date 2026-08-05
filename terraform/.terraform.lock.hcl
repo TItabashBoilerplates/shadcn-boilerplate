@@ -1,7 +1,7 @@
-# This file is maintained automatically by "tofu init".
+# This file is maintained automatically by "terraform init".
 # Manual edits may be lost in future updates.
 
-provider "registry.opentofu.org/dopplerhq/doppler" {
+provider "registry.terraform.io/dopplerhq/doppler" {
   version     = "1.21.4"
   constraints = "~> 1.21"
   hashes = [
@@ -22,7 +22,7 @@ provider "registry.opentofu.org/dopplerhq/doppler" {
   ]
 }
 
-provider "registry.opentofu.org/integrations/github" {
+provider "registry.terraform.io/integrations/github" {
   version     = "6.13.0"
   constraints = "~> 6.13"
   hashes = [
@@ -44,7 +44,7 @@ provider "registry.opentofu.org/integrations/github" {
   ]
 }
 
-provider "registry.opentofu.org/supabase/supabase" {
+provider "registry.terraform.io/supabase/supabase" {
   version     = "1.10.1"
   constraints = "~> 1.10"
   hashes = [
@@ -66,7 +66,7 @@ provider "registry.opentofu.org/supabase/supabase" {
   ]
 }
 
-provider "registry.opentofu.org/vercel/vercel" {
+provider "registry.terraform.io/vercel/vercel" {
   version     = "5.7.1"
   constraints = "~> 5.7"
   hashes = [

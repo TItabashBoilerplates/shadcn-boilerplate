@@ -1,6 +1,4 @@
 locals {
-  repo_root = var.repo_root != "" ? var.repo_root : abspath("${path.root}/..")
-
   # branch → 環境の対応。scripts/infra/lib.sh の git_branch_for / doppler_config_for、
   # および docs/deployment/README.md の branch→env マッピングと**必ず一致させる**。
   environments = {
@@ -40,6 +38,10 @@ module "github" {
   production_reviewers = var.production_reviewers
 }
 
+# Supabase のサービス設定（Auth / API / Storage / メールテンプレート）と
+# Edge Functions / Storage buckets は **config.toml が single source of truth** なので
+# ここでは扱わない。Terraform は project と branch だけを作り、その ref を
+# `supabase config push --project-ref` 等に渡す入力として output する。
 module "supabase" {
   source = "./modules/supabase"
 
@@ -50,15 +52,6 @@ module "supabase" {
   database_password = var.supabase_db_password
 
   branch_environments = local.branch_environments
-
-  manage_settings       = var.manage_supabase_settings
-  manage_edge_functions = var.manage_supabase_edge_functions
-
-  repo_root                = local.repo_root
-  site_urls                = var.supabase_site_urls
-  additional_redirect_urls = var.supabase_additional_redirect_urls
-  auth_settings_extra      = var.supabase_auth_settings_extra
-  api_settings             = var.supabase_api_settings
 }
 
 module "vercel" {

@@ -8,24 +8,28 @@ boilerplate から量産する各アプリの外部 PaaS（Supabase / Vercel / G
 
 ---
 
-## 実行バイナリ: 既定は OpenTofu
+## 実行バイナリ: HashiCorp 公式の Terraform
 
-devenv には **`pkgs.opentofu`** を入れている（`tofu` コマンド）。HashiCorp 製 CLI ではない理由:
+devenv には **releases.hashicorp.com の公式配布 zip をそのまま取り込む derivation** を入れている
+（`devenv.nix` の `terraformCli`）。`pkgs.terraform` を使わないのは、Terraform 1.6 以降が BUSL で
+nixpkgs がバイナリを再配布できず、**必ずソースからの Go ビルド**になるため（devenv shell の初回が数分〜）。
 
-| | terraform | opentofu |
+OpenTofu ではなく Terraform を選んでいる理由:
+
+| | Terraform | OpenTofu |
 |---|---|---|
-| ライセンス | BUSL（nixpkgs 上は unfree） | MPL-2.0 |
-| nixpkgs でのバイナリ再配布 | **不可** → 毎回 **ソースから Go ビルド** | 可 → cache.nixos.org から降ってくる |
-| devenv shell の初回コスト | 数分〜（ネットワーク前提） | 数秒 |
+| HCP Terraform の **managed run** | 実行できる | **実行できない**（HCP は terraform バイナリのみ） |
+| HCP Terraform を state 置き場として使う | 可 | 可 |
+| Sentinel / private module registry | 可 | 不可 |
 
-HCL / state / provider はそのまま互換なので、`.tf` 資産は Terraform でも動く。
-**HashiCorp 製 CLI に切り替えたい場合**は次の 3 手順:
+state backend に HCP Terraform を推奨している以上、CLI も Terraform に揃えるのが整合的。
 
-1. `devenv.nix` の `pkgs.opentofu` を `pkgs.terraform` に変更
-2. `rm terraform/.terraform.lock.hcl`（registry が `registry.opentofu.org` → `registry.terraform.io` に変わるため lock の作り直しが要る）
-3. `export TF_BIN=terraform`（`tf-*` script と devenv task が参照する）
+OpenTofu に切り替える場合は、`devenv.nix` の `terraformCli` を `pkgs.opentofu` に差し替え、
+`rm terraform/.terraform.lock.hcl` してから `export TF_BIN=tofu`
+（registry が `registry.terraform.io` → `registry.opentofu.org` に変わるため lock の作り直しが要る）。
 
----
+バージョンを上げるときは `devenv.nix` の `terraformVersion` と `terraformDist` のハッシュを差し替える
+（手順はコメントに記載）。
 
 ## コマンド（devenv）
 
@@ -51,8 +55,8 @@ bootstrap config のトークンが `scripts/infra/tf.sh` 経由で注入され�
 
 `ci-check`（= `devenv tasks run ci:check`）に以下が入っている。credential 不要なので CI で安全に回る。
 
-- `format-check:terraform` … `tofu fmt -check -recursive`
-- `type-check:terraform` … `tofu init -backend=false` + `tofu validate`
+- `format-check:terraform` … `terraform fmt -check -recursive`
+- `type-check:terraform` … `terraform init -backend=false` + `terraform validate`
 
 ---
 
@@ -87,33 +91,42 @@ AWS を使わない構成なので **HCP Terraform の無料枠**（5 users ま�
 
 ---
 
-## 何を管理していて、何を管理していないか
+## 責務分担: config.toml と Terraform
 
-### 管理する
+**Supabase のサービス設定は `supabase/config.toml` が single source of truth**（`.claude/rules/supabase-config.md`）。
+これは Terraform を入れても変わらない。Terraform が担うのは **config.toml では作れないもの**だけ。
 
-| 対象 | リソース |
+| 対象 | source of truth | 反映経路 |
+|---|---|---|
+| Auth / API / Storage 設定、**メールテンプレート** | **`supabase/config.toml`** | `supabase config push --project-ref <ref>`（`scripts/supabase/deploy-config.sh`） |
+| Edge Functions | **`supabase/config.toml` + `supabase/functions/`** | `devenv tasks run deploy:functions` |
+| Storage buckets | **`supabase/config.toml`** | `supabase seed buckets --linked` |
+| DB スキーマ / RLS / migration | **Drizzle** | `migrate.yml` |
+| **Supabase project / persistent branch** | **Terraform** | `tf-apply` |
+| **Vercel project / 環境変数** | **Terraform** | `tf-apply` |
+| **GitHub environment / 承認ゲート / repo 生成** | **Terraform** | `tf-apply` |
+| **Doppler project / 生成値 / GitHub Actions sync** | **Terraform** | `tf-apply` |
+
+> Terraform 側にも `supabase_settings` / `supabase_edge_function` という resource は存在するが、
+> **意図的に使っていない**。使うと config.toml と二重書き込みになって drift するため
+> （`.claude/rules/clean-code.md` の重複コード禁止）。
+
+### Terraform の output は config.toml 反映の入力になる
+
+`supabase config push` / `functions deploy` は対象 project の ref を必要とする。
+persistent branch の ref は Terraform が作るまで存在しないので、`tf-output` から受け取る。
+
+```bash
+tf-output myapp                      # supabase_env_refs = { production = "...", staging = "...", dev = "..." }
+supabase config push --project-ref "<staging の ref>"
+```
+
+### 管理しないもの（Terraform 側）
+
+| 対象 | 理由 |
 |---|---|
-| Supabase project（= production） | `supabase_project` |
-| Supabase persistent branch（staging / develop） | `supabase_branch` |
-| Supabase の auth / api 設定（**メールテンプレート本文を含む**） | `supabase_settings` |
-| Supabase Edge Functions（全環境へデプロイ） | `supabase_edge_function` |
-| Vercel の web / backend project + repo 接続 + Root Directory | `vercel_project` |
-| Vercel の環境変数（Supabase の値・backend endpoint） | `vercel_project_environment_variable` |
-| GitHub の deployment environment + **production 承認ゲート** | `github_repository_environment` ほか |
-| GitHub repo の生成（template から） | `github_repository` の `template` ブロック |
-| Doppler project + 生成値（`POSTGRES_URL` / `EXPO_PUBLIC_*`） | `doppler_project` / `doppler_secret` |
-| Doppler → GitHub Actions の sync | `doppler_secrets_sync_github_actions` |
-
-### 管理しない（意図的）
-
-| 対象 | 理由 / 代替 |
-|---|---|
-| **DB スキーマ / RLS / migration** | Drizzle が source of truth（`.claude/rules/database.md`）。適用は `migrate.yml` |
-| **Storage buckets** | Management API が **GET のみ**で作成できない → `supabase seed buckets --linked`（`scripts/supabase/deploy-buckets.sh`） |
-| **外部 API キー**（OpenAI / Stripe 等） | state に平文で載るため Terraform で書かない → doppler MCP で投入（`.claude/rules/mcp-doppler.md`） |
+| **外部 API キー**（OpenAI / Stripe 等） | state に平文で載るため → doppler MCP で投入（`.claude/rules/mcp-doppler.md`） |
 | Doppler → Vercel / Supabase の native sync | provider に resource が無い。**そのぶん Terraform が Vercel へ直接 env を書く**ので不要 |
-
----
 
 ## Supabase の GitHub 連携は使わない前提
 
@@ -122,14 +135,16 @@ Branching に GitHub 連携は不要（2026-05-04 に「Git なしの Branching�
 
 | GitHub 連携がやること | この構成での代替 |
 |---|---|
-| `config.toml` 同期（auth / api / storage・メールテンプレート） | `supabase_settings`（`manage_supabase_settings = true`） |
-| Edge Functions のデプロイ | `supabase_edge_function`（`manage_supabase_edge_functions = true`） |
+| `config.toml` 同期（auth / api / storage・メールテンプレート） | **`supabase config push --project-ref <ref>`**（CLI。ref は `tf-output` から） |
+| Edge Functions のデプロイ | `devenv tasks run deploy:functions` |
 | Storage buckets のデプロイ | `supabase seed buckets --linked`（元々連携外） |
 | migration の自動実行 | 元々使っていない（Drizzle + `migrate.yml`） |
 
-> ⚠️ **二重書き込みの禁止**: GitHub 連携の config 同期を有効にしたまま
-> `manage_supabase_settings = true` にすると、同じ対象を 2 人が書いて drift する。
-> どちらか一方に寄せること。この構成は **Terraform 側に寄せている**。
+つまり **config.toml は SSOT のまま**で、GitHub 連携という「配送経路」だけを CLI に置き換える。
+
+> ℹ️ これにより `[remotes.*]` の**無言スキップ**（`.claude/rules/supabase-config.md` §1.5）も避けやすくなる。
+> あれは GitHub 連携の config 同期ステップで起きる挙動で、`--project-ref` を明示する push では
+> 対象が曖昧にならない。
 
 ---
 
@@ -175,8 +190,8 @@ tf-output myapp
 
 ```bash
 tf-init myapp
-tofu import -var-file=apps/myapp.tfvars 'module.supabase.supabase_project.this' <project-ref>
-tofu import -var-file=apps/myapp.tfvars 'module.vercel.vercel_project.web'      <project-id>
+terraform import -var-file=apps/myapp.tfvars 'module.supabase.supabase_project.this' <project-ref>
+terraform import -var-file=apps/myapp.tfvars 'module.vercel.vercel_project.web'      <project-id>
 ```
 
 > ⚠️ `supabase_branch` の import は **persistent かどうかを判定できない**（provider の既知の制約）。
@@ -189,5 +204,5 @@ tofu import -var-file=apps/myapp.tfvars 'module.vercel.vercel_project.web'      
 | 項目 | 内容 |
 |---|---|
 | `supabase_branch` × GitHub 連携なし | provider は `git_branch` を必須にし、`branch_name` と `git_branch` の両方に同じ値を送る。連携を張っていない project での挙動（無害なラベル扱いか、エラーか）は未検証 |
-| branch への `supabase_settings` 適用 | branch の `database.id` を branch project ref として使っている（provider schema の description に基づく）。初回 `tf-plan` で参照先が正しいか確認する |
+| branch ref の取り扱い | `supabase_env_refs` output は branch の `database.id` を branch project ref として扱っている（provider schema の description に基づく）。`supabase config push --project-ref` に渡す前に実値を確認する |
 | `supabase_branch` のインスタンスサイズ | Management API は `desired_instance_size` を受け付けるが **provider が公開していない** → branch は既定サイズになる |
