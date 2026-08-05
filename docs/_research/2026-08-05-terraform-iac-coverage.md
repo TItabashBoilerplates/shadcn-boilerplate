@@ -12,8 +12,8 @@
 | 区分 | 内容 | 件数 |
 |---|---|---|
 | ✅ **Terraform 化できる** | Supabase project/branch/設定/Edge Functions、Vercel project/env/domain/microfrontends、GitHub environments/承認ゲート/**template からの repo 生成**、Doppler project/config/secret/GitHub sync | 大半 |
-| 🟡 **設計を変えれば手動を消せる** | Vercel⇄Supabase Marketplace 連携、Doppler→Vercel/Supabase native sync | 2 |
-| ❌ **構造的に不可（dashboard 専用）** | 課金/org、Vercel GitHub App install、**Supabase GitHub Integration（Branching）有効化** | 3 |
+| 🟡 **設計を変えれば手動を消せる** | Vercel⇄Supabase Marketplace 連携、Doppler→Vercel/Supabase native sync、**Supabase GitHub Integration**（§8.1） | 3 |
+| ❌ **構造的に不可（dashboard 専用）** | 課金/org/権限機能の有効化、Vercel GitHub App install（**GitHub org につき一度きり**） | 2 |
 | ❌ **意図的に対象外** | DB スキーマ / RLS / migration（Drizzle が source of truth）、Storage buckets（API が GET のみ） | 2 |
 
 **最大の発見**: `supabase_settings` は Management API の `UpdateAuthConfigBody`（**234 フィールド**）を JSON で丸ごと管理でき、
@@ -49,11 +49,18 @@
 | resource | `supabase_apikey` | API キー管理 |
 | data | `supabase_apikeys` / `supabase_branch` / `supabase_pooler` / `supabase_network_bans` | 生成値の取得（= `wire.sh` の置き換え） |
 
-### 2.2 branch は Terraform 管理できる（ただし機能の有効化だけは手動）
+### 2.2 branch は Terraform 管理できる（Branching に GitHub 連携は不要）
 
-**ブランチそのものは `supabase_branch` で宣言的に管理できる。** 手動なのは「Branching 機能の有効化
-（GitHub Integration の認可）」であって、有効化さえ済めば staging / develop の persistent branch は
-`terraform apply` で作成・更新・破棄できる。
+**ブランチは `supabase_branch` で宣言的に管理できる。** しかも **Branching の利用に GitHub 連携は要らない**。
+
+> ⚠️ **`docs/deployment/README.md` の記述は古い。** 同 runbook には「project の GitHub Integration
+> （Branching 有効化）が未有効だと branch 作成 API は失敗する」とあるが、これは Branching 1.0 時代の前提。
+> Supabase は [Branching 2.0](https://supabase.com/blog/branching-2-0)（2025-07 発表）で Git 要件を外し、
+> **[2026-05-04 に「Git なしの Branching」が全 project の既定](https://supabase.com/blog/branching-without-git-is-now-the-default)** になった。
+> Management API の `CreateBranchBody` も **必須は `branch_name` のみ**（`git_branch` は任意）で、この変更と整合する。
+> → **runbook の Phase 0 / トラブルシュート表の該当記述は要修正。**
+
+つまり staging / develop の persistent branch は、GitHub 連携なしで `terraform apply` から作成・更新・破棄できる。
 
 ```hcl
 resource "supabase_branch" "staging" {
@@ -86,6 +93,12 @@ resource "supabase_branch" "staging" {
 **import 時の注意**: provider docs いわく、import では**既存ブランチが persistent かどうかを判定できない**ため、
 `persistent = true` を手で書き足さないと drift する。既存の staging / develop を取り込む際は必須。
 
+**要実機確認（provider ソースを読んだ上での懸念）**: `internal/provider/branch_resource.go` は
+`git_branch` を **必須**にしており、その値を `BranchName` と `GitBranch` の**両方**に入れて API を叩く。
+API 自体は `git_branch` が任意なので問題ないはずだが、**GitHub 連携を張っていない project に対して
+`git_branch` を送ったときの挙動（無害なラベル扱いか、エラーか）は未検証**。GitHub 連携なし構成
+（§8.1）を採るなら、ここは実際に 1 本 apply して確かめること。
+
 ### 2.3 `supabase_settings.auth` で何が管理できるか（実測）
 
 Management API の OpenAPI（`https://api.supabase.com/api/v1-json`）を取得して `PATCH /v1/projects/{ref}/config/auth` の
@@ -108,7 +121,7 @@ Management API の OpenAPI（`https://api.supabase.com/api/v1-json`）を取得�
 
 | 項目 | 理由（実測） |
 |---|---|
-| **GitHub Integration / Branching の「有効化」** | Management API の 115 エンドポイントを全列挙したが **`/integrations/github` 系が存在しない** → dashboard 専用。※**branch そのものは §2.2 のとおり `supabase_branch` で管理できる**。手動なのは機能を on にする一手だけ |
+| **GitHub Integration の接続そのもの** | Management API の 115 エンドポイントを全列挙したが **`/integrations/github` 系が存在しない**。CLI にも `integrations` コマンドは無い（v2.90.0 で確認）→ dashboard の OAuth 専用。**ただし §8.1 のとおり、この連携自体を不要にできる** |
 | **Storage buckets の作成** | `/v1/projects/{ref}/storage/buckets` は **GET のみ**（POST/PATCH なし）。provider にも resource 無し → `supabase seed buckets --linked`（現状の `scripts/supabase/deploy-buckets.sh`）を維持 |
 | **DB スキーマ / RLS / migration** | *意図的に対象外*。`.claude/rules/database.md` / `drizzle/` が source of truth。`migrate.yml` の承認ゲート運用を維持 |
 | custom domain / vanity subdomain | API（`/custom-hostname`, `/vanity-subdomain`）はあるが provider に resource が無い → CLI/API で対応 |
@@ -249,11 +262,33 @@ resource "vercel_project_environment_variable" "openai" {
 | # | 項目 | 頻度 | 代替手段 |
 |---|---|---|---|
 | 1 | アカウント / org / 課金プラン / Vercel Container Services の有効化 | 一度きり（org 単位） | なし |
-| 2 | Vercel GitHub App の install | **一度きり（GitHub org 単位）** — 以降の全アプリで再利用 | なし |
-| 3 | **Supabase GitHub Integration（Branching）の「有効化」** | アプリ（project）ごと 1 回 | なし（API が存在しない）。※**branch の作成・更新・破棄は `supabase_branch` で Terraform 管理できる**（§2.2）。手動なのは機能を on にする一手だけ |
+| 2 | Vercel GitHub App の install | **一度きり（GitHub org 単位）** — 以降の全アプリで再利用 | なし（GitHub App の install は GitHub 側の仕様上ブラウザ認可が必須） |
 
-→ **アプリを増やすたびに必要な手動作業は #3 だけ**（1〜2 は org 単位で一度きり）。
-persistent branch を使わない構成なら **#3 すら不要**になる。
+→ **どちらも org 単位で一度きり。アプリを増やすたびに発生する手動作業はゼロにできる。**
+（Supabase の GitHub Integration は §8.1 のとおり不要にできる。）
+
+### 8.1 Supabase の GitHub 連携は「自動化できない」が「不要にできる」
+
+**接続そのものの自動化は不可**: Management API に endpoint が無く、CLI にも `integrations` コマンドが無い
+（v2.90.0 で確認）。dashboard の GitHub OAuth 認可はブラウザ必須。
+（dashboard が使う内部 API `/platform/*` は非公開・無保証なので依存すべきでない。）
+
+**しかしこの連携が担っている仕事は、すべて代替がある**:
+
+| GitHub 連携がやること | 本リポジトリでの代替 |
+|---|---|
+| `config.toml` 同期（auth / api / storage・**メールテンプレート**） | `supabase_settings`（§7 Option B）／ CLI なら **`supabase config push`**（`supabase config --help` で存在確認済み） |
+| Edge Functions のデプロイ | `supabase_edge_function` ／ 既存の `devenv tasks run deploy:functions` |
+| Storage buckets のデプロイ | **既に連携外**（`scripts/supabase/deploy-buckets.sh` = `supabase seed buckets --linked`） |
+| migration の自動実行 | **既に使っていない**（Drizzle が source of truth、`migrate.yml` が適用） |
+| git branch → Supabase branch の自動作成・リンク | `supabase_branch` を宣言で持つ（自動作成をやめ、Terraform を唯一の作成経路にする） |
+
+→ **GitHub 連携を張らない構成にすれば、Supabase 側の手動ステップは完全にゼロ。**
+失うのは「PR を作ると preview branch が自動で生える」体験だけで、本リポジトリは
+persistent branch（staging / develop）を固定運用しているため実害が小さい。
+
+さらに副次的な利点として、**`[remotes.*]` の無言スキップ問題（§7）がそもそも発生しなくなる**
+——あの挙動は GitHub 連携の config 同期ステップ固有のものなので、連携を使わなければ踏みようがない。
 
 ---
 
@@ -295,6 +330,7 @@ terraform/
 ## 参考リンク
 
 - [Supabase Terraform Provider（Registry）](https://registry.terraform.io/providers/supabase/supabase/latest/docs) / [reference](https://supabase.com/docs/guides/platform/terraform/reference) / [repo](https://github.com/supabase/terraform-provider-supabase)
+- [Supabase: Introducing Branching 2.0](https://supabase.com/blog/branching-2-0) / [Branching Without Git Is Now The Default（2026-05-04）](https://supabase.com/blog/branching-without-git-is-now-the-default) / [Branching ドキュメント](https://supabase.com/docs/guides/deployment/branching) / [GitHub integration](https://supabase.com/docs/guides/deployment/branching/github-integration)
 - [Supabase Management API リファレンス](https://supabase.com/docs/reference/api/introduction)（本調査は `https://api.supabase.com/api/v1-json` を実取得して検証）
 - [Vercel Terraform Provider](https://github.com/vercel/terraform-provider-vercel)
 - [Vercel: Install Marketplace Integrations from the CLI](https://vercel.com/changelog/install-marketplace-integrations-from-the-vercel-cli)
