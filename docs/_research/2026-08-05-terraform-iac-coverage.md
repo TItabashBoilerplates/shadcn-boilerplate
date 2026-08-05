@@ -49,7 +49,44 @@
 | resource | `supabase_apikey` | API キー管理 |
 | data | `supabase_apikeys` / `supabase_branch` / `supabase_pooler` / `supabase_network_bans` | 生成値の取得（= `wire.sh` の置き換え） |
 
-### 2.2 `supabase_settings.auth` で何が管理できるか（実測）
+### 2.2 branch は Terraform 管理できる（ただし機能の有効化だけは手動）
+
+**ブランチそのものは `supabase_branch` で宣言的に管理できる。** 手動なのは「Branching 機能の有効化
+（GitHub Integration の認可）」であって、有効化さえ済めば staging / develop の persistent branch は
+`terraform apply` で作成・更新・破棄できる。
+
+```hcl
+resource "supabase_branch" "staging" {
+  parent_project_ref = supabase_project.app.id
+  git_branch         = "staging"
+  persistent         = true
+  region             = var.supabase_region
+}
+```
+
+| 属性 | 種別 | 備考 |
+|---|---|---|
+| `parent_project_ref` / `git_branch` | 必須 | 現行 `scripts/infra/supabase.sh` が Management API に直接投げている `git_branch` と同じ |
+| `persistent` | 任意 | long-lived branch。**常時 compute 課金**（Spend Cap 対象外）なのは従来どおり |
+| `region` | 任意 | |
+| `id` / `database`（`host` / `port` / `user` / `password` / `jwt_secret` / `status` / `version` / `project_ref`） | read-only | **`wire.sh` の `supabase branches get -o env` パースを丸ごと置き換えられる** |
+
+→ 現行 `supabase.sh`（Management API 直叩き）+ `wire.sh`（CLI 出力を `sed` でパース）は
+**両方とも `supabase_branch` 1 つに畳める**。接続情報が read-only 属性として型付きで取れるため、
+`POSTGRES_URL` の組み立てが文字列パースではなく参照になる。
+
+**provider が API より狭い点（実測差分）**:
+
+`POST /v1/projects/{ref}/branches` は `desired_instance_size` / `with_data` / `secrets` /
+`postgres_engine` / `release_channel` / `is_default` も受け付けるが、**provider はこれらを公開していない**
+（`git_branch` / `persistent` / `region` のみ）。現行 `supabase.sh` は `desired_instance_size` を渡しているため、
+**Terraform 化するとインスタンスサイズ指定が効かなくなる**（既定サイズになる）。サイズ指定が必要なら
+その部分だけ API / CLI を残すか、provider に issue を上げる必要がある。
+
+**import 時の注意**: provider docs いわく、import では**既存ブランチが persistent かどうかを判定できない**ため、
+`persistent = true` を手で書き足さないと drift する。既存の staging / develop を取り込む際は必須。
+
+### 2.3 `supabase_settings.auth` で何が管理できるか（実測）
 
 Management API の OpenAPI（`https://api.supabase.com/api/v1-json`）を取得して `PATCH /v1/projects/{ref}/config/auth` の
 リクエストスキーマ `UpdateAuthConfigBody` を検査した結果、**234 フィールド**を確認。主なもの:
@@ -67,11 +104,11 @@ Management API の OpenAPI（`https://api.supabase.com/api/v1-json`）を取得�
 → **`supabase/templates/email/*.html` を `file()` で読んで `mailer_templates_*_content` に流し込めば、
 `[auth.email.template.*]` + GitHub 連携 config 同期と等価のことが Terraform で（しかも `plan` に差分が出る形で）できる。**
 
-### 2.3 できないこと
+### 2.4 できないこと
 
 | 項目 | 理由（実測） |
 |---|---|
-| **GitHub Integration / Branching の有効化** | Management API の 115 エンドポイントを全列挙したが **`/integrations/github` 系が存在しない** → dashboard 専用。`supabase_branch` はこれが有効な前提でしか動かない |
+| **GitHub Integration / Branching の「有効化」** | Management API の 115 エンドポイントを全列挙したが **`/integrations/github` 系が存在しない** → dashboard 専用。※**branch そのものは §2.2 のとおり `supabase_branch` で管理できる**。手動なのは機能を on にする一手だけ |
 | **Storage buckets の作成** | `/v1/projects/{ref}/storage/buckets` は **GET のみ**（POST/PATCH なし）。provider にも resource 無し → `supabase seed buckets --linked`（現状の `scripts/supabase/deploy-buckets.sh`）を維持 |
 | **DB スキーマ / RLS / migration** | *意図的に対象外*。`.claude/rules/database.md` / `drizzle/` が source of truth。`migrate.yml` の承認ゲート運用を維持 |
 | custom domain / vanity subdomain | API（`/custom-hostname`, `/vanity-subdomain`）はあるが provider に resource が無い → CLI/API で対応 |
@@ -213,10 +250,10 @@ resource "vercel_project_environment_variable" "openai" {
 |---|---|---|---|
 | 1 | アカウント / org / 課金プラン / Vercel Container Services の有効化 | 一度きり（org 単位） | なし |
 | 2 | Vercel GitHub App の install | **一度きり（GitHub org 単位）** — 以降の全アプリで再利用 | なし |
-| 3 | **Supabase GitHub Integration（Branching）の有効化** | アプリ（project）ごと 1 回 | なし（API が存在しない） |
+| 3 | **Supabase GitHub Integration（Branching）の「有効化」** | アプリ（project）ごと 1 回 | なし（API が存在しない）。※**branch の作成・更新・破棄は `supabase_branch` で Terraform 管理できる**（§2.2）。手動なのは機能を on にする一手だけ |
 
 → **アプリを増やすたびに必要な手動作業は #3 だけ**（1〜2 は org 単位で一度きり）。
-`supabase_branch` を使わない（persistent branch を作らない）構成なら **#3 すら不要**になる。
+persistent branch を使わない構成なら **#3 すら不要**になる。
 
 ---
 
