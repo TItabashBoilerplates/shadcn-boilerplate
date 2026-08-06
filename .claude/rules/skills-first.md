@@ -58,6 +58,9 @@
 | モバイル課金 / アプリ内課金 / IAP / paywall / RevenueCat | `revenuecat`, `integrate-revenuecat`, `create-revenuecat-project`, `revenuecat-paywall`, `revenuecat-purchase-flow`, `revenuecat-entitlements-gate`, `revenuecat-identify-user`, `revenuecat-testing-setup`, `revenuecat-troubleshoot` |
 | モバイル課金 / Adapty | `adapty-cli` |
 | Sentry / 監視 / エラートラッキング / source map / release | `sentry-get-started`, `sentry-instrument`, `sentry-debug-issue`, `sentry-fix-stack-traces`, `sentry-setup-releases` |
+| プッシュ通知 / push notification / 通知が届かない / 購読許可 / OneSignal | `onesignal`（自作） |
+| ビデオ通話 / 音声通話 / WebRTC / 音声エージェント / 画面共有 / LiveKit | `livekit`（自作） |
+| 画像生成 / 動画生成 / text-to-image / GPU 推論 / Flux / fal.ai | `fal`（自作） |
 | Resend / メール送信 / Webhook | `resend`, `resend-cli`, `send-email`, `react-email`, `email-best-practices`, `agent-email-inbox` |
 | LangChain / LangGraph / LangSmith / エージェント | `langchain` |
 | Storybook | `storybook` |

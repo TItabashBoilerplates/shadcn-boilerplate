@@ -70,7 +70,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     ├── maestro/          # Maestro E2Eテスト
     ├── devenv-cicd/      # GitHub Actions × devenv 2.0 CI/CD（enterShell hook / .devenv キャッシュ / concurrency）
     ├── edge-functions-mcp/ # Supabase Edge Functions 上に MCP サーバを構築（BYO MCP: @hono/mcp + @modelcontextprotocol/sdk）
-    └── doppler/          # Doppler シークレット管理（CLI / devenv 統合 / 公式 MCP / .env.secrets からの移行）
+    ├── doppler/          # Doppler シークレット管理（CLI / devenv 統合 / 公式 MCP / .env.secrets からの移行）
+    │
+    │ # ↓ 公式 Skill が存在しない外部サービス向けの自作 Skill（lock 管理外）
+    ├── onesignal/        # プッシュ通知（既存実装が仕様書。external_id = Supabase user.id）
+    ├── livekit/          # リアルタイム音声・映像（トークン発行はサーバ側限定・Edge FN / backend-py の切り分け）
+    └── fal/              # 生成 AI 推論（FAL_KEY 非公開・subscribe / submit+webhook の使い分け）
 
 # 外部サービス系の公式 Skill（skills-lock.json 管理。CLI は devenv が提供する）:
 #   stripe-best-practices / stripe-integration / stripe-docs / upgrade-stripe   → CLI: stripe

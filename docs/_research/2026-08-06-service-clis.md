@@ -19,11 +19,11 @@
 | **Stripe**（決済） | ✅ `stripe` | ✅ `stripe-cli` 1.37.1 | `packages` に追加 | `stripe-best-practices`（既存）+ **`stripe-docs`** / **`upgrade-stripe`** を追加 |
 | **Resend**（メール） | ✅ `resend`（npm `resend-cli`） | ❌ | `scripts.resend` = `bunx resend-cli` | `resend` / `resend-cli` / `react-email` / `send-email` / `email-best-practices` / `agent-email-inbox`（**すべて導入済み**） |
 | **Sentry**（監視） | ✅ `sentry-cli` | ✅ `sentry-cli` 2.58.2 | `packages` に追加 | **`sentry-get-started` / `sentry-instrument` / `sentry-debug-issue` / `sentry-fix-stack-traces` / `sentry-setup-releases`** を追加 |
-| **LiveKit**（RTC） | ✅ `lk` | ✅ `livekit-cli` 2.16.2 | `packages` に追加 | 公式 Skill なし |
+| **LiveKit**（RTC） | ✅ `lk` | ✅ `livekit-cli` 2.16.2 | `packages` に追加 | 公式 Skill なし → **自作 `.claude/skills/livekit/`** |
 | **Adapty**（モバイル課金） | ✅ `adapty`（npm `adapty`） | ❌ | `scripts.adapty` = `bunx adapty` | **`adapty-cli`** を追加 |
-| **fal.ai**（生成 AI 推論） | ✅ `fal`（PyPI `fal`） | ❌ | `scripts.fal` = `uvx fal` | 公式 Skill なし（**MCP は `.mcp.json` に導入済み**） |
+| **fal.ai**（生成 AI 推論） | ✅ `fal`（PyPI `fal`） | ❌ | `scripts.fal` = `uvx fal` | 公式 Skill なし → **自作 `.claude/skills/fal/`**（MCP は `.mcp.json` に導入済み） |
 | **RevenueCat**（モバイル課金） | ❌ 公式 CLI なし（MCP を提供） | ❌ | CLI は導入しない | **`revenuecat` 他 9 種**を追加 |
-| **OneSignal**（プッシュ通知） | ⚠️ beta / 用途不一致 | ❌ | **導入しない**（§3） | 公式 Skill なし |
+| **OneSignal**（プッシュ通知） | ⚠️ beta / 用途不一致 | ❌ | **導入しない**（§3） | 公式 Skill なし → **自作 `.claude/skills/onesignal/`** |
 | **Expo EAS** | ✅ `eas`（npm `eas-cli`） | ⚠️ 18.7.0（npm は 21.6.0） | **nix で固定しない**・`nlx eas-cli`（§3） | `expo/skills` 各種（導入済み） |
 | **Vercel** | ✅ `vercel` | ❌ | `scripts.vercel` = `bunx vercel`（**日常運用のみ**。provisioning は REST API のまま） | `vercel-*` skills（導入済み） |
 | **Supabase / Doppler / GitHub / Maestro** | — | ✅ | **導入済み** | 導入済み |
@@ -80,6 +80,27 @@ script 名はいずれも bash 組み込みと衝突しない（`.claude/rules/c
 
 インストール先は既存の慣習どおり **`.agents/skills/<name>` が実体、`.claude/skills/<name>` はそこへの
 symlink**（`--agent universal --agent claude-code`）。
+
+### 2.4 自作 Skill（公式 Skill が存在しないサービス）
+
+公式 Skill が無い 3 サービスは `.claude/skills/` 直下に自作した（`skills-lock.json` 管理外）。
+
+| skill | 根拠にしたもの | 核になっている判断 |
+|---|---|---|
+| `onesignal` | **本リポジトリの既存実装**（`supabase/functions/shared/onesignal/`、`onesignal-send`、`onesignal-webhooks`、`frontend/packages/onesignal`、`OneSignalInitializer.tsx`）を読んで記述 | `external_id` = Supabase `auth.users.id` に揃える設計が背骨。クライアントのメソッドは 5 つだけ／`sendToUsers` は 2,000 件上限／Webhook は署名ではなく共有シークレット検証／Provider が SSR 対策で mount 前 `null` を返す、といった**実装を読まないと分からない事実**を明文化した |
+| `livekit` | 公式ドキュメント + Context7（`livekit.api.AccessToken().with_identity().with_grants(VideoGrants(...)).to_jwt()` / `api.LiveKitAPI(...)`）。**実装コードはまだ無い** | **トークン発行は API Secret 署名なのでサーバ側限定**。`NEXT_PUBLIC_`/`EXPO_PUBLIC_` を付けてよいのは `LIVEKIT_URL` だけ。トークン発行・room 操作は Edge Function、音声 AI エージェントだけが backend-py（supabase-first のエスカレーション条件に該当） |
+| `fal` | 公式ドキュメント + Context7（`fal_client` の `subscribe` / `submit` / `run` / `stream`、`webhook_url`、server-side は `FAL_KEY` を env から自動取得）。**実装コードはまだ無い** | `FAL_KEY` は課金直結なのでサーバ経由が既定。**「待たせるか投げっぱなしか」で Edge Function / backend-py が決まる**（数分かかるジョブを Edge Function で同期待ちしない → `submit` + webhook） |
+
+いずれも「一般論のコピー」ではなく、**このリポジトリのルール
+（supabase-first のエスカレーション判断 / env-naming の予約 prefix / mcp-doppler の値非露出 /
+python-monorepo の `--package` と import shadow / error-handling / ui-testing）に接続した形**で書いてある。
+`.claude/rules/skills-first.md` のトリガー表と `.claude/CLAUDE.md` の Skill ツリーにも登録済み。
+
+> ⚠️ `onesignal` skill の執筆中に判明した別件: **`supabase/config.toml` が存在しない**
+> （`supabase/` 配下は `functions` / `seed.sql` / `templates` / `tests` のみ）。
+> `.claude/rules/supabase-config.md` は config.toml を single source of truth と定めており、
+> Edge Function の `verify_jwt` 設定やメールテンプレートの配線もここに書く前提になっている。
+> 本番デプロイに着手する前に作成が必要（今回の変更対象外）。
 
 ---
 
