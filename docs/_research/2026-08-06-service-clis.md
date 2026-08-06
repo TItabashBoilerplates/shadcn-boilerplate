@@ -118,11 +118,11 @@ symlink**（`--agent universal --agent claude-code`）。
 python-monorepo の `--package` と import shadow / error-handling / ui-testing）に接続した形**で書いてある。
 `.claude/rules/skills-first.md` のトリガー表と `.claude/CLAUDE.md` の Skill ツリーにも登録済み。
 
-> ⚠️ `onesignal` skill の執筆中に判明した別件: **`supabase/config.toml` が存在しない**
-> （`supabase/` 配下は `functions` / `seed.sql` / `templates` / `tests` のみ）。
-> `.claude/rules/supabase-config.md` は config.toml を single source of truth と定めており、
-> Edge Function の `verify_jwt` 設定やメールテンプレートの配線もここに書く前提になっている。
-> 本番デプロイに着手する前に作成が必要（今回の変更対象外）。
+> 📌 `onesignal` skill の執筆中に「`supabase/config.toml` が無い」ことを不備として一度報告したが、
+> **これは誤り。本リポジトリは boilerplate なので config.toml は不要**というのがオーナーの方針。
+> `.claude/rules/supabase-config.md` は**この boilerplate から派生した実プロジェクト**に適用されるルールで、
+> `project_id` / `[remotes.*]` は派生先ごとに異なるため boilerplate 本体には置けない。
+> 同じ誤報告が繰り返されないよう、`.claude/rules/supabase-config.md` §0 に適用範囲を明記した。
 
 ---
 

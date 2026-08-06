@@ -177,8 +177,12 @@ OneSignal はローカルにモックが無いので、確認は次の順で進�
 4. Web Push は `allowLocalhostAsSecureOrigin: true`（development のみ）で localhost でも試せる
 
 デプロイは `devenv tasks run deploy:functions`。`verify_jwt` などの関数デプロイ設定は
-`supabase/config.toml` の `[functions.*]` に書く — が、**このリポジトリには現状 `config.toml` が存在しない**。
-Edge Function を本番に出す作業に着手する時点で、`.claude/rules/supabase-config.md` に従って作成が必要になる。
+`supabase/config.toml` の `[functions.*]` に書く。
+
+> **本リポジトリに `supabase/config.toml` が無いのは意図的**（boilerplate なので不要）。
+> `.claude/rules/supabase-config.md` は**この boilerplate から派生した実プロジェクト**に適用されるルールで、
+> boilerplate 本体に置くべきものではない（project_id / `[remotes.*]` は派生先ごとに異なるため）。
+> **「config.toml が無い」を不備として報告しないこと。**
 
 ---
 
