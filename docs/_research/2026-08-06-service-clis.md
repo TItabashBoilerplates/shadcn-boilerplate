@@ -49,7 +49,7 @@
 |---|---|---|
 | `resend` | `bunx resend-cli` | npm パッケージ名 `resend-cli` / bin 名 `resend`。Node >= 22（本リポジトリは nodejs_22） |
 | `adapty` | `bunx adapty` | npm パッケージ名も bin 名も `adapty`。Node >= 18。認証は OAuth device flow → `~/.config/adapty/config.json`（Doppler 管理外） |
-| `fal` | `uvx fal` | PyPI パッケージ名も コマンド名も `fal`（1.79.1）。**Python 製なので bunx ではなく uvx**。認証は `fal auth login` か `FAL_KEY`（`.mcp.json` の fal-ai MCP と同じキー） |
+| `fal` | `uvx fal` | PyPI パッケージ名も コマンド名も `fal`（1.79.1）。**Python 製なので bunx ではなく uvx**。**CLI の認証は `fal auth login`（Auth0 device flow の OAuth）**で、`fal_client` / `fal-ai` MCP が使う API キー `FAL_KEY` とは別系統（後述の罠あり） |
 | `vercel` | `bunx vercel` | **日常運用専用**（logs / env pull / inspect / 手動 deploy）。provisioning は引き続き REST API（§3）。CLI は実行ディレクトリに依存するので script 内で `cd` しない |
 
 **バージョンを固定しない理由**: いずれもリモート API を叩く運用ツールで、CLI を古いまま固定すると
@@ -89,7 +89,29 @@ symlink**（`--agent universal --agent claude-code`）。
 |---|---|---|
 | `onesignal` | **本リポジトリの既存実装**（`supabase/functions/shared/onesignal/`、`onesignal-send`、`onesignal-webhooks`、`frontend/packages/onesignal`、`OneSignalInitializer.tsx`）を読んで記述 | `external_id` = Supabase `auth.users.id` に揃える設計が背骨。クライアントのメソッドは 5 つだけ／`sendToUsers` は 2,000 件上限／Webhook は署名ではなく共有シークレット検証／Provider が SSR 対策で mount 前 `null` を返す、といった**実装を読まないと分からない事実**を明文化した |
 | `livekit` | 公式ドキュメント + Context7（`livekit.api.AccessToken().with_identity().with_grants(VideoGrants(...)).to_jwt()` / `api.LiveKitAPI(...)`）。**実装コードはまだ無い** | **トークン発行は API Secret 署名なのでサーバ側限定**。`NEXT_PUBLIC_`/`EXPO_PUBLIC_` を付けてよいのは `LIVEKIT_URL` だけ。トークン発行・room 操作は Edge Function、音声 AI エージェントだけが backend-py（supabase-first のエスカレーション条件に該当） |
-| `fal` | 公式ドキュメント + Context7（`fal_client` の `subscribe` / `submit` / `run` / `stream`、`webhook_url`、server-side は `FAL_KEY` を env から自動取得）。**実装コードはまだ無い** | `FAL_KEY` は課金直結なのでサーバ経由が既定。**「待たせるか投げっぱなしか」で Edge Function / backend-py が決まる**（数分かかるジョブを Edge Function で同期待ちしない → `submit` + webhook） |
+| `fal` | 公式ドキュメント + Context7（`fal_client` の `subscribe` / `submit` / `run` / `stream`、`webhook_url`、`fal auth login` / `fal keys create --scope {ADMIN,API}` / 資格情報の優先順位）。**実装コードはまだ無い** | `FAL_KEY` は課金直結なのでサーバ経由が既定。**「待たせるか投げっぱなしか」で Edge Function / backend-py が決まる**。加えて**認証 2 系統の罠**（下記） |
+
+#### fal の認証は 2 系統 — devenv 固有の罠がある
+
+当初「CLI の認証は `fal auth login` か `FAL_KEY`」と並列に書いていたが、これは不正確だった。
+
+| 経路 | 資格情報 |
+|---|---|
+| `fal_client`（アプリコード） | **API キー** `FAL_KEY`（`key_id:key_secret` 形式） |
+| `fal-ai` MCP | **同じく API キー**（`.mcp.json` が `Authorization: Bearer ${FAL_KEY}` で送る静的トークン） |
+| **`fal` CLI** | **OAuth**（Auth0 device authorization flow / RFC 8628）。`fal auth login` → GitHub / Google / SSO。資格情報はローカル保存で他マシンへ持ち出せない |
+| `fal` CLI（CI） | **ADMIN スコープ**の API キー（`fal keys create --scope ADMIN`）。CI はブラウザが無いので OAuth 不可 |
+
+**罠**: fal の資格情報解決には優先順位があり、**`FAL_KEY` が env にあると `fal auth login` の OAuth トークンより優先される**
+（`FAL_FORCE_AUTH_BY_USER=1` のときだけ逆転）。本リポジトリは `devenv shell` 進入時に `loadDopplerByEnv` が
+**Doppler のシークレットを丸ごと env へ export する**ため、Doppler に `FAL_KEY` を置くと
+**devenv shell 内では `fal auth login` 済みでも常にその API キーで動く**。
+`fal deploy` が権限エラーになる（API スコープのキーでは deploy できない）、意図しない principal で動く、といった形で出る。
+
+対処は `FAL_FORCE_AUTH_BY_USER=1 fal ...` / `env -u FAL_KEY fal ...` / `fal profile`。
+また **アプリ用（API スコープ）と CI 用（ADMIN スコープ）を 1 つの `FAL_KEY` で兼ねない**
+（ADMIN キーはアカウント全体を操作できるのでランタイムへ配らない。CI 用は `FAL_ADMIN_KEY` 等の別名にする）。
+詳細は `.claude/skills/fal/SKILL.md` §3。
 
 いずれも「一般論のコピー」ではなく、**このリポジトリのルール
 （supabase-first のエスカレーション判断 / env-naming の予約 prefix / mcp-doppler の値非露出 /
@@ -190,3 +212,4 @@ provisioning が REST API のままである点は変更していない。
 - [OneSignal/cli](https://github.com/OneSignal/cli)
 - [eas-cli (npm)](https://www.npmjs.com/package/eas-cli) / [EAS CLI reference](https://docs.expo.dev/eas/cli/) / [eas.json reference](https://docs.expo.dev/eas/json/)
 - [vercel/vercel#15763](https://github.com/vercel/vercel/issues/15763)（preview env の対話プロンプト、open）
+- fal: [CLI `fal auth`](https://fal.ai/docs/api-reference/cli/auth) / [`fal keys`](https://fal.ai/docs/api-reference/cli/keys) / [`fal profile`](https://fal.ai/docs/api-reference/cli/profile) / [Installation & Authentication](https://docs.fal.ai/serverless/getting-started/installation) / [Authentication and Credentials（資格情報の優先順位）](https://deepwiki.com/fal-ai/fal/3.3-authentication-and-credentials)

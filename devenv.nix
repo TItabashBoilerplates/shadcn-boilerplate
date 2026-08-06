@@ -1354,7 +1354,14 @@ in
     # bunx ではなく **uvx**（= `uv tool run`）で実行する。backend-py の dependency-group には
     # 入れない: fal は運用ツールでアプリの実行時依存ではなく、`uv sync --all-packages` や CI の
     # インストール時間を無駄に増やすため。
-    # 認証は `fal auth login`（ブラウザ）か `FAL_KEY`（Doppler 管理・`.mcp.json` の fal-ai MCP と共通）。
+    #
+    # ⚠️ 認証は 2 系統あり、**CLI は `fal auth login`（Auth0 device flow の OAuth）が既定**。
+    # `.mcp.json` の fal-ai MCP と `fal_client` が使う `FAL_KEY`（API キー）とは別物である。
+    # さらに fal の資格情報解決は **`FAL_KEY` が env にあると OAuth トークンより優先される**ため、
+    # Doppler に `FAL_KEY` を置いていると devenv shell 内では `fal auth login` 済みでも
+    # 常にそのキーで動く（deploy 等は ADMIN スコープが要るので権限エラーになりうる）。
+    # 自分のアカウントで動かしたいときは `FAL_FORCE_AUTH_BY_USER=1 fal ...` か `env -u FAL_KEY fal ...`。
+    # 詳細は .claude/skills/fal/SKILL.md §3。
     "fal" = {
       exec = ''cd "$DEVENV_ROOT" && exec uvx fal "$@"'';
       description = "Run the official fal CLI via uvx (fal.ai serverless / inference)";
