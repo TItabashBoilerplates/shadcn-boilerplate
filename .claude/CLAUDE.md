@@ -71,6 +71,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     ├── devenv-cicd/      # GitHub Actions × devenv 2.0 CI/CD（enterShell hook / .devenv キャッシュ / concurrency）
     ├── edge-functions-mcp/ # Supabase Edge Functions 上に MCP サーバを構築（BYO MCP: @hono/mcp + @modelcontextprotocol/sdk）
     └── doppler/          # Doppler シークレット管理（CLI / devenv 統合 / 公式 MCP / .env.secrets からの移行）
+
+# 外部サービス系の公式 Skill（skills-lock.json 管理。CLI は devenv が提供する）:
+#   stripe-best-practices / stripe-integration / stripe-docs / upgrade-stripe   → CLI: stripe
+#   resend / resend-cli / react-email / send-email / email-best-practices       → CLI: resend
+#   sentry-get-started / sentry-instrument / sentry-debug-issue /               → CLI: sentry-cli
+#     sentry-fix-stack-traces / sentry-setup-releases
+#   adapty-cli                                                                  → CLI: adapty
+#   revenuecat / create-revenuecat-project / integrate-revenuecat /             → 公式 CLI 無し（MCP）
+#     revenuecat-{entitlements-gate,paywall,purchase-flow,identify-user,
+#     testing-setup,troubleshoot}
+# 選定理由・見送ったもの: docs/_research/2026-08-06-service-clis.md
 ```
 
 ## Domain Documentation

@@ -225,6 +225,21 @@ in
     # backend も Vercel（Dockerfile.vercel コンテナ）へデプロイするため、デプロイ用 CLI は REST API 直叩きで代替。
     pkgs.gh
     pkgs.jq
+
+    # ===== 外部サービス CLI（nixpkgs 収録ぶん）=====
+    # nixpkgs に無いものは devenv script (bunx 経由) で提供する。一覧と選定理由は
+    # docs/_research/2026-08-06-service-clis.md を参照。
+    #
+    # Stripe CLI（決済）。`stripe login` / `stripe listen --forward-to <edge function>` で
+    # Webhook をローカル転送し、`stripe trigger <event>` でイベントを再現する。
+    # Webhook ハンドラは Edge Functions 側に置く（.claude/rules/supabase-first.md）。
+    pkgs.stripe-cli
+    # Sentry CLI（監視・エラートラッキング）。source map / debug file のアップロードと
+    # release / deploy 作成に使う。CI からも同じバイナリを呼べるよう nix で固定する。
+    pkgs.sentry-cli
+    # LiveKit CLI（リアルタイム音声・映像）。backend-py の AI/ML 機能が LiveKit を使う。
+    # `lk token create` / `lk room list` などローカル検証用。
+    pkgs.livekit-cli
   ];
 
   languages.javascript = {
@@ -1300,6 +1315,40 @@ in
     "uipro" = {
       exec = ''cd "$DEVENV_ROOT" && exec bunx uipro-cli "$@"'';
       description = "Run uipro-cli (UI/UX Pro Max skill installer) via bunx";
+    };
+
+    # ---------- 外部サービス CLI（nixpkgs 未収録 → bunx 経由）----------
+    # 公式 CLI ではあるが nixpkgs に derivation が無いもの。`uipro` と同じく bunx で都度実行し、
+    # グローバル node_modules を作らない（bun のキャッシュが効くので 2 回目以降は即時）。
+    # バージョンは固定しない: どちらもリモート API を叩く運用ツールで、古い CLI を固定すると
+    # サーバ側 API 変更に追従できなくなるため（EAS CLI を nixpkgs で固定しない判断と同じ）。
+    # 一覧と選定理由は docs/_research/2026-08-06-service-clis.md を参照。
+
+    # Resend CLI（メール配信）。`resend login` → `resend emails send` / `resend domains list` 等。
+    # npm パッケージ名は `resend-cli`、bin 名は `resend`（https://resend.com/docs/cli）。
+    # 使い方は skills-lock 管理の `resend-cli` skill（resend/resend-skills）が持っている。
+    "resend" = {
+      exec = ''cd "$DEVENV_ROOT" && exec bunx resend-cli "$@"'';
+      description = "Run the official Resend CLI via bunx (email delivery)";
+    };
+
+    # Adapty CLI（モバイル課金 / paywall）。npm パッケージ名も bin 名も `adapty`
+    # （https://adapty.io/docs/developer-cli）。認証は OAuth device flow で
+    # ~/.config/adapty/config.json に保存されるため Doppler 管理の対象外。
+    "adapty" = {
+      exec = ''cd "$DEVENV_ROOT" && exec bunx adapty "$@"'';
+      description = "Run the official Adapty CLI via bunx (mobile subscriptions/paywalls)";
+    };
+
+    # fal CLI（生成 AI 推論 / serverless）。PyPI パッケージ名も コマンド名も `fal`
+    # （https://docs.fal.ai/serverless/getting-started/installation）。npm ではなく Python 製なので
+    # bunx ではなく **uvx**（= `uv tool run`）で実行する。backend-py の dependency-group には
+    # 入れない: fal は運用ツールでアプリの実行時依存ではなく、`uv sync --all-packages` や CI の
+    # インストール時間を無駄に増やすため。
+    # 認証は `fal auth login`（ブラウザ）か `FAL_KEY`（Doppler 管理・`.mcp.json` の fal-ai MCP と共通）。
+    "fal" = {
+      exec = ''cd "$DEVENV_ROOT" && exec uvx fal "$@"'';
+      description = "Run the official fal CLI via uvx (fal.ai serverless / inference)";
     };
 
     # ---------- Status check ----------

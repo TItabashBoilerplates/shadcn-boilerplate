@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "adapty-cli": {
+      "source": "adaptyteam/adapty-cli",
+      "sourceType": "github",
+      "skillPath": "skills/adapty-cli/SKILL.md",
+      "computedHash": "8c55598c86b20c2ade7ff0816e087a302529e1fc249028f48bb5970eebdcd326"
+    },
     "agent-email-inbox": {
       "source": "resend/resend-skills",
       "sourceType": "github",
@@ -31,6 +37,12 @@
       "source": "better-auth/skills",
       "sourceType": "github",
       "computedHash": "31c027d02dbf1faa37f58191f574b9443143042fb2b684fe32df53ab0270487c"
+    },
+    "create-revenuecat-project": {
+      "source": "RevenueCat/ai-toolkit",
+      "sourceType": "github",
+      "skillPath": "revenuecat/skills/create-revenuecat-project/SKILL.md",
+      "computedHash": "067dd9f6d7172ba44e8e6845346d533b8b94423df9ede8fb6d69d975c8777432"
     },
     "deep-agents-core": {
       "source": "langchain-ai/langchain-skills",
@@ -134,6 +146,12 @@
       "skillPath": "skills/omnibus/instrument-product-analytics/SKILL.md",
       "computedHash": "e674e35145c25ca7aa77b0bd1b32cf094dd1faa86599a1d55fd11573a68a8de2"
     },
+    "integrate-revenuecat": {
+      "source": "RevenueCat/ai-toolkit",
+      "sourceType": "github",
+      "skillPath": "revenuecat/skills/integrate-revenuecat/SKILL.md",
+      "computedHash": "a2326f2896cdd5ece40f038ddfeee07f1b82555f6c38ee5fee964f774dad3295"
+    },
     "langchain-dependencies": {
       "source": "langchain-ai/langchain-skills",
       "sourceType": "github",
@@ -215,6 +233,78 @@
       "sourceType": "github",
       "computedHash": "8253f110ec3cbaac56153fc9051eeb7d3e8dbba03c31b49981aeb4d6f036d6d7"
     },
+    "revenuecat": {
+      "source": "RevenueCat/ai-toolkit",
+      "sourceType": "github",
+      "skillPath": "revenuecat/skills/revenuecat/SKILL.md",
+      "computedHash": "7c8d9eab04e322ce851cf9d0c68d23f778abb1e3909b5a1f07a90e6c6fd3c3f1"
+    },
+    "revenuecat-entitlements-gate": {
+      "source": "RevenueCat/ai-toolkit",
+      "sourceType": "github",
+      "skillPath": "revenuecat/skills/revenuecat-entitlements-gate/SKILL.md",
+      "computedHash": "137b725af76eac6250e80b1b562af7a41ffe33bfc9ed569d39f1d4959cf21270"
+    },
+    "revenuecat-identify-user": {
+      "source": "RevenueCat/ai-toolkit",
+      "sourceType": "github",
+      "skillPath": "revenuecat/skills/revenuecat-identify-user/SKILL.md",
+      "computedHash": "50661df3ddc3e12ccf50d478405fb8ffa4c94dc05859a30786ecfc5dcbcc6025"
+    },
+    "revenuecat-paywall": {
+      "source": "RevenueCat/ai-toolkit",
+      "sourceType": "github",
+      "skillPath": "revenuecat/skills/revenuecat-paywall/SKILL.md",
+      "computedHash": "d74338e47fab76e53f87d395052e42e0bc6660dab3e4babc8ea142505db3c902"
+    },
+    "revenuecat-purchase-flow": {
+      "source": "RevenueCat/ai-toolkit",
+      "sourceType": "github",
+      "skillPath": "revenuecat/skills/revenuecat-purchase-flow/SKILL.md",
+      "computedHash": "b5c3f941634c976ac8b656b78429153a2c5e2420788bc54f48470e3a9d8edd85"
+    },
+    "revenuecat-testing-setup": {
+      "source": "RevenueCat/ai-toolkit",
+      "sourceType": "github",
+      "skillPath": "revenuecat/skills/revenuecat-testing-setup/SKILL.md",
+      "computedHash": "c18dfc4a93054d4cdf8389357d63ba3ca9fd92d17a484818c2c51f18f78d7777"
+    },
+    "revenuecat-troubleshoot": {
+      "source": "RevenueCat/ai-toolkit",
+      "sourceType": "github",
+      "skillPath": "revenuecat/skills/revenuecat-troubleshoot/SKILL.md",
+      "computedHash": "8acffced9b4e8bcf7a36f7ecb8cc836d189651ecb829ae813612bedb14598a04"
+    },
+    "sentry-debug-issue": {
+      "source": "getsentry/sentry-for-ai",
+      "sourceType": "github",
+      "skillPath": "src/skills/sentry-debug-issue/SKILL.md",
+      "computedHash": "448787a0630fc135bfa0888116a1ac27d14e64d67f5f2e9da2016ab39d529b35"
+    },
+    "sentry-fix-stack-traces": {
+      "source": "getsentry/sentry-for-ai",
+      "sourceType": "github",
+      "skillPath": "src/skills/sentry-fix-stack-traces/SKILL.md",
+      "computedHash": "a74e5a7f57b6b56c1349ed75d5afb9fe586e512a1f6134a7040443a41e93d16e"
+    },
+    "sentry-get-started": {
+      "source": "getsentry/sentry-for-ai",
+      "sourceType": "github",
+      "skillPath": "src/skills/sentry-get-started/SKILL.md",
+      "computedHash": "5f6057ca2ceff60c2d99ec740d872a0d311436424975ff42dd2b4eda6d6b9c66"
+    },
+    "sentry-instrument": {
+      "source": "getsentry/sentry-for-ai",
+      "sourceType": "github",
+      "skillPath": "src/skills/sentry-instrument/SKILL.md",
+      "computedHash": "673fba74f95f66dc9ecba6fbd1967b5589b998609735422087ebc5b7b3c82697"
+    },
+    "sentry-setup-releases": {
+      "source": "getsentry/sentry-for-ai",
+      "sourceType": "github",
+      "skillPath": "src/skills/sentry-setup-releases/SKILL.md",
+      "computedHash": "6e0f3d08baec1642429aa6625480b57575036ba05d6bd875ccd2a42058e751ef"
+    },
     "shadcn": {
       "source": "shadcn/ui",
       "sourceType": "github",
@@ -226,6 +316,12 @@
       "sourceType": "github",
       "skillPath": "skills/stripe-best-practices/SKILL.md",
       "computedHash": "c89653e4f3a289ecdf1a51b3696ee7b18e172131c9803a981088c8d70536c85e"
+    },
+    "stripe-docs": {
+      "source": "stripe/ai",
+      "sourceType": "github",
+      "skillPath": "skills/stripe-docs/SKILL.md",
+      "computedHash": "7f8b47057d65cdc55c60ed870bf6ad508907e5d981fca77781b4964de54d985f"
     },
     "supabase": {
       "source": "supabase/agent-skills",
@@ -247,6 +343,12 @@
       "source": "better-auth/skills",
       "sourceType": "github",
       "computedHash": "7e297aaf887e11fdc03e52bdbf44974e161e8f7c393170ced7dc66cace4f6d46"
+    },
+    "upgrade-stripe": {
+      "source": "stripe/ai",
+      "sourceType": "github",
+      "skillPath": "skills/upgrade-stripe/SKILL.md",
+      "computedHash": "f4aa17ac21714309e3cafa4eb15b032b3d8ff8623c8731944ccbcaf6766fdb49"
     },
     "upgrading-expo": {
       "source": "expo/skills",
