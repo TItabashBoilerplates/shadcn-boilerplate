@@ -49,6 +49,7 @@
 | マイクロフロントエンド / multi-zones / microfrontends.json / @vercel/microfrontends / 単一ドメイン合成 / パスルーティング | `vercel-microfrontends`（公式）, `monorepo` |
 | Python モノレポ / uv workspace / backend-py の apps・packages / src-layout / MCP サーバ追加 | `python-monorepo` |
 | shadcn/ui / TailwindCSS | `shadcn`, `shadcn-ui`, `web-design-guidelines`, `frontend-design` |
+| **モバイル UI/UX 全般** / スマホ対応 / レスポンシブ / モバイルファースト / 「モバイルで見づらい・崩れる・使いにくい・チープ・微妙」 / 「ネイティブっぽくない」 / safe-area / ノッチ / ホームインジケータ / 100vh / dvh / キーボードで隠れる / タップ領域 / サムゾーン / ボトムシート / edge-to-edge / 押下フィードバック / ハプティクス / リストのカクつき / 画面・フォーム・モーダル・ナビゲーションの新規実装・修正・レビュー | **`mobile-uiux`（必須。Web モバイル幅と Expo/RN の両方をカバー）** + プラットフォーム別に `shadcn-ui` / `gluestack` |
 | gluestack / NativeWind / Expo / RN | `gluestack`（本リポジトリ規約）, `gluestack-ui-v5`（公式）, `tailwind-setup`, `building-ui`, `building-native-ui`, `vercel-react-native-skills`, `use-dom`, `expo-deployment`, `dev-client`, `expo-dev-client`, `upgrading-expo`, `expo-cicd-workflows`, `cicd-workflows`, `expo-tailwind-setup`, `expo-api-routes`, `api-routes` |
 | TanStack Query | `tanstack-query` |
 | 状態管理 / 取得 (web) | `data-fetching` |
@@ -76,7 +77,7 @@
 | Doppler / シークレット管理 / secret manager / .env 暗号化 / トークン取り扱い | `doppler` |
 | 多言語対応 / next-intl | `i18n` |
 | Figma 連携 | `figma:figma-*` |
-| UI 一般 / レビュー / アクセシビリティ | `ui-ux-pro-max`, `web-design-guidelines`, `vercel-react-best-practices`, `vercel-composition-patterns` |
+| UI 一般 / レビュー / アクセシビリティ | `mobile-uiux`（モバイル観点の監査）, `ui-ux-pro-max`, `web-design-guidelines`, `vercel-react-best-practices`, `vercel-composition-patterns` |
 | PR レビュー / セキュリティレビュー | `review`, `security-review` |
 | シンプル化 | `simplify` |
 | Skill / 設定の作成・拡張 | `skill-creator`, `find-skills`, `update-config`, `keybindings-help`, `fewer-permission-prompts` |
