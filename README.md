@@ -154,11 +154,14 @@ By adopting these environments, we can ensure efficient development and maintain
 | Resend CLI (`resend`) | メール配信（nixpkgs 未収録のため bunx 経由の script） |
 | Adapty CLI (`adapty`) | モバイル課金・paywall（同上） |
 | fal CLI (`fal`) | fal.ai の生成 AI 推論 / serverless（Python 製のため uvx 経由の script） |
+| Vercel CLI (`vercel`) | デプロイ・ログ・env の日常運用（同上）。**プロビジョニングは REST API のまま** |
 
 > 外部サービス CLI の選定理由（何を入れて何を入れなかったか）は
 > [`docs/_research/2026-08-06-service-clis.md`](docs/_research/2026-08-06-service-clis.md) を参照。
-> OneSignal CLI は macOS 限定 / Beta / React Native 非対応のため導入していない。
+> OneSignal CLI は macOS 限定 / Beta / React Native 非対応で **REST API を置き換えられない**ため
+> 導入していない（Edge Functions からの REST 連携が正しい実装）。
 > RevenueCat は公式 CLI が存在せず、公式 MCP サーバと Agent Skill を使う。
+> EAS CLI は `nlx eas-cli`（常に最新）+ `eas.json` の `cli.version` で pin するのが公式の方式。
 
 > 環境変数は devenv の **profiles** で管理する。**local が既定**（`-P` 指定なしで base enterShell が `env/<service>/.env.local`（非機密）をロードし、シークレットは Doppler から注入する）。`-P dev` / `-P staging` / `-P production` を付けると後勝ちで env を上書きする。dotenvx は不要。**シークレット・リモートの値は Doppler 一本**（ファイルフォールバックは廃止。新規キーは `doppler-set <KEY>`）。ローカル非機密の env ファイル (`env/<service>/.env.local`) は配置されていなくても profile アクティベーション自体はエラーにならず（`[ -f ] && . ` ガードのため）、後で置けば即読み込まれる。
 

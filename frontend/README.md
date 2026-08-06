@@ -498,10 +498,9 @@ Set the following environment variables in Vercel project settings:
 
 #### Vercel CLI Deployment
 
-```bash
-# Install Vercel CLI
-bun add -g vercel
+`vercel` は devenv script として提供済み（実体は `bunx vercel`）なので、グローバルインストールは不要。
 
+```bash
 # Login to Vercel
 vercel login
 

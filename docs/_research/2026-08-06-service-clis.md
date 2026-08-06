@@ -24,8 +24,8 @@
 | **fal.ai**（生成 AI 推論） | ✅ `fal`（PyPI `fal`） | ❌ | `scripts.fal` = `uvx fal` | 公式 Skill なし（**MCP は `.mcp.json` に導入済み**） |
 | **RevenueCat**（モバイル課金） | ❌ 公式 CLI なし（MCP を提供） | ❌ | CLI は導入しない | **`revenuecat` 他 9 種**を追加 |
 | **OneSignal**（プッシュ通知） | ⚠️ beta / 用途不一致 | ❌ | **導入しない**（§3） | 公式 Skill なし |
-| **Expo EAS** | ✅ `eas` | ⚠️ 18.7.0（npm は 21.6.0） | **nix で固定しない**（§3） | `expo/skills` 各種（導入済み） |
-| **Vercel** | ✅ `vercel` | ❌ | **導入しない**（既存方針: REST API 直叩き） | `vercel-*` skills（導入済み） |
+| **Expo EAS** | ✅ `eas`（npm `eas-cli`） | ⚠️ 18.7.0（npm は 21.6.0） | **nix で固定しない**・`nlx eas-cli`（§3） | `expo/skills` 各種（導入済み） |
+| **Vercel** | ✅ `vercel` | ❌ | `scripts.vercel` = `bunx vercel`（**日常運用のみ**。provisioning は REST API のまま） | `vercel-*` skills（導入済み） |
 | **Supabase / Doppler / GitHub / Maestro** | — | ✅ | **導入済み** | 導入済み |
 
 ---
@@ -50,6 +50,7 @@
 | `resend` | `bunx resend-cli` | npm パッケージ名 `resend-cli` / bin 名 `resend`。Node >= 22（本リポジトリは nodejs_22） |
 | `adapty` | `bunx adapty` | npm パッケージ名も bin 名も `adapty`。Node >= 18。認証は OAuth device flow → `~/.config/adapty/config.json`（Doppler 管理外） |
 | `fal` | `uvx fal` | PyPI パッケージ名も コマンド名も `fal`（1.79.1）。**Python 製なので bunx ではなく uvx**。認証は `fal auth login` か `FAL_KEY`（`.mcp.json` の fal-ai MCP と同じキー） |
+| `vercel` | `bunx vercel` | **日常運用専用**（logs / env pull / inspect / 手動 deploy）。provisioning は引き続き REST API（§3）。CLI は実行ディレクトリに依存するので script 内で `cd` しない |
 
 **バージョンを固定しない理由**: いずれもリモート API を叩く運用ツールで、CLI を古いまま固定すると
 サーバ側の API 変更に追従できなくなる。bunx / uvx のキャッシュが効くので 2 回目以降のオーバーヘッドは無い。
@@ -84,17 +85,24 @@ symlink**（`--agent universal --agent claude-code`）。
 
 ## 3. 導入しなかったもの（理由つき）
 
-### OneSignal CLI — 導入しない
+### OneSignal CLI — 導入しない（**REST API 連携は現状のままが正**）
 
-`OneSignal/cli` は存在するが、以下の理由で本リポジトリでは役に立たない:
+まず前提として、**Edge Functions から OneSignal REST API を呼ぶ現状の実装
+（`supabase/functions/onesignal-send` / `onesignal-webhooks` / `shared/onesignal`）は正しい**。
+`.claude/rules/supabase-first.md` の「バックエンド処理の既定は Edge Functions」と
+「外部 API 連携（単発・短時間で完結するもの）」にそのまま合致する。
+`.claude/rules/mcp-supabase.md` が禁止しているのは **エージェントが Supabase インフラを
+調査・操作するときに Bash で `curl` / `psql` を叩くこと**であって、アプリケーションコードから
+外部 SaaS の REST API を呼ぶことではない（同ルールが冒頭で明示的に対象外としている）。
+
+そのうえで `OneSignal/cli` を入れないのは、**CLI 側に本リポジトリで使える機能が無い**ため:
 
 - **Ruby gem / Homebrew 配布**（`brew tap OneSignal/cli`）で nix にも npm にも無い
 - **macOS のみ公式サポート**（Linux / CI では動かない）
 - **Beta** 扱い
-- 機能が `onesignal install-sdk`（iOS / Android ネイティブへの SDK 追加）に限られ、
-  **React Native / Expo は非対応**。本リポジトリの OneSignal 連携は
-  `supabase/functions/onesignal-*`（REST API 直叩き）と `frontend/packages/onesignal` にあるので、
-  この CLI が触る領域が無い
+- 機能が `onesignal install-sdk`（iOS / Android **ネイティブプロジェクト**への SDK 追加）に
+  限られ、**React Native / Expo は非対応**。通知の送信・セグメント操作・テンプレート管理といった
+  運用コマンドは持っていないので、REST API を置き換えられない
 
 公式 Agent Skill も存在しない。OneSignal の運用が増えたら
 `.claude/skills/` 配下に独自 Skill を書くのが現実的（`skills-lock.json` 管理外）。
@@ -108,15 +116,45 @@ AI Toolkit（Skill 群）を提供している。検索で出てくる `revcat` 
 > RevenueCat を実際に導入する段になったら、`.mcp.json` に MCP サーバを追加して `mcp-sync` を流す。
 > `revenuecat-troubleshoot` / `integrate-revenuecat` skill は MCP がある前提で書かれている。
 
-### Expo EAS CLI — nix で固定しない
+### Expo EAS CLI — nix でも devDependency でも固定しない（**バージョン pin は `eas.json`**）
 
 `pkgs.eas-cli` は **18.7.0** だが npm の最新は **21.6.0**（メジャー 3 つ遅れ）。
 EAS はクラウド側 API との組み合わせで動くため、古い CLI を固定するとビルドが弾かれる。
-既存の `nlx eas ...`（= 常に最新を取得）のままにする。
 
-### Vercel CLI — 導入しない
+「では package.json の devDependencies に入れて lockfile で固定すれば？」も **公式が明確に非推奨**:
 
-既存方針どおり（`devenv.nix` のコメント）。CLI のバグ回避のため REST API を curl で直叩きしている。
+> Installing `eas-cli` into project dependencies is strongly discouraged because it can cause
+> dependency conflicts that are difficult to debug.
+> — [EAS CLI reference](https://docs.expo.dev/eas/cli/)
+
+公式が用意している pin の正規経路は **`eas.json` の `cli.version`**（例 `">=21.0.0"`）で、
+これなら CI 再現性を確保しつつ CLI 本体は最新パッチを取れる。
+→ よって `nlx eas-cli ...`（= 常に最新を取得）+ `eas.json` の `cli.version` が正しい組み合わせ。
+本リポジトリは `frontend/apps/mobile/eas.json` を**まだ作っていない**（ビルドプロファイルは
+プロジェクト固有のため）。EAS ビルドを実際に使う段階で `cli.version` ごと作成すること。
+
+#### ⚠️ 併せて修正したバグ: `nlx eas` → `nlx eas-cli`
+
+npm パッケージ名は **`eas-cli`**（bin 名が `eas`）。`nlx eas` と書くと bunx は
+npm 上の**無関係な `eas` パッケージ**（"Embedded Async Simple Javascript templating" v0.1.0 /
+bin 無し）を解決してしまい、EAS ビルドが起動しない。
+`build-mobile-ios` / `build-mobile-android` / `build-mobile-android-local` の 3 script を修正した。
+
+### Vercel CLI — provisioning には使わない（日常運用向けには導入する）
+
+`scripts/infra/vercel.sh` が REST API を直叩きしているのは、**CLI 全般が使えないからではなく
+プロビジョニング固有の 2 点**が理由:
+
+1. `vercel env add <name> preview` が `--yes` / `--force` / `--non-interactive` を付けても
+   git branch を対話で聞いてくる（[vercel/vercel#15763](https://github.com/vercel/vercel/issues/15763)、
+   2026-08 時点 **open**。CLI 50.37.3 で報告、公式 issue 上の回避策も「REST API を使う」）
+2. `rootDirectory` を設定する CLI フラグが無い
+
+逆に `vercel logs` / `vercel env pull` / `vercel inspect` / `vercel microfrontends pull` /
+手動 deploy といった**日常運用は CLI のほうが素直**で、`frontend/README.md` も CLI 手順を
+載せていた（`bun add -g vercel` によるグローバル導入）。nixpkgs に derivation が無いので
+`scripts.vercel` = `bunx vercel` として提供し、グローバルインストール手順を置き換えた。
+provisioning が REST API のままである点は変更していない。
 
 ---
 
@@ -129,4 +167,5 @@ EAS はクラウド側 API との組み合わせで動くため、古い CLI を
 - [Adapty Developer CLI](https://adapty.io/docs/developer-cli) / [adaptyteam/adapty-cli](https://github.com/adaptyteam/adapty-cli)
 - [RevenueCat AI Toolkit](https://github.com/RevenueCat/ai-toolkit) / [RevenueCat MCP Server Setup](https://www.revenuecat.com/docs/tools/mcp/setup)
 - [OneSignal/cli](https://github.com/OneSignal/cli)
-- [eas-cli (npm)](https://www.npmjs.com/package/eas-cli)
+- [eas-cli (npm)](https://www.npmjs.com/package/eas-cli) / [EAS CLI reference](https://docs.expo.dev/eas/cli/) / [eas.json reference](https://docs.expo.dev/eas/json/)
+- [vercel/vercel#15763](https://github.com/vercel/vercel/issues/15763)（preview env の対話プロンプト、open）

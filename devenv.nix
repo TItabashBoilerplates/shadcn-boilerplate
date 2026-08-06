@@ -221,7 +221,9 @@ in
     # infra-bootstrap（scripts/infra/*）が使う CLI。
     #   - gh : GitHub environments / 承認ゲート / secret 設定（github.sh）
     #   - jq : 各 API レスポンスの JSON 整形（supabase/vercel/github）
-    # Vercel は CLI バグ回避のため REST API(curl) 直叩き → vercel CLI は不要。
+    # Vercel の **プロビジョニング**は CLI バグ（vercel/vercel#15763: preview env が
+    # --non-interactive でも対話を要求 / rootDirectory 設定フラグ欠如）を避けるため
+    # REST API(curl) 直叩き。日常運用向けの vercel CLI 自体は `scripts.vercel` で提供する。
     # backend も Vercel（Dockerfile.vercel コンテナ）へデプロイするため、デプロイ用 CLI は REST API 直叩きで代替。
     pkgs.gh
     pkgs.jq
@@ -442,8 +444,15 @@ in
 
         # クラウドを使わないローカル EAS ビルド。frontend/apps/mobile/eas.json の
         # profile 定義が前提（未作成なら eas-cli が案内を出す）。
+        #
+        # ⚠️ npm パッケージ名は **`eas-cli`**（bin 名が `eas`）。`nlx eas` と書くと bunx が
+        # npm 上の**無関係な `eas` パッケージ**（"Embedded Async Simple Javascript templating",
+        # bin 無し）を解決してしまうので必ず `nlx eas-cli` と書くこと。
+        # バージョンは固定しない: Expo 公式が「eas-cli を project dependency に入れるのは
+        # dependency conflict を招くので強く非推奨」としており、pin したい場合の正規経路は
+        # eas.json の `cli.version` フィールド（https://docs.expo.dev/eas/json/）。
         "build-mobile-android-local" = {
-          exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && exec nlx eas build --platform android --local "$@"'';
+          exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && exec nlx eas-cli build --platform android --local "$@"'';
           description = "Build mobile (Android) via EAS on this machine (--local)";
         };
 
@@ -1179,12 +1188,12 @@ in
     };
 
     "build-mobile-ios" = {
-      exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && exec nlx eas build --platform ios'';
+      exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && exec nlx eas-cli build --platform ios'';
       description = "Build mobile (iOS) via EAS";
     };
 
     "build-mobile-android" = {
-      exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && exec nlx eas build --platform android'';
+      exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && exec nlx eas-cli build --platform android'';
       description = "Build mobile (Android) via EAS";
     };
 
@@ -1349,6 +1358,21 @@ in
     "fal" = {
       exec = ''cd "$DEVENV_ROOT" && exec uvx fal "$@"'';
       description = "Run the official fal CLI via uvx (fal.ai serverless / inference)";
+    };
+
+    # Vercel CLI。**日常運用（logs / env pull / inspect / microfrontends pull / 手動 deploy）
+    # 向け**であって、インフラのプロビジョニングには使わない。
+    # provisioning（scripts/infra/vercel.sh）が REST API を直叩きしているのは、
+    #   - `vercel env add <name> preview` が --yes/--force/--non-interactive を付けても
+    #     git branch を対話で聞いてくる（vercel/vercel#15763、2026-08 時点 open。
+    #     公式 issue の回避策も「REST API を使う」）
+    #   - rootDirectory を設定する CLI フラグが無い
+    # の 2 点が理由で、CLI 全般が使えないという話ではない。
+    # nixpkgs に derivation が無いので bunx 経由（frontend/README.md の
+    # `bun add -g vercel` によるグローバル導入はこの script で置き換える）。
+    "vercel" = {
+      exec = ''exec bunx vercel "$@"'';
+      description = "Run the Vercel CLI via bunx (logs / env / deploy. provisioning は REST API)";
     };
 
     # ---------- Status check ----------
