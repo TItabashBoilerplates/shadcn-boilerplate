@@ -65,6 +65,15 @@ const securityHeaders = [
 ]
 
 const nextConfig: NextConfig = {
+  // Next.js 16 は開発時、サーバーが初期化されたホスト（既定 `localhost`）以外からの
+  // dev アセット（/_next/static/chunks/*）へのリクエストを 403 で遮断する。
+  // そのため `127.0.0.1:3000` で開くと HTML は返るが JS が全て 403 になり、
+  // **真っ白なページ**になる（E2E ハーネスも 127.0.0.1 を叩くため同様に落ちる）。
+  // ループバックの別名を許可して localhost / 127.0.0.1 のどちらでも開けるようにする。
+  // 開発時のみ有効な設定で、本番ビルドには影響しない。
+  // @see https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+  allowedDevOrigins: ['127.0.0.1'],
+
   // PostHog リバースプロキシ: ブラウザ → PostHog のリクエストを自ドメイン(/ingest)経由にし、
   // アドブロッカー起因の計測欠損を回避する（US リージョン用の宛先）。
   // @see https://posthog.com/docs/advanced/proxy/nextjs
