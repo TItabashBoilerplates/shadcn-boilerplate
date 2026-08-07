@@ -10,6 +10,9 @@ description: 本リポジトリで fal.ai（画像・動画・音声などの生
 
 CLI (`fal`) は devenv が提供済み（`scripts.fal` = `uvx fal`）。調査記録: `docs/_research/2026-08-06-service-clis.md`
 
+> **併読必須**: `.claude/skills/ai-usage-metering/` も起動すること。fal は**トークンではなく実行秒数・枚数・解像度**で課金されるため、
+> レスポンスに usage が無いケースがある。数量が確定する場所（リクエストのパラメータ、または Webhook 側）で記録する。
+
 ---
 
 ## 1. 最重要: `FAL_KEY` はサーバ側にしか置けない

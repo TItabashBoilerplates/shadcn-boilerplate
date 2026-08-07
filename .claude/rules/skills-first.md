@@ -65,6 +65,7 @@
 | 画像生成 / 動画生成 / text-to-image / GPU 推論 / Flux / fal.ai | `fal`（自作） |
 | Resend / メール送信 / Webhook | `resend`, `resend-cli`, `send-email`, `react-email`, `email-best-practices`, `agent-email-inbox` |
 | LangChain / LangGraph / LangSmith / エージェント | `langchain` |
+| LLM を呼ぶ機能全般（チャット / 要約 / RAG / 埋め込み / 画像・音声・動画生成）/ トークン使用量 / コスト集計 / 従量課金 / プラン上限 / 「AI が高い」 | `ai-usage-metering`（自作。**モデル呼び出しが増えるなら常に対象**）+ 実装先の Skill（`langchain` / `fal` / `edge-functions-mcp` 等） |
 | Storybook | `storybook` |
 | Maestro / E2E | `maestro` |
 | 単体テスト (Python) | `python-testing` |

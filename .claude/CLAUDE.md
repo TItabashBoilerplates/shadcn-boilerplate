@@ -73,6 +73,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     ├── doppler/          # Doppler シークレット管理（CLI / devenv 統合 / 公式 MCP / .env.secrets からの移行）
     │
     │ # ↓ 本リポジトリ固有の運用手順（自作 Skill・lock 管理外）
+    ├── ai-usage-metering/ # ★ LLM/生成AI のトークン使用量・コスト集計を設計へ標準で織り込む（集計軸・単価表・計上の罠）
     ├── vercel-deploy/    # ★ Vercel の GitHub 連携 + デプロイ（vercel-deploy script の使い方と落とし穴）
     ├── mobile-release/   # ★ EAS リリース（TestFlight / Play。クラウド=expo.dev とローカルの両対応）
     │
@@ -141,6 +142,8 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 **MANDATORY**: コンポーネントの再描画は必要最小限に抑える。FSD のスライス単位でステートを局所化し、状態変更の影響範囲をそのスライス内に閉じ込める。TanStack Query の invalidation はピンポイント、Zustand は必ずセレクター使用、Widget/View にビジネスステートを持たせない。詳細は `.claude/rules/render-optimization.md` を参照。
 
 **MANDATORY**: エラーは握りつぶさず適切にエラーとして処理する。不必要なフォールバック処理は禁止。catch したら必ずログ出力 + リスロー or 明示的 Result 型。supabase-js の `{ error }` は必ずチェック。フォールバックは付随的処理（analytics等）のみ許容。詳細は `.claude/rules/error-handling.md` を参照。
+
+**MANDATORY**: **LLM / 生成 AI を機能として組み込むときは、トークン使用量とコストの計測・集計を最初から設計に含める**（後付け禁止）。生成 AI は実行のたびに原価が動く数少ない機能であり、**使用量イベントは過去に遡って作れず、集計軸（`organization_id` 等）は後から列を足しても過去行が埋まらない**。したがって「モデルを呼ぶコードを書く」と「使用量イベントを 1 件記録する」は常にセットで実装する。**集計単位（ユーザー / 組織 / 機能 / 会話）はサービス特性で変わるので固定せず、実装前に請求主体と配賦軸を決める**。原則: ①プロバイダが返した usage の**生値**を残す（単価誤りの再計算用）②**単価はコードに書かず** `effective_from` 付きの単価表データとして持ち、イベントに使用した単価を凍結する ③プロバイダのレスポンス ID に**一意制約**を張って二重計上を DB で弾く。キャッシュ読み書き・reasoning トークン・ストリーミング中断は計上を間違えやすい（プロバイダごとに内数/外数が違う）。詳細は `.claude/skills/ai-usage-metering/` を参照。
 
 **MANDATORY**: フロントエンド・バックエンドのデバッグは **devenv 2.0 の native process manager の TUI** を主インターフェースとして使用する。`devenv up` を対話端末で実行すると TUI が自動起動し、プロセス一覧・ログ閲覧・再起動がキーボード操作で可能。詳細は `.claude/skills/debugging/SKILL.md` を参照。
 
@@ -355,5 +358,6 @@ nr build
 - **LLM Orchestration**: LangChain/LangGraph
 - **Providers**: OpenAI, Anthropic, Replicate, FAL
 - **Real-time**: LiveKit
+- **Usage Metering**: トークン使用量・コスト集計は**標準で設計に含める** → `.claude/skills/ai-usage-metering/`
 
 → 詳細は [`backend-py/README.md`](backend-py/README.md)
