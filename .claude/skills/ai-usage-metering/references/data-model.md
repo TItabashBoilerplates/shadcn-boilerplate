@@ -114,9 +114,18 @@ export const aiUsageEvents = pgTable(
     /** プロバイダが返した usage をそのまま。単価誤り時の再計算と原因調査の生命線 */
     rawUsage: jsonb('raw_usage'),
 
-    /** 計算済みの合計。内訳は ai_usage_items 側。集計を速くするための非正規化 */
+    /** 計算済みの合計 USD。内訳は ai_usage_items 側。集計を速くするための非正規化。
+     *  単価が引けなかったときは NULL のまま（0 にしない）。cost_status で区別する */
     totalCost: numeric('total_cost', { precision: 24, scale: 12 }),
     currency: text('currency').notNull().default('USD'),
+
+    /** 'priced'（単価表から算出）| 'price_missing'（単価未登録＝未計上）
+     *  | 'provider_reported'（プロバイダが返した金額を採用） */
+    costStatus: text('cost_status').notNull().default('price_missing'),
+
+    /** プロバイダが金額を返す場合（OpenRouter の cost 等）はそのまま保存する。
+     *  自前計算（total_cost）と突き合わせて単価表のズレを検知するために両方持つ */
+    providerReportedCost: numeric('provider_reported_cost', { precision: 24, scale: 12 }),
 
     startedAt: timestamp('started_at', { withTimezone: true, precision: 3 }).notNull().defaultNow(),
     settledAt: timestamp('settled_at', { withTimezone: true, precision: 3 }),
@@ -131,6 +140,8 @@ export const aiUsageEvents = pgTable(
     index('ai_usage_events_user_time').on(t.userId, t.startedAt),
     index('ai_usage_events_feature_time').on(t.feature, t.startedAt),
     index('ai_usage_events_trace').on(t.traceId),
+    // 未計上（単価未登録）の検知用。ここが 0 でないと金額が過少に出る
+    index('ai_usage_events_cost_status').on(t.costStatus, t.startedAt),
   ],
 ).enableRLS()
 ```
@@ -216,6 +227,9 @@ export const aiUsageDaily = pgTable(
     requestCount: integer('request_count').notNull().default(0),
     totalCost: numeric('total_cost', { precision: 24, scale: 12 }).notNull().default('0'),
     currency: text('currency').notNull().default('USD'),
+    /** 単価未登録で金額に算入できなかった件数。0 でなければ total_cost は過少。
+     *  画面にも必ず出す（見えない欠損が一番怖い） */
+    unpricedCount: integer('unpriced_count').notNull().default(0),
     updatedAt: timestamp('updated_at', { withTimezone: true, precision: 3 }).notNull().defaultNow(),
   },
   (t) => [
@@ -238,6 +252,41 @@ DB に混在させると「日をまたぐ請求」がずれる。
 | マテリアライズドビュー | 読み取り専用の分析用途 | リフレッシュ中のロックに注意 |
 
 **上限を強制する場合**は「イベント挿入時に加算」を選ぶ。前日集計では超過を止められない。
+
+### ドルで取り出すクエリ
+
+集計は**必ず金額込みで出す**。トークン数だけの画面を作らない（原価が判断できないので使われない）。
+
+```sql
+-- 当月のテナント別コスト（USD）。未計上件数を必ず併記する
+select
+  organization_id,
+  sum(total_cost)                                          as cost_usd,
+  count(*)                                                 as requests,
+  count(*) filter (where cost_status = 'price_missing')    as unpriced_requests
+from ai_usage_events
+where started_at >= date_trunc('month', now() at time zone 'utc')
+  and status = 'settled'
+group by organization_id
+order by cost_usd desc nulls last;
+
+-- 機能別・モデル別の内訳（どこが高いか）
+select feature, model, sum(total_cost) as cost_usd, count(*) as requests
+from ai_usage_events
+where started_at >= now() - interval '30 days'
+group by feature, model
+order by cost_usd desc;
+
+-- 1 会話あたりのコスト上位（エージェントの暴走検知）
+select trace_id, sum(total_cost) as cost_usd, count(*) as llm_calls
+from ai_usage_events
+group by trace_id
+order by cost_usd desc
+limit 20;
+```
+
+**`unpriced_requests` を必ず一緒に出す。** これが 0 でない集計値は過少申告であり、
+併記しないと「安く出た数字」をそのまま信じてしまう。
 
 ---
 
