@@ -38,6 +38,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 │   ├── render-optimization.md # 再描画最小化（FSDスライス単位のステート局所化）
 │   ├── error-handling.md     # エラーハンドリング（握りつぶし禁止・フォールバック最小化）
 │   ├── page-navigation.md    # ページ遷移（loading.tsx + Suspense によるストリーミング必須）
+│   ├── list-pagination.md    # 一覧のページング必須（全件取得禁止・UI パターンは自分で選定）
 │   ├── mcp-supabase.md       # Supabase インフラ操作は MCP（supabase / supabase-prod）必須
 │   ├── supabase-config.md    # Supabase 設定は config.toml に集約（DB のみ Drizzle 例外）・[remotes.*] 必須・メールテンプレートは [auth.email.template.*]
 │   ├── mcp-doppler.md        # Doppler シークレットの読み書きは doppler MCP 必須（書込はフェーズ制: 初期構築=full / 本番=prd 承認制・値の露出禁止）
@@ -140,6 +141,8 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 **MANDATORY**: **テキスト入力を受け付けるフォーム要素（`<input>` / `<textarea>` / ネイティブ `<select>` / `contenteditable`）は、モバイル幅で必ず font-size 16px 以上**にする（`text-base md:text-sm` が標準形）。**iOS Safari は 16px 未満のフォーム要素にフォーカスすると自動でズームイン**するため、`text-sm`(14px) / `text-xs`(12px) は禁止。`maximum-scale=1` / `user-scalable=no` による回避も **WCAG 1.4.4 違反**につき禁止。あわせて、**フォーム要素のスタイルは `@workspace/ui` の共有コンポーネント 1 か所にのみ定義**し、`textareaClass` のようなローカル定数を各画面にコピペすることを禁止する（実際に textarea が 6 ファイルに重複し全部ズーム対象になった事故がある）。checkbox / radio / file や Radix の `SelectTrigger`（実体は `<button>`）はズームしないため対象外。詳細は `.claude/rules/form-controls.md` を参照。
 
 **MANDATORY**: コンポーネントの再描画は必要最小限に抑える。FSD のスライス単位でステートを局所化し、状態変更の影響範囲をそのスライス内に閉じ込める。TanStack Query の invalidation はピンポイント、Zustand は必ずセレクター使用、Widget/View にビジネスステートを持たせない。詳細は `.claude/rules/render-optimization.md` を参照。
+
+**MANDATORY**: **一覧（リスト）画面は、件数が増えうるなら開発者から指示されなくても最初からページングを実装する**。判定は「時間・ユーザー数・外部連携で行が増えるか」「件数上限がスキーマ/仕様でハードに保証されているか」で行い、保証が無ければ必ずページングする（「今はデータが少ない」は理由にならない — seed では顕在化せず本番で壊れる）。**全件取得は禁止**で、クエリには必ず `limit` / `range` を付け、**ページングは常に DB 側**（クライアントの `slice` は禁止）。API の `limit` はサーバー側でクランプする。**UI パターン（ページ番号 / もっと見る / 無限スクロール）はエージェント自身が選定する**: Web の管理画面・検索結果・SEO 対象の公開一覧は**ページ番号 + URL 同期**（`?page=`。共有・戻る・クローラビリティのため）、Web の探索的グリッドは**「もっと見る」**、Mobile（Expo/RN）は**無限スクロール**（`onEndReached` + 仮想化リスト）、チャット/タイムラインなど新着が前方に挿入される一覧は**カーソル(keyset)**。迷ったら「もっと見る」を選ぶ（フッターに到達でき、キーボードで進め、後から双方向に移行できる）。無限スクロールにする場合は「もっと見る」ボタンを DOM に残す（キーボード fallback）・フッターを潰さない・スクロール位置を復元することが必須条件。`order` には必ず一意列の tiebreaker を付け（無いとページ間で重複/欠落する）、ソートキーに index を張り、総数が UI 要件でなければ `count` を取らない（大テーブルは `estimated`）。初回ローディング / 追加ローディング / 空 / エラー / 末尾到達の 5 状態を必ず用意する。詳細は `.claude/rules/list-pagination.md` を参照。
 
 **MANDATORY**: エラーは握りつぶさず適切にエラーとして処理する。不必要なフォールバック処理は禁止。catch したら必ずログ出力 + リスロー or 明示的 Result 型。supabase-js の `{ error }` は必ずチェック。フォールバックは付随的処理（analytics等）のみ許容。詳細は `.claude/rules/error-handling.md` を参照。
 

@@ -75,20 +75,27 @@ This directory contains guidelines for Antigravity Agent when working in this re
     - 重複コードの禁止
     - 未使用コードの削除
 
+### Lists and Data Display
+
+13. **[List Pagination Policy](./list-pagination.md)** ⚠️ **MUST READ**
+    - 増えうる一覧は指示を待たずページング（全件取得禁止・DB 側でページング）
+    - UI パターン（ページ番号 / もっと見る / 無限スクロール）はエージェント自身が選定
+    - 決定的ソート（一意列の tiebreaker）・index・必須 UI 状態
+
 ### Debugging
 
-13. **[Debugging Policy](./debugging.md)** ⚠️ **MUST READ**
+14. **[Debugging Policy](./debugging.md)** ⚠️ **MUST READ**
     - devenv 2.0 native process manager の TUI 最優先（`devenv up` で TUI 自動起動）
     - 非対話環境では `/tmp/devenv-*/processes/logs/<process>.{stdout,stderr}.log` を tail
     - Supabase は Docker ログで確認
 
 ### Environment Configuration
 
-14. **[Environment Configuration](./environment.md)**
+15. **[Environment Configuration](./environment.md)**
     - Environment variable management
     - dotenvx usage
 
-14. **[Special Notes](./special-notes.md)**
+16. **[Special Notes](./special-notes.md)**
     - Type generation
     - AI/ML features
     - Authentication
@@ -116,3 +123,4 @@ For detailed information, refer to the following documentation:
 7. **Clean Code Policy** - No backward compatibility, no duplication, no unused code
 8. **Use TailwindCSS CSS variables** - No hardcoded colors
 9. **Debugging via devenv 2.0 native TUI** - `devenv up` で TUI 起動、非対話環境は logs tail
+10. **Paginate every list that can grow** - 指示を待たずページング。全件取得禁止、UI パターンはエージェントが選定 - See `list-pagination.md`

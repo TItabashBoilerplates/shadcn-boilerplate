@@ -204,6 +204,45 @@ const { data } = supabase.storage
 
 **RESTful path structure**: `{resource}/{id}/{sub-resource}/{filename}`
 
+### 9. List Pagination
+
+**Paginate any list that can grow — without waiting to be asked.** Pick the UI pattern yourself.
+
+Pagination is REQUIRED unless the row count is hard-capped by schema or spec. "There is little data
+right now" is not a reason: seed data never surfaces the problem, production does.
+
+```typescript
+// WRONG: unbounded fetch + client-side slicing
+const { data } = await supabase.from('orders').select('*')
+const page = data.slice(offset, offset + 20)
+
+// CORRECT: paginate in the DB, with a unique tiebreaker in the sort
+const { data, count } = await supabase
+  .from('orders')
+  .select('*', { count: 'estimated' })
+  .order('created_at', { ascending: false })
+  .order('id', { ascending: false })      // required — otherwise rows repeat/vanish across pages
+  .range(from, from + PAGE_SIZE - 1)
+```
+
+**Default UI pattern by surface**:
+
+| Surface | Default |
+|---------|---------|
+| Web admin tables / search results / SEO-facing lists | Numbered pages synced to the URL (`?page=`) |
+| Web exploratory grids and galleries | "Load more" button |
+| Mobile (Expo / RN) lists | Infinite scroll (`onEndReached` + virtualized list) |
+| Chat / timelines / feeds (new rows prepended) | Keyset (cursor) pagination |
+
+When unsure, choose "Load more". Infinite scroll additionally requires: no footer, a real
+"Load more" button left in the DOM (keyboard fallback), and scroll-position restoration.
+
+Also required: clamp `limit` server-side, index the sort keys, skip `count` unless the total is
+shown (`estimated` on large tables), and ship all five states — initial loading, loading more,
+empty, error, end-of-list.
+
+Full policy: `.claude/rules/list-pagination.md`
+
 ---
 
 ## Domain Documentation

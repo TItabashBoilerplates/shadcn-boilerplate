@@ -244,6 +244,37 @@ const textareaClass = '... text-sm'
 
 → 詳細・チェックリスト・検出コマンドは `.claude/rules/form-controls.md` を参照
 
+## List Pagination (MANDATORY)
+
+**件数が増えうる一覧は、指示を待たずに最初からページングを実装する。** UI パターンもエージェントが選ぶ。
+
+```tsx
+// ❌ Bad: 全件取得 → クライアントで slice
+const { data } = await supabase.from('items').select('*')
+const page = data.slice(from, from + 20)
+
+// ✅ Good: DB 側でページング + 一意列の tiebreaker
+const { data } = await supabase
+  .from('items')
+  .select('*')
+  .order('created_at', { ascending: false })
+  .order('id', { ascending: false })
+  .range(from, from + PAGE_SIZE - 1)
+```
+
+| 画面 | 既定パターン |
+|---|---|
+| Web の管理画面 / テーブル / 検索結果 / SEO 対象の公開一覧 | ページ番号 + URL 同期（`?page=`） |
+| Web の探索的グリッド / ギャラリー | 「もっと見る」ボタン |
+| Mobile（Expo / RN） | 無限スクロール（`onEndReached` + 仮想化リスト） |
+| チャット / タイムライン（新着が前方挿入） | keyset(cursor) ページング |
+
+迷ったら「もっと見る」。無限スクロールは「もっと見る」ボタンを DOM に残す（キーボード fallback）・
+フッターを潰さない・スクロール位置を復元する、を満たす場合のみ。
+初回ローディング / 追加ローディング / 空 / エラー / 末尾到達の 5 状態は必須。
+
+→ 詳細・チェックリスト・実装例は `.claude/rules/list-pagination.md` を参照
+
 ## Date/Time Handling
 
 To prevent hydration errors:
