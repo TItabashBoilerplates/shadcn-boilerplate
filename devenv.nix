@@ -1038,6 +1038,42 @@ in
       description = "外部 PaaS の project/env/承認ゲートを冪等プロビジョニング（要 config.env + dashboard 事前 OAuth）";
     };
 
+    # frontend/apps/<name> を Vercel project 化（GitHub 連携 + rootDirectory）してデプロイする。
+    # infra-bootstrap（web + backend を固定で作る一括プロビジョニング）とは別で、
+    # **アプリを 1 つ後から足す / 手で本番へ出す**ための ad-hoc 経路。config.env は不要。
+    #   vercel-deploy                          # frontend/apps/web を本番デプロイ
+    #   vercel-deploy frontend/apps/lp         # 任意のアプリ
+    #   vercel-deploy frontend/apps/lp --no-deploy   # project + env だけ（配信は git push）
+    # token は VC_TOKEN → VERCEL_TOKEN → `vercel login` 済みの CLI 認証情報、の順で解決する。
+    # 手順の詳細・つまずきどころは .claude/skills/vercel-deploy/SKILL.md。
+    "vercel-deploy" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/infra/vercel_deploy.sh" "$@"'';
+      description = "アプリを Vercel project 化（GitHub 連携）してデプロイ（--no-deploy / --preview / --dry-run）";
+    };
+
+    # ---------- モバイルリリース（EAS: クラウド / ローカルの両対応）----------
+    # 各 script が Doppler の secrets を自己注入するので prefix 不要。
+    # 前提と必要なシークレットは scripts/mobile/release-*.sh の冒頭 / .claude/skills/mobile-release/。
+    "mobile-release-ios" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/release-ios.sh" "$@"'';
+      description = "iOS を build → TestFlight（既定 expo.dev / --local でローカルビルド）";
+    };
+
+    "mobile-release-android" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/release-android.sh" "$@"'';
+      description = "Android を build → Play 内部テスト（既定 expo.dev / --local でローカルビルド）";
+    };
+
+    "mobile-metadata" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/release-ios.sh" --metadata-only "$@"'';
+      description = "store.config.js を App Store Connect へ同期（ビルドしない）";
+    };
+
+    "sync-eas-env" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/sync-eas-env.sh" "$@"'';
+      description = "Doppler の EXPO_PUBLIC_* を EAS の Environment Variables へ同期";
+    };
+
     # ---------- Doppler（シークレット管理・移行下準備）----------
     # 完全移行に向けた補助 script。詳細・移行手順は .claude/skills/doppler/SKILL.md。
     "doppler-setup" = {

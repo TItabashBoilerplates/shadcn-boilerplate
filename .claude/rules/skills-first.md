@@ -46,6 +46,8 @@
 | FSD / レイヤー / スライス | `fsd`, `feature-sliced-design` |
 | モノレポ / Bun workspace / packages 追加 / パッケージ間の依存 | `monorepo`（本リポジトリ規約）+ `turborepo`（公式 vercel/turborepo） |
 | デザインシステム / トークン / Web と Native で UI を揃える / デスクトップ対応 | `monorepo`（`design-system.md`）, `shadcn`（公式）, `gluestack` |
+| Vercel 連携 / デプロイ / 本番に出す / Vercel project 作成 / rootDirectory / 15000 files エラー | `vercel-deploy`（自作） |
+| リリース / TestFlight / Play ストア / EAS ビルド / アプリを提出 / ストア配信 | `mobile-release`（自作）, `expo-deployment`, `expo-cicd-workflows` |
 | マイクロフロントエンド / multi-zones / microfrontends.json / @vercel/microfrontends / 単一ドメイン合成 / パスルーティング | `vercel-microfrontends`（公式）, `monorepo` |
 | Python モノレポ / uv workspace / backend-py の apps・packages / src-layout / MCP サーバ追加 | `python-monorepo` |
 | shadcn/ui / TailwindCSS | `shadcn`, `shadcn-ui`, `web-design-guidelines`, `frontend-design` |

@@ -1,0 +1,234 @@
+---
+name: vercel-deploy
+description: Vercel との GitHub 連携（repo 接続 + rootDirectory 設定）と、それを使った本番/プレビューデプロイの手順。「Vercel に連携して」「デプロイして」「このアプリを本番に出して」「Vercel project を作って」「vercel-deploy」「デプロイが 15000 files で落ちる」「本番 URL を env に入れたい」といった指示・症状が出たら必ず最初に起動する。モノレポ（frontend/apps/*）で rootDirectory を正しく設定し、`--archive=tgz` を含む既知の落とし穴を踏まないためのファクトと、`vercel-deploy` script の使い方を提供する。
+---
+
+# Vercel 連携 & デプロイ
+
+**このリポジトリで Vercel へのデプロイを指示されたら、手で `vercel` を叩く前に必ず
+`vercel-deploy` script を使うこと。** 手順・順序・回避策がすべて入っている。
+
+```bash
+vercel-deploy                          # frontend/apps/web を本番デプロイ
+vercel-deploy frontend/apps/lp         # 任意のアプリ
+vercel-deploy frontend/apps/lp --dry-run     # 計画だけ（Vercel へ 1 件も送らない）
+vercel-deploy frontend/apps/lp --no-deploy   # project + env だけ作り、配信は git push に任せる
+vercel-deploy frontend/apps/lp --preview     # preview デプロイ
+```
+
+実体は `scripts/infra/vercel_deploy.sh`。冪等なので途中で失敗しても再実行してよい。
+
+---
+
+## ⚠️ 資格情報は Doppler が唯一のソース（最初に理解すること）
+
+**このリポジトリでは、トークン・API キー・シークレットの類はすべて Doppler にある。**
+`.env` ファイルにも、`config.env` にも、コード中にも書かない。
+
+| 何を | どこから来るか |
+|---|---|
+| **Vercel の API トークン** | **Doppler の bootstrap config の `VC_TOKEN`**。`devenv shell` 進入時に `loadDopplerByEnv` が env へ載せるので、`vercel-deploy` は何もせず拾える |
+| Vercel project の **runtime secret**（外部 API キー等） | **Doppler → Vercel のネイティブ連携（sync）** が Vercel の Environment Variables へ fan-out する。**`--env` で入れない** |
+| **Supabase の接続情報** | **Vercel Marketplace の Supabase 連携**が自動注入する。Doppler にも Vercel にも手で入れない |
+| 本番 URL 等の**生成値** | `vercel-deploy` が実測して投入する（`NEXT_PUBLIC_APP_URL`） |
+
+### キー名が `VERCEL_TOKEN` ではなく `VC_TOKEN` である理由
+
+**Doppler に `VERCEL_` / `SUPABASE_` / `GITHUB_` prefix のキーは登録できない**（各 PF の予約
+名前空間で、sync が予約値違反になり **その config 全体が届かなくなる**）。そのため Doppler 上は
+`VC_TOKEN` で保持し、CLI が別名を要求する箇所だけプロセス内で読み替える。
+詳細は `.claude/rules/env-naming.md`。
+
+### token 解決の優先順（script の実装）
+
+1. `VC_TOKEN`（**通常はこれ。Doppler 由来**）
+2. `VERCEL_TOKEN`（CI の慣例名。プロセス env なので許容）
+3. `vercel login` 済み CLI の `auth.json`（**Doppler が使えないときの最後の手段**）
+
+**新しいトークンを勝手に発行しない。値をチャット / ログ / コミット / PR に出さない**
+（会話はキー名だけで行う）。Doppler への書き込みが必要なら `doppler` MCP 経由・フェーズ制に従う
+（`.claude/rules/mcp-doppler.md`）。
+
+---
+
+## 0. 2 つのプロビジョニング経路（取り違えない）
+
+| 経路 | 何をするか | いつ使うか |
+|---|---|---|
+| `infra-bootstrap`（`scripts/infra/vercel.sh`） | **web + backend の 2 project を固定で**作る。config.env + Doppler bootstrap トークンが前提 | リポジトリから**実プロジェクトを起こす初期構築** |
+| **`vercel-deploy`**（`scripts/infra/vercel_deploy.sh`） | **アプリ 1 つ**を project 化してデプロイ。config.env 不要 | **アプリを後から足す / 手で本番へ出す**（＝ふだんの「デプロイして」） |
+
+「デプロイして」「Vercel と連携して」という指示は、ほぼ常に後者。
+
+---
+
+## 1. 事前に確認すること（プリフライト）
+
+```bash
+vercel --version           # devenv script（bunx 経由）。入っていることの確認
+vercel whoami              # ログイン済みか。未ログインなら `vercel login`
+find . -name .vercel -type d -not -path "*/node_modules/*"   # 既存リンクの有無
+```
+
+- **`vercel project ls` が "No projects found" でも鵜呑みにしない。** scope（team）が違うと
+  そう見える。実態は REST API（`GET /v9/projects`）か dashboard で確認する。
+- ローカルビルドが通ることを先に確認する。`vercel-deploy` は既定で `build-frontend` を
+  実行してから進む（`--skip-build-check` で省略可）。**壊れたものをデプロイして枠と時間を
+  無駄にしないため**。
+
+### 手作業が必要な前提（自動化できない）
+
+**Vercel GitHub App が対象 repo に install 済み**であること（dashboard で一度きり）。
+未 install だと project 作成の `gitRepository` 紐付けが失敗する。
+
+---
+
+## 2. script が行うこと（＝手でやる場合の正しい順序）
+
+1. **token 解決** — `VC_TOKEN` → `VERCEL_TOKEN` → `vercel login` 済み CLI の `auth.json`。
+   値はログに出さない。新しいトークンを勝手に発行しない。
+2. **scope 解決** — `VERCEL_TEAM_ID` があればそれ、無ければ `GET /v2/teams`。
+   **team が複数あるときは自動で選ばず止まる**（誤った team に作ると名前が予約されて厄介）。
+3. **`<app>/vercel.json` の存在確認** — 無ければ落とす（§4）。
+4. **project の作成 / 確認** — `POST /v11/projects`（`rootDirectory` + `gitRepository`）。
+   既存なら `rootDirectory` を PATCH で冪等に再保証。
+5. **本番ドメインの実測** — `GET /v9/projects/{name}/domains?target=production`。
+   **URL を推測しない**（§5）。
+6. **env の投入** — 本番 URL を `NEXT_PUBLIC_APP_URL` に（`--url-env-key` で変更・`none` で無効）、
+   追加は `--env KEY=VALUE`。`upsert=true` なので再実行しても 403 にならない。
+7. **link → deploy** — リポジトリルートで `vercel link`、`vercel deploy --prod --archive=tgz`。
+8. **疎通確認** — 本番 URL に curl して HTTP ステータスを表示。
+
+---
+
+## 3. なぜ project 作成だけ REST API なのか（CLI を避ける理由）
+
+- **`vercel project add` に `rootDirectory` を指定するフラグが無い。** モノレポでは
+  rootDirectory 無しのビルドは必ず壊れる。
+- `vercel env add <name> preview` は `--yes` / `--force` / `--non-interactive` を付けても
+  **git branch を対話で聞いてくる**（[vercel/vercel#15763](https://github.com/vercel/vercel/issues/15763)、
+  公式 issue の回避策も「REST API を使う」）。
+
+`link` / `deploy` は CLI の方が確実なので CLI を使う。**「CLI 全般が使えない」という話ではない。**
+
+---
+
+## 4. モノレポでは `<app>/vercel.json` が必須
+
+rootDirectory（`frontend/apps/<name>`）の配下には `bun.lock` も `turbo.json` も無い。
+install / build をリポジトリルートへ戻さないとビルドが落ちる。
+
+```jsonc
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "buildCommand": "cd ../.. && turbo build --filter=@workspace/<pkg>",
+  "installCommand": "cd ../.. && bun install",
+  "outputDirectory": ".next"
+}
+```
+
+`frontend/apps/web/vercel.json` が既存の実例。`vercel-deploy` は無ければこの雛形を出して止まる。
+
+**link とデプロイをリポジトリルートで行うのも同じ理由**（`cd ../..` がリポジトリルートに
+届く必要があるので、アップロードの起点もルートでなければならない）。
+
+---
+
+## 5. 本番 URL は推測せず実測する
+
+canonical / sitemap / OG 画像 / メールのリンクに焼き込まれるため、URL を 1 文字間違えると
+本番の SEO と導線が壊れる。**env に入れる前に必ずドメインを API で取得する**。
+
+```bash
+# 実測（script が内部でやっていること）
+curl -fsS -H "Authorization: Bearer $VC_TOKEN" \
+  "https://api.vercel.com/v9/projects/<project>/domains?target=production&limit=1&teamId=$VERCEL_TEAM_ID" \
+  | jq -r '.domains[0].name'
+```
+
+---
+
+## 6. 既存 project に GitHub repo を後から繋ぐ REST API は無い
+
+git repository を紐付けられるのは **`POST /v11/projects`（作成時）だけ**。
+`PATCH /v9/projects/{idOrName}` の body に `gitRepository` は無く、公開された link
+エンドポイントも存在しない。
+
+したがって「project は在るが repo 未接続」に出くわしたら:
+
+1. dashboard の Project > Settings > Git > **Connect Git Repository** で接続する、または
+2. `--project <別名>` で作り直す
+
+`vercel-deploy` はこの状態を検知して**止まる**（黙って repo 未接続のままデプロイしない）。
+
+---
+
+## 7. `files should NOT have more than 15000 items`
+
+モノレポ全体をアップロードするとファイル数が Vercel の上限を超える。
+**公式の回避策が `--archive=tgz`**（`vercel-deploy` は常に付けている）。
+
+```bash
+vercel deploy --prod --yes --archive=tgz
+```
+
+> `--archive` はソースファイルのアップロードキャッシュを無効化するので、
+> ケースによっては遅くなる。それでもファイル数上限を踏むよりはよい。
+
+---
+
+## 8. `.gitignore` を汚さない
+
+`vercel link` は `.gitignore` に `.vercel` を追記するが、本リポジトリは既に
+`**/.vercel/` を無視している（**重複した差分が出るだけ**）。
+`vercel-deploy` は link 前後で `.gitignore` を比較し、増えていたら元に戻す。
+
+手で `vercel link` した場合は `git diff .gitignore` を確認して戻すこと。
+
+---
+
+## 9. env に入れてよいもの / いけないもの
+
+| 値 | どこから来るか |
+|---|---|
+| **runtime secret**（外部 API キー等） | **Doppler → Vercel のネイティブ連携**。`--env` で入れない |
+| **Supabase の接続情報** | **Vercel Marketplace の Supabase 連携が自動注入**。手で入れない・Doppler にも置かない |
+| 本番 URL 等の生成値 | `vercel-deploy` が投入（`NEXT_PUBLIC_APP_URL`） |
+| 静的な非機密 config | `--env KEY=VALUE` |
+
+**`VERCEL_` prefix のキーは作れない**（Vercel の system 予約）。
+詳細は `.claude/rules/env-naming.md`。`vercel-deploy` は `VERCEL_*` を弾く。
+
+---
+
+## 10. トラブルシュート
+
+| 症状 | 原因 / 対処 |
+|---|---|
+| project 作成が失敗する | Vercel GitHub App が repo に未 install / project 名が他 team で重複 |
+| `files should NOT have more than 15000 items` | `--archive=tgz`（§7） |
+| ビルドが「lockfile が無い」で落ちる | `<app>/vercel.json` の install/build が `cd ../..` していない（§4） |
+| デプロイは成功するのに 404 | rootDirectory が違う。`PATCH /v9/projects/{name}` で再設定（script が冪等に行う） |
+| 疎通確認が 401 | Deployment Protection が有効。dashboard の Settings > Deployment Protection |
+| `vercel project ls` に何も出ない | scope 違い。`--team <slug>` を明示（§1） |
+| team が複数あって止まる | 意図した team を `--team <slug>` で指定 |
+
+---
+
+## 11. 完了報告に必ず含めること
+
+- 作成/更新した **project 名と scope**
+- **rootDirectory** と接続した **GitHub repo**
+- 投入した **env のキー名**（値は出さない）
+- **本番 URL と疎通確認の HTTP ステータス**
+- 残っている手作業（dashboard での Supabase 連携 / Deployment Protection 等）
+
+---
+
+## 参照
+
+- REST API のエンドポイントと curl 例: [references/rest-api.md](references/rest-api.md)
+- 初期構築の全体像: `docs/deployment/README.md`
+- env / secret の命名規約: `.claude/rules/env-naming.md`
+- マイクロフロントエンド構成で複数 project を 1 ドメインに合成する場合: `vercel-microfrontends` skill

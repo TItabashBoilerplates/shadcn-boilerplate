@@ -72,6 +72,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     ├── edge-functions-mcp/ # Supabase Edge Functions 上に MCP サーバを構築（BYO MCP: @hono/mcp + @modelcontextprotocol/sdk）
     ├── doppler/          # Doppler シークレット管理（CLI / devenv 統合 / 公式 MCP / .env.secrets からの移行）
     │
+    │ # ↓ 本リポジトリ固有の運用手順（自作 Skill・lock 管理外）
+    ├── vercel-deploy/    # ★ Vercel の GitHub 連携 + デプロイ（vercel-deploy script の使い方と落とし穴）
+    ├── mobile-release/   # ★ EAS リリース（TestFlight / Play。クラウド=expo.dev とローカルの両対応）
+    │
     │ # ↓ 公式 Skill が存在しない外部サービス向けの自作 Skill（lock 管理外）
     ├── onesignal/        # プッシュ通知（既存実装が仕様書。external_id = Supabase user.id）
     ├── livekit/          # リアルタイム音声・映像（トークン発行はサーバ側限定・Edge FN / backend-py の切り分け）
@@ -149,6 +153,8 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 **MANDATORY**: Doppler 上のシークレット（projects / configs / secrets）を**調査・作成・更新**する場合は、必ず **`doppler` MCP**（read-write）を使用する。Bash で `doppler secrets set` / `doppler secrets delete` を直接叩くのは禁止。書き込み許可は**フェーズ制**（`.claude/rules/mcp-doppler.md` 冒頭の `PHASE:` を書き込み前に必ず確認）: **初期構築（full-access）= 全 config 可** / **本番（protected）= `prd` 書き込みは明示承認制**。フェーズ不明時は本番（protected）として扱う。**シークレットの値をチャット / ログ / コミットに出さない**（キー名のみで会話）。詳細は `.claude/rules/mcp-doppler.md`。
 
 **MANDATORY**: **Doppler に `GITHUB_` / `SUPABASE_` / `VERCEL_` prefix のキーを登録してはならない**。これらは各 PF が予約している名前空間であり、Doppler ネイティブ連携の sync 時に**予約値違反でエラー**になり、その config の sync 全体が失敗する（GitHub:「Must not start with the `GITHUB_` prefix」／ Supabase:「Env name cannot start with SUPABASE_」／ Vercel: `VERCEL_*` は system 環境変数）。**とくに Supabase の環境変数は Doppler で管理しない** — **Vercel（web / backend）へは Vercel Marketplace の Supabase 連携（Connect Account）が `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` / `NEXT_PUBLIC_SUPABASE_*` / `POSTGRES_*` を自動注入**し、**Edge Functions へは Supabase platform が default secrets として自動提供**する。つまり「Supabase の値が要る」は Doppler にキーを作る理由にならない（二重管理も禁止）。ローカルの `env/<svc>/.env.local` はファイル管理なので本制約の対象外。詳細は `.claude/rules/env-naming.md` を参照。
+
+**MANDATORY**: **Vercel への連携・デプロイ、およびモバイル（EAS）のリリースは、必ず専用 script 経由で行う**。`vercel` / `eas` を Bash で直接叩いて手順を再発明しない。Vercel は `vercel-deploy`（`scripts/infra/vercel_deploy.sh`）、モバイルは `mobile-release-ios` / `mobile-release-android`（`scripts/mobile/release-*.sh`）が正規経路で、**GitHub 連携・rootDirectory 設定・`--archive=tgz`（15000 files 上限の回避）・資格情報の復元と後始末・eas.json の一時注入と復元・EAS への `EXPO_PUBLIC_*` push** といった、抜けると無言で壊れる手順がすべて入っている。**モバイルビルドは expo.dev（クラウド）とローカル（`--local`）の両方に対応**し、既定はクラウド。**認証情報はすべて Doppler が唯一のソース**（Vercel は `VC_TOKEN`、モバイルは `EXPO_TOKEN` / `APPLE_*` / `PLAY_SERVICE_ACCOUNT_JSON`）で、モバイル script は起動時に `doppler run` で自身を再実行して注入するため呼び出す側の準備は不要。**値はチャット / ログ / コミットに出さない**（キー名のみで会話）。runtime secret は Doppler→Vercel のネイティブ連携、Supabase の値は Vercel Marketplace 連携が供給するので**手で env に入れない**。詳細は `.claude/skills/vercel-deploy/` および `.claude/skills/mobile-release/` を参照。
 
 **Supabase の Docker コンテナ自体は Supabase CLI が所有**（devenv の native process supervisor は backend / storybook のみ監視）。**起動連動**: `supabase:start` task が backend の `before` に登録されているため `devenv up` 起動時は Supabase → backend の順で立ち上がる。**停止は手動運用**: devenv 2.0 native process manager は task の `after` も `process.manager.after` も動作しない（前者は shutdown 時に cancel、後者は assertion でブロック、native の Rust shutdown パスに task runner 呼び出しが無いため）。auto-stop の中途半端な実装は持たず、停止は `supabase-stop` / `stop` script で明示的に行う運用に統一している。`stop` script は devenv プロセスと Supabase 両方を停止する。
 
@@ -261,6 +267,16 @@ devenv tasks run model:build       # 型のみ再生成（AI 実行可）
 gh workflow run migrate.yml --ref main -f environment=production   # ⚠️ ユーザー承認必須
 # ローカルから直接叩く場合は ENV= を必ず前置（-P だけだと ENV=local のまま = ローカル DB を見る）
 ENV=production devenv tasks run -P production db:migrate-deploy    # ⚠️ 緊急時のみ
+
+# Deploy / Release
+# 資格情報はすべて Doppler。devenv shell 進入時に env へロード済みなので追加準備は不要。
+vercel-deploy                      # frontend/apps/web を Vercel へ (GitHub 連携 + rootDirectory 設定 + デプロイ)
+vercel-deploy frontend/apps/lp     # 任意アプリ (--no-deploy / --preview / --dry-run)
+mobile-release-ios                 # iOS: expo.dev でビルド → TestFlight (--local でローカルビルド)
+mobile-release-android             # Android: expo.dev でビルド → Play 内部テスト (--local 可)
+mobile-metadata                    # store.config.js を App Store Connect へ同期
+sync-eas-env production            # Doppler の EXPO_PUBLIC_* を EAS へ同期
+# → 手順・落とし穴は .claude/skills/vercel-deploy/ と .claude/skills/mobile-release/
 
 # Task graph 確認 (依存・実行順序を可視化)
 devenv tasks list                          # 全 task の階層表示
