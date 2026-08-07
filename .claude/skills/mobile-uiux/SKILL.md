@@ -1,6 +1,6 @@
 ---
 name: mobile-uiux
-description: モバイルの UI/UX 品質基準（クオリティバー）。Web のモバイル幅（Next.js 16 + Tailwind v4 + shadcn/ui）と Expo/React Native（Expo SDK 57 + RN 0.86 + NativeWind v5 + gluestack-ui）の両方で、「動くけど微妙」を潰すための具体的な判断基準・実装パターン・レビュー観点を提供する。safe-area / ノッチ / ホームインジケータ、100vh・dvh・svh、キーボードで CTA が隠れる、sticky hover が残る、タップ領域が小さい、ボトムシート、サムゾーン、edge-to-edge、Android 戻る、押下フィードバック、ハプティクス、リストのカクつき、ローディング・空・エラー状態、フォントスケーリング、モーション設計などを扱う。「モバイルで見づらい / 崩れる / 使いにくい / チープ / 微妙」「スマホ対応」「レスポンシブ」「モバイルファースト」「ネイティブっぽくない」「UI をよくして」「UX 改善」「デザインを整えて」といった依頼、および画面・ページ・フォーム・モーダル・ナビゲーションを新規実装 / 修正 / レビューするときは、ユーザーが「モバイル」と明示していなくても必ず最初に起動すること。mobile UI, mobile UX, responsive, viewport, safe area, touch target, bottom sheet, keyboard, edge-to-edge, native feel。
+description: モバイルの UI/UX 品質基準（クオリティバー）。Web のモバイル幅（Next.js 16 + Tailwind v4 + shadcn/ui）と Expo/React Native（Expo SDK 57 + RN 0.86 + NativeWind v5 + gluestack-ui）の両方で、「動くけど微妙」を潰すための具体的な判断基準・実装パターン・レビュー観点を提供する。safe-area / ノッチ / ホームインジケータ、100vh・dvh・svh、キーボードで CTA が隠れる、sticky hover が残る、タップ領域が小さい、ボトムシート、サムゾーン、edge-to-edge、Android 戻る、押下フィードバック、ハプティクス、リストのカクつき、ローディング・空・エラー状態、フォントスケーリング、モーション設計などを扱う。Apple Human Interface Guidelines（HIG）と Google Material Design 3 / Android 公式ガイドラインの一次情報（タップ領域 44pt・48dp、要素間パディング 12pt / 24pt、iOS の Dynamic Type 型スケール、Material の型スケール・モーショントークン、コントラスト比、セマンティックカラー、Window Size Class、Liquid Glass、targetSdk 由来の挙動変更）を数値つきで収録しており、「Apple のガイドラインではどうなっている？」「Material の規約に合わせて」「視認性の基準は？」といった規約・根拠の照会にも答える。「モバイルで見づらい / 崩れる / 使いにくい / チープ / 微妙」「スマホ対応」「レスポンシブ」「モバイルファースト」「ネイティブっぽくない」「UI をよくして」「UX 改善」「デザインを整えて」といった依頼、および画面・ページ・フォーム・モーダル・ナビゲーションを新規実装 / 修正 / レビューするときは、ユーザーが「モバイル」と明示していなくても必ず最初に起動すること。mobile UI, mobile UX, responsive, viewport, safe area, touch target, bottom sheet, keyboard, edge-to-edge, native feel, Apple HIG, Human Interface Guidelines, Material Design 3, accessibility, contrast, Dynamic Type, Liquid Glass。
 ---
 
 # モバイル UI/UX 品質基準
@@ -40,9 +40,15 @@ description: モバイルの UI/UX 品質基準（クオリティバー）。Web
 | プラットフォーム共通の基準（タップ領域・サムゾーン・タイポ・モーション・状態設計） | [references/foundations.md](references/foundations.md) |
 | `apps/web` / `packages/ui` — Next.js 16 + Tailwind v4 + shadcn/ui のモバイル幅 | [references/web.md](references/web.md) |
 | `apps/mobile` / `packages/native-ui` — Expo SDK 57 + RN 0.86 + NativeWind v5 + gluestack | [references/native.md](references/native.md) |
+| **Apple / Google の公式規約の原典が要るとき**（数値の根拠、型スケール、モーショントークン、Liquid Glass、Android の targetSdk 由来の挙動） | [references/platform-guidelines.md](references/platform-guidelines.md) |
 | 既存画面の UI/UX レビュー・監査をする | [references/review-checklist.md](references/review-checklist.md) |
 
 **Web と Native の両方を触るタスクなら、foundations + 該当プラットフォームの両方を読む。**
+
+> **`platform-guidelines.md` を読むべき場面**: 「なぜ 44px なのか」を説明する必要があるとき、
+> デザイナー / レビュアーと数値で議論するとき、iOS の型スケールや Material のモーション
+> トークンに合わせたいとき、OS バージョン由来の挙動変更（edge-to-edge 強制・Predictive Back）
+> を確認したいとき。**日常の実装では foundations + 各プラットフォームだけで足りる。**
 
 ---
 
@@ -56,7 +62,7 @@ description: モバイルの UI/UX 品質基準（クオリティバー）。Web
 | Web | Next.js 16.3 / React 19.2 / Tailwind CSS **v4.3** / shadcn 4 / Radix UI / motion 13 / next-intl |
 | Native | Expo SDK **57** / React Native **0.86** / expo-router 57 / NativeWind **5.0.0-preview.4**（実体は `react-native-css` 3） / gluestack-ui / Reanimated **4.5** + react-native-worklets / react-native-gesture-handler 2.32 / react-native-safe-area-context 5.7 / expo-haptics / expo-image |
 | デザイントークン | `@workspace/tokens`（**single source of truth**。`web.css` / `native.css` を生成） |
-| **未導入**（使うなら要相談） | `react-native-keyboard-controller` / `@shopify/flash-list` / `vaul`（Drawer） / safe-area 用 Tailwind プラグイン |
+| **未導入**（使うなら要相談） | `react-native-keyboard-controller` / `@shopify/flash-list` / `vaul`（Drawer） / `expo-glass-effect`（Liquid Glass） / safe-area 用 Tailwind プラグイン |
 
 ### 既存の設定状況（実装時の注意）
 
@@ -65,6 +71,11 @@ description: モバイルの UI/UX 品質基準（クオリティバー）。Web
 - `apps/mobile/app.json` は **`edgeToEdgeEnabled: true`** かつ **`predictiveBackGestureEnabled: false`**。
   → 画面いっぱいに描画されるので、**inset を自分で入れないとステータスバー/ナビバーに被る**
   （[native.md](references/native.md) §1）。
+- **Expo SDK 57 の既定 `targetSdkVersion` は 36（Android 16）** で、`app.json` に上書きが無い。
+  → edge-to-edge は **opt-out 不能**。Predictive Back は本来「既定 ON」だが
+  `predictiveBackGestureEnabled: false` で**明示的に切っている**状態。
+  → 画面向き固定は **600dp 以上の端末で無視される**
+  （[platform-guidelines.md](references/platform-guidelines.md) §7）。
 
 ---
 
@@ -88,6 +99,8 @@ description: モバイルの UI/UX 品質基準（クオリティバー）。Web
 | 12 | 全体的に「ネイティブっぽくない」 | 遷移・戻る・ハプティクス・慣性が OS 慣習と違う | [native.md](references/native.md) §2, §5 |
 | 13 | ローディングが spinner だけ / 表示後にガタッと動く | skeleton 不使用、領域予約なし | [foundations.md](references/foundations.md) §6 |
 | 14 | 端末の文字サイズを上げると崩壊する | 固定高さ + フォントスケーリング未考慮 | [foundations.md](references/foundations.md) §3 |
+| 15 | タブレット縦 / 横向きで中途半端に崩れる | `md`(768px) が Window Size Class の境界(600/840dp)とズレている。targetSdk 36 では画面向き固定も無視される | [web.md](references/web.md) §8 / [platform-guidelines.md](references/platform-guidelines.md) §5, §7 |
+| 16 | 「Apple / Google の規約に沿っているか」を聞かれて答えられない | 数値の根拠を持っていない | [platform-guidelines.md](references/platform-guidelines.md) |
 
 ---
 
@@ -126,6 +139,7 @@ description: モバイルの UI/UX 品質基準（クオリティバー）。Web
 | 担当 | 委譲先 |
 |---|---|
 | フォーム要素の font-size / 共有コンポーネント強制 | **`.claude/rules/form-controls.md`（ルール。このスキルより優先）** |
+| **Apple HIG / Material 3 の原典の数値・条文** | **[references/platform-guidelines.md](references/platform-guidelines.md)（本スキル内。数値の根拠はすべてここ）** |
 | shadcn/ui コンポーネントの追加・構成 | `shadcn`（公式） / `shadcn-ui`（本リポ規約） |
 | gluestack-ui の書き方・`tva`・import パス・SafeAreaView の罠 | `gluestack`（本リポ規約） / `gluestack-ui-v5`（公式） |
 | Expo Router の UI 機構（native tabs / form sheet / blur / SF Symbols） | `building-native-ui`（Expo 公式） |

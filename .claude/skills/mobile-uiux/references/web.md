@@ -111,10 +111,17 @@ Tailwind CSS **v4.3 に safe-area ユーティリティは組み込まれてい�
 
 ```tsx
 // 下部固定 CTA の基本形
+// バー自体は画面幅いっぱい、ボタンは px-4 で内側に寄せ、角丸を持たせる
 <div className="fixed inset-x-0 bottom-0 border-t bg-background px-4 pb-safe pt-3">
-  <Button className="h-12 w-full">{t('submit')}</Button>
+  <Button className="h-12 w-full rounded-xl">{t('submit')}</Button>
 </div>
 ```
+
+> **画面の端に密着した直角のボタンにしない。** Apple HIG は "Avoid full-width buttons […]
+> Buttons feel at home in iOS when they respect system-defined margins and are inset from the
+> edges of the screen" とし、やむを得ず全幅にする場合も**端末の角丸と調和させ、safe-area に
+> 揃えろ**としている。上の例で `px-4` と `rounded-xl` を外さないこと
+> （→ [platform-guidelines.md](platform-guidelines.md) §5）。
 
 **固定要素を置いたら、スクロールコンテンツ側にも同じ高さの下パディングを足す**
 （最後の項目が隠れる）。
@@ -384,6 +391,11 @@ export function useKeyboardInset() {
   `md:` を基準に書いて `max-md:` で戻すのは逆流であり、破綻の温床
 - 本リポの分岐点は実質 `md`（768px）。**`sm:`(640px) を「モバイル」と誤解しない**
 - **375px で必ず確認**（[foundations.md](foundations.md) §9）
+
+> **タブレット対応が要件に入ったら 768px 境界を見直すこと。** Google の Window Size Class は
+> Compact **< 600dp** / Medium **600–840dp** / Expanded **840dp〜** で切っており、
+> Tailwind の `md`(768px) はこの Medium 帯の途中に落ちる。「タブレット縦で中途半端に崩れる」は
+> ほぼこのズレが原因（→ [platform-guidelines.md](platform-guidelines.md) §5）。
 
 ---
 

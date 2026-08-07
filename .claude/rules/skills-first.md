@@ -50,6 +50,7 @@
 | Python モノレポ / uv workspace / backend-py の apps・packages / src-layout / MCP サーバ追加 | `python-monorepo` |
 | shadcn/ui / TailwindCSS | `shadcn`, `shadcn-ui`, `web-design-guidelines`, `frontend-design` |
 | **モバイル UI/UX 全般** / スマホ対応 / レスポンシブ / モバイルファースト / 「モバイルで見づらい・崩れる・使いにくい・チープ・微妙」 / 「ネイティブっぽくない」 / safe-area / ノッチ / ホームインジケータ / 100vh / dvh / キーボードで隠れる / タップ領域 / サムゾーン / ボトムシート / edge-to-edge / 押下フィードバック / ハプティクス / リストのカクつき / 画面・フォーム・モーダル・ナビゲーションの新規実装・修正・レビュー | **`mobile-uiux`（必須。Web モバイル幅と Expo/RN の両方をカバー）** + プラットフォーム別に `shadcn-ui` / `gluestack` |
+| **Apple HIG / Human Interface Guidelines / Material Design 3 / Android 公式ガイドライン** / 「規約に沿っているか」 / 視認性・可読性の基準 / コントラスト比 / Dynamic Type / 型スケール / モーショントークン / Window Size Class / Liquid Glass / targetSdk 由来の挙動変更 | **`mobile-uiux`（`references/platform-guidelines.md` に一次情報を収録。推測で答えない）** |
 | gluestack / NativeWind / Expo / RN | `gluestack`（本リポジトリ規約）, `gluestack-ui-v5`（公式）, `tailwind-setup`, `building-ui`, `building-native-ui`, `vercel-react-native-skills`, `use-dom`, `expo-deployment`, `dev-client`, `expo-dev-client`, `upgrading-expo`, `expo-cicd-workflows`, `cicd-workflows`, `expo-tailwind-setup`, `expo-api-routes`, `api-routes` |
 | TanStack Query | `tanstack-query` |
 | 状態管理 / 取得 (web) | `data-fetching` |

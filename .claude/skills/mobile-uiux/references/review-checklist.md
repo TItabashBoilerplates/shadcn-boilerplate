@@ -45,7 +45,7 @@
 | # | 観点 | NG の例 | 参照 |
 |---|---|---|---|
 | A1 | 操作可能要素の実効サイズが 44×44 以上 | `size-6` のアイコンボタンが素で置かれている | [foundations.md](foundations.md) §1 |
-| A2 | 隣接するタップ対象が近すぎない | リスト行に 3 つのアイコンが密着 | foundations §1 |
+| A2 | 隣接するタップ対象が近すぎない（枠あり 12px / 枠なし 24px の余白） | リスト行に 3 つのアイコンが密着 | foundations §1 |
 | A3 | 主要 CTA が下部（サムゾーン内）にある | 「保存」がヘッダー右上のみ | foundations §2 |
 | A4 | 本文 16px 以上 / 補助 12px 以上 | 本文が `text-sm` | foundations §3 |
 | A5 | 固定高さでテキストが切れない | `h-10` に長いラベル | foundations §3 |
@@ -56,6 +56,9 @@
 | A10 | Reduce Motion を尊重 | 無条件のアニメーション | foundations §4 |
 | A11 | アニメーションが 500ms 以内 | 演出目的の長い遷移 | foundations §4 |
 | A12 | 色だけで情報を伝えていない | 赤文字だけのエラー | foundations §8 |
+| A12b | 色をハードコードせずトークン経由 | `text-[#ff0000]` / 生の hex | foundations §8 / [platform-guidelines.md](platform-guidelines.md) §3 |
+| A12c | **ダーク**でもコントラストを満たす | ライトのみ確認 | platform-guidelines §3 |
+| A12d | 自動で消える表示だけで重要情報を伝えていない | トーストのみでエラー通知 | platform-guidelines §8 |
 | A13 | ユーザー向けテキストが i18n 化されている | 文字列直書き | `.claude/rules/i18n.md` |
 | A14 | Storybook にモバイル幅のストーリーがある | ストーリー無し | `.claude/rules/ui-testing.md` |
 | A15 | クラス文字列をコピペしていない | 各画面に同じ `const xxxClass` | `.claude/rules/clean-code.md` |
@@ -83,6 +86,7 @@
 | B15 | モーダルがモバイルに適した形（入力系はボトムシート） | 中央 Dialog に長いフォーム | web.md §7 |
 | B16 | モーダル内スクロールが背後に連鎖しない | `overscroll-behavior` 無し | web.md §6 |
 | B17 | `next/image` に `sizes` がある / 比率が確保されている | `sizes` 未指定 | web.md §9 |
+| B18 | 下部 CTA が画面端に密着した直角ボタンでない | `w-full` 直角でバー全幅 | web.md §2 / [platform-guidelines.md](platform-guidelines.md) §5 |
 
 ---
 
@@ -108,6 +112,8 @@
 | C16 | 画像が `expo-image`（`transition` / `placeholder` / 比率指定） | `react-native` の `Image` | native.md §8 |
 | C17 | スプラッシュから初期画面への白フラッシュが無い | `hideAsync()` のタイミング不備 | native.md §10 |
 | C18 | 影が Platform 分岐（iOS `shadow*` / Android `elevation`） | iOS 用の影のみ | native.md §11 |
+| C19 | 画面向き固定に依存していない（600dp 以上では無視される） | 縦固定前提のレイアウト | native.md §2 / [platform-guidelines.md](platform-guidelines.md) §7 |
+| C20 | `GlassView` をコンテンツ層や多数の要素に使っていない | 装飾目的で多用 | platform-guidelines §6 |
 
 ---
 

@@ -64,6 +64,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     ├── mobile-uiux/      # ★ モバイル UI/UX 品質基準 (Web モバイル幅 + Expo/RN 共通)
     │                     #   safe-area / dvh / キーボード / タップ領域 / サムゾーン /
     │                     #   edge-to-edge / 押下フィードバック / 状態設計 / レビュー観点
+    │                     #   └ platform-guidelines.md: Apple HIG・Material 3 の一次情報
+    │                     #     (44pt/48dp・型スケール・コントラスト・モーショントークン・
+    │                     #      Window Size Class・Liquid Glass・targetSdk 由来の挙動)
     ├── storybook/        # Storybook 10 コンポーネントカタログ
     ├── pgtap/            # RLS・DB 関数テスト（pgTAP + supabase test db）
     ├── python-testing/   # Python単体テスト（外部SDK/TypeError検知）
@@ -137,7 +140,7 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 
 **MANDATORY**: **テキスト入力を受け付けるフォーム要素（`<input>` / `<textarea>` / ネイティブ `<select>` / `contenteditable`）は、モバイル幅で必ず font-size 16px 以上**にする（`text-base md:text-sm` が標準形）。**iOS Safari は 16px 未満のフォーム要素にフォーカスすると自動でズームイン**するため、`text-sm`(14px) / `text-xs`(12px) は禁止。`maximum-scale=1` / `user-scalable=no` による回避も **WCAG 1.4.4 違反**につき禁止。あわせて、**フォーム要素のスタイルは `@workspace/ui` の共有コンポーネント 1 か所にのみ定義**し、`textareaClass` のようなローカル定数を各画面にコピペすることを禁止する（実際に textarea が 6 ファイルに重複し全部ズーム対象になった事故がある）。checkbox / radio / file や Radix の `SelectTrigger`（実体は `<button>`）はズームしないため対象外。詳細は `.claude/rules/form-controls.md` を参照。
 
-**MANDATORY**: **画面・ページ・フォーム・モーダル・ナビゲーションを新規実装 / 修正 / レビューするときは、必ず `mobile-uiux` Skill を最初に起動する**（ユーザーが「モバイル」と明示していなくても）。Web も Expo も、実機で「動くけど微妙」になる原因は **(1) デスクトップ設計の縮小 (2) 物理的な画面（ノッチ / ホームインジケータ / キーボード）の無視 (3) 状態とフィードバックの欠落** のほぼ 3 つに集約される。**タップ領域は実効 44×44px 以上**、**下部固定要素には safe-area inset 必須**、**`100vh` ではなく `svh` / `dvh`**、**`hover:` は `@media (hover: hover)` で囲う**、**loading / empty / error の 3 状態は必ず実装**。配色やフォントの調整はこの 3 原因を潰した後に行う（それ以前だと効果がない）。**このスキルは UI/UX のみを扱い、モノレポ構成・FSD のレイヤー配置は一切変更しない**。詳細は `.claude/skills/mobile-uiux/` を参照。
+**MANDATORY**: **画面・ページ・フォーム・モーダル・ナビゲーションを新規実装 / 修正 / レビューするときは、必ず `mobile-uiux` Skill を最初に起動する**（ユーザーが「モバイル」と明示していなくても）。Web も Expo も、実機で「動くけど微妙」になる原因は **(1) デスクトップ設計の縮小 (2) 物理的な画面（ノッチ / ホームインジケータ / キーボード）の無視 (3) 状態とフィードバックの欠落** のほぼ 3 つに集約される。**タップ領域は実効 44×44px 以上**、**下部固定要素には safe-area inset 必須**、**`100vh` ではなく `svh` / `dvh`**、**`hover:` は `@media (hover: hover)` で囲う**、**loading / empty / error の 3 状態は必ず実装**。配色やフォントの調整はこの 3 原因を潰した後に行う（それ以前だと効果がない）。**数値の根拠（Apple Human Interface Guidelines / Google Material Design 3・Android 公式）は `.claude/skills/mobile-uiux/references/platform-guidelines.md` に一次情報として収録済み**なので、「Apple / Google の規約ではどうなっているか」を推測で答えない。**このスキルは UI/UX のみを扱い、モノレポ構成・FSD のレイヤー配置は一切変更しない**。詳細は `.claude/skills/mobile-uiux/` を参照。
 
 **MANDATORY**: コンポーネントの再描画は必要最小限に抑える。FSD のスライス単位でステートを局所化し、状態変更の影響範囲をそのスライス内に閉じ込める。TanStack Query の invalidation はピンポイント、Zustand は必ずセレクター使用、Widget/View にビジネスステートを持たせない。詳細は `.claude/rules/render-optimization.md` を参照。
 

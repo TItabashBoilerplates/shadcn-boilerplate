@@ -8,15 +8,16 @@ Web / Native どちらでも同じく効く基準。**数値は根拠つきで�
 
 ### 基準値
 
-| 規格 | 最小サイズ | 位置づけ |
+| 規格 | サイズ | 位置づけ |
 |---|---|---|
 | WCAG 2.2 **2.5.8 Target Size (Minimum)** — Level **AA** | **24×24 CSS px** | 法的な最低ライン（下限であって推奨値ではない） |
 | WCAG 2.2 **2.5.5 Target Size (Enhanced)** — Level **AAA** | **44×44 CSS px** | 推奨 |
-| Apple **Human Interface Guidelines** | **44×44 pt** | iOS の実質標準 |
-| Google **Material Design** | **48×48 dp** | Android の実質標準 |
+| Apple **HIG**（iOS / iPadOS） | **推奨 44×44 pt** / 最小 28×28 pt | 44 は *推奨* であって最小ではない |
+| Google **Material Design 3** | **48×48 dp** | 「見た目が小さくてもターゲットは 48dp」 |
 
-> **本リポジトリの基準: 実効 44×44px 以上（Android 向けの主要操作は 48dp を推奨）。**
+> **本リポジトリの基準: 実効 44×44px 以上（Android 向けの主要操作は 48px を推奨）。**
 > WCAG AA の 24px は「これを下回ると明確な違反」という下限であり、これを目標にしない。
+> **各社の原典・プラットフォーム別の全表は [platform-guidelines.md](platform-guidelines.md) §1。**
 
 ### 「実効」の意味 — 見た目は小さくてよい
 
@@ -48,12 +49,23 @@ Web / Native どちらでも同じく効く基準。**数値は根拠つきで�
 > レイアウトを変えられるなら **padding で広げるほうが確実**。`hitSlop` は
 > 「padding だと崩れる場合の次善策」と位置づける。
 
-### 要素間の間隔
+### 要素間の間隔（サイズより見落とされる）
 
-隣接するタップ対象の**中心間距離が 44px 未満**だと、サイズを満たしていても誤タップが起きる。
+サイズを満たしていても、**間隔が足りなければ誤タップは起きる。** Apple は具体的な数値を出している。
 
-- リスト行内のアイコンを並べるときは **最低 8px の間隔**（44px 判定同士なら実質接触しない）
+> "In general, it works well to add about **12 points of padding** around elements that include a
+> bezel. For elements without a bezel, about **24 points of padding** works well around the
+> element's visible edges."
+
+| 要素 | 周囲に確保する余白 |
+|---|---|
+| **枠 / 背景のあるボタン**（`Button` など） | **12px** |
+| **枠の無いアイコンボタン・テキストリンク** | **24px** |
+
+- 「アイコンだけのボタンが押しにくい」の原因は、サイズよりこの間隔であることが多い
 - 破壊的操作（削除・退会）は、隣接する安全な操作から**物理的に離す**か、確認を挟む
+  （Apple は復旧困難な操作に **2 段階の確認**を求めている →
+  [platform-guidelines.md](platform-guidelines.md) §8）
 
 ---
 
@@ -95,10 +107,15 @@ Web / Native どちらでも同じく効く基準。**数値は根拠つきで�
 |---|---|
 | 本文 | **16px 以上**（モバイル）。14px は補助テキストまで |
 | **フォーム要素**（input / textarea / native select / contenteditable） | **16px 必須**。下回ると **iOS Safari がフォーカス時に自動ズーム**する → **`.claude/rules/form-controls.md`（本リポの強制ルール）** |
-| 補助・キャプション | 12〜14px。これ未満は使わない |
+| 補助・キャプション | **12px を下限**とする（Android は「body を 12sp より小さくするな」、Apple の iOS 最小は 11pt） |
+| ウェイト | **Light / Thin を本文に使わない**（Apple: "avoid Ultralight, Thin, and Light font weights"） |
 | 行長 | 45〜75 文字目安。モバイル幅では自然に収まるが、`max-w-*` の付けすぎで狭くなりすぎないこと |
 | 行間 | 本文 1.5 前後（WCAG 1.4.12 は 1.5 倍まで崩れないことを要求） |
 | タップ可能なテキストリンク | 単独行なら §1 の 44px を満たすよう `py-*` を付ける |
+
+> **iOS の本文既定は 17pt、Material の Body Large は 16sp。** Web の 16px は両者の下側に当たる。
+> 「モバイルで字が小さい」と言われたら、まず本文を 17px にできないか検討する。
+> **両 OS の完全な型スケール表は [platform-guidelines.md](platform-guidelines.md) §2。**
 
 ### 端末のフォントサイズ設定（見落とし多発）
 
@@ -122,16 +139,20 @@ Web / Native どちらでも同じく効く基準。**数値は根拠つきで�
 
 ## 4. モーション
 
-| 用途 | 目安時間 |
-|---|---|
-| 押下・ホバー等の微小フィードバック | 100〜150ms |
-| 要素の出現・消失、展開 | 200〜300ms |
-| 画面遷移 | 250〜400ms（OS 標準に合わせるのが最良） |
+数値は Material 3 の duration トークン（`MotionTokens` の実装値）に揃える。
+
+| 用途 | 目安時間 | 対応する M3 トークン |
+|---|---|---|
+| 押下・ホバー等の微小フィードバック | 100〜150ms | Short 2 / Short 3 |
+| 要素の出現・消失、展開 | 200〜300ms | Short 4 / Medium 2 |
+| 画面遷移 | 250〜400ms（OS 標準に合わせるのが最良） | Medium 1〜4 |
 
 - **500ms を超えるアニメーションは遅く感じる**。「リッチにする」ために伸ばさない
 - **アニメーションするのは `transform` と `opacity` を優先**（レイアウトを動かすとカクつく）
 - **入場より退場を速く**すると、キビキビ感が出る
-- 位置の移動には ease-out 系、消える要素には ease-in 系
+- **入場は decelerate `cubic-bezier(0, 0, 0, 1)`、退場は accelerate `cubic-bezier(0.3, 0, 1, 1)`、
+  それ以外は standard `cubic-bezier(0.2, 0, 0, 1)`**（M3 の easing トークン）
+  → 全トークン表は [platform-guidelines.md](platform-guidelines.md) §4
 
 ### Reduce Motion の尊重（必須）
 
@@ -231,10 +252,16 @@ className="transition-[transform,opacity] duration-100 active:scale-[0.98] activ
 ## 8. コントラストと屋外可読性
 
 - WCAG 1.4.3 (AA): 通常テキスト **4.5:1**、大きいテキスト（24px / 太字 18.66px 以上）**3:1**
-- WCAG 1.4.11: UI コンポーネント・グラフィックの境界 **3:1**
+- WCAG 1.4.11: UI コンポーネント・グラフィックの境界 **3:1**（Android も「surface と非テキスト
+  要素は 3:1」と同じことを言っている）
+- **ダークモードでも必ず測る**（Apple: "check the minimum contrast in both light and dark
+  appearances"）。ライトだけ確認して終わりにしない
 - **モバイルは屋外・低輝度・斜めから見られる**ので、AA ぎりぎりは実質不足。主要テキストは
   余裕を持たせる
-- 色は `@workspace/tokens` が正本。**画面側でハードコードした色を使わない**（`monorepo` スキル）
+- 色は `@workspace/tokens` が正本。**画面側でハードコードした色を使わない**（`monorepo` スキル）。
+  これは Apple / Material が共通して求める「セマンティックカラー」の考え方そのもので、
+  `--primary` / `--primary-foreground` のペアは Material の `primary` / `on-primary` に対応する
+  → [platform-guidelines.md](platform-guidelines.md) §3
 - **色だけで情報を伝えない**（WCAG 1.4.1）。エラーは赤 + アイコン + テキスト
 
 ---

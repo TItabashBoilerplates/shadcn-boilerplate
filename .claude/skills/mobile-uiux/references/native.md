@@ -21,9 +21,14 @@
 ```
 
 **edge-to-edge が有効 = アプリがステータスバー / ナビゲーションバーの下まで描画される。**
-これは選択ではなく前提である: Android 15（targetSdk 35）以降、edge-to-edge は**強制**であり、
-Play Store も targetSdk 35 を必須化している。**「無効化して回避する」という選択肢は無い。**
+これは選択ではなく前提である。
 
+- Android 15（targetSdk 35）以降、edge-to-edge は**強制**
+- **Expo SDK 57 の既定 `targetSdkVersion` は 36**（＝本リポジトリは Android 16 ターゲット）。
+  targetSdk 36 では逃げ道の属性 `windowOptOutEdgeToEdgeEnforcement` 自体が
+  **deprecated かつ無効化**され、公式に「**can't opt-out of going edge-to-edge**」と明記された
+
+**「無効化して回避する」という選択肢は無い**（→ [platform-guidelines.md](platform-guidelines.md) §7）。
 つまり **inset を自分で入れていない画面は、実機で必ずシステム UI に被る。**
 
 ### 基本形
@@ -88,11 +93,27 @@ import { StatusBar } from 'expo-status-bar'
 | **タブの再タップで先頭へスクロール / スタックの先頭へ戻る** | ネイティブタブなら自動。JS タブでは自前実装が必要 |
 | 遷移アニメーションは OS 標準（iOS: 右からスライド / Android: フェード + せり上がり） | `<Stack>` の既定に任せる。カスタム遷移は目的があるときだけ |
 
-### Predictive Back（Android）
+### Predictive Back（Android）— 本リポは既定挙動から意図的に外れている
 
-現在 `predictiveBackGestureEnabled: false`。Android 14+ の「戻る途中で遷移先がプレビューされる」
-挙動が無効になっている。**有効化はネイティブ側の対応が要るので、勝手に true にしない**
-（変更する場合はユーザーに諮ること）。
+現在 `app.json` は `predictiveBackGestureEnabled: false`（Expo の既定値）。これは
+AndroidManifest の **`android:enableOnBackInvokedCallback="false"`** に対応する。
+
+**一方で targetSdk 36（＝本リポの現状）では、Predictive Back のシステムアニメーションは
+本来「既定で有効」**であり、`onBackPressed` は呼ばれず `KEYCODE_BACK` も配送されなくなる。
+公式は `enableOnBackInvokedCallback=false` を「**temporarily opt out**（一時的な回避）」と
+位置づけている。
+
+つまり本リポジトリは **OS の既定挙動を明示的に切っている状態**。
+
+> **勝手に `true` にしない。** 有効化すると戻る処理の実装（`onBackPressed` 依存のコード）を
+> 見直す必要がある。**「一時的な opt-out という位置づけである」ことを伝えたうえで、
+> 移行するかはユーザーに諮ること。** → [platform-guidelines.md](platform-guidelines.md) §7
+
+### 大画面では画面向き固定が効かない（targetSdk 36）
+
+`screenOrientation` / `minAspectRatio` / `setRequestedOrientation()` などは、
+**smallest width 600dp 以上の端末では無視される**。「縦固定だから横向きは考慮不要」は
+タブレット・折りたたみで成立しない。
 
 ### Native Tabs（検討する価値あり）
 
@@ -112,6 +133,19 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs'
 
 **「ネイティブっぽくしたい」なら Native Tabs が最短。** ただし alpha なので、
 移行するかはユーザーに諮ること。詳細は `building-native-ui` スキルの `references/tabs.md`。
+
+### Liquid Glass（iOS 26+）— 手を出す前に Native Tabs
+
+`expo-glass-effect`（`GlassView` / `GlassContainer`）で iOS 26 以降の Liquid Glass を使えるが、
+**本リポジトリには未導入**。加えて Apple の HIG は **「コンテンツ層に使うな」「控えめに使え」**と
+明示している。
+
+- **効果対コストが最も良いのは Native Tabs**（システムコンポーネントは新デザインを自動で拾う）
+- 自前の `GlassView` を並べるのは HIG の "use sparingly" に反する
+- iOS / tvOS 限定。Android・Web では通常の `View` にフォールバックする
+- **Web 側で `backdrop-blur` による「Liquid Glass 風」を自作しない**（コントラスト不足になる）
+
+導入判断・禁止事項の原文は [platform-guidelines.md](platform-guidelines.md) §6。
 
 ---
 
