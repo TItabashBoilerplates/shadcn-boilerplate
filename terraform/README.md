@@ -4,7 +4,7 @@ boilerplate から量産する各アプリの外部 PaaS（Supabase / Vercel / G
 **宣言的に**プロビジョニングする。カバレッジ調査の根拠は
 [`docs/_research/2026-08-05-terraform-iac-coverage.md`](../docs/_research/2026-08-05-terraform-iac-coverage.md)。
 
-新規アプリの立ち上げは **tfvars 1 枚 + `tf-apply`** で完結する。
+新規アプリの立ち上げは **tfvars 1 枚 + `infra-deploy <app>` の 1 コマンド**で完結する。
 
 ---
 
@@ -38,6 +38,7 @@ OpenTofu に切り替える場合は、`devenv.nix` の `terraformCli` を `pkgs
 
 | コマンド | 内容 |
 |---|---|
+| **`infra-deploy <app> [env...]`** | **展開を一発実行**（terraform apply → Supabase の config / functions / buckets 反映） |
 | `tf-init <app>` | provider 同期 + workspace 選択 |
 | `tf-plan <app>` | 差分表示 |
 | `tf-apply <app>` | 適用（`tf-apply <app> -auto-approve` も可） |
@@ -159,6 +160,32 @@ Branching に GitHub 連携は不要（2026-05-04 に「Git なしの Branching�
 
 つまり **config.toml は SSOT のまま**で、GitHub 連携という「配送経路」だけを CLI に置き換える。
 
+### そもそも連携では production の Auth 設定が届かない
+
+公式は production への適用対象をこう定義している（[GitHub integration](https://supabase.com/docs/guides/deployment/branching/github-integration)）:
+
+> "New migrations are applied, Edge Functions declared in `config.toml` are deployed,
+>  Storage buckets declared in `config.toml` are deployed."
+> "**All other configurations, including API, Auth, and seed files, are ignored by default.**"
+
+| 対象 | 連携が適用するもの |
+|---|---|
+| ephemeral / persistent branch | config.toml が丸ごと同期（Auth / API 含む。`[remotes.*]` 必須） |
+| **production** | **migrations / Edge Functions / Storage buckets のみ** |
+
+→ 連携を採用しても **production の Auth 設定・メールテンプレート・SMTP は別経路が必要**になる。
+連携の接続自体も API / CLI が無く project ごとに dashboard 作業が要るため、
+「コマンド一発」を優先するなら連携を使わない一択になる。
+
+### 「PaaS 側に取りに来させる」配線は Vercel については自動化済み
+
+| PaaS | pull 型の配線 | Terraform で作れるか |
+|---|---|---|
+| **Vercel** | `vercel_project.git_repository` が repo を接続 → 以降は git push で Vercel が取りに来る | **✓ 作れる**（`infra-deploy` に含まれる） |
+| **Supabase** | GitHub Integration | **✗ 不可**（Management API に endpoint 無し / CLI にコマンド無し） |
+
+この非対称性が、Supabase だけ push 型にしている理由。
+
 > ℹ️ これにより `[remotes.*]` の**無言スキップ**（`.claude/rules/supabase-config.md` §1.5）も避けやすくなる。
 > あれは GitHub 連携の config 同期ステップで起きる挙動で、`--project-ref` を明示する push では
 > 対象が曖昧にならない。
@@ -190,12 +217,16 @@ $EDITOR terraform/apps/myapp.tfvars
 # 2) 差分を確認
 tf-plan myapp
 
-# 3) 適用
-tf-apply myapp
+# 3) 展開（terraform apply → Supabase 反映まで一発）
+infra-deploy myapp
 
 # 4) 埋め残しの確認（backend_urls 未指定など）
 tf-output myapp
 ```
+
+`infra-deploy` は Terraform の `supabase_env_refs` output から環境ごとの ref を解決し、
+`ENV` と `SUPABASE_PROJECT_REF` を渡して `scripts/supabase/deploy.sh` を各環境で実行する。
+環境を絞るなら `infra-deploy myapp production` のように指定する。
 
 `manual_followups` output に、Terraform では埋められなかった項目が列挙される。
 

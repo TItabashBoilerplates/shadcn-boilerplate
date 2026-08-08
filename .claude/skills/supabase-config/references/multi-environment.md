@@ -91,7 +91,7 @@ root（[auth] / [storage] / [functions.*] ...）      ← ベース。全環境�
 
 | git branch | 環境 | Supabase 実体 | config.toml での扱い |
 |---|---|---|---|
-| `main` | production | **project 本体**（default branch） | **root の設定がそのまま適用**（`project_id` は最上部のもの） |
+| `main` | production | **project 本体**（default branch） | **root の設定が適用**（`project_id` は最上部）。⚠️ ただし **GitHub 連携では適用されない**（下記） |
 | `staging` | staging | persistent branch `staging` | **`[remotes.staging]` が必須** |
 | `develop` | dev | persistent branch `develop` | **`[remotes.develop]` が必須** |
 
@@ -126,6 +126,22 @@ site_url = "https://dev.example.com"
 
 > `[remotes.staging]` の中に `[remotes.staging.auth.email.template.*]` を**書く必要は無い**。
 > root のテンプレート定義がベースとして適用される。ブロックの存在が本質。
+
+### ⚠️ production は GitHub 連携の対象外（`[remotes.*]` とは別の落とし穴）
+
+`[remotes.*]` を正しく書いても、**production の Auth / API 設定は GitHub 連携では反映されない**。
+公式は production への適用対象を「New migrations are applied, Edge Functions declared in
+`config.toml` are deployed, Storage buckets declared in `config.toml` are deployed」と定義し、
+「**All other configurations, including API, Auth, and seed files, are ignored by default.**」
+と明記している（[GitHub integration](https://supabase.com/docs/guides/deployment/branching/github-integration)）。
+
+| 対象 | GitHub 連携が適用するもの |
+|---|---|
+| ephemeral / persistent branch | config.toml が丸ごと同期（Auth / API 含む。`[remotes.*]` 必須） |
+| **production** | **migrations / Edge Functions / Storage buckets のみ**。Auth / API / seed は無視 |
+
+→ 本リポジトリは **GitHub 連携を使わず `supabase config push --project-ref <ref>` で反映**する
+（`infra-deploy <app>`）。`.claude/rules/supabase-config.md` §1 を参照。
 
 ---
 

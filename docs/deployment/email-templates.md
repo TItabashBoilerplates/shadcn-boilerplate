@@ -6,9 +6,9 @@
 
 - **HTML 本文**: `supabase/templates/email/*.html`（Git 管理）
 - **配線（subject + content_path）**: `supabase/config.toml` の `[auth.email.template.*]`
-- **本番反映**: Supabase の **GitHub 連携（config 同期）** に委譲
+- **本番反映**: **GitHub Actions からの `supabase config push --project-ref <ref>`**（`infra-deploy`）
 
-> Dashboard へ手動でコピペする運用はしない。設定は必ず `config.toml` → PR → GitHub 連携で反映する。
+> Dashboard へ手動でコピペする運用はしない。設定は必ず `config.toml` → PR → `config push` で反映する。
 > ルールの正本は [`.claude/rules/supabase-config.md`](../../.claude/rules/supabase-config.md)。
 
 ## config.toml への配線
@@ -55,10 +55,19 @@ Inbucket（http://localhost:54324）で送信メールを確認できる。
 
 ## 本番反映（hosted）
 
-本番への反映は **Supabase の GitHub 連携（config 同期）** に委譲する。`config.toml` を含む変更を main 連携ブランチにマージすると設定が同期される。
+本番への反映は **`supabase config push --project-ref <production の ref>`** で行う（`infra-deploy <app>` に含まれる）。
+
+> ⚠️ **GitHub 連携では届かない。** 公式は production への適用対象を
+> 「New migrations are applied, Edge Functions declared in `config.toml` are deployed,
+> Storage buckets declared in `config.toml` are deployed」とし、
+> 「**All other configurations, including API, Auth, and seed files, are ignored by default.**」
+> と明記している（[GitHub integration](https://supabase.com/docs/guides/deployment/branching/github-integration)）。
+> メールテンプレートは Auth 設定なので **production では連携の対象外**。
+> 「本番だけテンプレートが古いまま」の症状はこれで説明できる（`[remotes.*]` を正しく書いても直らない）。
+> persistent branch（staging / develop）には連携でも適用される。
 
 > ⚠️ **公式仕様の注意**: hosted プロジェクトでは、メールテンプレートの**本文**が `supabase config push` 単体では反映されないケースがあると公式ドキュメントに記載がある（[customizing-email-templates](https://supabase.com/docs/guides/local-development/customizing-email-templates)）。
-> GitHub 連携で本文が同期されない場合のフォールバックは以下のいずれか。**必要になったらユーザーに判断をあおぐこと**（勝手に実装しない）。
+> `config push` で本文が同期されない場合のフォールバックは以下のいずれか。**必要になったらユーザーに判断をあおぐこと**（勝手に実装しない）。
 > - Management API: `PATCH https://api.supabase.com/v1/projects/{ref}/config/auth`（`mailer_subjects_*` / `mailer_templates_*_content`）
 > - Dashboard: [Email Templates](https://supabase.com/dashboard/project/_/auth/templates) に貼り付け
 
@@ -109,7 +118,7 @@ supabase/
 
 - **locale未設定時**: 英語がデフォルト表示
 - **既存ユーザー**: `user_metadata.locale` がない場合は英語表示
-- **設定変更後**: ローカルは再起動（`stop && supabase-start`）、本番は GitHub 連携での同期を確認
+- **設定変更後**: ローカルは再起動（`stop && supabase-start`）、本番は `infra-deploy <app> production` で反映を確認
 
 ## トラブルシューティング
 

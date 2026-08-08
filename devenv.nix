@@ -1108,6 +1108,21 @@ in
     # を行う。トークンは `doppler run` が bootstrap config から注入する（値は露出しない）。
     #
     # 使い方: tf-plan <app>  /  tf-apply <app>  （<app> = terraform/apps/<app>.tfvars）
+    # ワンショットのインフラ展開。Terraform apply → Supabase 反映まで 1 コマンド。
+    #   infra-deploy <app> [env...]
+    #
+    # 「PaaS 側に取りに来させる」配線のうち、**Vercel はこれに含まれている**
+    # （Terraform の vercel_project.git_repository が repo を接続するので、以降は
+    #  git push で Vercel が自分で取りに来る）。Supabase の GitHub 連携だけは
+    # Management API にも CLI にも接続手段が無いため含められず、こちらから push する。
+    "infra-deploy" = {
+      exec = ''
+        cd "$DEVENV_ROOT"
+        exec doppler run -- bash scripts/infra/deploy.sh "$@"
+      '';
+      description = "インフラ展開を一発実行（terraform apply + Supabase config/functions/buckets 反映）";
+    };
+
     "tf-init" = {
       exec = ''
         cd "$DEVENV_ROOT"

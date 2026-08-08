@@ -273,6 +273,25 @@ resource "vercel_project_environment_variable" "openai" {
 （v2.90.0 で確認）。dashboard の GitHub OAuth 認可はブラウザ必須。
 （dashboard が使う内部 API `/platform/*` は非公開・無保証なので依存すべきでない。）
 
+> OpenAPI 全文を走査したところ、GitHub 関連のパス・スキーマは **ゼロ**。唯一の言及は
+> `/v1/organizations/{slug}/entitlements` の feature key `integrations.github_connections` で、
+> 「機能が存在し org が使えるか」は分かるが **CRUD が一切生えていない**。
+
+**さらに、連携を採用しても production の Auth 設定は届かない**（[GitHub integration](https://supabase.com/docs/guides/deployment/branching/github-integration)）:
+
+> "New migrations are applied, Edge Functions declared in `config.toml` are deployed,
+>  Storage buckets declared in `config.toml` are deployed."
+> "**All other configurations, including API, Auth, and seed files, are ignored by default.**"
+
+| 対象 | 連携が適用するもの |
+|---|---|
+| ephemeral / persistent branch | config.toml が丸ごと同期（Auth / API 含む。`[remotes.*]` 必須） |
+| **production** | **migrations / Edge Functions / Storage buckets のみ** |
+
+つまり「本番だけメールテンプレートが古いまま」は `[remotes.*]` の書き忘れ（§7）だけでなく、
+**production が構造的に Auth の適用対象外**であることでも起きる。`[remotes.*]` を正しく書いても直らない。
+本リポジトリは migrations を Drizzle で回しており連携の主機能が不要なため、連携を採らない判断をしている。
+
 **しかしこの連携が担っている仕事は、すべて代替がある**:
 
 | GitHub 連携がやること | 本リポジトリでの代替 |

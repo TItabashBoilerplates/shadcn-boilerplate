@@ -101,7 +101,15 @@ content_path = "./supabase/templates/email/email_change.html"
 ### 反映タイミング
 
 - **ローカル / セルフホスト**: `config.toml` の `content_path` がそのまま適用される。**`config.toml` やテンプレート変更後は `supabase stop && supabase start`（= `stop && supabase-start`）で再起動**しないと反映されない。
-- **本番（hosted）**: **Supabase の GitHub 連携（config 同期）に委譲**する（本リポジトリ方針）。Dashboard での手動コピペ運用はしない。
+- **本番（hosted）**: **GitHub Actions から `supabase config push --project-ref <ref>` で反映**する（本リポジトリ方針）。Dashboard での手動コピペ運用はしない。
+  > ⚠️ **GitHub 連携（config 同期）に委譲してはならない。** 公式は production への適用対象を
+  > 「New migrations are applied, Edge Functions declared in `config.toml` are deployed,
+  > Storage buckets declared in `config.toml` are deployed」と定義し、
+  > 「**All other configurations, including API, Auth, and seed files, are ignored by default.**」
+  > と明記している（[GitHub integration](https://supabase.com/docs/guides/deployment/branching/github-integration)）。
+  > つまり **production の Auth 設定・メールテンプレート・SMTP は連携では届かない**。
+  > 「本番だけテンプレートが古いまま」の原因は `[remotes.*]` の書き忘れだけではなく、これも該当する。
+  > なお persistent branch には連携でも適用される（`[remotes.*]` が必要）。
 
 ### 追加の制約（CLI 実装由来。必ず守る）
 
@@ -117,7 +125,7 @@ content_path = "./supabase/templates/email/email_change.html"
 >
 > [customizing-email-templates](https://supabase.com/docs/guides/local-development/customizing-email-templates)
 > に「hosted は Dashboard にコピーせよ」とあるのは、同ページが冒頭で断っているとおり
-> **ローカル開発向けガイド**だから。CLI/GitHub 連携で config を push する本リポジトリの運用には当たらない。
+> **ローカル開発向けガイド**だから。CLI で config を push する本リポジトリの運用には当たらない。
 >
 > ⚠️ **テンプレートが反映されないときに真っ先に疑うのは Dashboard ではなく `[remotes.*]`**（§1.5）。
 > ブロックが無い / `project_id` が違うと、テンプレートを含む設定適用が**丸ごと・無言でスキップ**される。
@@ -149,7 +157,7 @@ secret    = "env(SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET)"
 **NEVER**: Supabase Dashboard で Auth / Storage / API / メールテンプレート等のサービス設定を手動変更する。
 
 - Dashboard 手動変更は **レビュー不能・再現不能・drift の温床**。
-- すべて `config.toml` → PR → GitHub 連携（config 同期）で反映する。
+- すべて `config.toml` → PR → **GitHub Actions からの `config push`** で反映する（§1 の理由により連携には委譲しない）。
 - 本番の設定を変えたいときは `config.toml`（または `[remotes.production.*]`）を編集して PR を出す。
 
 ---
@@ -162,7 +170,7 @@ secret    = "env(SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET)"
 | `config.toml` の**編集** | このルール（Config-as-Code） | 本ファイル |
 | **DB スキーマ / RLS / migration** | Drizzle + `devenv tasks run app:migrate-dev`（本番は承認必須） | `.claude/rules/database.md` |
 | ローカル反映 | `stop && supabase-start`（再起動で config 反映） | `.claude/CLAUDE.md` |
-| 本番デプロイ | GitHub 連携（config 同期） / `devenv tasks run -P <env> deploy:supabase` | `.claude/skills/supabase-config/` |
+| 本番デプロイ | `infra-deploy <app>` / `devenv tasks run -P <env> deploy:supabase`（要 `SUPABASE_PROJECT_REF`） | `terraform/README.md` |
 
 > `psql` / `curl` / `supabase` CLI を Bash で直接叩いてインフラを調査・操作するのは `mcp-supabase.md` どおり禁止。`config.toml` の編集は通常のファイル編集として行う。
 
@@ -196,4 +204,6 @@ secret = "abc123"
 - Supabase のサービス設定は **`config.toml` に集約**（DB のみ Drizzle 例外）。
 - メールテンプレートは **`supabase/templates/email/*.html` + `[auth.email.template.*]` の `content_path`** で Git 管理。
 - Secret は **`env()`**。Dashboard 手動変更は **禁止**。
-- 本番反映は **GitHub 連携（config 同期）**に委譲。フォールバックが必要なときは**ユーザーに判断をあおぐ**。
+- 本番反映は **`supabase config push --project-ref <ref>`**（`infra-deploy` / `deploy:supabase`）。
+  **GitHub 連携に委譲しない**（production では Auth / API が無視されるため。§1 参照）。
+  フォールバックが必要なときは**ユーザーに判断をあおぐ**。
