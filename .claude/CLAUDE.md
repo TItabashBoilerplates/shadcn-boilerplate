@@ -38,6 +38,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 │   ├── render-optimization.md # 再描画最小化（FSDスライス単位のステート局所化）
 │   ├── error-handling.md     # エラーハンドリング（握りつぶし禁止・フォールバック最小化）
 │   ├── page-navigation.md    # ページ遷移（loading.tsx + Suspense によるストリーミング必須）
+│   ├── list-pagination.md    # 一覧のページング必須（全件取得禁止・UI パターンは自分で選定）
 │   ├── mcp-supabase.md       # Supabase インフラ操作は MCP（supabase / supabase-prod）必須
 │   ├── supabase-config.md    # Supabase 設定は config.toml に集約（DB のみ Drizzle 例外）・[remotes.*] 必須・メールテンプレートは [auth.email.template.*]
 │   ├── mcp-doppler.md        # Doppler シークレットの読み書きは doppler MCP 必須（書込はフェーズ制: 初期構築=full / 本番=prd 承認制・値の露出禁止）
@@ -70,7 +71,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     ├── maestro/          # Maestro E2Eテスト
     ├── devenv-cicd/      # GitHub Actions × devenv 2.0 CI/CD（enterShell hook / .devenv キャッシュ / concurrency）
     ├── edge-functions-mcp/ # Supabase Edge Functions 上に MCP サーバを構築（BYO MCP: @hono/mcp + @modelcontextprotocol/sdk）
-    └── doppler/          # Doppler シークレット管理（CLI / devenv 統合 / 公式 MCP / .env.secrets からの移行）
+    ├── doppler/          # Doppler シークレット管理（CLI / devenv 統合 / 公式 MCP / .env.secrets からの移行）
+    │
+    │ # ↓ 本リポジトリ固有の運用手順（自作 Skill・lock 管理外）
+    ├── ai-usage-metering/ # ★ LLM/生成AI のトークン使用量・コスト集計を設計へ標準で織り込む（集計軸・単価表・計上の罠）
+    ├── vercel-deploy/    # ★ Vercel の GitHub 連携 + デプロイ（vercel-deploy script の使い方と落とし穴）
+    ├── mobile-release/   # ★ EAS リリース（TestFlight / Play。クラウド=expo.dev とローカルの両対応）
+    │
+    │ # ↓ 公式 Skill が存在しない外部サービス向けの自作 Skill（lock 管理外）
+    ├── onesignal/        # プッシュ通知（既存実装が仕様書。external_id = Supabase user.id）
+    ├── livekit/          # リアルタイム音声・映像（トークン発行はサーバ側限定・Edge FN / backend-py の切り分け）
+    └── fal/              # 生成 AI 推論（FAL_KEY 非公開・subscribe / submit+webhook の使い分け）
+
+# 外部サービス系の公式 Skill（skills-lock.json 管理。CLI は devenv が提供する）:
+#   stripe-best-practices / stripe-integration / stripe-docs / upgrade-stripe   → CLI: stripe
+#   resend / resend-cli / react-email / send-email / email-best-practices       → CLI: resend
+#   sentry-get-started / sentry-instrument / sentry-debug-issue /               → CLI: sentry-cli
+#     sentry-fix-stack-traces / sentry-setup-releases
+#   adapty-cli                                                                  → CLI: adapty
+#   revenuecat / create-revenuecat-project / integrate-revenuecat /             → 公式 CLI 無し（MCP）
+#     revenuecat-{entitlements-gate,paywall,purchase-flow,identify-user,
+#     testing-setup,troubleshoot}
+# 選定理由・見送ったもの: docs/_research/2026-08-06-service-clis.md
 ```
 
 ## Domain Documentation
@@ -120,19 +142,25 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 
 **MANDATORY**: コンポーネントの再描画は必要最小限に抑える。FSD のスライス単位でステートを局所化し、状態変更の影響範囲をそのスライス内に閉じ込める。TanStack Query の invalidation はピンポイント、Zustand は必ずセレクター使用、Widget/View にビジネスステートを持たせない。詳細は `.claude/rules/render-optimization.md` を参照。
 
+**MANDATORY**: **一覧（リスト）画面は、件数が増えうるなら開発者から指示されなくても最初からページングを実装する**。判定は「時間・ユーザー数・外部連携で行が増えるか」「件数上限がスキーマ/仕様でハードに保証されているか」で行い、保証が無ければ必ずページングする（「今はデータが少ない」は理由にならない — seed では顕在化せず本番で壊れる）。**全件取得は禁止**で、クエリには必ず `limit` / `range` を付け、**ページングは常に DB 側**（クライアントの `slice` は禁止）。API の `limit` はサーバー側でクランプする。**UI パターン（ページ番号 / もっと見る / 無限スクロール）はエージェント自身が選定する**: Web の管理画面・検索結果・SEO 対象の公開一覧は**ページ番号 + URL 同期**（`?page=`。共有・戻る・クローラビリティのため）、Web の探索的グリッドは**「もっと見る」**、Mobile（Expo/RN）は**無限スクロール**（`onEndReached` + 仮想化リスト）、チャット/タイムラインなど新着が前方に挿入される一覧は**カーソル(keyset)**。迷ったら「もっと見る」を選ぶ（フッターに到達でき、キーボードで進め、後から双方向に移行できる）。無限スクロールにする場合は「もっと見る」ボタンを DOM に残す（キーボード fallback）・フッターを潰さない・スクロール位置を復元することが必須条件。`order` には必ず一意列の tiebreaker を付け（無いとページ間で重複/欠落する）、ソートキーに index を張り、総数が UI 要件でなければ `count` を取らない（大テーブルは `estimated`）。初回ローディング / 追加ローディング / 空 / エラー / 末尾到達の 5 状態を必ず用意する。詳細は `.claude/rules/list-pagination.md` を参照。
+
 **MANDATORY**: エラーは握りつぶさず適切にエラーとして処理する。不必要なフォールバック処理は禁止。catch したら必ずログ出力 + リスロー or 明示的 Result 型。supabase-js の `{ error }` は必ずチェック。フォールバックは付随的処理（analytics等）のみ許容。詳細は `.claude/rules/error-handling.md` を参照。
+
+**MANDATORY**: **LLM / 生成 AI を機能として組み込むときは、トークン使用量とコストの計測・集計を最初から設計に含める**（後付け禁止）。生成 AI は実行のたびに原価が動く数少ない機能であり、**使用量イベントは過去に遡って作れず、集計軸（`organization_id` 等）は後から列を足しても過去行が埋まらない**。したがって「モデルを呼ぶコードを書く」と「使用量イベントを 1 件記録する」は常にセットで実装する。**集計単位（ユーザー / 組織 / 機能 / 会話）・上限制御の有無・円換算の方式はサービス特性で変わるので、一律の型を当てず、そのサービスに適した形で決める**。判断材料（テナントの有無 / 料金プラン / 会計方針）は既存のスキーマや要件から読み取れることが多いのでまず調べ、**読み取れず推測になる場合は開発者の判断を仰ぐ**。とくに**集計軸と円換算方式は後から変えられない**（過去行が埋まらない / 会計は継続適用が条件）ので、ここは推測で進めない。原則: ①**最終成果物はトークン数ではなく金額（USD）**。入力/出力/キャッシュ読み/書きは単価が違うのでトークン合計から金額は復元できない。**全イベントに確定した USD 金額が入っている状態**をゴールにし、使用量画面にもドルを出す ②プロバイダが返した usage の**生値**を残す（単価誤りの再計算用）③**単価はコードに書かず** `effective_from` 付きの単価表データとして持ち、イベントに使用した単価を凍結する（**モデルを 1 つ足したらその場で単価登録するまでが実装**。未登録時は 0 ではなく `price_missing` として集計から除外し件数を可視化する）④プロバイダのレスポンス ID に**一意制約**を張って二重計上を DB で弾く。キャッシュ読み書き・reasoning トークン・ストリーミング中断は計上を間違えやすい（プロバイダごとに内数/外数が違う）。詳細は `.claude/skills/ai-usage-metering/` を参照。
 
 **MANDATORY**: フロントエンド・バックエンドのデバッグは **devenv 2.0 の native process manager の TUI** を主インターフェースとして使用する。`devenv up` を対話端末で実行すると TUI が自動起動し、プロセス一覧・ログ閲覧・再起動がキーボード操作で可能。詳細は `.claude/skills/debugging/SKILL.md` を参照。
 
 **MANDATORY**: Supabase 上のインフラ（DB / Storage / Auth / Edge Functions / Logs / Migrations / Advisors / 設定）を**調査・操作**する場合は、必ず **`supabase` MCP**（ローカル）または **`supabase-prod` MCP**（本番、read-only）を使用する。`psql` / `curl` / `supabase` CLI を Bash で直接叩くのは禁止。本番への書き込みが必要な場合は必ずユーザーに判断をあおぐこと。詳細は `.claude/rules/mcp-supabase.md` を参照。
 
-**MANDATORY**: Supabase の**サービス設定値はすべて `supabase/config.toml` を single source of truth として Git 管理する**（Auth / Storage / API / Realtime サービス / Edge Runtime / Functions のデプロイ設定 / メールテンプレート）。Dashboard での手動変更は禁止。**唯一の例外は DB（スキーマ / RLS / Realtime publication / migration）で、これは Drizzle が source of truth**。認証メールテンプレートは `supabase/templates/email/*.html` に置き、`[auth.email.template.*]` の `content_path` で配線する。Secret は必ず `env()`。本番反映は GitHub 連携（config 同期）に委譲。詳細は `.claude/rules/supabase-config.md` を参照。
+**MANDATORY**: Supabase の**サービス設定値はすべて `supabase/config.toml` を single source of truth として Git 管理する**（Auth / Storage / API / Realtime サービス / Edge Runtime / Functions のデプロイ設定 / メールテンプレート）。Dashboard での手動変更は禁止。**唯一の例外は DB（スキーマ / RLS / Realtime publication / migration）で、これは Drizzle が source of truth**。認証メールテンプレートは `supabase/templates/email/*.html` に置き、`[auth.email.template.*]` の `content_path` で配線する。Secret は必ず `env()`。本番反映は GitHub 連携（config 同期）に委譲。詳細は `.claude/rules/supabase-config.md` を参照。**ただし本リポジトリは boilerplate なので `supabase/config.toml` を意図的に置いていない**（`project_id` / `[remotes.*]` 等は派生先ごとに異なるため）。**「config.toml が無い」を不備として報告しないこと。**本ポリシーが効くのは、この boilerplate から実プロジェクトを起こした後（`.claude/rules/supabase-config.md` §0）。
 
-**MANDATORY**: `supabase/config.toml` を**新規生成・更新するときは、リモート環境ごとに `[remotes.<name>]` を必ず書く**。公式仕様上「**宣言が無い / `project_id` が違うと、その環境への設定適用ステップは丸ごとスキップされる**」（[Branching: Configuration](https://supabase.com/docs/guides/deployment/branching/configuration)）。**スキップはエラーも警告も出さない**ため、「メールテンプレートだけ反映されない」という形でしか気づけない — これが本リポジトリで繰り返し起きている不具合の根因である。`project_id` には **`supabase --experimental branches list` の BRANCH PROJECT ID**（親 project の ref ではない）を、**ブロックごとに異なる値**で入れる。persistent branch を**先に作ってから**書くこと。メールテンプレート等の共通設定は **root に 1 回**書けばよく（`[remotes.X]` が存在すれば root がベースとして適用される）、remotes 側へのコピーは不要。詳細は `.claude/rules/supabase-config.md` §1.5 と `.claude/skills/supabase-config/references/multi-environment.md`。
+**MANDATORY**（派生プロジェクトで `config.toml` を作る時点から適用。boilerplate 本体には config.toml を置かない）: `supabase/config.toml` を**新規生成・更新するときは、リモート環境ごとに `[remotes.<name>]` を必ず書く**。公式仕様上「**宣言が無い / `project_id` が違うと、その環境への設定適用ステップは丸ごとスキップされる**」（[Branching: Configuration](https://supabase.com/docs/guides/deployment/branching/configuration)）。**スキップはエラーも警告も出さない**ため、「メールテンプレートだけ反映されない」という形でしか気づけない — これが本リポジトリで繰り返し起きている不具合の根因である。`project_id` には **`supabase --experimental branches list` の BRANCH PROJECT ID**（親 project の ref ではない）を、**ブロックごとに異なる値**で入れる。persistent branch を**先に作ってから**書くこと。メールテンプレート等の共通設定は **root に 1 回**書けばよく（`[remotes.X]` が存在すれば root がベースとして適用される）、remotes 側へのコピーは不要。詳細は `.claude/rules/supabase-config.md` §1.5 と `.claude/skills/supabase-config/references/multi-environment.md`。
 
 **MANDATORY**: Doppler 上のシークレット（projects / configs / secrets）を**調査・作成・更新**する場合は、必ず **`doppler` MCP**（read-write）を使用する。Bash で `doppler secrets set` / `doppler secrets delete` を直接叩くのは禁止。書き込み許可は**フェーズ制**（`.claude/rules/mcp-doppler.md` 冒頭の `PHASE:` を書き込み前に必ず確認）: **初期構築（full-access）= 全 config 可** / **本番（protected）= `prd` 書き込みは明示承認制**。フェーズ不明時は本番（protected）として扱う。**シークレットの値をチャット / ログ / コミットに出さない**（キー名のみで会話）。詳細は `.claude/rules/mcp-doppler.md`。
 
 **MANDATORY**: **Doppler に `GITHUB_` / `SUPABASE_` / `VERCEL_` prefix のキーを登録してはならない**。これらは各 PF が予約している名前空間であり、Doppler ネイティブ連携の sync 時に**予約値違反でエラー**になり、その config の sync 全体が失敗する（GitHub:「Must not start with the `GITHUB_` prefix」／ Supabase:「Env name cannot start with SUPABASE_」／ Vercel: `VERCEL_*` は system 環境変数）。**とくに Supabase の環境変数は Doppler で管理しない** — **Vercel（web / backend）へは Vercel Marketplace の Supabase 連携（Connect Account）が `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` / `NEXT_PUBLIC_SUPABASE_*` / `POSTGRES_*` を自動注入**し、**Edge Functions へは Supabase platform が default secrets として自動提供**する。つまり「Supabase の値が要る」は Doppler にキーを作る理由にならない（二重管理も禁止）。ローカルの `env/<svc>/.env.local` はファイル管理なので本制約の対象外。詳細は `.claude/rules/env-naming.md` を参照。
+
+**MANDATORY**: **Vercel への連携・デプロイ、およびモバイル（EAS）のリリースは、必ず専用 script 経由で行う**。`vercel` / `eas` を Bash で直接叩いて手順を再発明しない。Vercel は `vercel-deploy`（`scripts/infra/vercel_deploy.sh`）、モバイルは `mobile-release-ios` / `mobile-release-android`（`scripts/mobile/release-*.sh`）が正規経路で、**GitHub 連携・rootDirectory 設定・`--archive=tgz`（15000 files 上限の回避）・資格情報の復元と後始末・eas.json の一時注入と復元・EAS への `EXPO_PUBLIC_*` push** といった、抜けると無言で壊れる手順がすべて入っている。**モバイルビルドは expo.dev（クラウド）とローカル（`--local`）の両方に対応**し、既定はクラウド。**認証情報はすべて Doppler が唯一のソース**（Vercel は `VC_TOKEN`、モバイルは `EXPO_TOKEN` / `APPLE_*` / `PLAY_SERVICE_ACCOUNT_JSON`）で、モバイル script は起動時に `doppler run` で自身を再実行して注入するため呼び出す側の準備は不要。**値はチャット / ログ / コミットに出さない**（キー名のみで会話）。runtime secret は Doppler→Vercel のネイティブ連携、Supabase の値は Vercel Marketplace 連携が供給するので**手で env に入れない**。詳細は `.claude/skills/vercel-deploy/` および `.claude/skills/mobile-release/` を参照。
 
 **Supabase の Docker コンテナ自体は Supabase CLI が所有**（devenv の native process supervisor は backend / storybook のみ監視）。**起動連動**: `supabase:start` task が backend の `before` に登録されているため `devenv up` 起動時は Supabase → backend の順で立ち上がる。**停止は手動運用**: devenv 2.0 native process manager は task の `after` も `process.manager.after` も動作しない（前者は shutdown 時に cancel、後者は assertion でブロック、native の Rust shutdown パスに task runner 呼び出しが無いため）。auto-stop の中途半端な実装は持たず、停止は `supabase-stop` / `stop` script で明示的に行う運用に統一している。`stop` script は devenv プロセスと Supabase 両方を停止する。
 
@@ -246,6 +274,16 @@ gh workflow run migrate.yml --ref main -f environment=production   # ⚠️ ユ�
 # ローカルから直接叩く場合は ENV= を必ず前置（-P だけだと ENV=local のまま = ローカル DB を見る）
 ENV=production devenv tasks run -P production db:migrate-deploy    # ⚠️ 緊急時のみ
 
+# Deploy / Release
+# 資格情報はすべて Doppler。devenv shell 進入時に env へロード済みなので追加準備は不要。
+vercel-deploy                      # frontend/apps/web を Vercel へ (GitHub 連携 + rootDirectory 設定 + デプロイ)
+vercel-deploy frontend/apps/lp     # 任意アプリ (--no-deploy / --preview / --dry-run)
+mobile-release-ios                 # iOS: expo.dev でビルド → TestFlight (--local でローカルビルド)
+mobile-release-android             # Android: expo.dev でビルド → Play 内部テスト (--local 可)
+mobile-metadata                    # store.config.js を App Store Connect へ同期
+sync-eas-env production            # Doppler の EXPO_PUBLIC_* を EAS へ同期
+# → 手順・落とし穴は .claude/skills/vercel-deploy/ と .claude/skills/mobile-release/
+
 # Task graph 確認 (依存・実行順序を可視化)
 devenv tasks list                          # 全 task の階層表示
 devenv tasks list --mode before app:migrate-dev   # 上流依存の確認
@@ -323,5 +361,6 @@ nr build
 - **LLM Orchestration**: LangChain/LangGraph
 - **Providers**: OpenAI, Anthropic, Replicate, FAL
 - **Real-time**: LiveKit
+- **Usage Metering**: トークン使用量・コスト集計は**標準で設計に含める** → `.claude/skills/ai-usage-metering/`
 
 → 詳細は [`backend-py/README.md`](backend-py/README.md)

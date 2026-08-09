@@ -68,6 +68,15 @@ load_config() {
   set -a; . "$cfg"; set +a
 }
 
+# config.env があれば読む・無ければ黙って続行（既定値をそこから拾いたいだけの ad-hoc script 用）。
+# bootstrap 系（config.env が前提）は load_config を使い、こちらを使わないこと。
+load_config_if_present() {
+  local cfg="${INFRA_CONFIG_FILE:-$INFRA_DIR/config.env}"
+  [ -f "$cfg" ] || return 0
+  # shellcheck disable=SC1090
+  set -a; . "$cfg"; set +a
+}
+
 # 環境名 → Doppler config 名（branch→env マッピングと一致させる）
 # dev→dev / staging→stg / production→prd
 doppler_config_for() {

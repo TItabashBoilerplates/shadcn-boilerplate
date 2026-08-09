@@ -64,6 +64,25 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 | **Clean Code** | 後方互換禁止、重複禁止 |
 | **UI Testing** | UI は Storybook、単体テスト不要 |
 | **Debugging** | devenv 2.0 の native process manager TUI を主インターフェース |
+| **List Pagination** | 増えうる一覧は指示を待たずページング。UI パターンも自分で選定 |
+
+### List Pagination（MANDATORY）
+
+**件数が増えうる一覧は、開発者からの指示を待たずに最初からページングを実装する**。
+判定は「時間 / ユーザー数 / 外部連携で行が増えるか」「件数上限がスキーマ・仕様でハードに保証されているか」。
+保証が無ければ必ずページングする（「今はデータが少ない」は理由にならない）。
+**全件取得は禁止**（一覧クエリには必ず `limit` / `range`）、**ページングは常に DB 側**（クライアント `slice` 禁止）、
+API の `limit` はサーバー側でクランプ。
+
+**UI パターンもエージェント自身が選定する**: Web の管理画面・検索結果・SEO 対象の公開一覧は
+ページ番号 + URL 同期（`?page=`）、Web の探索的グリッドは「もっと見る」、Mobile（Expo / RN）は
+無限スクロール（`onEndReached` + 仮想化リスト）、チャット / タイムラインなど新着が前方に挿入される
+一覧は keyset(cursor)。**迷ったら「もっと見る」**。無限スクロールはフッターが無い・「もっと見る」ボタンを
+DOM に残す（キーボード fallback）・スクロール位置を復元できる、を満たす場合のみ。
+
+`order` には必ず一意列の tiebreaker を付け、ソートキーに index を張り、総数を出さないなら `count` を取らない
+（大テーブルは `estimated`）。初回ローディング / 追加ローディング / 空 / エラー / 末尾到達の 5 状態を必ず用意する。
+詳細は `/.claude/rules/list-pagination.md` を参照。
 
 ### Debugging — devenv 2.0 native TUI（MANDATORY）
 

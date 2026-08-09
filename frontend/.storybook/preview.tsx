@@ -2,7 +2,8 @@ import { withThemeByClassName } from '@storybook/addon-themes'
 import type { Preview } from '@storybook/react'
 import '@workspace/ui/styles/globals.css'
 
-// TODO: Mobile UI (react-native-web) が有効化されたらコメントを解除
+// TODO: Mobile UI のストーリーを有効化したらコメントを解除
+//       （無効化している理由は .storybook/main.ts の PACKAGES ブロック参照）
 // import { GluestackUIProvider } from '@workspace/native-ui/components'
 
 const preview: Preview = {
@@ -26,7 +27,8 @@ const preview: Preview = {
       },
       defaultTheme: 'light',
     }),
-    // TODO: Mobile UI (react-native-web) が有効化されたらコメントを解除
+    // TODO: Mobile UI のストーリーを有効化したらコメントを解除
+    //       （無効化している理由は .storybook/main.ts の PACKAGES ブロック参照）
     // (Story: React.ComponentType, context) => {
     //   const isMobileStory = context.title.startsWith('Packages/UI Mobile')
     //   if (isMobileStory) {

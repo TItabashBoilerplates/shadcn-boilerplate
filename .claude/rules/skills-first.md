@@ -46,6 +46,8 @@
 | FSD / レイヤー / スライス | `fsd`, `feature-sliced-design` |
 | モノレポ / Bun workspace / packages 追加 / パッケージ間の依存 | `monorepo`（本リポジトリ規約）+ `turborepo`（公式 vercel/turborepo） |
 | デザインシステム / トークン / Web と Native で UI を揃える / デスクトップ対応 | `monorepo`（`design-system.md`）, `shadcn`（公式）, `gluestack` |
+| Vercel 連携 / デプロイ / 本番に出す / Vercel project 作成 / rootDirectory / 15000 files エラー | `vercel-deploy`（自作） |
+| リリース / TestFlight / Play ストア / EAS ビルド / アプリを提出 / ストア配信 | `mobile-release`（自作）, `expo-deployment`, `expo-cicd-workflows` |
 | マイクロフロントエンド / multi-zones / microfrontends.json / @vercel/microfrontends / 単一ドメイン合成 / パスルーティング | `vercel-microfrontends`（公式）, `monorepo` |
 | Python モノレポ / uv workspace / backend-py の apps・packages / src-layout / MCP サーバ追加 | `python-monorepo` |
 | shadcn/ui / TailwindCSS | `shadcn`, `shadcn-ui`, `web-design-guidelines`, `frontend-design` |
@@ -54,9 +56,16 @@
 | 状態管理 / 取得 (web) | `data-fetching` |
 | 状態管理 / 取得 (mobile) | `native-data-fetching` |
 | Better Auth | `better-auth-best-practices`, `email-and-password-best-practices`, `two-factor-authentication-best-practices`, `organization-best-practices`, `better-auth-security-best-practices`, `create-auth-skill`, `Better Auth Best Practices` |
-| Stripe / 決済 / サブスク | `stripe-integration`, `stripe-best-practices` |
+| Stripe / 決済 / サブスク | `stripe-integration`, `stripe-best-practices`, `stripe-docs`, `upgrade-stripe` |
+| モバイル課金 / アプリ内課金 / IAP / paywall / RevenueCat | `revenuecat`, `integrate-revenuecat`, `create-revenuecat-project`, `revenuecat-paywall`, `revenuecat-purchase-flow`, `revenuecat-entitlements-gate`, `revenuecat-identify-user`, `revenuecat-testing-setup`, `revenuecat-troubleshoot` |
+| モバイル課金 / Adapty | `adapty-cli` |
+| Sentry / 監視 / エラートラッキング / source map / release | `sentry-get-started`, `sentry-instrument`, `sentry-debug-issue`, `sentry-fix-stack-traces`, `sentry-setup-releases` |
+| プッシュ通知 / push notification / 通知が届かない / 購読許可 / OneSignal | `onesignal`（自作） |
+| ビデオ通話 / 音声通話 / WebRTC / 音声エージェント / 画面共有 / LiveKit | `livekit`（自作） |
+| 画像生成 / 動画生成 / text-to-image / GPU 推論 / Flux / fal.ai | `fal`（自作） |
 | Resend / メール送信 / Webhook | `resend`, `resend-cli`, `send-email`, `react-email`, `email-best-practices`, `agent-email-inbox` |
 | LangChain / LangGraph / LangSmith / エージェント | `langchain` |
+| LLM を呼ぶ機能全般（チャット / 要約 / RAG / 埋め込み / 画像・音声・動画生成）/ トークン使用量 / コスト集計 / 従量課金 / プラン上限 / 「AI が高い」 | `ai-usage-metering`（自作。**モデル呼び出しが増えるなら常に対象**）+ 実装先の Skill（`langchain` / `fal` / `edge-functions-mcp` 等） |
 | Storybook | `storybook` |
 | Maestro / E2E | `maestro` |
 | 単体テスト (Python) | `python-testing` |

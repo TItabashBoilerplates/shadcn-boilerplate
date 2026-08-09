@@ -218,6 +218,36 @@ git push origin main       # → prd:  各 PaaS 反映 + migrate は GitHub で�
   `drizzle.config.ts` / `package.json` / `bun.lock` 変更時に起動。
   **production のみ GitHub Environment の承認待ち**（承認するまで適用されない）。
 
+### アプリを 1 つ後から Vercel へ足す / 手で本番へ出す
+
+`infra-bootstrap` は web + backend の 2 project を固定で作る初期構築用。その後で
+`frontend/apps/<name>` を増やしたときや、git push を伴わずに本番へ出したいときは
+**`vercel-deploy`** を使う（`config.env` は不要）。
+
+```bash
+vercel-deploy frontend/apps/lp --dry-run   # 計画だけ（Vercel へ 1 件も送らない）
+vercel-deploy frontend/apps/lp             # project 作成（GitHub 連携 + rootDirectory）→ env → デプロイ
+vercel-deploy frontend/apps/lp --no-deploy # project と env だけ。以降の配信は git push に任せる
+```
+
+トークンは **Doppler の `VC_TOKEN`**（devenv shell 進入時にロード済み）。
+GitHub repo を紐付けられるのは **project 作成時だけ**なので、「project は在るが repo 未接続」に
+なったら dashboard で接続するか別名で作り直す。手順と落とし穴は
+[`.claude/skills/vercel-deploy/`](../../.claude/skills/vercel-deploy/SKILL.md)。
+
+### モバイル（EAS）のリリース
+
+```bash
+mobile-release-ios                 # expo.dev でビルド → TestFlight
+mobile-release-ios --local         # ローカルビルド（EAS のビルド枠を消費しない）
+mobile-release-android             # expo.dev でビルド → Play 内部テスト（--local 可）
+```
+
+資格情報（`EXPO_TOKEN` / `APPLE_*` / `PLAY_SERVICE_ACCOUNT_JSON`）は **Doppler が唯一のソース**で、
+script が `doppler run` で自身を再実行して注入する。非機密の設定だけを
+`scripts/mobile/config.env`（`config.example.env` からコピー）に置く。
+手順・既知バグの回避策は [`.claude/skills/mobile-release/`](../../.claude/skills/mobile-release/SKILL.md)。
+
 ### マイグレーションの手動実行（push を伴わない再実行 / 任意環境への適用）
 
 Actions タブ > **DB Migrate (Drizzle)** > **Run workflow** で、branch と `environment`

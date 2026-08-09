@@ -45,11 +45,17 @@ export SUPABASE_URL="${API_URL:-http://127.0.0.1:54321}"
 export SUPABASE_SERVICE_ROLE_KEY="${SERVICE_ROLE_KEY:?could not read SERVICE_ROLE_KEY from supabase status}"
 export MAILPIT_URL="${MAILPIT_URL:-http://127.0.0.1:54324}"
 
-# 3. Web up? Next.js reads $HOSTNAME (which is "vm" here) as its bind host, so
-#    always pin -H 127.0.0.1 explicitly.
+# 3. Web up? Do NOT pass `-H`.
+#    Next.js 16.3 + next-intl: binding the dev/prod server to an explicit host
+#    (`-H 127.0.0.1`) makes next-intl's middleware answer every page with a 307
+#    to the very same path (`/login` -> `/login`, setting NEXT_LOCALE), i.e. an
+#    infinite redirect loop -> the browser aborts with ERR_TOO_MANY_REDIRECTS.
+#    Without `-H` the server still listens on 127.0.0.1 (verified: /login 200 on
+#    both 127.0.0.1 and localhost), so the old "$HOSTNAME is vm" workaround is
+#    no longer needed and is now actively harmful.
 if ! curl -sf -o /dev/null "http://127.0.0.1:3000/login" 2>/dev/null; then
-  log "web not reachable -> starting next dev on 127.0.0.1:3000"
-  ( cd "$ROOT/frontend/apps/web" && exec bun run dev -- -H 127.0.0.1 -p 3000 ) > "$WEB_LOG" 2>&1 &
+  log "web not reachable -> starting next dev on port 3000"
+  ( cd "$ROOT/frontend/apps/web" && exec bun run dev -- -p 3000 ) > "$WEB_LOG" 2>&1 &
   WEB_PID=$!
   WEB_STARTED=1
   for _ in $(seq 1 60); do

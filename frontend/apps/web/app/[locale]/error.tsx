@@ -3,6 +3,7 @@
 import { Button } from '@workspace/ui/components/button'
 import { useTranslations } from 'next-intl'
 import { useEffect } from 'react'
+import { useRouter } from '@/shared/lib/i18n'
 
 interface ErrorProps {
   error: Error & { digest?: string }
@@ -11,6 +12,7 @@ interface ErrorProps {
 
 export default function LocaleError({ error, reset }: ErrorProps) {
   const t = useTranslations('ErrorBoundary')
+  const router = useRouter()
 
   useEffect(() => {
     console.error('Locale segment error:', error)
@@ -31,7 +33,7 @@ export default function LocaleError({ error, reset }: ErrorProps) {
           <Button
             variant="outline"
             onClick={() => {
-              window.location.href = '/'
+              router.push('/')
             }}
           >
             {t('backHome')}

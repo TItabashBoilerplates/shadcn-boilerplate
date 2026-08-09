@@ -11,7 +11,20 @@ const config: StorybookConfig = {
 
   stories: [
     // ============================================
-    // PACKAGES - Web UI のみ（Mobile は TailwindCSS 4 互換性問題のため一時無効）
+    // PACKAGES - Web UI のみ
+    //
+    // Mobile (packages/native-ui) のストーリーは意図的に登録していない。
+    // NativeWind v5 は `className` を **Metro のトランスフォーマ**でスタイルへ変換する
+    // 設計で、その実装元 react-native-css は「officially only supports Metro as the
+    // bundler」と明言している（Webpack / Vite / Turbopack はコミュニティ実装待ち）。
+    // このため Webpack ベースの @storybook/nextjs では className が変換されず、
+    // react-native-web が未知の prop として捨てるため **全コンポーネントが無スタイル**で
+    // 描画される（Tailwind 側は .bg-primary 等を正しく生成できており CSS の問題ではない）。
+    // 登録すると「壊れた見た目のカタログ」ができてしまうので無効のままにする。
+    //   - 上流: https://github.com/nativewind/react-native-css （README の Bundler 節）
+    //   - 症状が同じ Storybook 側の issue: storybookjs/storybook#32018 / #31165
+    // 有効化するには Storybook を NativeWind の変換が効く構成
+    // （@storybook/react-native-web-vite + NativeWind preset 等）へ載せ替える必要がある。
     // ============================================
     {
       directory: '../packages/ui/src/components',
@@ -47,7 +60,8 @@ const config: StorybookConfig = {
     //       (現状の shared 配下: api / config / hooks / lib)
     //       UI を追加する場合はここに { directory: '../apps/web/src/shared/ui', ... } を復活させる
 
-    // TODO: Mobile UI (gluestack-ui) - TailwindCSS 4 との互換性問題解決後に有効化
+    // TODO: Mobile UI (gluestack-ui) - react-native-css が Metro 以外のバンドラに
+    //       対応したら有効化（詳細は上記 PACKAGES ブロックのコメント）
     // TODO: Views - i18n (@/shared/lib/i18n) 依存の解決後に有効化
   ],
 

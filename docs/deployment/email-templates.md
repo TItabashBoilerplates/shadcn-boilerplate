@@ -11,6 +11,12 @@
 > Dashboard へ手動でコピペする運用はしない。設定は必ず `config.toml` → PR → `config push` で反映する。
 > ルールの正本は [`.claude/rules/supabase-config.md`](../../.claude/rules/supabase-config.md)。
 
+> 📌 **本リポジトリ（boilerplate）に `supabase/config.toml` は無い。意図的に置いていない。**
+> テンプレート HTML は派生先でもそのまま使えるので `supabase/templates/email/` に置いてあるが、
+> 配線先の `config.toml` は `project_id` / `[remotes.*]` が派生先ごとに異なるため作れない。
+> **この手順書は、boilerplate から実プロジェクトを起こしたあとに実行するもの**
+> （`.claude/rules/supabase-config.md` §0）。
+
 ## config.toml への配線
 
 `supabase/config.toml` に以下を記載してテンプレートを配線する（HTML は既に `supabase/templates/email/` に存在）。

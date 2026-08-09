@@ -64,6 +64,7 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 | **Clean Code** | 後方互換禁止、重複禁止 | `clean-code.md` |
 | **UI Testing** | UI は Storybook、単体テスト不要 | `ui-testing.md` |
 | **Debugging** | devenv 2.0 の native process manager TUI を主インターフェース | `debugging.md` |
+| **List Pagination** | 増えうる一覧は指示を待たずページング。UI パターン（ページ番号/もっと見る/無限スクロール）も自分で選定 | `list-pagination.md` |
 
 ---
 
@@ -180,3 +181,4 @@ env/
 - `clean-code.md` - クリーンコード
 - `ui-testing.md` - UIテスト（Storybook）
 - `debugging.md` - デバッグ（devenv 2.0 native CLI 優先・Supabase）
+- `list-pagination.md` - 一覧のページング（全件取得禁止・UI パターン選定）

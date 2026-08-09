@@ -278,7 +278,9 @@ in
     # infra-bootstrap（scripts/infra/*）が使う CLI。
     #   - gh : GitHub environments / 承認ゲート / secret 設定（github.sh）
     #   - jq : 各 API レスポンスの JSON 整形（supabase/vercel/github）
-    # Vercel は CLI バグ回避のため REST API(curl) 直叩き → vercel CLI は不要。
+    # Vercel の **プロビジョニング**は CLI バグ（vercel/vercel#15763: preview env が
+    # --non-interactive でも対話を要求 / rootDirectory 設定フラグ欠如）を避けるため
+    # REST API(curl) 直叩き。日常運用向けの vercel CLI 自体は `scripts.vercel` で提供する。
     # backend も Vercel（Dockerfile.vercel コンテナ）へデプロイするため、デプロイ用 CLI は REST API 直叩きで代替。
     pkgs.gh
     pkgs.jq
@@ -287,6 +289,21 @@ in
     # terraform/.terraform.lock.hcl を作り直して TF_BIN=tofu を export する
     # （registry が registry.terraform.io → registry.opentofu.org に変わるため）。
     terraformCli
+
+    # ===== 外部サービス CLI（nixpkgs 収録ぶん）=====
+    # nixpkgs に無いものは devenv script (bunx 経由) で提供する。一覧と選定理由は
+    # docs/_research/2026-08-06-service-clis.md を参照。
+    #
+    # Stripe CLI（決済）。`stripe login` / `stripe listen --forward-to <edge function>` で
+    # Webhook をローカル転送し、`stripe trigger <event>` でイベントを再現する。
+    # Webhook ハンドラは Edge Functions 側に置く（.claude/rules/supabase-first.md）。
+    pkgs.stripe-cli
+    # Sentry CLI（監視・エラートラッキング）。source map / debug file のアップロードと
+    # release / deploy 作成に使う。CI からも同じバイナリを呼べるよう nix で固定する。
+    pkgs.sentry-cli
+    # LiveKit CLI（リアルタイム音声・映像）。backend-py の AI/ML 機能が LiveKit を使う。
+    # `lk token create` / `lk room list` などローカル検証用。
+    pkgs.livekit-cli
   ];
 
   languages.javascript = {
@@ -489,8 +506,15 @@ in
 
         # クラウドを使わないローカル EAS ビルド。frontend/apps/mobile/eas.json の
         # profile 定義が前提（未作成なら eas-cli が案内を出す）。
+        #
+        # ⚠️ npm パッケージ名は **`eas-cli`**（bin 名が `eas`）。`nlx eas` と書くと bunx が
+        # npm 上の**無関係な `eas` パッケージ**（"Embedded Async Simple Javascript templating",
+        # bin 無し）を解決してしまうので必ず `nlx eas-cli` と書くこと。
+        # バージョンは固定しない: Expo 公式が「eas-cli を project dependency に入れるのは
+        # dependency conflict を招くので強く非推奨」としており、pin したい場合の正規経路は
+        # eas.json の `cli.version` フィールド（https://docs.expo.dev/eas/json/）。
         "build-mobile-android-local" = {
-          exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && exec nlx eas build --platform android --local "$@"'';
+          exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && exec nlx eas-cli build --platform android --local "$@"'';
           description = "Build mobile (Android) via EAS on this machine (--local)";
         };
 
@@ -1169,6 +1193,42 @@ in
       description = "Terraform validate（構文・型・参照の静的検証、cached）";
     };
 
+    # frontend/apps/<name> を Vercel project 化（GitHub 連携 + rootDirectory）してデプロイする。
+    # infra-bootstrap（web + backend を固定で作る一括プロビジョニング）とは別で、
+    # **アプリを 1 つ後から足す / 手で本番へ出す**ための ad-hoc 経路。config.env は不要。
+    #   vercel-deploy                          # frontend/apps/web を本番デプロイ
+    #   vercel-deploy frontend/apps/lp         # 任意のアプリ
+    #   vercel-deploy frontend/apps/lp --no-deploy   # project + env だけ（配信は git push）
+    # token は VC_TOKEN → VERCEL_TOKEN → `vercel login` 済みの CLI 認証情報、の順で解決する。
+    # 手順の詳細・つまずきどころは .claude/skills/vercel-deploy/SKILL.md。
+    "vercel-deploy" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/infra/vercel_deploy.sh" "$@"'';
+      description = "アプリを Vercel project 化（GitHub 連携）してデプロイ（--no-deploy / --preview / --dry-run）";
+    };
+
+    # ---------- モバイルリリース（EAS: クラウド / ローカルの両対応）----------
+    # 各 script が Doppler の secrets を自己注入するので prefix 不要。
+    # 前提と必要なシークレットは scripts/mobile/release-*.sh の冒頭 / .claude/skills/mobile-release/。
+    "mobile-release-ios" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/release-ios.sh" "$@"'';
+      description = "iOS を build → TestFlight（既定 expo.dev / --local でローカルビルド）";
+    };
+
+    "mobile-release-android" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/release-android.sh" "$@"'';
+      description = "Android を build → Play 内部テスト（既定 expo.dev / --local でローカルビルド）";
+    };
+
+    "mobile-metadata" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/release-ios.sh" --metadata-only "$@"'';
+      description = "store.config.js を App Store Connect へ同期（ビルドしない）";
+    };
+
+    "sync-eas-env" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/sync-eas-env.sh" "$@"'';
+      description = "Doppler の EXPO_PUBLIC_* を EAS の Environment Variables へ同期";
+    };
+
     # ---------- Doppler（シークレット管理・移行下準備）----------
     # 完全移行に向けた補助 script。詳細・移行手順は .claude/skills/doppler/SKILL.md。
     "doppler-setup" = {
@@ -1319,12 +1379,12 @@ in
     };
 
     "build-mobile-ios" = {
-      exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && exec nlx eas build --platform ios'';
+      exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && exec nlx eas-cli build --platform ios'';
       description = "Build mobile (iOS) via EAS";
     };
 
     "build-mobile-android" = {
-      exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && exec nlx eas build --platform android'';
+      exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && exec nlx eas-cli build --platform android'';
       description = "Build mobile (Android) via EAS";
     };
 
@@ -1456,6 +1516,62 @@ in
     "uipro" = {
       exec = ''cd "$DEVENV_ROOT" && exec bunx uipro-cli "$@"'';
       description = "Run uipro-cli (UI/UX Pro Max skill installer) via bunx";
+    };
+
+    # ---------- 外部サービス CLI（nixpkgs 未収録 → bunx 経由）----------
+    # 公式 CLI ではあるが nixpkgs に derivation が無いもの。`uipro` と同じく bunx で都度実行し、
+    # グローバル node_modules を作らない（bun のキャッシュが効くので 2 回目以降は即時）。
+    # バージョンは固定しない: どちらもリモート API を叩く運用ツールで、古い CLI を固定すると
+    # サーバ側 API 変更に追従できなくなるため（EAS CLI を nixpkgs で固定しない判断と同じ）。
+    # 一覧と選定理由は docs/_research/2026-08-06-service-clis.md を参照。
+
+    # Resend CLI（メール配信）。`resend login` → `resend emails send` / `resend domains list` 等。
+    # npm パッケージ名は `resend-cli`、bin 名は `resend`（https://resend.com/docs/cli）。
+    # 使い方は skills-lock 管理の `resend-cli` skill（resend/resend-skills）が持っている。
+    "resend" = {
+      exec = ''cd "$DEVENV_ROOT" && exec bunx resend-cli "$@"'';
+      description = "Run the official Resend CLI via bunx (email delivery)";
+    };
+
+    # Adapty CLI（モバイル課金 / paywall）。npm パッケージ名も bin 名も `adapty`
+    # （https://adapty.io/docs/developer-cli）。認証は OAuth device flow で
+    # ~/.config/adapty/config.json に保存されるため Doppler 管理の対象外。
+    "adapty" = {
+      exec = ''cd "$DEVENV_ROOT" && exec bunx adapty "$@"'';
+      description = "Run the official Adapty CLI via bunx (mobile subscriptions/paywalls)";
+    };
+
+    # fal CLI（生成 AI 推論 / serverless）。PyPI パッケージ名も コマンド名も `fal`
+    # （https://docs.fal.ai/serverless/getting-started/installation）。npm ではなく Python 製なので
+    # bunx ではなく **uvx**（= `uv tool run`）で実行する。backend-py の dependency-group には
+    # 入れない: fal は運用ツールでアプリの実行時依存ではなく、`uv sync --all-packages` や CI の
+    # インストール時間を無駄に増やすため。
+    #
+    # ⚠️ 認証は 2 系統あり、**CLI は `fal auth login`（Auth0 device flow の OAuth）が既定**。
+    # `.mcp.json` の fal-ai MCP と `fal_client` が使う `FAL_KEY`（API キー）とは別物である。
+    # さらに fal の資格情報解決は **`FAL_KEY` が env にあると OAuth トークンより優先される**ため、
+    # Doppler に `FAL_KEY` を置いていると devenv shell 内では `fal auth login` 済みでも
+    # 常にそのキーで動く（deploy 等は ADMIN スコープが要るので権限エラーになりうる）。
+    # 自分のアカウントで動かしたいときは `FAL_FORCE_AUTH_BY_USER=1 fal ...` か `env -u FAL_KEY fal ...`。
+    # 詳細は .claude/skills/fal/SKILL.md §3。
+    "fal" = {
+      exec = ''cd "$DEVENV_ROOT" && exec uvx fal "$@"'';
+      description = "Run the official fal CLI via uvx (fal.ai serverless / inference)";
+    };
+
+    # Vercel CLI。**日常運用（logs / env pull / inspect / microfrontends pull / 手動 deploy）
+    # 向け**であって、インフラのプロビジョニングには使わない。
+    # provisioning（scripts/infra/vercel.sh）が REST API を直叩きしているのは、
+    #   - `vercel env add <name> preview` が --yes/--force/--non-interactive を付けても
+    #     git branch を対話で聞いてくる（vercel/vercel#15763、2026-08 時点 open。
+    #     公式 issue の回避策も「REST API を使う」）
+    #   - rootDirectory を設定する CLI フラグが無い
+    # の 2 点が理由で、CLI 全般が使えないという話ではない。
+    # nixpkgs に derivation が無いので bunx 経由（frontend/README.md の
+    # `bun add -g vercel` によるグローバル導入はこの script で置き換える）。
+    "vercel" = {
+      exec = ''exec bunx vercel "$@"'';
+      description = "Run the Vercel CLI via bunx (logs / env / deploy. provisioning は REST API)";
     };
 
     # ---------- Status check ----------

@@ -29,6 +29,7 @@ globs: []
 | i18n | `@i18n` - 多言語対応必須 |
 | DateTime | `@datetime` - UTC保存、Frontend変換 |
 | Debugging | `@debugging` - devenv 2.0 native process manager の TUI 最優先 |
+| List Pagination | `@list-pagination` - 増えうる一覧は指示前提でページング。UI パターンは自分で選ぶ |
 
 ## Commands
 

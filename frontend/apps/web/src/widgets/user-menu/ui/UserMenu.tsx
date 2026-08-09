@@ -17,6 +17,7 @@ import {
 } from '@workspace/ui/components/dropdown-menu'
 import { LogOut, User } from 'lucide-react'
 import { signOut } from '@/features/auth'
+import { useRouter } from '@/shared/lib/i18n'
 
 interface UserMenuProps {
   userEmail: string
@@ -27,8 +28,13 @@ interface UserMenuProps {
  * ドロップダウンメニューでユーザー情報とログアウトを表示
  */
 export function UserMenu({ userEmail }: UserMenuProps) {
+  const router = useRouter()
+
   const handleSignOut = async () => {
     await signOut()
+    router.push('/login')
+    // Server Component 側の認証状態（getUser()）を再評価させるため RSC を再取得する
+    router.refresh()
   }
 
   // メールアドレスからイニシャルを生成

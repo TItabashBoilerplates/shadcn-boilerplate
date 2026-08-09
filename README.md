@@ -115,6 +115,7 @@ By adopting these environments, we can ensure efficient development and maintain
 #### Configuration Management
 
 - **Supabase Services** (`supabase/config.toml`): Auth, Storage, API settings, service-level configurations
+  - 📌 このリポジトリは boilerplate なので **`config.toml` は意図的に置いていない**（`project_id` / `[remotes.*]` が派生先ごとに異なるため）。派生プロジェクトを起こした時点で作成する（[`.claude/rules/supabase-config.md`](.claude/rules/supabase-config.md) §0）
 - **Database Schema** (`drizzle/`): Tables, RLS policies, Realtime publications, functions, triggers managed with Drizzle ORM
 
 ### Key Features
@@ -146,6 +147,22 @@ By adopting these environments, we can ensure efficient development and maintain
 | Supabase CLI | データベース・認証 |
 | ni / nr / nlx | パッケージマネージャー抽象化 |
 | Maestro | E2E テスト |
+| Doppler CLI | シークレット管理 |
+| gh / jq | インフラブートストラップ |
+| Stripe CLI (`stripe`) | 決済（Webhook のローカル転送・イベント再現） |
+| Sentry CLI (`sentry-cli`) | 監視（source map / debug file アップロード・release 作成） |
+| LiveKit CLI (`lk`) | リアルタイム音声・映像（トークン発行・room 操作） |
+| Resend CLI (`resend`) | メール配信（nixpkgs 未収録のため bunx 経由の script） |
+| Adapty CLI (`adapty`) | モバイル課金・paywall（同上） |
+| fal CLI (`fal`) | fal.ai の生成 AI 推論 / serverless（Python 製のため uvx 経由の script）。**CLI は `fal auth login` の OAuth 認証**で、アプリ / MCP が使う API キー `FAL_KEY` とは別系統 |
+| Vercel CLI (`vercel`) | デプロイ・ログ・env の日常運用（同上）。**プロビジョニングは REST API のまま** |
+
+> 外部サービス CLI の選定理由（何を入れて何を入れなかったか）は
+> [`docs/_research/2026-08-06-service-clis.md`](docs/_research/2026-08-06-service-clis.md) を参照。
+> OneSignal CLI は macOS 限定 / Beta / React Native 非対応で **REST API を置き換えられない**ため
+> 導入していない（Edge Functions からの REST 連携が正しい実装）。
+> RevenueCat は公式 CLI が存在せず、公式 MCP サーバと Agent Skill を使う。
+> EAS CLI は `nlx eas-cli`（常に最新）+ `eas.json` の `cli.version` で pin するのが公式の方式。
 
 > 環境変数は devenv の **profiles** で管理する。**local が既定**（`-P` 指定なしで base enterShell が `env/<service>/.env.local`（非機密）をロードし、シークレットは Doppler から注入する）。`-P dev` / `-P staging` / `-P production` を付けると後勝ちで env を上書きする。dotenvx は不要。**シークレット・リモートの値は Doppler 一本**（ファイルフォールバックは廃止。新規キーは `doppler-set <KEY>`）。ローカル非機密の env ファイル (`env/<service>/.env.local`) は配置されていなくても profile アクティベーション自体はエラーにならず（`[ -f ] && . ` ガードのため）、後で置けば即読み込まれる。
 
@@ -452,6 +469,17 @@ check-functions         # Deno type check (all functions auto-detected)
   build-storybook
   ```
 
+- 外部サービス CLI（すべて devenv shell 内で PATH 上にある）:
+
+  ```bash
+  stripe listen --forward-to http://127.0.0.1:54321/functions/v1/stripe-webhooks  # 決済 Webhook をローカル転送
+  sentry-cli releases new "$(git rev-parse HEAD)"                                  # Sentry release 作成
+  lk token create --join --room dev --identity me                                  # LiveKit トークン発行
+  resend emails send --help                                                        # Resend（bunx 経由）
+  adapty --help                                                                    # Adapty（bunx 経由）
+  fal auth login && fal auth whoami                                                # fal.ai（uvx 経由。CLI は OAuth 認証）
+  ```
+
 ### Database Operations
 
 This project manages database schema with Drizzle ORM.
@@ -589,9 +617,16 @@ Each AI assistant automatically understands the project's architecture, coding c
 
 ## Future Considerations
 
-The following tools are being considered for implementation:
+The following tools are being considered for implementation. アプリ側の実装はまだだが、
+**CLI と Agent Skill は先に devenv / `skills-lock.json` へ導入済み**なので、着手時はすぐ動かせる。
 
-- **[Resend](https://resend.com/)**: Email delivery service
-- **[Sentry](https://sentry.io/)**: Application monitoring and error tracking
-- **[Stripe](https://stripe.com/)**: Payment processing platform
-- **[RevenueCat](https://www.revenuecat.com/)**: Subscription management for mobile apps
+| サービス | 用途 | CLI | Agent Skill |
+|---|---|---|---|
+| **[Resend](https://resend.com/)** | Email delivery service | `resend` | `resend` / `resend-cli` / `react-email` / `send-email` / `email-best-practices` / `agent-email-inbox` |
+| **[Sentry](https://sentry.io/)** | Application monitoring and error tracking | `sentry-cli` | `sentry-get-started` / `sentry-instrument` / `sentry-debug-issue` / `sentry-fix-stack-traces` / `sentry-setup-releases` |
+| **[Stripe](https://stripe.com/)** | Payment processing platform | `stripe` | `stripe-best-practices` / `stripe-integration` / `stripe-docs` / `upgrade-stripe` |
+| **[RevenueCat](https://www.revenuecat.com/)** | Subscription management for mobile apps | 公式 CLI なし（MCP を使う） | `revenuecat` ほか 8 種 |
+| **[Adapty](https://adapty.io/)** | Subscription management for mobile apps（RevenueCat の対抗馬） | `adapty` | `adapty-cli` |
+
+> 選定理由・見送ったもの（OneSignal CLI / EAS CLI の nix 固定 / Vercel CLI）は
+> [`docs/_research/2026-08-06-service-clis.md`](docs/_research/2026-08-06-service-clis.md) を参照。
