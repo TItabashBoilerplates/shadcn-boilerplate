@@ -1,6 +1,6 @@
 ---
 name: fal
-description: 本リポジトリで fal.ai（画像・動画・音声などの生成 AI 推論、serverless GPU）を実装するときのガイダンス。同期 subscribe とキュー submit の使い分け、Webhook でのコールバック、`FAL_KEY` を絶対にクライアントへ出さないための proxy 構成、backend-py / Edge Functions のどちらに置くかの判断、そして fal のツール窓口を **CLI に一元化**（fal-ai MCP は廃止）したうえで、認証が 2 系統（アプリは API キー、CLI は `fal auth login` の OAuth）に分かれていて devenv が流す `FAL_KEY` が OAuth を上書きしてしまう罠を扱う。「画像生成」「動画生成」「image generation」「text-to-image」「Flux」「生成モデルを呼びたい」「GPU 推論」「fal」といった話題が出たら、ユーザーが fal.ai の名前を出していなくても必ず最初に起動すること。公式 Agent Skill が存在しないサービスなので、鍵の扱いと配置ルールはこのスキルが唯一の拠り所になる。
+description: 本リポジトリで fal.ai（画像・動画・音声・3D などの生成 AI 推論、serverless GPU）を扱うときのガイダンス。**どのモデルを使うかの選定**（ユーザーの意図 → カテゴリ → モデル。画像生成の既定は `openai/gpt-image-2`、編集は `openai/gpt-image-2/edit`。最新カタログの調べ方つき）、`fal api` CLI での生成の実行手順、同期 subscribe とキュー submit + Webhook の使い分け、`FAL_KEY` を絶対にクライアントへ出さない構成、backend-py / Edge Functions のどちらに置くかの判断、そして fal のツール窓口を **CLI に一元化**（fal-ai MCP は廃止）したうえで、認証が 2 系統（アプリは API キー、CLI は `fal auth login` の OAuth）に分かれていて devenv が流す `FAL_KEY` が OAuth を上書きしてしまう罠を扱う。「画像を作って」「イラスト」「バナー」「動画生成」「この画像を編集して」「背景を消して」「喋らせて」「ナレーション」「文字起こし」「BGM」「3D モデル」「LoRA を学習させたい」「image generation」「text-to-image」「Flux」「GPU 推論」「fal」といった話題が出たら、ユーザーが fal.ai の名前を出していなくても必ず最初に起動すること。公式 Agent Skill が存在しないサービスなので、モデル選定・鍵の扱い・配置ルールはこのスキルが唯一の拠り所になる。
 ---
 
 # fal.ai（生成 AI 推論 / serverless GPU）
@@ -10,6 +10,24 @@ description: 本リポジトリで fal.ai（画像・動画・音声などの生
 
 **fal を触る窓口は `fal` CLI に一元化している**（`.mcp.json` にあった `fal-ai` MCP は廃止した）。
 CLI は devenv が提供する（`scripts.fal` = `uvx fal` のラッパ）。調査記録: `docs/_research/2026-08-06-service-clis.md`
+
+## このスキルの読み方
+
+| 知りたいこと | 見る場所 |
+|---|---|
+| **どのモデルを使うか**（意図 → カテゴリ → モデル、最新カタログの調べ方、既定モデル） | **`references/models.md`** |
+| **CLI の使い方**（`fal api` での生成、パラメータ記法、入出力の扱い、コマンド一覧） | **`references/cli.md`** |
+| 鍵の扱い・認証モード | 本ファイル §1 / §3 |
+| どこに実装するか（Edge Function / backend-py）・呼び出し方・ジョブ管理 | 本ファイル §2 / §4 / §5 |
+
+### 先に頭に入れておく 3 つ
+
+1. **画像生成の既定は `openai/gpt-image-2`**（編集・インペイントは `openai/gpt-image-2/edit`）。
+   指示が無ければこれを選ぶ。外すのは `references/models.md` §3 の条件に当たるときだけで、**理由を添える**。
+2. **モデル ID と入力スキーマは推測で書かない**。fal は 1,400 以上のモデルがあり週単位で入れ替わる。
+   `references/models.md` §1 の一次情報（公開カタログ API / モデルページの API タブ / `fal api` で実行）で必ず確認する。
+3. **参照画像があるなら「生成」ではなく「編集」**（`text-to-image` ではなく `image-to-image` = `/edit` 系）。
+   ここの取り違えが最も多い。
 
 > **併読必須**: `.claude/skills/ai-usage-metering/` も起動すること。fal は**トークンではなく実行秒数・枚数・解像度**で課金されるため、
 > レスポンスに usage が無いケースがある。数量が確定する場所（リクエストのパラメータ、または Webhook 側）で記録する。
@@ -118,7 +136,12 @@ ADMIN キーはアカウント全体を操作できるので、Edge Function / b
 ## 4. 呼び出し方（3 つのモードを使い分ける）
 
 fal のクライアントは Python / JS / Swift / Java / Kotlin / Dart で **同じ 4 メソッド**（`subscribe` / `submit` / `run` / `stream`）を提供する。
-サーバ側環境では `FAL_KEY` を env から自動で読む。
+サーバ側環境では `FAL_KEY` を env から自動で読む。**モデル ID と引数は `references/models.md` §1 で確認したものを使う。**
+
+> 以下の Python 例は **fal-client 1.0.0** のシグネチャに一致している
+> （`subscribe(application, arguments, *, with_logs=, on_queue_update=, ...)` /
+> `submit(application, arguments, *, webhook_url=, ...) -> SyncRequestHandle`）。
+> ローカルファイルを入力にするときは `fal_client.upload_file(path) -> str` で URL 化する。
 
 ### 4.1 `subscribe` — キューに投げて結果まで待つ（既定）
 
@@ -127,8 +150,9 @@ fal のクライアントは Python / JS / Swift / Java / Kotlin / Dart で **�
 ```python
 import fal_client
 
-result = fal_client.subscribe("fal-ai/flux/schnell", arguments={
+result = fal_client.subscribe("openai/gpt-image-2", arguments={
     "prompt": "a sunset over mountains",
+    "image_size": "landscape_16_9",
 })
 image_url = result["images"][0]["url"]
 ```
@@ -138,10 +162,10 @@ image_url = result["images"][0]["url"]
 ハンドラが返るので、`request_id` を DB に持っておいて後で照会する。
 
 ```python
-handler = fal_client.submit("fal-ai/flux/schnell", arguments={"prompt": "..."})
-handler.request_id        # ← これを DB に保存する
-handler.status()          # 状態照会
-handler.get()             # 完了後の取得
+handle = fal_client.submit("fal-ai/kling-video/v3/pro/image-to-video", arguments={...})
+handle.request_id         # ← これを DB に保存する
+handle.status()           # 状態照会（with_logs=True でログ付き）
+handle.get()              # 完了後の取得
 ```
 
 ### 4.3 `submit` + `webhook_url` — 完了通知を受ける（推奨: 長時間ジョブ）
@@ -149,8 +173,8 @@ handler.get()             # 完了後の取得
 ポーリングを持たなくて済むので、Edge Functions と相性が良い。
 
 ```python
-handler = fal_client.submit(
-    "fal-ai/flux/schnell",
+handle = fal_client.submit(
+    "bytedance/seedance-2.0/text-to-video",
     arguments={"prompt": "..."},
     webhook_url="https://<project>.supabase.co/functions/v1/fal-webhooks?secret=...",
 )
@@ -191,21 +215,22 @@ Webhook を受ける Edge Function は `supabase/functions/onesignal-webhooks/` 
 
 | やりたいこと | 使うもの | 認証 |
 |---|---|---|
-| モデルを探す / 動作を試す / キューの状態を見る | **`fal` CLI** | §3 のモード解決に従う |
+| モデルを探す（カタログ検索） | `references/models.md` §1 の**公開カタログ API**（認証不要） | — |
+| 生成を**その場で試す** / スキーマの当たりを取る | **`fal` CLI**（`fal api <model id> k=v ...`） | §3 のモード解決に従う |
 | 自前の serverless 関数を fal 上にデプロイする | **`fal` CLI**（`fal deploy my_app.py`） | ローカル=OAuth / CI=ADMIN スコープキー |
-| 既製モデル（`fal-ai/flux/...` など）を叩くだけ | **CLI 不要** — アプリコードから client を呼ぶ | `FAL_KEY`（API スコープ） |
+| **プロダクションの生成経路** | **CLI ではなくアプリコードの `fal_client`**（§2 / §4） | `FAL_KEY`（API スコープ） |
 
 ```bash
-fal auth whoami             # 今どの principal で動いているかを確認 ← 迷ったらまずこれ
-fal auth login              # ブラウザで GitHub / Google / SSO を選択（--connection github で省略可）
-fal auth login --no-browser # SSH 越し等、ブラウザを開けない環境では URL を表示するだけにする
+fal auth whoami                                              # 今どの principal か ← 迷ったらまずこれ
+fal api openai/gpt-image-2 prompt="a red fox in snow"        # 生成を試す（既定の画像モデル）
 ```
 
+**CLI の全コマンド・`fal api` のパラメータ記法・入出力の扱いは `references/cli.md`**。
 CLI は devenv の `fal` script（`uvx fal` のラッパ）経由で提供している
 （Python 製。backend-py の依存には入れていない = 運用ツールなので）。
 
-> ⚠️ **`fal` CLI が要るのは「自前モデルをホストする」場合だけ**。
-> 既製モデルを使うだけなら `fal_client` の依存を足すだけでよく、CLI は不要。
+> ⚠️ **CLI は試行と自前モデルのホスティング用**。アプリの生成経路には使わない
+> （`fal api` は値をすべて文字列として送るなど CLI 固有の制約がある。`references/cli.md` §2）。
 >
 > ⚠️ **`fal auth login` したのに挙動が変**なら §3 の優先順位を疑い、まず `fal auth whoami`。
 > `fal` script 経由なら Doppler の `FAL_KEY` はローカルで自動的に無効化されるが、
@@ -237,10 +262,12 @@ cd backend-py && uv add --package api fal-client
 
 推測で API を書かないための一次情報:
 
+- [Model explorer](https://fal.ai/models) / **カタログ API** `https://fal.ai/api/models?keywords=&categories=&page=1`（認証不要。`references/models.md` §1）
+- **モデルページの API タブ** `https://fal.ai/models/<model id>/api` ← **入出力スキーマの正本**
 - [fal client](https://fal.ai/docs/model-apis/client)（`subscribe` / `submit` / `run` / `stream` と鍵の扱い）
 - [Queue & webhooks](https://fal.ai/docs/model-apis/model-endpoints/queue)
-- [Model APIs](https://fal.ai/docs/model-apis)（モデルごとの入出力スキーマ）
+- [Model APIs](https://fal.ai/docs/model-apis)
 - [Private serverless models](https://docs.fal.ai/private-serverless-models/)（`fal` CLI でのデプロイ）
 
 モデルごとに入出力スキーマが違うので、**使うモデルのページを必ず確認してから引数を書く**
-（`.claude/rules/research.md`）。`fal-ai` MCP でモデルスキーマを引くのが最短。
+（`.claude/rules/research.md`）。手順は `references/models.md` §1。

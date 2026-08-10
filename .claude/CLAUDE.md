@@ -81,7 +81,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     │ # ↓ 公式 Skill が存在しない外部サービス向けの自作 Skill（lock 管理外）
     ├── onesignal/        # プッシュ通知（既存実装が仕様書。external_id = Supabase user.id）
     ├── livekit/          # リアルタイム音声・映像（トークン発行はサーバ側限定・Edge FN / backend-py の切り分け）
-    └── fal/              # 生成 AI 推論（FAL_KEY 非公開・subscribe / submit+webhook の使い分け）
+    └── fal/              # 生成 AI 推論（モデル選定 / CLI 一元化 / FAL_KEY 非公開 / submit+webhook）
+        │                 #   **画像生成の既定は openai/gpt-image-2（編集は /edit）**
+        ├── references/models.md  # 意図→カテゴリ→モデルの選定・最新カタログの調べ方
+        └── references/cli.md     # fal CLI（fal api でのコンテンツ生成）
 
 # 外部サービス系の公式 Skill（skills-lock.json 管理。CLI は devenv が提供する）:
 #   stripe-best-practices / stripe-integration / stripe-docs / upgrade-stripe   → CLI: stripe
@@ -360,6 +363,9 @@ nr build
 - **Vector Search**: pgvector
 - **LLM Orchestration**: LangChain/LangGraph
 - **Providers**: OpenAI, Anthropic, Replicate, FAL
+- **生成 AI（画像 / 動画 / 音声 / 3D）**: fal.ai。**窓口は `fal` CLI に一元化**（fal-ai MCP は廃止）。
+  **画像生成の既定モデルは `openai/gpt-image-2`（編集・インペイントは `openai/gpt-image-2/edit`）**。
+  モデル ID とスキーマは推測せず必ずカタログ API / モデルページで確認する → `.claude/skills/fal/`
 - **Real-time**: LiveKit
 - **Usage Metering**: トークン使用量・コスト集計は**標準で設計に含める** → `.claude/skills/ai-usage-metering/`
 

@@ -62,7 +62,7 @@
 | Sentry / 監視 / エラートラッキング / source map / release | `sentry-get-started`, `sentry-instrument`, `sentry-debug-issue`, `sentry-fix-stack-traces`, `sentry-setup-releases` |
 | プッシュ通知 / push notification / 通知が届かない / 購読許可 / OneSignal | `onesignal`（自作） |
 | ビデオ通話 / 音声通話 / WebRTC / 音声エージェント / 画面共有 / LiveKit | `livekit`（自作） |
-| 画像生成 / 動画生成 / text-to-image / GPU 推論 / Flux / fal.ai | `fal`（自作） |
+| 画像生成 / 画像編集 / 背景除去 / 動画生成 / 音声合成（読み上げ・ナレーション）/ 効果音・BGM / 文字起こし / 3D 生成 / LoRA 学習 / text-to-image / GPU 推論 / Flux / fal.ai | `fal`（自作。**モデル選定の判断軸つき。画像生成の既定は `openai/gpt-image-2`**） |
 | Resend / メール送信 / Webhook | `resend`, `resend-cli`, `send-email`, `react-email`, `email-best-practices`, `agent-email-inbox` |
 | LangChain / LangGraph / LangSmith / エージェント | `langchain` |
 | LLM を呼ぶ機能全般（チャット / 要約 / RAG / 埋め込み / 画像・音声・動画生成）/ トークン使用量 / コスト集計 / 従量課金 / プラン上限 / 「AI が高い」 | `ai-usage-metering`（自作。**モデル呼び出しが増えるなら常に対象**）+ 実装先の Skill（`langchain` / `fal` / `edge-functions-mcp` 等） |
