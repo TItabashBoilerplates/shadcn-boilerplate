@@ -1547,16 +1547,86 @@ in
     # 入れない: fal は運用ツールでアプリの実行時依存ではなく、`uv sync --all-packages` や CI の
     # インストール時間を無駄に増やすため。
     #
-    # ⚠️ 認証は 2 系統あり、**CLI は `fal auth login`（Auth0 device flow の OAuth）が既定**。
-    # `.mcp.json` の fal-ai MCP と `fal_client` が使う `FAL_KEY`（API キー）とは別物である。
-    # さらに fal の資格情報解決は **`FAL_KEY` が env にあると OAuth トークンより優先される**ため、
-    # Doppler に `FAL_KEY` を置いていると devenv shell 内では `fal auth login` 済みでも
-    # 常にそのキーで動く（deploy 等は ADMIN スコープが要るので権限エラーになりうる）。
-    # 自分のアカウントで動かしたいときは `FAL_FORCE_AUTH_BY_USER=1 fal ...` か `env -u FAL_KEY fal ...`。
-    # 詳細は .claude/skills/fal/SKILL.md §3。
+    # ⚠️ 認証は 2 系統ある（fal 1.79.1 の `fal/auth/__init__.py::key_credentials` で確認）:
+    #   1. **API キー** `FAL_KEY`（`<id>:<secret>`）… アプリコード（`fal_client`）が使う。
+    #      env にあると `~/.fal` の OAuth トークンより**優先される**。
+    #   2. **OAuth**（`fal auth login` / Auth0 device flow）… 開発者個人の資格情報。
+    #      `~/.fal/auth0_token`（`FAL_HOME_DIR` で変更可）に保存され、他マシンへ持ち出せない。
+    #   `FAL_FORCE_AUTH_BY_USER=1` を立てると key 系（env / `~/.fal` の profile key / colab /
+    #   `FAL_KEY_ID`+`FAL_KEY_SECRET`）を**すべて無視**して 2 に倒れる。
+    #
+    # 本リポジトリは fal を **CLI に一元化**している（fal-ai MCP は廃止）。そのうえで、
+    # devenv shell は Doppler のシークレットを丸ごと env へ流し込む（loadDopplerByEnv）ため、
+    # 素の `uvx fal` だとローカルでも常に `FAL_KEY` が OAuth を上書きしてしまう。
+    # そこで実行環境に応じて認証モードを解決してから CLI を起動する:
+    #
+    #   | 環境                                     | mode | 使う資格情報                          |
+    #   |------------------------------------------|------|---------------------------------------|
+    #   | 開発者のローカルマシン（既定）           | user | `fal auth login` の OAuth             |
+    #   | クラウド sandbox（CCR / Codespaces 等）  | key  | Doppler の `FAL_ADMIN_KEY` or `FAL_KEY` |
+    #   | CI（GitHub Actions）                     | key  | 同上                                  |
+    #
+    # ブラウザを開けない環境では device flow を通せないので key に倒す、という判断。
+    # `FAL_AUTH_MODE=user|key` で明示上書きできる（ローカルで CI 相当を再現したい時など）。
+    # key mode は `FAL_ADMIN_KEY` があればそれを優先する: `fal deploy` 等は ADMIN スコープが
+    # 要る一方、アプリ実行時に配る `FAL_KEY` は API スコープに留めたいため（両者を 1 キーで
+    # 兼ねない）。詳細は .claude/skills/fal/SKILL.md §3。
     "fal" = {
-      exec = ''cd "$DEVENV_ROOT" && exec uvx fal "$@"'';
-      description = "Run the official fal CLI via uvx (fal.ai serverless / inference)";
+      exec = ''
+        set -euo pipefail
+        cd "$DEVENV_ROOT"
+
+        _fal_mode="''${FAL_AUTH_MODE:-}"
+        if [ -z "$_fal_mode" ]; then
+          # ブラウザを開けない実行環境の判定（CI / クラウド sandbox）。
+          # `CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE` は Claude Code on the web（CCR）が注入する。
+          # ローカルの Claude Code でも立つ `CLAUDECODE` / `IS_SANDBOX` は判定に使わない
+          # （ローカルは OAuth を通せるので user のままにする）。
+          if [ -n "''${CI:-}" ] || [ -n "''${GITHUB_ACTIONS:-}" ] \
+            || [ -n "''${CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE:-}" ] \
+            || [ -n "''${CODESPACES:-}" ] || [ -n "''${GITPOD_WORKSPACE_ID:-}" ]; then
+            _fal_mode=key
+          else
+            _fal_mode=user
+          fi
+        fi
+
+        case "$_fal_mode" in
+          key)
+            # ADMIN スコープのキーがあれば優先（deploy 等）。無ければアプリ用 FAL_KEY。
+            if [ -n "''${FAL_ADMIN_KEY:-}" ]; then
+              FAL_KEY="$FAL_ADMIN_KEY"
+            fi
+            if [ -z "''${FAL_KEY:-}" ]; then
+              echo "❌ fal: FAL_KEY が未設定です（auth mode: key）。" >&2
+              echo "   このマシンは CI / クラウド sandbox と判定されており、OAuth（fal auth login）は使えません。" >&2
+              echo "   Doppler に FAL_KEY（アプリ用 / API スコープ）または FAL_ADMIN_KEY（deploy 用 / ADMIN スコープ）" >&2
+              echo "   を登録してください（doppler MCP 経由。値はチャット/ログに出さない）。" >&2
+              echo "   ローカルの OAuth を使いたい場合は FAL_AUTH_MODE=user fal ... 。詳細: .claude/skills/fal/SKILL.md §3" >&2
+              exit 1
+            fi
+            export FAL_KEY
+            unset FAL_FORCE_AUTH_BY_USER || true
+            ;;
+          user)
+            # Doppler 由来の key が OAuth を上書きしないよう、両方の手段で確実に無効化する。
+            unset FAL_KEY FAL_KEY_ID FAL_KEY_SECRET || true
+            export FAL_FORCE_AUTH_BY_USER=1
+            if [ ! -f "''${FAL_HOME_DIR:-$HOME/.fal}/auth0_token" ]; then
+              echo "ℹ️  fal: 未ログインです（auth mode: user）。'fal auth login' を実行してください。" >&2
+              echo "   ブラウザを開けない環境なら 'fal auth login --no-browser'、" >&2
+              echo "   キーで動かすなら FAL_AUTH_MODE=key fal ... 。" >&2
+            fi
+            ;;
+          *)
+            echo "❌ fal: FAL_AUTH_MODE の値が不正です: '$_fal_mode'（'user' か 'key'）" >&2
+            exit 1
+            ;;
+        esac
+
+        exec uvx fal "$@"
+      '';
+      description = "Run the official fal CLI via uvx (local=OAuth / CI・sandbox=FAL_KEY from Doppler)";
     };
 
     # Vercel CLI。**日常運用（logs / env pull / inspect / microfrontends pull / 手動 deploy）

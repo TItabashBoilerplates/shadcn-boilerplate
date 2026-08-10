@@ -1,14 +1,15 @@
 ---
 name: fal
-description: 本リポジトリで fal.ai（画像・動画・音声などの生成 AI 推論、serverless GPU）を実装するときのガイダンス。同期 subscribe とキュー submit の使い分け、Webhook でのコールバック、`FAL_KEY` を絶対にクライアントへ出さないための proxy 構成、backend-py / Edge Functions のどちらに置くかの判断、そして認証が 2 系統（アプリ/MCP は API キー、CLI は `fal auth login` の OAuth）に分かれていて devenv が流す `FAL_KEY` が OAuth を上書きしてしまう罠を扱う。「画像生成」「動画生成」「image generation」「text-to-image」「Flux」「生成モデルを呼びたい」「GPU 推論」「fal」といった話題が出たら、ユーザーが fal.ai の名前を出していなくても必ず最初に起動すること。公式 Agent Skill が存在しないサービスなので、鍵の扱いと配置ルールはこのスキルが唯一の拠り所になる。
+description: 本リポジトリで fal.ai（画像・動画・音声などの生成 AI 推論、serverless GPU）を実装するときのガイダンス。同期 subscribe とキュー submit の使い分け、Webhook でのコールバック、`FAL_KEY` を絶対にクライアントへ出さないための proxy 構成、backend-py / Edge Functions のどちらに置くかの判断、そして fal のツール窓口を **CLI に一元化**（fal-ai MCP は廃止）したうえで、認証が 2 系統（アプリは API キー、CLI は `fal auth login` の OAuth）に分かれていて devenv が流す `FAL_KEY` が OAuth を上書きしてしまう罠を扱う。「画像生成」「動画生成」「image generation」「text-to-image」「Flux」「生成モデルを呼びたい」「GPU 推論」「fal」といった話題が出たら、ユーザーが fal.ai の名前を出していなくても必ず最初に起動すること。公式 Agent Skill が存在しないサービスなので、鍵の扱いと配置ルールはこのスキルが唯一の拠り所になる。
 ---
 
 # fal.ai（生成 AI 推論 / serverless GPU）
 
-`.claude/CLAUDE.md` の AI/ML プロバイダに **FAL** として載っており、`.mcp.json` に `fal-ai` MCP が配線済み。
+`.claude/CLAUDE.md` の AI/ML プロバイダに **FAL** として載っている。
 **アプリ側の実装コードはまだ無い**ので、このスキルは「これから書くときの設計判断」を固定するためのもの。公式 Agent Skill は存在しない。
 
-CLI (`fal`) は devenv が提供済み（`scripts.fal` = `uvx fal`）。調査記録: `docs/_research/2026-08-06-service-clis.md`
+**fal を触る窓口は `fal` CLI に一元化している**（`.mcp.json` にあった `fal-ai` MCP は廃止した）。
+CLI は devenv が提供する（`scripts.fal` = `uvx fal` のラッパ）。調査記録: `docs/_research/2026-08-06-service-clis.md`
 
 > **併読必須**: `.claude/skills/ai-usage-metering/` も起動すること。fal は**トークンではなく実行秒数・枚数・解像度**で課金されるため、
 > レスポンスに usage が無いケースがある。数量が確定する場所（リクエストのパラメータ、または Webhook 側）で記録する。
@@ -54,40 +55,63 @@ fal には **API キー**と **OAuth（ユーザー）** の 2 つの資格情�
 | 経路 | 資格情報 | 取得方法 | どこで使う |
 |---|---|---|---|
 | **アプリコード**（`fal_client`） | **API キー** `FAL_KEY`（`key_id:key_secret` 形式） | ダッシュボード or `fal keys create --scope API` | Edge Function / backend-py。env から自動で読まれる |
-| **`fal-ai` MCP** | **同じく API キー** | 同上 | `.mcp.json` が `Authorization: Bearer ${FAL_KEY}` で送る（静的トークン） |
-| **`fal` CLI** | **OAuth（Auth0 device flow, RFC 8628）** | `fal auth login` → ブラウザで GitHub / Google / SSO を選択 | 開発者の手元。**資格情報はローカルに保存され、他マシンへ持ち出せない** |
-| **`fal` CLI（CI）** | **ADMIN スコープの API キー** | `fal keys create --scope ADMIN` | CI/CD。OAuth はブラウザが要るので CI では使えない |
+| **`fal` CLI（ローカル）** | **OAuth（Auth0 device flow, RFC 8628）** | `fal auth login` → ブラウザで GitHub / Google / SSO を選択 | 開発者の手元。**資格情報は `~/.fal/auth0_token` に保存され、他マシンへ持ち出せない** |
+| **`fal` CLI（CI / クラウド sandbox）** | **API キー**（deploy 等をするなら ADMIN スコープ） | `fal keys create --scope ADMIN` | GitHub Actions / Claude Code on the web 等。**ブラウザが無いので OAuth は使えない** |
 
-### ⚠️ このリポジトリ固有の罠: Doppler の `FAL_KEY` が CLI の OAuth を上書きする
+### 資格情報の解決順（fal 1.79.1 `fal/auth/__init__.py::key_credentials` で確認）
 
-fal の資格情報解決には **優先順位**があり、**`FAL_KEY` が env にあると `fal auth login` の OAuth トークンより優先される**
-（`FAL_FORCE_AUTH_BY_USER=1` を立てたときだけ逆転する）。
+1. **`FAL_FORCE_AUTH_BY_USER=1` が立っていたら key 系を全部無視**して OAuth トークンへ倒れる
+2. `FAL_KEY`（env）
+3. `~/.fal` の profile key（`fal profile key`）
+4. Google Colab の `FAL_KEY`
+5. `FAL_KEY_ID` + `FAL_KEY_SECRET`
+6. どれも無ければ `~/.fal/auth0_token` の OAuth（`fal auth login`）
+
+つまり **`FAL_KEY` が env にあると `fal auth login` 済みでも常にキー側が勝つ**。
+
+### ⚠️ このリポジトリ固有の罠と、その解決（`fal` script が吸収済み）
 
 本リポジトリは `devenv shell` 進入時に **`loadDopplerByEnv` が Doppler のシークレットを丸ごと env へ export する**。
-つまり Doppler に `FAL_KEY` を入れていると、**devenv shell の中では `fal auth login` 済みでも常にその API キーで動く**。
-症状としてはこう出る:
+素の `uvx fal` を叩くと、Doppler の `FAL_KEY` がローカルでも常に OAuth を上書きしてしまう
+（症状: `fal deploy` が権限エラー／個人アカウントのつもりがチーム共有キーの principal で動く）。
 
-- `fal deploy` が権限エラーになる → Doppler の `FAL_KEY` が **API スコープ**（モデル呼び出し用）で、deploy には **ADMIN スコープ**が要る
-- 個人アカウントでログインしたつもりが、チーム共有キーの principal として動いている
+そこで devenv の **`fal` script が実行環境を見て認証モードを決めてから CLI を起動する**。
+**手で `uvx fal` を叩かず、必ず `fal` script を使うこと**（`.claude/rules/commands.md`）。
 
-対処:
+| 環境 | mode | 使う資格情報 | script がやること |
+|---|---|---|---|
+| 開発者のローカルマシン（既定） | `user` | `fal auth login` の OAuth | `FAL_KEY` / `FAL_KEY_ID` / `FAL_KEY_SECRET` を unset し `FAL_FORCE_AUTH_BY_USER=1` を立てる |
+| クラウド sandbox（Claude Code on the web / Codespaces / Gitpod） | `key` | Doppler の `FAL_ADMIN_KEY` → 無ければ `FAL_KEY` | キー未設定なら**エラーで停止**（黙って OAuth に落ちない） |
+| CI（GitHub Actions） | `key` | 同上 | 同上 |
 
-| やりたいこと | どうする |
-|---|---|
-| CLI を**自分のアカウント**で動かしたい | `FAL_FORCE_AUTH_BY_USER=1 fal <cmd>`、または `env -u FAL_KEY fal <cmd>` |
-| CLI を**キー**で動かしたい（CI 等） | `FAL_KEY` を **ADMIN スコープ**のキーにする。ただしアプリ用の API スコープキーと**別のキー名で分ける**こと |
-| 複数キーを切り替えたい | `fal profile set <name>` + `fal profile key`（`~/.fal` に保存） |
+判定材料は `CI` / `GITHUB_ACTIONS` / `CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE` / `CODESPACES` / `GITPOD_WORKSPACE_ID`。
+**ローカルの Claude Code でも立つ `CLAUDECODE` / `IS_SANDBOX` は判定に使わない**（ローカルは OAuth を通せるため）。
+明示上書きは **`FAL_AUTH_MODE=user|key`**:
+
+```bash
+fal auth whoami                  # 今どの principal で動いているか ← 迷ったらまずこれ
+FAL_AUTH_MODE=key fal <cmd>      # ローカルで CI 相当（キー）を再現したい
+FAL_AUTH_MODE=user fal <cmd>     # sandbox でも自分の OAuth を使いたい（要 fal auth login）
+fal profile set <name>           # 複数キーの切り替え（~/.fal に保存）
+```
 
 **アプリ用（API スコープ）と CLI/CI 用（ADMIN スコープ）を 1 つの `FAL_KEY` で兼ねない。**
 ADMIN キーはアカウント全体を操作できるので、Edge Function / backend-py のランタイムへ配ってはいけない。
+`fal` script が `FAL_ADMIN_KEY` を優先するのはこのため（アプリに配る `FAL_KEY` は API スコープのまま据え置ける）。
 
 ### Doppler 上の扱い
 
 `FAL_` は予約 prefix（`GITHUB_` / `SUPABASE_` / `VERCEL_`）に当たらないので **Doppler にそのままの名前で置ける**
 （`.claude/rules/env-naming.md`）。書き込みは `doppler` MCP 経由で、**値をチャット / ログ / コミットに出さない**
 （`.claude/rules/mcp-doppler.md`）。
-CI 用の ADMIN キーを持つ場合は `FAL_ADMIN_KEY` のように別キー名にして、**devenv shell に自動 export される
-`FAL_KEY` とは切り離す**（上の罠を踏まないため）。
+
+| キー | スコープ | 用途 |
+|---|---|---|
+| `FAL_KEY` | **API** | アプリ実行時（`fal_client`）。CI / sandbox の CLI もこれで足りる（deploy 以外） |
+| `FAL_ADMIN_KEY` | **ADMIN** | `fal deploy` 等。**任意**。置けば CLI が自動で優先する |
+
+> boilerplate の共通 Doppler（project `all` / config `all`）には **ダミーの `FAL_KEY` を登録済み**。
+> 派生プロジェクトで fal を実際に使うときに実キーへ差し替えること（ダミーのままだと当然 401 になる）。
 
 ---
 
@@ -154,31 +178,38 @@ Webhook を受ける Edge Function は `supabase/functions/onesignal-webhooks/` 
 
 ---
 
-## 6. `fal` CLI と `fal-ai` MCP の使い分け
+## 6. ツールの窓口は `fal` CLI 一本（MCP は廃止）
 
-**両者は認証方式が違う**（§3）。MCP は `.mcp.json` に書かれた **API キーの静的トークン**で動き、
-CLI は既定で **`fal auth login` の OAuth セッション**で動く。同じ「fal を触る」でも別の principal になりうる。
+以前は `fal-ai` MCP（`https://mcp.fal.ai/mcp` を `Bearer ${FAL_KEY}` で叩く HTTP MCP）を `.mcp.json` に
+配線していたが、**廃止して CLI に一元化した**。理由:
+
+- **認証が二重になる**。MCP は API キー固定、CLI は既定で OAuth。同じ「fal を触る」操作が
+  エージェントの選んだ経路次第で**別の principal**になり、権限エラーの原因が特定できない
+- CLI だけでモデル検索・実行・キュー確認・デプロイまで足りる（MCP に固有の機能が無い）
+- 経路が 1 本なら、§3 の環境別モード解決（ローカル=OAuth / sandbox=Doppler のキー）を
+  **`fal` script 1 か所に閉じ込められる**
 
 | やりたいこと | 使うもの | 認証 |
 |---|---|---|
-| モデルを探す / 動作を試す / キューの状態を見る | **`fal-ai` MCP**（`.mcp.json` に配線済み） | `Bearer ${FAL_KEY}`（API キー） |
-| 自前の serverless 関数を fal 上にデプロイする | **`fal` CLI**（`fal deploy my_app.py`） | `fal auth login`（OAuth）。CI では ADMIN スコープキー |
-| 既製モデル（`fal-ai/flux/...` など）を叩くだけ | **CLI も MCP も不要** — アプリコードから client を呼ぶ | `FAL_KEY`（API キー） |
+| モデルを探す / 動作を試す / キューの状態を見る | **`fal` CLI** | §3 のモード解決に従う |
+| 自前の serverless 関数を fal 上にデプロイする | **`fal` CLI**（`fal deploy my_app.py`） | ローカル=OAuth / CI=ADMIN スコープキー |
+| 既製モデル（`fal-ai/flux/...` など）を叩くだけ | **CLI 不要** — アプリコードから client を呼ぶ | `FAL_KEY`（API スコープ） |
 
 ```bash
+fal auth whoami             # 今どの principal で動いているかを確認 ← 迷ったらまずこれ
 fal auth login              # ブラウザで GitHub / Google / SSO を選択（--connection github で省略可）
 fal auth login --no-browser # SSH 越し等、ブラウザを開けない環境では URL を表示するだけにする
-fal auth whoami             # 今どの principal で動いているかを確認 ← 迷ったらまずこれ
 ```
 
-CLI は `uvx fal` 経由で提供している（Python 製。backend-py の依存には入れていない = 運用ツールなので）。
+CLI は devenv の `fal` script（`uvx fal` のラッパ）経由で提供している
+（Python 製。backend-py の依存には入れていない = 運用ツールなので）。
 
 > ⚠️ **`fal` CLI が要るのは「自前モデルをホストする」場合だけ**。
 > 既製モデルを使うだけなら `fal_client` の依存を足すだけでよく、CLI は不要。
 >
-> ⚠️ **`fal auth login` したのに挙動が変**なら §3 の優先順位の罠を疑う。
-> devenv shell は Doppler の `FAL_KEY` を env に流し込んでおり、それが OAuth トークンより優先される。
-> `fal auth whoami` で確認し、`FAL_FORCE_AUTH_BY_USER=1` か `env -u FAL_KEY` で回避する。
+> ⚠️ **`fal auth login` したのに挙動が変**なら §3 の優先順位を疑い、まず `fal auth whoami`。
+> `fal` script 経由なら Doppler の `FAL_KEY` はローカルで自動的に無効化されるが、
+> `uvx fal` を直接叩くとこのガードが効かない。
 
 ### backend-py に依存を足すとき
 

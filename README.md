@@ -154,7 +154,7 @@ By adopting these environments, we can ensure efficient development and maintain
 | LiveKit CLI (`lk`) | リアルタイム音声・映像（トークン発行・room 操作） |
 | Resend CLI (`resend`) | メール配信（nixpkgs 未収録のため bunx 経由の script） |
 | Adapty CLI (`adapty`) | モバイル課金・paywall（同上） |
-| fal CLI (`fal`) | fal.ai の生成 AI 推論 / serverless（Python 製のため uvx 経由の script）。**CLI は `fal auth login` の OAuth 認証**で、アプリ / MCP が使う API キー `FAL_KEY` とは別系統 |
+| fal CLI (`fal`) | fal.ai の生成 AI 推論 / serverless（Python 製のため uvx 経由の script）。**fal を触る窓口は CLI に一元化**（fal-ai MCP は廃止）。**ローカルは `fal auth login` の OAuth、CI / クラウド sandbox は Doppler の `FAL_KEY`** を script が自動で切り替える |
 | Vercel CLI (`vercel`) | デプロイ・ログ・env の日常運用（同上）。**プロビジョニングは REST API のまま** |
 
 > 外部サービス CLI の選定理由（何を入れて何を入れなかったか）は
@@ -477,7 +477,7 @@ check-functions         # Deno type check (all functions auto-detected)
   lk token create --join --room dev --identity me                                  # LiveKit トークン発行
   resend emails send --help                                                        # Resend（bunx 経由）
   adapty --help                                                                    # Adapty（bunx 経由）
-  fal auth login && fal auth whoami                                                # fal.ai（uvx 経由。CLI は OAuth 認証）
+  fal auth whoami                                                                  # fal.ai（uvx 経由。ローカル=OAuth / CI・sandbox=FAL_KEY）
   ```
 
 ### Database Operations

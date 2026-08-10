@@ -113,6 +113,19 @@ symlink**（`--agent universal --agent claude-code`）。
 （ADMIN キーはアカウント全体を操作できるのでランタイムへ配らない。CI 用は `FAL_ADMIN_KEY` 等の別名にする）。
 詳細は `.claude/skills/fal/SKILL.md` §3。
 
+> **追記（2026-08-10）— fal の窓口を CLI に一元化し、`fal-ai` MCP を廃止した。**
+> 上表のとおり MCP（API キー固定）と CLI（既定 OAuth）で principal が食い違い、
+> 「同じ fal 操作なのにエージェントが選んだ経路次第で権限エラーになる」状態だったため、
+> `.mcp.json` から `fal-ai` を削除して CLI 一本にした（MCP 固有の機能は無く、
+> モデル検索・実行・キュー確認・デプロイは CLI で足りる）。
+> あわせて上記の「対処」を人手の作法から **`fal` script の自動解決**へ移した:
+> ローカル = `FAL_FORCE_AUTH_BY_USER=1` + キー系 unset で OAuth、
+> CI / クラウド sandbox（`CI` / `GITHUB_ACTIONS` / `CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE` /
+> `CODESPACES` / `GITPOD_WORKSPACE_ID` で判定）= Doppler の `FAL_ADMIN_KEY`→`FAL_KEY`。
+> `FAL_AUTH_MODE=user|key` で明示上書き可。優先順位は fal 1.79.1 の
+> `fal/auth/__init__.py::key_credentials` を読んで確認済み（`FAL_FORCE_AUTH_BY_USER=1` が
+> env キー / profile key / colab / `FAL_KEY_ID`+`FAL_KEY_SECRET` を**すべて**無効化する）。
+
 いずれも「一般論のコピー」ではなく、**このリポジトリのルール
 （supabase-first のエスカレーション判断 / env-naming の予約 prefix / mcp-doppler の値非露出 /
 python-monorepo の `--package` と import shadow / error-handling / ui-testing）に接続した形**で書いてある。

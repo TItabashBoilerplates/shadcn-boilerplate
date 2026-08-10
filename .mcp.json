@@ -56,13 +56,6 @@
 			"command": "npx",
 			"args": ["-y", "@dopplerhq/mcp-server"],
 			"env": {}
-		},
-		"fal-ai": {
-			"type": "http",
-			"url": "https://mcp.fal.ai/mcp",
-			"headers": {
-				"Authorization": "Bearer ${FAL_KEY}"
-			}
 		}
 	}
 }

@@ -61,12 +61,6 @@
         "-y",
         "@dopplerhq/mcp-server"
       ]
-    },
-    "fal-ai": {
-      "url": "https://mcp.fal.ai/mcp",
-      "headers": {
-        "Authorization": "Bearer ${FAL_KEY}"
-      }
     }
   }
 }
