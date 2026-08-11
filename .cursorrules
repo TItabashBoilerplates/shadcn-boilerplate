@@ -20,6 +20,7 @@
 
 | ポリシー | ルール | 概要 |
 |---------|--------|------|
+| Minimal Implementation | `@minimal-implementation` | 実装量を最小化（既存資産 → 標準機能 → マネージド → 実績ある OSS → スクラッチ）。star だけで選定しない・FSD / monorepo は壊さない |
 | Research-First | `@research` | 実装前に公式ドキュメント確認必須 |
 | TDD | `@tdd` | テスト駆動開発、All Green必須 |
 | Commands | `@commands` | Makefileコマンド使用必須 |

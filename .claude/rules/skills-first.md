@@ -119,6 +119,7 @@ Claude: → `rls` Skill を起動 → `supabase` Skill を確認 → ガイダ�
 | ポリシー | 役割 |
 |---|---|
 | **`skills-first.md`（このファイル）** | **最初**: タスク開始時に該当 Skill を起動 |
+| `.claude/rules/minimal-implementation.md` | Skill / 公式ドキュメントで確認した**最小の実装**を選ぶ（既存資産 → 標準機能 → マネージド → 実績ある OSS → スクラッチ） |
 | `.claude/rules/research.md` | Skill で足りない部分を Context7 MCP / WebSearch / WebFetch で補完 |
 | `.claude/rules/commands.md` | コマンド実行時は devenv の scripts / tasks を使用 |
 | `.claude/rules/mcp-supabase.md` | Supabase インフラ操作は `supabase` / `supabase-prod` MCP |

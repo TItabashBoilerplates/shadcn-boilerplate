@@ -21,6 +21,7 @@ globs: []
 
 | ポリシー | ルール |
 |---------|--------|
+| Minimal Implementation | `@minimal-implementation` - 実装量を最小化（既存資産 → 標準機能 → マネージド → 実績ある OSS → スクラッチ）。star だけで選定しない |
 | Research-First | `@research` - 実装前に公式ドキュメント確認 |
 | TDD | `@tdd` - テスト駆動開発、All Green必須 |
 | Commands | `@commands` - devenv scripts/tasks 使用必須 (Makefile は削除済み) |

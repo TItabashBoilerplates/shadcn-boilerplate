@@ -70,32 +70,38 @@ This directory contains guidelines for Antigravity Agent when working in this re
     - 単体テスト不要な対象範囲
     - Storybook 必須要件
 
-12. **[Clean Code Policy](./clean-code.md)** ⚠️ **MUST READ**
+12. **[Minimal Implementation Policy](./minimal-implementation.md)** ⚠️ **MUST READ**
+    - 実装量を最小化（既存資産 → 標準機能 → マネージドサービス → 実績ある OSS → スクラッチ）
+    - ライブラリ選定基準（メンテ状況 / 実績 / 脆弱性 / ライセンス / 型 / 依存の深さ）。star だけで選ばない
+    - 共通化は Rule of Three。ただし FSD / monorepo の境界は壊さない
+    - 公式が推奨するベストプラクティスを一次情報で確認してから設計・実装
+
+13. **[Clean Code Policy](./clean-code.md)** ⚠️ **MUST READ**
     - 後方互換コードの扱い（原則：保持しない）
     - 重複コードの禁止
     - 未使用コードの削除
 
 ### Lists and Data Display
 
-13. **[List Pagination Policy](./list-pagination.md)** ⚠️ **MUST READ**
+14. **[List Pagination Policy](./list-pagination.md)** ⚠️ **MUST READ**
     - 増えうる一覧は指示を待たずページング（全件取得禁止・DB 側でページング）
     - UI パターン（ページ番号 / もっと見る / 無限スクロール）はエージェント自身が選定
     - 決定的ソート（一意列の tiebreaker）・index・必須 UI 状態
 
 ### Debugging
 
-14. **[Debugging Policy](./debugging.md)** ⚠️ **MUST READ**
+15. **[Debugging Policy](./debugging.md)** ⚠️ **MUST READ**
     - devenv 2.0 native process manager の TUI 最優先（`devenv up` で TUI 自動起動）
     - 非対話環境では `/tmp/devenv-*/processes/logs/<process>.{stdout,stderr}.log` を tail
     - Supabase は Docker ログで確認
 
 ### Environment Configuration
 
-15. **[Environment Configuration](./environment.md)**
+16. **[Environment Configuration](./environment.md)**
     - Environment variable management
     - dotenvx usage
 
-16. **[Special Notes](./special-notes.md)**
+17. **[Special Notes](./special-notes.md)**
     - Type generation
     - AI/ML features
     - Authentication
@@ -124,3 +130,4 @@ For detailed information, refer to the following documentation:
 8. **Use TailwindCSS CSS variables** - No hardcoded colors
 9. **Debugging via devenv 2.0 native TUI** - `devenv up` で TUI 起動、非対話環境は logs tail
 10. **Paginate every list that can grow** - 指示を待たずページング。全件取得禁止、UI パターンはエージェントが選定 - See `list-pagination.md`
+11. **Write less code** - 既存資産 → 標準機能 → マネージド → 実績ある OSS → スクラッチ の順で検討。star だけでライブラリを選ばない。ただし FSD / monorepo / 品質ゲートは犠牲にしない - See `minimal-implementation.md`

@@ -5,6 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **CRITICAL - 推測実装の完全禁止**:
 
 - **タスク開始前に、必ず利用可能な Skill を確認し、該当するものがあれば最初に `Skill` ツールで起動すること**（詳細は `.claude/rules/skills-first.md`）
+- **実装量は常に最小化すること**。既存資産 → 標準機能 → マネージドサービス → 実績ある OSS → スクラッチ の順で必ず検討し、上位で解決できるものをスクラッチしない（詳細は `.claude/rules/minimal-implementation.md`）
 - **推測・記憶・一般知識に基づく実装は一切禁止**
 - 実装前に必ず **Context7 MCP** または **WebSearch/WebFetch** で公式ドキュメントを確認すること
 - ライブラリの API、設定ファイル形式、CLI 構文は**必ずファクトを調査**してから使用
@@ -28,6 +29,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 │   ├── commands.md       # Makefile コマンド必須
 │   ├── database.md       # マイグレーション承認必須
 │   ├── auto-generated.md # 自動生成ファイル編集禁止
+│   ├── minimal-implementation.md # 最小実装（再発明禁止・ライブラリ/マネージド選定基準・公式BP優先）
 │   ├── clean-code.md     # クリーンコード（後方互換禁止・重複禁止）
 │   ├── frontend.md       # Frontend コード規約
 │   ├── form-controls.md  # フォーム要素（iOS Safari オートズーム禁止=16px以上・共有コンポーネント必須）
@@ -138,6 +140,8 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 **MANDATORY**: すべての実装はテスト駆動開発（TDD）を厳守。**作業終了時は必ず All Green（全テスト通過）を確認**。詳細は `.claude/rules/tdd.md` を参照。
 
 **MANDATORY**: 単体テストでは**外部SDK（pipモジュール）を丸ごとMockしない**。本物のSDKを使い、I/O層（HTTP/DB）のみ差し替えることで、**TypeError・ValueError・RuntimeError を単体テスト時点で検知**し、型安全で堅牢な状態を維持する。詳細は `.claude/rules/backend-py.md` および `.claude/skills/python-testing/` を参照。
+
+**MANDATORY**: **実装は常に最小量にする（Write Less Code）**。優秀なエンジニアが書くコードは少なく、**書かなかったコードはバグらず・レビュー不要・保守不要**である。機能に着手したら、コードを書く前に必ず **①リポジトリ内の既存資産（`frontend/packages/*` / `shared/` / `entities/` / `backend-py/packages/core` / `supabase/functions/shared/`）→ ②フレームワーク・プラットフォーム・PostgreSQL の標準機能 → ③マネージドサービス（Supabase Auth/Storage/Realtime、Stripe、Resend、OneSignal、LiveKit、fal、Sentry、Doppler、Vercel、EAS）→ ④選定基準を満たす実績ある OSS → ⑤スクラッチ** の順に評価し、**上位で解決できるものをスクラッチしない**。逆に、数行で書ける処理・プロダクト固有のドメインロジックのために依存を増やすのも実装量の増加であり禁止（**依存を 1 つ増やす = 保守対象を 1 つ増やす**）。**暗号・認証・認可・決済・日時/ロケール・メール到達性は絶対に自作しない**。**ライブラリ選定は star 数のみを根拠にしてはならない**（star は購入可能で、CMU/NC State/Socket の研究が約 600 万件の fake star を報告している）: **archived / deprecated でなく直近の活動がある（OpenSSF Scorecard の `Maintained` は「直近 90 日に週 1 コミット以上」で満点）・実利用の実績がある・未修正の既知脆弱性が無い・商用可ライセンス（AGPL/SSPL/BUSL は要ユーザー確認）・型がある・移行手順が示される・依存が浅い**、を `bun info` / `bun outdated` / `bun why` / `bun audit` / `uv tree` / [deps.dev](https://deps.dev) / [scorecard.dev](https://scorecard.dev) / Context7 MCP で**実際に確認**すること。**既に技術選定が済んでいる領域（shadcn/ui・gluestack-ui・TanStack Query・Zustand・next-intl・Drizzle・Hey API・Supabase Auth）へ役割の重複するライブラリを持ち込むのは禁止**。共通化は Rule of Three（不整合が事故になるスタイル定数・クエリキー・`PAGE_SIZE`・単価表は 2 回目で即共通化）で判断し、**誤った抽象化は重複より高くつく**（Sandi Metz: *duplication is far cheaper than the wrong abstraction*）。**ただし削減のために FSD の依存方向・公開 API・monorepo の境界を壊すこと、型を `any` で潰すこと、テスト/エラーハンドリング/i18n/ページングを省くことは本ポリシー違反**（減らすのは実装の総量であって保守性ではない）。設計・実装は**常に公式が推奨するベストプラクティスを一次情報で調査・理解したうえで**行い、公式の CLI / codemod / スキャフォールドを手書きで再現しない。逸脱する場合は理由と根拠を残す。詳細は `.claude/rules/minimal-implementation.md` を参照。
 
 **MANDATORY**: コードは常にクリーンな状態を維持。後方互換コード・重複コード・未使用コードは残さない（明示的な指示がある場合を除く）。詳細は `.claude/rules/clean-code.md` を参照。
 

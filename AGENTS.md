@@ -243,6 +243,66 @@ empty, error, end-of-list.
 
 Full policy: `.claude/rules/list-pagination.md`
 
+### 10. Minimal Implementation (Write Less Code)
+
+**Good engineers write less code.** Work is judged by how much you *avoided* building, not by how
+much you produced — code you never wrote cannot break, needs no review, and costs nothing to
+maintain. Before writing anything, evaluate in this order and stop at the first option that works:
+
+1. **What already exists in this repo** — `frontend/packages/*` (`@workspace/ui`, `query`, `auth`,
+   `client-supabase`, `logger`, `api-client`), an app's `shared/` and `entities/`,
+   `backend-py/packages/core`, `supabase/functions/shared/`. **Actually grep for it.**
+2. **Platform / framework built-ins** — `Intl`, `URL`, `crypto.randomUUID`; React 19 and Next.js 16
+   (Server Components, `loading.tsx`, `next/image`); PostgreSQL (constraints, generated columns,
+   RLS, indexes, pgvector).
+3. **Managed services** — Supabase (Auth / Storage / Realtime / Edge Functions), Stripe, Resend,
+   OneSignal, LiveKit, fal, Sentry, Doppler, Vercel, EAS.
+4. **A well-maintained OSS library** that passes the selection bar below.
+5. **Scratch** — only once 1–4 are ruled out.
+
+Adding a dependency is also adding a maintenance obligation, so the reverse is equally banned:
+do not pull in a package for something that takes a few lines of standard API, and do not wrap
+product-specific domain logic in a generic library. **Never hand-roll** crypto, auth/session
+handling (Supabase Auth), row-level authorization (RLS), payments (Stripe / RevenueCat), date-time
+and locale formatting (`Intl`), or email deliverability (Resend).
+
+**Library selection bar** — every item is required:
+
+| # | Requirement |
+|---|-------------|
+| 1 | Not archived or deprecated, with recent activity (OpenSSF Scorecard's `Maintained` scores full marks at ≥1 commit/week over the last 90 days) |
+| 2 | Real-world adoption (weekly downloads, dependents) |
+| 3 | No unfixed known vulnerabilities (`bun audit`, OSV) |
+| 4 | Commercially usable license (MIT / Apache-2.0 / BSD / ISC). **AGPL / SSPL / BUSL require asking the user** |
+| 5 | Ships types (bundled or official `@types`; `py.typed` for Python) |
+| 6 | Docs and release notes, with migration guidance for breaking changes |
+| 7 | Shallow transitive dependency tree |
+
+Verify with `bun info` / `bun outdated` / `bun why` / `bun audit` / `uv tree`,
+[deps.dev](https://deps.dev), `scorecard.dev/viewer/?uri=github.com/<owner>/<repo>`, and the
+official docs. **Stars are a secondary signal**: few stars (under a few hundred) is a reason to
+pass, but many stars is never a reason to adopt — stars are purchasable, and CMU / NC State /
+Socket (ICSE 2026) documented roughly six million suspected fake stars. **Do not introduce a
+library that overlaps an already-chosen area**: shadcn/ui + Radix (web), gluestack-ui (mobile),
+TanStack Query, Zustand, next-intl, Drizzle, Hey API, Supabase Auth.
+
+**Share code by the Rule of Three** — write it once, tolerate the second copy, extract on the
+third. Extract on the *second* copy when drift causes incidents (style constants, query keys,
+`PAGE_SIZE`, price tables, validation rules, API contracts). *Duplication is far cheaper than the
+wrong abstraction*; if an abstraction does not shrink total lines, it was not worth adding.
+
+**None of this licenses breaking maintainability.** Violating FSD layer direction or public APIs
+(`index.ts`), reaching across features, collapsing types with `any`/`as`, or skipping tests, error
+handling, i18n, or pagination to save lines is a violation of this policy, not compliance with it.
+"Less code" means less code *we own and maintain* — never fewer quality gates.
+
+Design against **officially recommended practice**, confirmed from primary sources (official docs >
+official blog / release notes > official repo code and examples > maintainer statements >
+third-party posts, which are never sufficient on their own). Use official CLIs, codemods, and
+scaffolds rather than reproducing them by hand; if you must deviate, record the reason.
+
+Full policy: `.claude/rules/minimal-implementation.md`
+
 ---
 
 ## Domain Documentation

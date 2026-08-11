@@ -168,6 +168,18 @@ import { queryClient, defaultOptions } from '@workspace/query'
 3. **ビジネスロジックが重複していないか？** → 共通化を検討
 4. **型定義が重複していないか？** → 共通の types パッケージを使用
 
+### 共通化のタイミングと「作らない」判断
+
+- **1 回目は書く / 2 回目はコピー可 / 3 回目で共通化**（Rule of Three）。ただし**不整合が事故になるもの**
+  （Tailwind のクラス定数・クエリキー・`PAGE_SIZE`・API 契約）は **2 回目で即共通化**する。
+  *duplication is far cheaper than the wrong abstraction* — 形が読めないうちに抽象化しない。
+- 抽象化を入れたら、**呼び出し側の削減行数 > 抽象化レイヤーの追加行数**か確認する。減っていなければ不要。
+- **共通化のために FSD の依存方向・公開 API（`index.ts`）・packages の境界を壊さない。**
+  共通化できない = 配置が間違っているサイン（`shared/` か `entities/` へ切り出す）。
+- そもそも**書かずに済ませられないか**を先に検討する（既存 packages → フレームワーク標準 →
+  マネージドサービス → 実績ある OSS → スクラッチ）。新しい依存を足す前に選定基準を満たすか確認する。
+  詳細は `.claude/rules/minimal-implementation.md`。
+
 ## Code Style
 
 - **Linting & Formatting**: Biome

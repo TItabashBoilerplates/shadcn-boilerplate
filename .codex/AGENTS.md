@@ -61,10 +61,49 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 | **Supabase-First** | supabase-js優先、バックエンドは最終手段 |
 | **i18n** | 多言語対応必須（en, ja） |
 | **DateTime** | UTC保存、Frontend変換 |
+| **Minimal Implementation** | 実装量を最小化（既存資産 → 標準機能 → マネージド → 実績ある OSS → スクラッチ）。star だけで選定しない |
 | **Clean Code** | 後方互換禁止、重複禁止 |
 | **UI Testing** | UI は Storybook、単体テスト不要 |
 | **Debugging** | devenv 2.0 の native process manager TUI を主インターフェース |
 | **List Pagination** | 増えうる一覧は指示を待たずページング。UI パターンも自分で選定 |
+
+### Minimal Implementation（MANDATORY）
+
+**優秀なエンジニアが書くコードは少ない。** 実装は「どれだけ作ったか」ではなく **「どれだけ作らずに
+要件を満たしたか」**で評価する。機能に着手したら、コードを書く前に必ず上から順に評価する:
+
+1. **リポジトリ内の既存資産**（`frontend/packages/*` = `@workspace/ui` / `query` / `auth` /
+   `client-supabase` / `logger` / `api-client`、アプリ内 `shared/` / `entities/`、
+   `backend-py/packages/core`、`supabase/functions/shared/`）。**まず grep する**
+2. **プラットフォーム / フレームワークの標準機能**（`Intl` / `URL` / `crypto.randomUUID`、
+   React 19・Next.js 16 の Server Components / `loading.tsx`、PostgreSQL の制約・生成列・RLS・index）
+3. **マネージドサービス**（Supabase Auth / Storage / Realtime / Edge Functions、Stripe、Resend、
+   OneSignal、LiveKit、fal、Sentry、Doppler、Vercel、EAS）
+4. **選定基準を満たす実績ある OSS**
+5. **スクラッチ**（1〜4 が該当しないと確認できた場合のみ）
+
+**上位で解決できるものをスクラッチした実装は却下**。逆に、数行で書ける処理やドメイン固有ロジックの
+ために依存を足すのも実装量の増加（**依存 1 つ = 保守対象 1 つ**）。**暗号 / 認証・セッション / 行レベル認可 /
+決済 / 日時・ロケール / メール到達性は絶対に自作しない**。
+
+**ライブラリ選定基準**（すべて必須）: archived / deprecated でなく直近の活動がある（OpenSSF Scorecard の
+`Maintained` は「直近 90 日に週 1 コミット以上」で満点）・実利用の実績がある・未修正の既知脆弱性が無い・
+商用可ライセンス（AGPL / SSPL / BUSL は要ユーザー確認）・型がある・移行手順が示される・依存が浅い。
+確認は `bun info` / `bun outdated` / `bun why` / `bun audit` / `uv tree` / deps.dev / scorecard.dev /
+公式ドキュメントで**実際に行う**。**star は補助シグナル**で、少なければ見送る理由になるが、多いことは
+採用の根拠にならない（star は購入可能。CMU / NC State / Socket の ICSE 2026 研究が約 600 万件の
+fake star を報告）。**採用済み領域**（shadcn/ui・gluestack-ui・TanStack Query・Zustand・next-intl・
+Drizzle・Hey API・Supabase Auth）**へ役割の重複するライブラリを持ち込まない**。
+
+**共通化**は Rule of Three（不整合が事故になるスタイル定数・クエリキー・`PAGE_SIZE`・単価表・API 契約は
+2 回目で即共通化）。*duplication is far cheaper than the wrong abstraction* — 形が読めないうちは重複を残す。
+**ただし削減のために FSD の依存方向・公開 API・monorepo の境界を壊すこと、`any` で型を潰すこと、
+テスト / エラーハンドリング / i18n / ページングを省くことは本ポリシー違反**（減らすのは実装の総量であって
+保守性ではない）。
+
+設計・実装は**常に公式が推奨するベストプラクティスを一次情報で確認**してから行う（公式ドキュメント >
+公式ブログ・リリースノート > 公式リポジトリのコード > メンテナの発言 > 第三者記事）。公式の CLI /
+codemod / スキャフォールドを手書きで再現しない。詳細は `/.claude/rules/minimal-implementation.md` を参照。
 
 ### List Pagination（MANDATORY）
 

@@ -61,6 +61,7 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 | **Supabase-First** | supabase-js優先、バックエンドは最終手段 | `supabase-config.md` |
 | **i18n** | 多言語対応必須（en, ja） | `i18n.md` |
 | **DateTime** | UTC保存、Frontend変換 | `date-time-handling.md` |
+| **Minimal Implementation** | 実装量を最小化（既存資産 → 標準機能 → マネージド → 実績ある OSS → スクラッチ）。star だけで選定しない。FSD / monorepo は壊さない | `minimal-implementation.md` |
 | **Clean Code** | 後方互換禁止、重複禁止 | `clean-code.md` |
 | **UI Testing** | UI は Storybook、単体テスト不要 | `ui-testing.md` |
 | **Debugging** | devenv 2.0 の native process manager TUI を主インターフェース | `debugging.md` |
@@ -178,6 +179,7 @@ env/
 - `architecture.md` - アーキテクチャ概要
 - `code-style.md` - コードスタイル
 - `testing.md` - テスト方針（TDD）
+- `minimal-implementation.md` - 最小実装（再発明禁止・ライブラリ/マネージド選定基準・公式 BP 優先）
 - `clean-code.md` - クリーンコード
 - `ui-testing.md` - UIテスト（Storybook）
 - `debugging.md` - デバッグ（devenv 2.0 native CLI 優先・Supabase）
