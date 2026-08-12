@@ -199,20 +199,58 @@ script は次の順で安全を担保している。**手で真似するとき�
 ## 6.5. ストア掲載用スクリーンショット（`screenshots-mobile`）
 
 ```bash
-screenshots-mobile                      # iOS + Android を撮って検証（アップロードしない）
+# 実機描画（simulator / emulator）
+screenshots-mobile                      # 撮って検証（アップロードしない）
 screenshots-mobile --platform android   # Android だけ（Linux はこちらのみ）
 screenshots-mobile --skip-capture       # 撮影済み画像を検証だけ
 screenshots-mobile --upload             # ★ ストアへ送信（明示指定が必要）
-screenshots-validate --platform ios fastlane/screenshots   # 検証だけ単体で
+
+# Storybook から（ネイティブビルド不要。多ロケール × 多サイズの量産向き）
+build-storybook && screenshots-storybook
+screenshots-storybook --devices iphone-6-9 --locales ja
+screenshots-storybook --allow-fidelity-warnings   # 忠実度警告を承知で続行
+
+# 検証だけ単体で
+screenshots-validate --platform ios fastlane/screenshots
 ```
 
-### 絶対に間違えてはいけない 3 点
+撮影対象は `scripts/mobile/storybook-shots.config.mjs`（story id / 端末 / ロケール）で宣言する。
+
+### 撮影経路は 2 つある。画面ごとに選ぶ
+
+| 経路 | コマンド | 何を撮るか |
+|---|---|---|
+| **実機描画** | `screenshots-mobile` | simulator / emulator の実キャプチャ。**ネイティブ部品・shadow/elevation・セーフエリアが写る画面はこちら必須** |
+| **Storybook** | `screenshots-storybook` | react-native-web の描画。**到達しづらい状態**（空・エラー・特定データ）や**多ロケール × 多サイズの量産**に強い。ネイティブビルド不要 |
+
+Apple のガイドライン 2.3.3 が求めるのは「アプリが**使用されている状態**を示すこと」であって、
+生のデバイスキャプチャであることではない（掲載画像は合成が主流）。
+問題になるのは**実機と見た目が食い違うこと**なので、そこだけを機械的に検出する方針にしてある:
+`screenshots-storybook` は撮影後に DOM を検査し、以下を見つけたら**警告して exit 1** する。
+
+| 検出 | なぜ危険か |
+|---|---|
+| `native-control` | `input`/`textarea`/`select`/switch/slider/progressbar は RN では OS 提供の部品になり見た目が別物 |
+| `shadow` | CSS `box-shadow` と iOS `shadow*` / Android `elevation` は描画が一致しない |
+| `broken-image` | 撮ってから気づくと痛い |
+| `theme-decorator` | 下記の既知バグ |
+
+警告が出た画面は `screenshots-mobile` で撮り直す。意図的に許容するなら
+`--allow-fidelity-warnings` を付ける。**どちらの経路も出力先・検証・アップロードは共通**。
+
+> ⚠️ **既知バグ: reanimated の CSS アニメーションを含む story はテーマ切替が効かない**
+> `HelloWave` のような reanimated CSS アニメーションを含む story では、
+> addon-themes の `withThemeByClassName` の effect が実行されず、
+> **Storybook 上でダークに切り替えても light のまま**になる（HomeScreen も HelloWave を含むため該当）。
+> 撮影スクリプトは `<html>` のクラスを**強制適用したうえで検証**するので撮影結果は正しくなるが、
+> `theme-decorator` 警告が出る。**Storybook を目視でデバッグするときはテーマ切替が効かない**点に注意。
+
+### 絶対に間違えてはいけない 2 点
 
 | # | 注意 |
 |---|---|
-| 1 | **Storybook で撮った画像をストアに出さない**。Storybook は react-native-web の描画で、ネイティブのフォント・shadow/elevation・ステータスバー・セーフエリアが実機と一致しない。Storybook は **UI/UX デバッグ専用**、提出画像は必ず simulator/emulator の実描画（このスクリプト） |
-| 2 | **Play の「最大辺 ≤ 最小辺 × 2」**。最近の Android 既定プロファイル（Pixel 7 = 1080x2400 = 2.22 倍）は**そのままだと弾かれる**。1080x1920 (16:9) の AVD を `ANDROID_SCREENSHOT_AVD` に指定すること |
-| 3 | **simulator/emulator 用のビルドが要る**。ストア提出用の `.ipa` / `.aab` はインストールできない。`eas build --profile development-simulator --platform ios --local`（iOS）/ `--profile preview --platform android --local`（Android） |
+| 1 | **Play の「最大辺 ≤ 最小辺 × 2」**。最近の Android 既定プロファイル（Pixel 7 = 1080x2400 = 2.22 倍）は**そのままだと弾かれる**。実機撮影なら 1080x1920 (16:9) の AVD を `ANDROID_SCREENSHOT_AVD` に指定する（Storybook 経路は 360x640 @3x = 1080x1920 で撮るので既に適合） |
+| 2 | **実機撮影には simulator/emulator 用のビルドが要る**。ストア提出用の `.ipa` / `.aab` はインストールできない。`eas build --profile development-simulator --platform ios --local`（iOS）/ `--profile preview --platform android --local`（Android）。Storybook 経路はビルド不要 |
 
 ### なぜ fastlane なのか（EAS ではない）
 

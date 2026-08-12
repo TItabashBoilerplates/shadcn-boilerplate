@@ -7,12 +7,13 @@ import { ModalScreen } from './ModalScreen'
  * ホームへ戻るリンクは expo-router の `Link`（Storybook ではモック）なので、
  * **押しても遷移しない**。遷移そのものの確認は実機 / Expo で行うこと。
  *
- * ⚠️ ストア用スクリーンショットとしては使えない（理由は HomeScreen のストーリー参照）。
+ * ストア掲載用スクショの素材としても使える（詳細と注意点は HomeScreen のストーリー参照）。
+ *
+ * ⚠️ ここに `globals: { viewport: ... }` を書かないこと（撮影時のテーマ指定が効かなくなる）。
  */
 const meta = {
   component: ModalScreen,
   parameters: { layout: 'fullscreen' },
-  globals: { viewport: { value: 'iphone-6-9' } },
   tags: ['autodocs'],
 } satisfies Meta<typeof ModalScreen>
 

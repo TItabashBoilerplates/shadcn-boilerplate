@@ -559,7 +559,11 @@ in
     #   # iOS の撮影自体は macOS + Xcode が必要（Linux では --platform android のみ）
     #   # Android のエミュレータが要る場合は -P android-emulator と併用する
     store-screenshots.module = {
-      packages = [ pkgs.fastlane ];
+      # fastlane : deliver / supply（ストアへのアップロード）
+      # chromium : Storybook から撮る経路（screenshots-storybook）が使うブラウザ。
+      #            playwright-core はブラウザを自動 DL しない軽量版なので、実行体は
+      #            ここで宣言的に供給する（各自の環境の Chrome 有無に依存させない）。
+      packages = [ pkgs.fastlane pkgs.chromium ];
     };
 
     android-emulator = {
@@ -1241,6 +1245,11 @@ in
     "screenshots-mobile" = {
       exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/screenshots.sh" "$@"'';
       description = "ストア掲載用スクショを simulator/emulator で撮影→検証（--upload で送信）";
+    };
+
+    "screenshots-storybook" = {
+      exec = ''exec node "$DEVENV_ROOT/scripts/mobile/screenshots-storybook.mjs" "$@"'';
+      description = "Storybook からストア用スクショを撮影（忠実度警告つき。実機描画が要る画面は screenshots-mobile を使う）";
     };
 
     "screenshots-validate" = {

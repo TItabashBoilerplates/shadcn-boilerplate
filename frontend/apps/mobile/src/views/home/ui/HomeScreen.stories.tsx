@@ -7,15 +7,19 @@ import { HomeScreen } from './HomeScreen'
  * 画面まるごとを載せているのは **UI/UX デバッグ用**（レイアウト崩れ・トークン適用・
  * ダーク/ライトの確認）。ツールバーの Viewport で実機相当の画面幅に切り替えられる。
  *
- * ⚠️ **ストア用スクリーンショットとしては使えない。**
- *    react-native-web の描画なので、ネイティブのフォント・shadow/elevation・
- *    ステータスバー・セーフエリアが実機と一致しない。提出用の画像は
- *    `screenshots-mobile`（Maestro + simulator/emulator）で撮ること。
+ * ストア掲載用スクショの素材としても使える（`screenshots-storybook`）。
+ * ただし react-native-web の描画なので、**ネイティブ部品・shadow/elevation・
+ * ステータスバー・セーフエリアが写る画面は実機と食い違う**。
+ * `screenshots-storybook` はそれらを検出して警告するので、
+ * 警告が出た画面は `screenshots-mobile`（simulator/emulator の実描画）で撮り直すこと。
+ *
+ * ⚠️ ここに `globals: { viewport: ... }` を書かないこと。
+ *    ストーリー側の globals は URL の globals を上書きするため、撮影スクリプトからの
+ *    テーマ指定（`?globals=theme:dark`）が効かなくなる。画面幅はツールバーで切り替える。
  */
 const meta = {
   component: HomeScreen,
   parameters: { layout: 'fullscreen' },
-  globals: { viewport: { value: 'iphone-6-9' } },
   tags: ['autodocs'],
 } satisfies Meta<typeof HomeScreen>
 
@@ -23,8 +27,3 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
-
-/** タブレット幅でのレイアウト確認 */
-export const Tablet: Story = {
-  globals: { viewport: { value: 'ipad-11' } },
-}
