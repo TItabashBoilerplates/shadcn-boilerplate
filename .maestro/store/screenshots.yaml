@@ -1,0 +1,67 @@
+# ストア掲載用スクリーンショットの撮影フロー
+#
+# ■ 通常の E2E とは別物
+#   tag `store-screenshots` は .maestro/config.yaml の includeTags に**入れていない**ので、
+#   `e2e` / `e2e-mobile` では実行されない。撮影は `screenshots-mobile` script が
+#   `--include-tags store-screenshots` を付けて明示的に呼ぶ。
+#
+# ■ ロケール切り替えについて
+#   端末のシステム言語を切り替える（simctl の -AppleLanguages 等）方式は
+#   OS・バージョンごとに作法が違って壊れやすいので、**アプリ内の LocaleSwitcher を
+#   タップする**方式を採る。HomeScreen に LocaleSwitcher があることが前提。
+#   （UI から言語を変えられないアプリに転用するときはここを端末設定方式へ差し替える）
+#
+# ■ 呼び出し側が渡す env
+#   APP_ID        … アプリの bundle identifier / package name
+#   LOCALE_LABEL  … LocaleSwitcher のボタン文言（"English" / "日本語"）
+#   HOME_TAB      … ホームタブの表示名（ロケール依存）
+#   EXPLORE_TAB   … Explore タブの表示名（ロケール依存）
+#   SHOT_PREFIX   … 出力ファイル名の接頭辞（"<locale>-<device>-" 等）
+
+appId: ${APP_ID}
+name: "Store Screenshots"
+tags:
+  - store-screenshots
+
+---
+# アプリを初期状態で起動する。
+# clearState: true にしないと前回の言語設定が残り、ロケール別の撮り分けが崩れる。
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+
+# 起動直後はスプラッシュやフォント読み込みが走るので、ホームの実要素が出るまで待つ。
+# ここを sleep で誤魔化すと CI で頻繁に空振りする。
+- extendedWaitUntil:
+    visible: ${HOME_TAB}
+    timeout: 30000
+
+# 目的のロケールへ切り替える（LocaleSwitcher）。
+# 既にそのロケールでもボタンは存在するので、タップしても状態は変わらない（冪等）。
+- tapOn: ${LOCALE_LABEL}
+
+# 切り替え後の再描画を待ってから撮る
+- extendedWaitUntil:
+    visible: ${EXPLORE_TAB}
+    timeout: 15000
+
+# ── 1 枚目: ホーム ────────────────────────────────────────────────────────
+- takeScreenshot: ${SHOT_PREFIX}01-home
+
+# ── 2 枚目: Explore ──────────────────────────────────────────────────────
+- tapOn: ${EXPLORE_TAB}
+- extendedWaitUntil:
+    visible: ${EXPLORE_TAB}
+    timeout: 15000
+- takeScreenshot: ${SHOT_PREFIX}02-explore
+
+# ── 3 枚目: Explore のセクションを開いた状態 ─────────────────────────────
+# 折りたたみが開いた状態のほうが情報量があり、ストア掲載向き。
+# セクション名はロケール依存なので、開けなかった場合でも撮影は続行させる
+# （optional: true にしないとロケール追加時にフロー全体が落ちる）。
+- tapOn:
+    text: ".*"
+    index: 2
+    optional: true
+- takeScreenshot: ${SHOT_PREFIX}03-explore-expanded

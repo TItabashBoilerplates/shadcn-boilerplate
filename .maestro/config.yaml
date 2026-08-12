@@ -4,6 +4,10 @@
 flows:
   - "web/**/*.yaml"
   - "mobile/**/*.yaml"
+  # ストア掲載用スクショの撮影フロー。tag `store-screenshots` を includeTags に
+  # **入れていない**ので、`e2e` / `e2e-mobile` では実行されない（撮影は
+  # `screenshots-mobile` script が --include-tags で明示的に呼ぶ）。
+  - "store/**/*.yaml"
 
 includeTags:
   - smoke

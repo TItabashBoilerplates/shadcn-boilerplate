@@ -543,6 +543,25 @@ in
     # system image は 1 プラットフォーム × 1 ABI でも GB 級なので、`android` から分離している。
     # NOTE: 親 profile が platforms.version を定義しているため、ここで再定義すると listOf が
     # **連結**されてしまう。system image を絞りたいときは abis / systemImageTypes 側で調整すること。
+    # ===== store-screenshots: ストア掲載用スクショのアップロード toolchain =====
+    #
+    # **opt-in profile にしている理由**: fastlane は Ruby ランタイム一式を引き込むため
+    # base に入れると全開発者と CI がダウンロードすることになる。使うのは
+    # 「ストアへスクショを送るとき」だけなので分離する。
+    #
+    # なぜ fastlane が要るか: EAS Metadata は **スクリーンショットを扱えず**
+    # （https://docs.expo.dev/eas/metadata/ の "Upload screenshots ✗"）、
+    # Google Play のストア掲載情報にも対応しない。アップロード経路は
+    # deliver（App Store Connect）/ supply（Play）しか無い。
+    #
+    # 使い方:
+    #   devenv shell -P store-screenshots -- screenshots-mobile --upload
+    #   # iOS の撮影自体は macOS + Xcode が必要（Linux では --platform android のみ）
+    #   # Android のエミュレータが要る場合は -P android-emulator と併用する
+    store-screenshots.module = {
+      packages = [ pkgs.fastlane ];
+    };
+
     android-emulator = {
       extends = [ "android" ];
       module = {
@@ -1217,6 +1236,16 @@ in
     "mobile-release-android" = {
       exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/release-android.sh" "$@"'';
       description = "Android を build → Play 内部テスト（既定 expo.dev / --local でローカルビルド）";
+    };
+
+    "screenshots-mobile" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/screenshots.sh" "$@"'';
+      description = "ストア掲載用スクショを simulator/emulator で撮影→検証（--upload で送信）";
+    };
+
+    "screenshots-validate" = {
+      exec = ''exec node "$DEVENV_ROOT/scripts/mobile/validate-screenshots.mjs" "$@"'';
+      description = "既存スクショがストア要求（サイズ/縦横比/枚数）を満たすか検証";
     };
 
     "mobile-metadata" = {

@@ -196,6 +196,61 @@ script は次の順で安全を担保している。**手で真似するとき�
 
 ---
 
+## 6.5. ストア掲載用スクリーンショット（`screenshots-mobile`）
+
+```bash
+screenshots-mobile                      # iOS + Android を撮って検証（アップロードしない）
+screenshots-mobile --platform android   # Android だけ（Linux はこちらのみ）
+screenshots-mobile --skip-capture       # 撮影済み画像を検証だけ
+screenshots-mobile --upload             # ★ ストアへ送信（明示指定が必要）
+screenshots-validate --platform ios fastlane/screenshots   # 検証だけ単体で
+```
+
+### 絶対に間違えてはいけない 3 点
+
+| # | 注意 |
+|---|---|
+| 1 | **Storybook で撮った画像をストアに出さない**。Storybook は react-native-web の描画で、ネイティブのフォント・shadow/elevation・ステータスバー・セーフエリアが実機と一致しない。Storybook は **UI/UX デバッグ専用**、提出画像は必ず simulator/emulator の実描画（このスクリプト） |
+| 2 | **Play の「最大辺 ≤ 最小辺 × 2」**。最近の Android 既定プロファイル（Pixel 7 = 1080x2400 = 2.22 倍）は**そのままだと弾かれる**。1080x1920 (16:9) の AVD を `ANDROID_SCREENSHOT_AVD` に指定すること |
+| 3 | **simulator/emulator 用のビルドが要る**。ストア提出用の `.ipa` / `.aab` はインストールできない。`eas build --profile development-simulator --platform ios --local`（iOS）/ `--profile preview --platform android --local`（Android） |
+
+### なぜ fastlane なのか（EAS ではない）
+
+**EAS Metadata はスクリーンショットを扱えず、Google Play のストア掲載情報にも対応しない**
+（[公式](https://docs.expo.dev/eas/metadata/) の対応表で "Upload screenshots ✗"）。
+`mobile-release-ios` が使う `eas metadata:push` は**テキストメタデータ専用**。
+したがって画像のアップロードは `deliver`（ASC）/ `supply`（Play）しか経路が無い。
+
+fastlane は Ruby 一式を引き込むので **opt-in profile** にしてある:
+
+```bash
+devenv shell -P store-screenshots -- screenshots-mobile --upload
+```
+
+### パイプライン
+
+```
+1. simulator/emulator 起動 + アプリインストール
+2. Maestro (.maestro/store/screenshots.yaml) をロケール分だけ実行
+   └ ロケール切替は端末設定ではなく **アプリ内の LocaleSwitcher をタップ**する方式
+3. fastlane のディレクトリ構成へ配置
+   iOS     : fastlane/screenshots/<locale>/          （deliver は解像度で端末種別を推定）
+   Android : fastlane/metadata/android/<locale>/images/phoneScreenshots/
+4. ストア要求を検証 ← ここで落ちたら 5 に進まない
+5. --upload 時のみ deliver / supply で送信
+```
+
+出力物は `.gitignore` 済み（撮影→検証→送信を 1 回で回す前提）。
+
+### 撮影対象を増やすとき
+
+`.maestro/store/screenshots.yaml` に `takeScreenshot` を足す。
+ロケール依存の文言は env（`HOME_TAB` / `EXPLORE_TAB` 等）で渡しているので、
+**アプリの翻訳を変えたら `scripts/mobile/screenshots.sh` の `locale_meta()` も直す**
+（ズレるとフローが要素を見つけられずタイムアウトする）。
+
+---
+
 ## 7. リリース前に必ず通すこと
 
 1. `ci-check`（lint / format / type-check）
