@@ -45,6 +45,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 │   ├── supabase-config.md    # Supabase 設定は config.toml に集約（DB のみ Drizzle 例外）・[remotes.*] 必須・メールテンプレートは [auth.email.template.*]
 │   ├── mcp-doppler.md        # Doppler シークレットの読み書きは doppler MCP 必須（書込はフェーズ制: 初期構築=full / 本番=prd 承認制・値の露出禁止）
 │   ├── env-naming.md         # 予約 prefix 禁止（GITHUB_/SUPABASE_/VERCEL_ を Doppler に登録しない）・Supabase env は Vercel Marketplace 連携が注入
+│   ├── store-review.md       # ストア審査の不変条件（第三者AIへの事前同意 / privacy manifest / target API 36 / 掲載情報と実装の一致）
 │   └── python-monorepo.md    # backend-py の uv workspace 構造（apps/+packages/、src-layout、単一uv.lock）必須
 │
 └── skills/         # 質問時に参照するガイダンス
@@ -79,6 +80,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     ├── ai-usage-metering/ # ★ LLM/生成AI のトークン使用量・コスト集計を設計へ標準で織り込む（集計軸・単価表・計上の罠）
     ├── vercel-deploy/    # ★ Vercel の GitHub 連携 + デプロイ（vercel-deploy script の使い方と落とし穴）
     ├── mobile-release/   # ★ EAS リリース（TestFlight / Play。クラウド=expo.dev とローカルの両対応）
+    ├── store-screenshots/ # ★ ストア掲載画像（撮影ハーネス → 生成AIで背景と見出し → 合成 → 両ストアへ API 反映）
     │
     │ # ↓ 公式 Skill が存在しない外部サービス向けの自作 Skill（lock 管理外）
     ├── onesignal/        # プッシュ通知（既存実装が仕様書。external_id = Supabase user.id）
@@ -168,6 +170,8 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 **MANDATORY**: **Doppler に `GITHUB_` / `SUPABASE_` / `VERCEL_` prefix のキーを登録してはならない**。これらは各 PF が予約している名前空間であり、Doppler ネイティブ連携の sync 時に**予約値違反でエラー**になり、その config の sync 全体が失敗する（GitHub:「Must not start with the `GITHUB_` prefix」／ Supabase:「Env name cannot start with SUPABASE_」／ Vercel: `VERCEL_*` は system 環境変数）。**とくに Supabase の環境変数は Doppler で管理しない** — **Vercel（web / backend）へは Vercel Marketplace の Supabase 連携（Connect Account）が `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` / `NEXT_PUBLIC_SUPABASE_*` / `POSTGRES_*` を自動注入**し、**Edge Functions へは Supabase platform が default secrets として自動提供**する。つまり「Supabase の値が要る」は Doppler にキーを作る理由にならない（二重管理も禁止）。ローカルの `env/<svc>/.env.local` はファイル管理なので本制約の対象外。詳細は `.claude/rules/env-naming.md` を参照。
 
 **MANDATORY**: **Vercel への連携・デプロイ、およびモバイル（EAS）のリリースは、必ず専用 script 経由で行う**。`vercel` / `eas` を Bash で直接叩いて手順を再発明しない。Vercel は `vercel-deploy`（`scripts/infra/vercel_deploy.sh`）、モバイルは `mobile-release-ios` / `mobile-release-android`（`scripts/mobile/release-*.sh`）が正規経路で、**GitHub 連携・rootDirectory 設定・`--archive=tgz`（15000 files 上限の回避）・資格情報の復元と後始末・eas.json の一時注入と復元・EAS への `EXPO_PUBLIC_*` push** といった、抜けると無言で壊れる手順がすべて入っている。**モバイルビルドは expo.dev（クラウド）とローカル（`--local`）の両方に対応**し、既定はクラウド。**認証情報はすべて Doppler が唯一のソース**（Vercel は `VC_TOKEN`、モバイルは `EXPO_TOKEN` / `APPLE_*` / `PLAY_SERVICE_ACCOUNT_JSON`）で、モバイル script は起動時に `doppler run` で自身を再実行して注入するため呼び出す側の準備は不要。**値はチャット / ログ / コミットに出さない**（キー名のみで会話）。runtime secret は Doppler→Vercel のネイティブ連携、Supabase の値は Vercel Marketplace 連携が供給するので**手で env に入れない**。詳細は `.claude/skills/vercel-deploy/` および `.claude/skills/mobile-release/` を参照。
+
+**MANDATORY**: **ストアへの反映（掲載情報・スクリーンショット・課金商品）も専用 script 経由で行う**（`scripts/mobile/store.sh` = `store-push-*` / `store-create-*` / `store-equalize-*`）。**必ず先に `--dry-run` を通す**（本番の掲載情報と課金商品を書き換えるため）。正本は `frontend/apps/mobile/` の **`store.config.js`（App Store の文言）/ `play.config.js`（Play の文言・画像）/ `iap.config.js`（サブスク商品。両ストア共通）** で、スクリーンショットは `store-listing/`。**EAS Metadata はスクリーンショットを扱えず Google Play にも対応しない**ため、画像と Play の掲載情報は App Store Connect API / Play Developer API を直接叩く（fastlane は使わない）。**`store-create-ios-subscriptions` の後は `store-equalize-ios-prices` が必須**（基準地域の価格しか作られないので、省くと商品が永久に `MISSING_METADATA` のままになり原因が非常に分かりにくい）。**Play の base plan / offer は DRAFT で作成される**ので有効化を忘れない。審査要件のコード側不変条件は `.claude/rules/store-review.md`、初回提出の全体手順は `docs/store/submission-checklist.md`、掲載文の設計は `docs/store/aso.md`、掲載画像の作り方は `.claude/skills/store-screenshots/` を参照。
 
 **Supabase の Docker コンテナ自体は Supabase CLI が所有**（devenv の native process supervisor は backend / storybook のみ監視）。**起動連動**: `supabase:start` task が backend の `before` に登録されているため `devenv up` 起動時は Supabase → backend の順で立ち上がる。**停止は手動運用**: devenv 2.0 native process manager は task の `after` も `process.manager.after` も動作しない（前者は shutdown 時に cancel、後者は assertion でブロック、native の Rust shutdown パスに task runner 呼び出しが無いため）。auto-stop の中途半端な実装は持たず、停止は `supabase-stop` / `stop` script で明示的に行う運用に統一している。`stop` script は devenv プロセスと Supabase 両方を停止する。
 
@@ -287,9 +291,19 @@ vercel-deploy                      # frontend/apps/web を Vercel へ (GitHub �
 vercel-deploy frontend/apps/lp     # 任意アプリ (--no-deploy / --preview / --dry-run)
 mobile-release-ios                 # iOS: expo.dev でビルド → TestFlight (--local でローカルビルド)
 mobile-release-android             # Android: expo.dev でビルド → Play 内部テスト (--local 可)
-mobile-metadata                    # store.config.js を App Store Connect へ同期
 sync-eas-env production            # Doppler の EXPO_PUBLIC_* を EAS へ同期
-# → 手順・落とし穴は .claude/skills/vercel-deploy/ と .claude/skills/mobile-release/
+
+# ストアへの反映（本番を書き換えるので必ず先に --dry-run）。正本は mobile/{store,play,iap}.config.js
+mobile-metadata                    # App Store の文言 (store.config.js → eas metadata:push)
+store-push-ios-screenshots         # App Store のスクショ (EAS Metadata では出せない)
+store-push-play-listing            # Play の文言 + アイコン + スクショ (1 つの edit で commit)
+store-create-ios-subscriptions     # サブスク商品を ASC に作成
+store-equalize-ios-prices          #   ↑ の後に必須（全地域へ等価価格。省くと永久に準備中のまま）
+store-create-play-subscriptions    # サブスク商品を Play に作成
+store-create-play-offers           # Play の無料トライアル (作成 → activate)
+screenshots-mobile                 # スクショ撮影 → 検証 (--upload で上記 push へ委譲)
+# → 手順・落とし穴は .claude/skills/vercel-deploy/ / mobile-release/ / store-screenshots/
+#    初回提出の全体手順は docs/store/submission-checklist.md
 
 # Task graph 確認 (依存・実行順序を可視化)
 devenv tasks list                          # 全 task の階層表示

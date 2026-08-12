@@ -1,0 +1,138 @@
+# ストア提出チェックリスト
+
+初回提出までに必要な作業を、**自動化できるもの / 人手でしかできないもの**に分けて並べる。
+コマンドはすべて devenv shell 上（`.claude/rules/commands.md`）。
+
+> **必ず `--dry-run` を先に通す。** 掲載情報と課金商品を書き換えるコマンドは、
+> 実行すると本番のストアに反映される。
+
+---
+
+## 0. 人手でしかできないこと（公開 API が無い）
+
+ここが済んでいないと、以降のコマンドは**エラーにならず「反映されない」形**で失敗する。
+
+| # | 作業 | 無いとどうなるか |
+|---|---|---|
+| 1 | Apple Developer Program / Google Play デベロッパー アカウントの登録 | 何も始まらない |
+| 2 | **有料 App 契約（Paid Applications Agreement）の締結** | サブスク商品が永久に `MISSING_METADATA` のまま。ローカライズも価格も揃っているのに解消しないので原因が分かりにくい |
+| 3 | App Store Connect でアプリレコードを作成（bundle id を登録） | `No suitable application records found` でアップロードが落ちる |
+| 4 | Play Console でアプリを作成し、**1 度は内部テストへ提出** | 掲載情報 API が対象アプリを見つけられない |
+| 5 | App Store Connect API キー（Key ID / Issuer ID / .p8）の発行 | ストア反映スクリプトが動かない |
+| 6 | Play の**サービスアカウント**を作り、Play Console の Users & Permissions で権限を付与 | 鍵は正しいのに 403。**GCP の IAM ロールでは付かない** |
+| 7 | Data safety / App Privacy ラベル、年齢レーティング、輸出コンプライアンスの申告 | 提出できない |
+
+5 と 6 の資格情報は **Doppler に登録**する（`.claude/rules/mcp-doppler.md`。値はチャットにも
+ログにも出さない）。キー名は `APPLE_API_KEY` / `APPLE_API_ISSUER` / `APPLE_API_KEY_P8` /
+`PLAY_SERVICE_ACCOUNT_JSON`。アカウント横断で共有するなら `config.env` の
+`MOBILE_TOKENS_PROJECT` / `MOBILE_TOKENS_CONFIG` を設定する。
+
+---
+
+## 1. アプリの identity を決める（1 度だけ・後から変えられない）
+
+```jsonc
+// frontend/apps/mobile/app.json
+{
+  "expo": {
+    "name": "...",
+    "version": "1.0.0",
+    "ios":     { "bundleIdentifier": "com.example.app", "supportsTablet": true },
+    "android": { "package": "com.example.app" }
+  }
+}
+```
+
+- **bundle id / package name はリネームできない**（別アプリ扱いになる）
+- `supportsTablet: true` のままにするなら、**iPad のスクリーンショットが必須**になる。
+  タブレット向けのレイアウトを作らないなら `false` にする
+- Play へ出すなら **`targetSdkVersion` 36 以上**が必要（Expo の既定は 35。
+  `expo-build-properties` で明示する。`.claude/rules/store-review.md` §3）
+
+---
+
+## 2. 掲載情報を書く
+
+| 対象 | ファイル | 反映 |
+|---|---|---|
+| App Store の文言 | `frontend/apps/mobile/store.config.js` | `mobile-metadata` |
+| Play の文言・画像 | `frontend/apps/mobile/play.config.js` | `store-push-play-listing` |
+
+書き方の判断基準は [`aso.md`](./aso.md)。上限と語の重複は単体テストが検査する:
+
+```bash
+test-frontend    # store-metadata.test.ts を含む
+```
+
+`store.config.js` は `STORE_WEB_BASE_URL`（法務ページを置く本番 Web オリジン）が
+未設定だと**意図的に落ちる**。雛形のまま push してプレースホルダを登録しないため。
+
+---
+
+## 3. 画像を用意する
+
+```bash
+# 実機描画（macOS + Xcode が要る。Linux では --platform android のみ）
+screenshots-mobile
+# Storybook から（ネイティブビルド不要。多ロケール × 多サイズの量産向き）
+devenv shell -P store-listing -- screenshots-storybook
+
+# Play のフィーチャーグラフィック（1024x500。公開に必須）
+devenv shell -P store-listing -- build-play-feature-graphic
+```
+
+| 画像 | App Store | Google Play |
+|---|---|---|
+| スクリーンショット | iPhone 6.9"（1320x2868）**必須**。`supportsTablet` なら iPad 13" も必須 | 2〜8 枚。**長辺 ≤ 短辺 × 2** |
+| アイコン | app.json の icon から生成 | 512x512（`store-push-play-listing` が自動縮小） |
+| フィーチャーグラフィック | — | **1024x500 必須** |
+
+出力先は `store-listing/`（gitignore 済み）。フィーチャーグラフィックは設計素材なので
+`assets/store/` に置いて**コミットする**。
+
+設計・合成・落とし穴は `.claude/skills/store-screenshots/`。
+
+---
+
+## 4. 課金商品を作る（サブスクを売る場合）
+
+`frontend/apps/mobile/iap.config.js` に商品を定義してから、**この順序で**実行する。
+
+```bash
+store-create-ios-subscriptions --dry-run && store-create-ios-subscriptions
+store-equalize-ios-prices     --dry-run && store-equalize-ios-prices   # ← 省略不可
+store-create-play-subscriptions --dry-run && store-create-play-subscriptions
+store-create-play-offers        --dry-run && store-create-play-offers
+```
+
+| 注意 | 内容 |
+|---|---|
+| **`store-equalize-ios-prices` を飛ばさない** | 商品作成は基準地域の価格しか作らない。全地域で販売する設定なので、残りの地域が「販売するのに価格が無い」状態になり **`MISSING_METADATA` が解消しない** |
+| **Play の base plan / offer は DRAFT で作られる** | activate するまで購入できない。offer はスクリプトが activate するが、**base plan は Play Console で有効化する** |
+| **productId は変更できない** | 作り直すと購入履歴が切れる。アプリ側の権限判定コードと同じ文字列を使う |
+
+---
+
+## 5. ビルドして提出する
+
+```bash
+sync-eas-env production        # Doppler の EXPO_PUBLIC_* を EAS へ（これが無いと起動直後に落ちる）
+mobile-release-ios             # build → TestFlight
+mobile-release-android         # build → Play 内部テスト
+```
+
+詳細と既知の失敗は `.claude/skills/mobile-release/`。
+
+---
+
+## 6. 提出前の最終確認
+
+| # | 確認 |
+|---|---|
+| 1 | `ci-check` と `unit-test` が All Green（`.claude/rules/tdd.md`） |
+| 2 | `.claude/rules/store-review.md` の §1〜§4 が満たされている（AI 同意 / privacy manifest / target API / アカウント削除・ペイウォールの必須要素） |
+| 3 | 掲載文の事実（無料枠・価格・機能）が**実装と両ストアで一致**している |
+| 4 | スクリーンショットに**価格を書いていない**（2.3.7） |
+| 5 | ログインが要るなら**審査用アカウント**を審査メモに記載した |
+| 6 | 各コマンドを `--dry-run` で流し、差分が意図どおりだった |
+| 7 | `app.json` を触ったなら `expo prebuild` の**生成物を実測**した（`store-review.md` §6） |

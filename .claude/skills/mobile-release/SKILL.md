@@ -211,7 +211,7 @@ screenshots-storybook --devices iphone-6-9 --locales ja
 screenshots-storybook --allow-fidelity-warnings   # 忠実度警告を承知で続行
 
 # 検証だけ単体で
-screenshots-validate --platform ios fastlane/screenshots
+screenshots-validate --platform ios store-listing/ios
 ```
 
 撮影対象は `scripts/mobile/storybook-shots.config.mjs`（story id / 端末 / ロケール）で宣言する。
@@ -252,18 +252,28 @@ Apple のガイドライン 2.3.3 が求めるのは「アプリが**使用さ�
 | 1 | **Play の「最大辺 ≤ 最小辺 × 2」**。最近の Android 既定プロファイル（Pixel 7 = 1080x2400 = 2.22 倍）は**そのままだと弾かれる**。実機撮影なら 1080x1920 (16:9) の AVD を `ANDROID_SCREENSHOT_AVD` に指定する（Storybook 経路は 360x640 @3x = 1080x1920 で撮るので既に適合） |
 | 2 | **実機撮影には simulator/emulator 用のビルドが要る**。ストア提出用の `.ipa` / `.aab` はインストールできない。`eas build --profile development-simulator --platform ios --local`（iOS）/ `--profile preview --platform android --local`（Android）。Storybook 経路はビルド不要 |
 
-### なぜ fastlane なのか（EAS ではない）
+### 反映はストアの API を直接叩く（fastlane も EAS も使わない）
 
 **EAS Metadata はスクリーンショットを扱えず、Google Play のストア掲載情報にも対応しない**
 （[公式](https://docs.expo.dev/eas/metadata/) の対応表で "Upload screenshots ✗"）。
-`mobile-release-ios` が使う `eas metadata:push` は**テキストメタデータ専用**。
-したがって画像のアップロードは `deliver`（ASC）/ `supply`（Play）しか経路が無い。
+`mobile-release-ios` が使う `eas metadata:push` は **App Store の文言専用**。
 
-fastlane は Ruby 一式を引き込むので **opt-in profile** にしてある:
+画像と Play の掲載情報は `scripts/mobile/store.sh` が
+App Store Connect API / Play Developer API を直接叩く（Node のみ・追加ランタイム不要）。
 
 ```bash
-devenv shell -P store-screenshots -- screenshots-mobile --upload
+store-push-ios-screenshots --dry-run     # 差分だけ見る（必ず先に）
+store-push-ios-screenshots
+store-push-play-listing --dry-run        # Play は文言 + 画像が同じ edit
+store-push-play-listing
 ```
+
+`screenshots-mobile --upload` はこの 2 つへ委譲するので、**同じことをする経路は 1 つだけ**。
+
+> 以前は fastlane（`deliver` / `supply`）を使っていたが、Ruby ランタイム一式を
+> 引き込むわりに **`deliver` が解像度から端末クラスを推定する**ため、
+> **iPad の画像を iPhone のセットへ入れる**取り違えが起きる。現在は
+> `screenshotDisplayType` を明示して送っている。
 
 ### パイプライン
 
@@ -271,11 +281,11 @@ devenv shell -P store-screenshots -- screenshots-mobile --upload
 1. simulator/emulator 起動 + アプリインストール
 2. Maestro (.maestro/store/screenshots.yaml) をロケール分だけ実行
    └ ロケール切替は端末設定ではなく **アプリ内の LocaleSwitcher をタップ**する方式
-3. fastlane のディレクトリ構成へ配置
-   iOS     : fastlane/screenshots/<locale>/          （deliver は解像度で端末種別を推定）
-   Android : fastlane/metadata/android/<locale>/images/phoneScreenshots/
+3. store-listing/ へ配置（ストア反映スクリプトが読む正本）
+   iOS     : store-listing/ios/<locale>/                  （端末クラスは実ピクセルから判定）
+   Android : store-listing/android/<play-locale>/phoneScreenshots/
 4. ストア要求を検証 ← ここで落ちたら 5 に進まない
-5. --upload 時のみ deliver / supply で送信
+5. --upload 時のみ store.sh 経由でストアの API へ送信
 ```
 
 出力物は `.gitignore` 済み（撮影→検証→送信を 1 回で回す前提）。
@@ -286,6 +296,36 @@ devenv shell -P store-screenshots -- screenshots-mobile --upload
 ロケール依存の文言は env（`HOME_TAB` / `EXPLORE_TAB` 等）で渡しているので、
 **アプリの翻訳を変えたら `scripts/mobile/screenshots.sh` の `locale_meta()` も直す**
 （ズレるとフローが要素を見つけられずタイムアウトする）。
+
+---
+
+## 6.6. ストアへの反映（掲載情報・課金商品）
+
+ビルドと提出とは別に、**掲載情報と課金商品をストアへ反映する経路**がある。
+すべて `scripts/mobile/store.sh`（資格情報の Doppler 注入込み）。
+**本番を書き換えるので必ず `--dry-run` を先に通す。**
+
+```bash
+mobile-metadata                    # App Store の文言（store.config.js → eas metadata:push）
+store-push-ios-screenshots         # App Store のスクショ（EAS Metadata では出せない）
+store-push-play-listing            # Play の文言 + アイコン + スクショ（1 つの edit）
+
+# 課金商品（iap.config.js が両ストア共通の正本）— この順序で
+store-create-ios-subscriptions
+store-equalize-ios-prices          # ★ 省略すると MISSING_METADATA が永久に解消しない
+store-create-play-subscriptions
+store-create-play-offers           # 無料トライアル（作成 → activate）
+```
+
+| 落とし穴 | 内容 |
+|---|---|
+| **`store-equalize-ios-prices` を飛ばす** | 商品作成は基準地域の価格しか作らない。全地域で販売する設定なので、残りが「販売するのに価格が無い」状態になり **商品が永久に準備中のまま**になる。ローカライズもスクショも揃っているので原因が分かりにくい |
+| **Play の base plan は DRAFT で作られる** | activate するまで購入できない。offer は script が activate するが、**base plan は Play Console で有効化する** |
+| **有料 App 契約が未締結** | iOS の商品が MISSING_METADATA から動かない。API では解決できない |
+| **productId は変更できない** | 作り直すと購入履歴が切れる |
+
+初回提出までの全体手順は `docs/store/submission-checklist.md`、
+掲載文の設計は `docs/store/aso.md`、審査要件の不変条件は `.claude/rules/store-review.md`。
 
 ---
 
