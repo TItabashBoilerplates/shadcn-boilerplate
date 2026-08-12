@@ -543,27 +543,27 @@ in
     # system image は 1 プラットフォーム × 1 ABI でも GB 級なので、`android` から分離している。
     # NOTE: 親 profile が platforms.version を定義しているため、ここで再定義すると listOf が
     # **連結**されてしまう。system image を絞りたいときは abis / systemImageTypes 側で調整すること。
-    # ===== store-screenshots: ストア掲載用スクショのアップロード toolchain =====
+    # ===== store-listing: ストア掲載画像の撮影・生成 toolchain =====
     #
-    # **opt-in profile にしている理由**: fastlane は Ruby ランタイム一式を引き込むため
-    # base に入れると全開発者と CI がダウンロードすることになる。使うのは
-    # 「ストアへスクショを送るとき」だけなので分離する。
-    #
-    # なぜ fastlane が要るか: EAS Metadata は **スクリーンショットを扱えず**
-    # （https://docs.expo.dev/eas/metadata/ の "Upload screenshots ✗"）、
-    # Google Play のストア掲載情報にも対応しない。アップロード経路は
-    # deliver（App Store Connect）/ supply（Play）しか無い。
+    # **ストアへの反映自体には何も要らない**（`store.sh` の反映スクリプトは Node と
+    # fetch だけで動く）。この profile が要るのは**画像を作る側**の 2 つ:
+    #   - chromium        : Storybook から撮る経路（screenshots-storybook）が使うブラウザ。
+    #                       playwright-core はブラウザを自動 DL しない軽量版なので、
+    #                       実行体をここで宣言的に供給する（各自の Chrome 有無に依存させない）。
+    #   - imagemagick     : Play のアイコン縮小（512x512）とフィーチャーグラフィックの生成
     #
     # 使い方:
-    #   devenv shell -P store-screenshots -- screenshots-mobile --upload
-    #   # iOS の撮影自体は macOS + Xcode が必要（Linux では --platform android のみ）
+    #   devenv shell -P store-listing -- screenshots-storybook
+    #   devenv shell -P store-listing -- build-play-feature-graphic
+    #   # iOS の実機撮影は macOS + Xcode が必要（Linux では --platform android のみ）
     #   # Android のエミュレータが要る場合は -P android-emulator と併用する
-    store-screenshots.module = {
-      # fastlane : deliver / supply（ストアへのアップロード）
-      # chromium : Storybook から撮る経路（screenshots-storybook）が使うブラウザ。
-      #            playwright-core はブラウザを自動 DL しない軽量版なので、実行体は
-      #            ここで宣言的に供給する（各自の環境の Chrome 有無に依存させない）。
-      packages = [ pkgs.fastlane pkgs.chromium ];
+    #
+    # > 以前は fastlane（deliver / supply）でアップロードしていたが、Ruby ランタイム
+    # > 一式を引き込むわりに **iPad の画像を iPhone のセットへ入れる**（deliver は
+    # > 解像度から端末クラスを推定する）などの取り違えが起きるため、App Store Connect /
+    # > Play の API を直接叩く実装（`scripts/mobile/store.sh`）に置き換えた。
+    store-listing.module = {
+      packages = [ pkgs.chromium pkgs.imagemagick ];
     };
 
     android-emulator = {
@@ -1260,6 +1260,45 @@ in
     "mobile-metadata" = {
       exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/release-ios.sh" --metadata-only "$@"'';
       description = "store.config.js を App Store Connect へ同期（ビルドしない）";
+    };
+
+    # ---------- ストアへの反映（App Store Connect / Google Play の API を直接叩く）----------
+    # すべて `--dry-run` を受け付ける。**本番の掲載情報・課金商品を書き換えるので、
+    # 必ず先に --dry-run で差分を確認すること。**
+    # 資格情報は store.sh が Doppler から自己注入する（呼ぶ側の準備は不要）。
+    "store-push-ios-screenshots" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/store.sh" push-ios-screenshots "$@"'';
+      description = "store-listing/ios のスクショを App Store Connect へ反映";
+    };
+
+    "store-push-play-listing" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/store.sh" push-play-listing "$@"'';
+      description = "play.config.js の文言 + アイコン + スクショを Google Play へ反映";
+    };
+
+    "store-create-ios-subscriptions" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/store.sh" create-ios-subscriptions "$@"'';
+      description = "iap.config.js のサブスク商品を App Store Connect に作成";
+    };
+
+    "store-equalize-ios-prices" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/store.sh" equalize-ios-prices "$@"'';
+      description = "App Store の販売地域すべてへ等価価格を展開（商品作成後に必須）";
+    };
+
+    "store-create-play-subscriptions" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/store.sh" create-play-subscriptions "$@"'';
+      description = "iap.config.js のサブスク商品を Google Play に作成";
+    };
+
+    "store-create-play-offers" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/store.sh" create-play-offers "$@"'';
+      description = "Play の無料トライアル（offer）を作成して有効化";
+    };
+
+    "build-play-feature-graphic" = {
+      exec = ''exec node "$DEVENV_ROOT/scripts/mobile/build-play-feature-graphic.mjs" "$@"'';
+      description = "Play のフィーチャーグラフィック(1024x500)を生成（要 -P store-listing）";
     };
 
     "sync-eas-env" = {

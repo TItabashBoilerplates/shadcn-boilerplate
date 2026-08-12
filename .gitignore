@@ -166,9 +166,6 @@ storybook-static/
 # 撮影→検証→アップロードを 1 回で回す前提なのでコミットしない。
 # 手で差し替えた画像を残したい場合だけ、そのファイルを個別に -f で追加する。
 e2e-results/store-screenshots/
-fastlane/screenshots/
-fastlane/metadata/android/*/images/
-# fastlane が実行時に生成する作業ファイル
-fastlane/report.xml
-fastlane/Preview.html
-fastlane/test_output/
+# ストア掲載用スクリーンショット（撮影 → 検証 → 反映を 1 回で回す前提の生成物）。
+# フィーチャーグラフィックは設計素材なのでコミットする（assets/store/ 配下）。
+store-listing/

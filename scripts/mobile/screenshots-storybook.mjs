@@ -19,8 +19,8 @@
  *
  * ■ 出力
  *   Maestro 版とまったく同じディレクトリへ出すので、後段の検証・アップロードは共通:
- *     iOS     : fastlane/screenshots/<locale>/
- *     Android : fastlane/metadata/android/<play-locale>/images/phoneScreenshots/
+ *     iOS     : store-listing/ios/<locale>/
+ *     Android : store-listing/android/<play-locale>/phoneScreenshots/
  *   撮影後は必ず `screenshots-validate` を通すこと（screenshots-mobile --skip-capture でも可）。
  */
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
@@ -126,7 +126,7 @@ function findChromium() {
 	const candidates = [
 		process.env.PLAYWRIGHT_CHROMIUM_PATH,
 		process.env.CHROME_BIN,
-		// devenv の store-screenshots profile が入れる chromium
+		// devenv の store-listing profile が入れる chromium
 		...(process.env.PATH ?? "")
 			.split(":")
 			.flatMap((d) => [
@@ -140,7 +140,7 @@ function findChromium() {
 	].filter(Boolean);
 	for (const c of candidates) if (existsSync(c)) return c;
 	throw new Error(
-		"Chromium が見つかりません。`devenv shell -P store-screenshots` に入るか、" +
+		"Chromium が見つかりません。`devenv shell -P store-listing` に入るか、" +
 			"PLAYWRIGHT_CHROMIUM_PATH で実行ファイルのパスを指定してください。",
 	);
 }
@@ -242,10 +242,10 @@ async function main() {
 
 				const outDir =
 					device.platform === "ios"
-						? join(REPO_ROOT, "fastlane/screenshots", localeKey)
+						? join(REPO_ROOT, "store-listing/ios", localeKey)
 						: join(
 								REPO_ROOT,
-								"fastlane/metadata/android",
+								"store-listing/android",
 								localeKey === "ja" ? "ja-JP" : localeKey,
 								"images/phoneScreenshots",
 							);
@@ -356,8 +356,8 @@ async function main() {
 
 	console.log(
 		"\n次に `screenshots-validate` でストア要求を検証してください:\n" +
-			"  screenshots-validate --platform ios fastlane/screenshots\n" +
-			"  screenshots-validate --platform android fastlane/metadata/android",
+			"  screenshots-validate --platform ios store-listing/ios\n" +
+			"  screenshots-validate --platform android store-listing/android",
 	);
 }
 

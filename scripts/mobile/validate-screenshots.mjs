@@ -2,8 +2,8 @@
 /**
  * ストア掲載用スクリーンショットが各ストアの要求を満たしているか検証する。
  *
- *   node scripts/mobile/validate-screenshots.mjs --platform ios     <dir>
- *   node scripts/mobile/validate-screenshots.mjs --platform android <dir>
+ *   node scripts/mobile/validate-screenshots.mjs --platform ios     store-listing/ios
+ *   node scripts/mobile/validate-screenshots.mjs --platform android store-listing/android
  *
  * **アップロード前に必ず通す**こと。ストア側で弾かれると原因が
  * 「Image dimensions are wrong」程度しか返らず、どのファイルが悪いのか分からない。
@@ -19,6 +19,7 @@
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { extname, join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ストア要求
@@ -26,16 +27,40 @@ import { extname, join } from "node:path";
 
 /**
  * App Store Connect が受け付ける実ピクセルサイズ。
- * deliver は **解像度からデバイス種別を推定**するため、ここに無いサイズは
- * 「どの表示サイズ枠にも属さない」としてアップロードが失敗する。
+ * ここに無いサイズは「どの表示サイズ枠にも属さない」としてアップロードが失敗する。
+ *
+ * `displayType` は App Store Connect API の `screenshotDisplayType`（アップロード先の
+ * セットを決める値）。**アップロードはこれで端末クラスを指定する**ので、
+ * ピクセルサイズから引けるようにここに併記している。
+ *
+ * ⚠️ **推測で増やさないこと。** 新しい画面サイズの display type は
+ * **Apple の API リファレンスに載っていない**（下記フォーラム参照）。値を誤ると
+ * API が 400 で許容値の一覧を返すので、**実際に送って返ってきた値だけ**をここへ足す。
+ * `displayType` が無いサイズは検証には通るが `asc-push-screenshots` が
+ * 「マッピングが無い」と明示して落ちる（黙って掲載から漏らさないため）。
+ *
+ *   6.9" iPhone: https://developer.apple.com/forums/thread/763908
+ *     → APP_IPHONE_67 が 1320x2868 / 1290x2796 / 1260x2736 を受け付ける
+ *   13"  iPad  : https://developer.apple.com/forums/thread/751867
+ *     → APP_IPAD_PRO_3GEN_129 が 2064x2752 / 2048x2732 を受け付ける
  */
-const APP_STORE_SIZES = [
-	{ label: 'iPhone 6.9"', portrait: [1320, 2868], required: true },
+export const APP_STORE_SIZES = [
+	{
+		label: 'iPhone 6.9"',
+		portrait: [1320, 2868],
+		required: true,
+		displayType: "APP_IPHONE_67",
+	},
 	{ label: 'iPhone 6.5"', portrait: [1284, 2778], required: false },
 	{ label: 'iPhone 6.3"', portrait: [1179, 2556], required: false },
 	{ label: 'iPhone 6.1"', portrait: [1170, 2532], required: false },
 	{ label: 'iPhone 5.5"', portrait: [1242, 2208], required: false },
-	{ label: 'iPad 13"', portrait: [2064, 2752], required: false },
+	{
+		label: 'iPad 13"',
+		portrait: [2064, 2752],
+		required: false,
+		displayType: "APP_IPAD_PRO_3GEN_129",
+	},
 	{ label: 'iPad 11"', portrait: [1488, 2266], required: false },
 	{ label: 'iPad 10.5"', portrait: [1668, 2224], required: false },
 	{ label: 'iPad 9.7"', portrait: [1536, 2048], required: false },
@@ -104,7 +129,7 @@ function pngHasAlpha(buf) {
 	return colorType === 4 || colorType === 6;
 }
 
-function readImage(path) {
+export function readImage(path) {
 	const buf = readFileSync(path);
 	const ext = extname(path).toLowerCase();
 	if (ext === ".png") {
@@ -122,7 +147,7 @@ function readImage(path) {
 // 検証
 // ─────────────────────────────────────────────────────────────────────────────
 
-function collectImages(dir) {
+export function collectImages(dir) {
 	const out = [];
 	const walk = (d) => {
 		for (const entry of readdirSync(d, { withFileTypes: true })) {
@@ -235,7 +260,7 @@ function main() {
 	if (!platform || !["ios", "android"].includes(platform) || !dir) {
 		console.error(
 			"usage: validate-screenshots.mjs --platform <ios|android> <dir>\n" +
-				"  例: validate-screenshots.mjs --platform ios fastlane/screenshots",
+				"  例: validate-screenshots.mjs --platform ios store-listing/ios",
 		);
 		process.exit(2);
 	}
@@ -274,4 +299,12 @@ function main() {
 	console.log("\n✓ すべてストアの要求を満たしている");
 }
 
-main();
+// 直接実行されたときだけ検証を走らせる。
+// asc-push-screenshots.mjs が APP_STORE_SIZES / readImage / collectImages を import するので、
+// ガードが無いと push のたびに usage を出して exit(2) してしまう。
+if (
+	process.argv[1] &&
+	import.meta.url === pathToFileURL(process.argv[1]).href
+) {
+	main();
+}

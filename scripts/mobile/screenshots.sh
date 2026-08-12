@@ -12,9 +12,9 @@
 # 何をするか:
 #   1. simulator / emulator を起動し、アプリをインストール
 #   2. Maestro の store-screenshots フローをロケール分だけ回して撮影
-#   3. 撮れた画像を fastlane が期待するディレクトリ構成へ配置
+#   3. 撮れた画像を store-listing/ 配下へ配置（ストア反映スクリプトが読む正本）
 #   4. ストア要求（サイズ・縦横比・枚数・アルファ）を検証   ← ここで落ちたらアップロードしない
-#   5. --upload 指定時のみ fastlane deliver / supply で送信
+#   5. --upload 指定時のみ store.sh 経由でストアの API へ送信
 #
 # ⚠️ 前提（この 2 つが無いと動かない）
 #   - **macOS + Xcode**: iOS simulator は macOS でしか動かない。Linux では --platform android のみ。
@@ -95,13 +95,15 @@ locale_meta() {
 }
 
 # ── 出力先 ────────────────────────────────────────────────────────────────
-#   iOS     : fastlane/screenshots/<asc-locale>/*.png
-#             （deliver は **解像度から端末種別を推定**するのでファイル名は順序用でよい）
-#   Android : fastlane/metadata/android/<play-locale>/images/phoneScreenshots/*.png
-#             （supply はこのディレクトリ構成が固定）
-FASTLANE_DIR="$REPO_ROOT/fastlane"
-IOS_SHOT_DIR="$FASTLANE_DIR/screenshots"
-ANDROID_META_DIR="$FASTLANE_DIR/metadata/android"
+# store-listing/ が「ストアへ送る画像の正本」。store.sh のストア反映スクリプトが
+# ここを読む（撮影経路が simulator でも Storybook でも同じ場所へ出す）。
+#   iOS     : store-listing/ios/<asc-locale>/*.png
+#             （端末クラスは**画像の実ピクセル**から引くのでファイル名は順序用でよい）
+#   Android : store-listing/android/<play-locale>/phoneScreenshots/*.png
+#             （ディレクトリ名がそのまま Play の imageType になる）
+LISTING_DIR="$REPO_ROOT/store-listing"
+IOS_SHOT_DIR="$LISTING_DIR/ios"
+ANDROID_SHOT_DIR="$LISTING_DIR/android"
 RAW_DIR="$REPO_ROOT/e2e-results/store-screenshots"
 
 maestro_capture() {
@@ -188,9 +190,9 @@ capture_android() {
   done
 }
 
-# ── 撮れた画像を fastlane のディレクトリ構成へ配置 ────────────────────────
+# ── 撮れた画像を store-listing/ へ配置 ────────────────────────────────────
 organize() {
-  mlog "fastlane のディレクトリ構成へ配置"
+  mlog "store-listing/ へ配置"
   for locale in ${LOCALES//,/ }; do
     locale_meta "$locale"
 
@@ -202,7 +204,7 @@ organize() {
     fi
 
     if [ "$PLATFORMS" != "ios" ]; then
-      local dst="$ANDROID_META_DIR/$PLAY_LOCALE/images/phoneScreenshots"
+      local dst="$ANDROID_SHOT_DIR/$PLAY_LOCALE/phoneScreenshots"
       run mkdir -p "$dst"
       run sh -c "find '$RAW_DIR/android/$locale' -name '*.png' | sort | \
         while read -r f; do cp \"\$f\" '$dst/'; done"
@@ -213,77 +215,35 @@ organize() {
 validate() {
   mlog "ストア要求を検証"
   [ "$PLATFORMS" = "android" ] || run node "$SCRIPT_DIR/validate-screenshots.mjs" --platform ios "$IOS_SHOT_DIR"
-  [ "$PLATFORMS" = "ios" ]     || run node "$SCRIPT_DIR/validate-screenshots.mjs" --platform android "$ANDROID_META_DIR"
+  [ "$PLATFORMS" = "ios" ]     || run node "$SCRIPT_DIR/validate-screenshots.mjs" --platform android "$ANDROID_SHOT_DIR"
 }
 
 # ── アップロード ──────────────────────────────────────────────────────────
-# EAS Metadata はスクリーンショットを扱えず Google Play にも対応しないため、
-# ここだけ fastlane（deliver / supply）を使う。
-#   https://docs.expo.dev/eas/metadata/ の「Upload screenshots ✗」参照
+# EAS Metadata はスクリーンショットを扱えず（公式の対応表で "Upload screenshots ✗"）、
+# Google Play のストア掲載情報にも対応しない。画像の反映経路はストアの API 直叩きだけ。
+#
+# ここでは各ストアの反映スクリプトへ委譲する（store.sh が Doppler 注入と dry-run を持つ）。
+# **同じことをする経路を 2 つ持たない**ため、このスクリプトは撮影と検証に専念する。
 upload() {
-  command -v fastlane >/dev/null || mdie "fastlane が見つかりません（devenv shell -P store-screenshots で入ります）"
+  local dry=()
+  [ "$DRY_RUN" = 1 ] && dry=(--dry-run)
 
   if [ "$PLATFORMS" != "android" ]; then
-    mobile_init_credentials
-    local p8="$CRED_DIR/asc_api_key.p8"
-    mobile_write_secret_file "$p8" "$APPLE_API_KEY_P8"
-
-    # fastlane は ASC API キーを **JSON ファイル**で受け取る（環境変数では渡せない）。
-    # 鍵本体を含むので CRED_DIR（mobile_init_credentials が後始末する場所）に置く。
-    local key_json="$CRED_DIR/asc_api_key.json"
-    if [ "$DRY_RUN" != 1 ]; then
-      jq -n \
-        --arg key_id "$APPLE_API_KEY" \
-        --arg issuer_id "$APPLE_API_ISSUER" \
-        --rawfile key "$p8" \
-        '{key_id:$key_id, issuer_id:$issuer_id, key:$key, duration:1200, in_house:false}' \
-        > "$key_json"
-      chmod 600 "$key_json"
-    fi
-
-    mlog "App Store Connect へスクリーンショットをアップロード（deliver）"
-    # skip_binary_upload / skip_metadata を立てて **スクリーンショットだけ**を差し替える。
-    # overwrite_screenshots が無いと既存の枚数に追加され、1 サイズ 10 枚上限に当たる。
-    run env FASTLANE_SKIP_UPDATE_CHECK=1 \
-      fastlane run deliver \
-        api_key_path:"$key_json" \
-        app_identifier:"$(app_id_for ios)" \
-        screenshots_path:"$IOS_SHOT_DIR" \
-        skip_binary_upload:true \
-        skip_metadata:true \
-        skip_app_version_update:true \
-        overwrite_screenshots:true \
-        run_precheck_before_submit:false \
-        force:true
+    mlog "App Store Connect へスクリーンショットを反映"
+    run bash "$SCRIPT_DIR/store.sh" push-ios-screenshots "${dry[@]}"
   fi
 
   if [ "$PLATFORMS" != "ios" ]; then
-    mobile_init_credentials
-    local sa="$CRED_DIR/play-sa.json"
-    mobile_write_secret_file "$sa" "$PLAY_SERVICE_ACCOUNT_JSON"
-
-    mlog "Google Play へスクリーンショットをアップロード（supply）"
-    # skip_upload_screenshots は **立てない**（それが今回の目的）。
-    # skip_upload_images はアイコン / フィーチャーグラフィックのことなので立てる。
-    run env FASTLANE_SKIP_UPDATE_CHECK=1 \
-      fastlane run supply \
-        package_name:"$(app_id_for android)" \
-        json_key:"$sa" \
-        metadata_path:"$ANDROID_META_DIR" \
-        skip_upload_apk:true \
-        skip_upload_aab:true \
-        skip_upload_metadata:true \
-        skip_upload_changelogs:true \
-        skip_upload_images:true \
-        track:internal
+    # Play は文言と画像が同じ edit（トランザクション）なので、掲載情報ごと反映する
+    mlog "Google Play へ掲載情報（文言 + 画像）を反映"
+    run bash "$SCRIPT_DIR/store.sh" push-play-listing "${dry[@]}"
   fi
 }
 
 main() {
   mobile_load_config
   parse_args "$@"
-  # アップロードするときだけシークレットが要る。撮影・検証だけなら Doppler は不要。
-  [ "$DO_UPLOAD" = 1 ] && mobile_doppler_reexec "$@"
+  # シークレットは store.sh 側が Doppler から注入する（このスクリプト自身は不要）。
 
   command -v maestro >/dev/null || mdie "maestro が見つかりません（devenv shell に入ってください）"
 
@@ -302,7 +262,7 @@ main() {
     mok "アップロード完了"
   else
     mok "撮影と検証が完了（アップロードは --upload 指定時のみ）"
-    mlog "出力: $IOS_SHOT_DIR / $ANDROID_META_DIR"
+    mlog "出力: $IOS_SHOT_DIR / $ANDROID_SHOT_DIR"
   fi
 }
 
