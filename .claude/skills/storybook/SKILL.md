@@ -1,6 +1,6 @@
 ---
 name: storybook
-description: Storybook ローカル環境でのコンポーネント開発ガイダンス。Story ファイルの作成、FSD 構成に合わせたサイドバー構造、Next.js モック、Lucide React アイコン、HMR 設定についての質問に使用。UIコンポーネントのカタログ管理の実装支援を提供。
+description: Storybook（Web の shadcn/ui と Mobile の gluestack-ui + NativeWind v5 を 1 つのカタログで扱う）のガイダンス。Story ファイルの作成、FSD 構成に合わせたサイドバー構造、デバイス枠プリセット、Next.js / expo-router のモック、HMR 設定に使用。**`frontend/.storybook/` を触るとき、および「Mobile コンポーネントにスタイルが当たらない」「bg-primary だけ効かない」「ビルドは通るのにブラウザで全ストーリーが落ちる」「テーマ切替が効かない」「@/ の import が別アプリに解決される」といった症状のときは必ず起動すること**（症状別の原因と対処を「ハマりどころ早見表」にまとめてある）。ストア掲載用スクショを Storybook から撮る場合の注意も扱う。
 ---
 
 # Storybook スキル
@@ -19,6 +19,61 @@ description: Storybook ローカル環境でのコンポーネント開発ガイ
 **Web（shadcn/ui）と Mobile（gluestack-ui + NativeWind v5）を 1 つのカタログで扱う。**
 Mobile のスタイルも適用される（仕組みと注意点は末尾の
 「NativeWind v5 (Mobile) を Storybook で動かす」を必読）。
+
+---
+
+## ⚠️ ハマりどころ早見表（`.storybook/` を触る前に必ず読む）
+
+過去に**実際に踏んだ**もの。症状が特徴的なので、症状から原因を引ける形にしてある。
+それぞれの詳細は各セクションへ。
+
+| 症状 | 原因 | 対処 |
+|---|---|---|
+| Mobile が**全部**無スタイル | `react-native-css/babel` の import 書き換えが未適用。RNW が className を捨てる | `main.ts` の `pluginReactOptions.babel.presets` |
+| `rounded-md`/`h-9` は効くのに **`bg-primary`/`flex-row` だけ**効かない | RNW が `<head>` 先頭に**レイヤー無し**で CSS を挿す。レイヤー無しは全 `@layer` に勝つ | `storybook.css` でユーティリティを**レイヤー無し**かつ `globals.css` より**前**に import |
+| `storybook build` は成功するのに**ブラウザで全ストーリーが落ちる**（`Cannot access 'X' before initialization`） | `react-native-web` 内部まで import 書き換えされ循環参照 → Rollup が自己参照に畳む | `main.ts` の `exclude` で `react-native-web` を Babel 対象外に |
+| mobile の import が**なぜか web の実装に解決される**（エラーは出ない） | `@/` が web/mobile で別物を指すのに Vite の alias はグローバル | `main.ts` の `fsdAliasPlugin`（importer で振り分け） |
+| `require('@/assets/...')` だけ壊れる | mobile の `@/` は **2 段構え**（FSD は `src/`、それ以外はアプリ直下） | 同上（`mobileBaseFor`） |
+| `ReferenceError: require is not defined` | `expo-router` 内部の CJS | `.storybook/mocks/expo-router.tsx`（完全一致 alias） |
+| **URL でテーマを指定しても切り替わらない** | **story 側の `globals` が URL の globals を上書きする** | story に `globals` を書かない（下記） |
+| **dark を指定したのに light のまま撮れる** | reanimated の CSS アニメーションを含む story で addon-themes の effect が走らない | 撮影側で強制適用 + 検証（下記） |
+
+### story に `globals` を書かない
+
+```ts
+// ❌ これを書くと URL の ?globals=theme:dark が**無視される**
+const meta = { globals: { viewport: { value: 'iphone-6-9' } } }
+```
+
+story-level の `globals` は URL globals を上書きする。画面幅の切り替えは**ツールバーの
+Viewport ツール**で行う（`MobileView` / `TabletView` 用の Story も作らない。後述の規約どおり）。
+撮影スクリプト（`screenshots-storybook`）はテーマを URL globals で渡すので、
+ここを守らないと**無言で違うテーマの画像が出来上がる**。
+
+### reanimated の CSS アニメーションはテーマ切替を壊す
+
+`HelloWave` のように reanimated の CSS アニメーション（`animationName` 等）を使う story では、
+`@storybook/addon-themes` の `withThemeByClassName` の effect が実行されず、
+**`<html>` に `.dark` が付かない**。それを含む上位 story（`HomeScreen`）も道連れになる。
+
+- **Storybook を目視で見るとき**: その画面はテーマ切替が効かない（既知の制限）
+- **撮影するとき**: `screenshots-storybook` が `<html>` のクラスを強制適用し、
+  適用できたかを検証して `theme-decorator` 警告を出す（画像自体は正しくなる）
+
+### 検証は「ビルドが通った」で終わらせない
+
+**`build-storybook` の成功は動作保証にならない。** 上表のとおり、
+「ビルドは成功するがブラウザで全ストーリーが落ちる」「クラスは出ているが CSS が当たっていない」
+という壊れ方が実際に起きている。`.storybook/` を変更したら**必ずブラウザで実測**する:
+
+```js
+// 例: computed style を実測する（headless Chromium + playwright-core）
+const cs = getComputedStyle(el)
+// bg-primary が効いていれば backgroundColor は transparent 以外になる
+```
+
+`screenshots-storybook` は撮影のついでにこの検査（描画の有無・画像の読み込み・
+テーマ適用）を行うので、**設定変更後の回帰確認にも使える**。
 
 ## 起動方法
 

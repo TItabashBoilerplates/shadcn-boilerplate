@@ -148,6 +148,54 @@ ci-check  (= devenv tasks run ci:check)
 
 > **使い分け**: 日常の auto-fix は `lint` / `format` script (シンプル sequential、execIfModified なし → 副作用ループ回避)。CI 相当の verify は**ローカル・CI とも `ci-check`**。
 
+#### ⚠️ Biome の設定は 2 つあり、`ci-check` は `scripts/` を見ない
+
+**`ci-check` が通っても `git commit` が biome で落ちることがある。** 設定ファイルが分かれているため。
+
+| 対象ディレクトリ | 適用される設定 | スタイル | `ci-check` の守備範囲 |
+|---|---|---|---|
+| `frontend/**` | `frontend/biome.json` | **スペース 2 / シングルクォート / セミコロン無し** | ✅ `lint-frontend` が見る |
+| `drizzle/**` | `drizzle/biome.json` | 同上系 | ✅ `lint-drizzle` が見る |
+| **`scripts/**` などリポジトリ直下** | **ルートの `biome.json`**（`extends: "//"` の親） | **タブ / ダブルクォート / セミコロン有り** | ❌ **見ていない** |
+
+つまり `scripts/*.mjs` `scripts/*.ts` を追加・変更すると、**`ci-check` は素通りするのに
+pre-commit hook（prek の biome）で初めて落ちる**。実際にこれで 2 回コミットに失敗している。
+
+**対処**: リポジトリ直下のスクリプトを書いたら、コミット前にルート設定で整形しておく。
+
+```bash
+# devenv shell 内。cd はリポジトリルートへ（ルートの biome.json を拾わせる）
+biome check --write scripts/mobile/foo.mjs
+```
+
+**注意点**:
+- ルート設定は **import が ASCII 順に整列していること**まで要求する。
+  ファイル先頭の docblock は「最初の import」に紐づくので、**並べ替えが起きると
+  docblock ごと移動させられる**。最初から `node:fs → node:http → node:module → node:path → node:url`
+  の順で書いておくと事故らない。
+- ビルド生成物は biome の対象から外す（`frontend/biome.json` の `!!**/storybook-static` など）。
+  外し忘れると数千件のエラーで本物の指摘が埋もれる。
+
+#### ⚠️ `devenv.nix` を編集するときの Nix 文字列エスケープ
+
+`scripts.<name>.exec` は Nix の**インデント文字列** `''...''` で書く。
+sed / python などで機械的に生成すると `'''...'''` のような壊れた形になりやすく、
+**評価エラーで devenv shell 自体に入れなくなる**（＝そこから先の全コマンドが死ぬ）。
+
+```nix
+# ✅ 正
+exec = ''exec node "$DEVENV_ROOT/scripts/mobile/foo.mjs" "$@"'';
+
+# ❌ 誤（''\' を使おうとして壊れた形）
+exec = '''exec node "..." "$@"''';
+```
+
+編集後は必ず評価を確認してから次へ進むこと:
+
+```bash
+devenv shell -- bash -c 'type <新しい script 名> >/dev/null && echo OK'
+```
+
 #### backend-py の `uv run` は `--all-packages` 必須（import 解決が要るツール）
 
 `backend-py` は uv の **virtual workspace**（root が `package = false`）。素の `uv run` は root の
