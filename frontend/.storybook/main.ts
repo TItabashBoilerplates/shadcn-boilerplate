@@ -1,30 +1,94 @@
+import { createRequire } from 'node:module'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { StorybookConfig } from '@storybook/nextjs'
+import type { StorybookConfig } from '@storybook/react-native-web-vite'
 
-// ESM環境では __dirname が使えないため import.meta.url から取得
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
+// ESM 環境では __dirname / require が使えないため import.meta.url から作る
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const require = createRequire(import.meta.url)
 
 const config: StorybookConfig = {
-  framework: '@storybook/nextjs',
+  // ============================================================
+  // Framework: react-native-web-vite
+  //
+  // Web (shadcn/ui) と Mobile (gluestack-ui + NativeWind v5) を **1 つのカタログ**に載せる。
+  //
+  // かつてここは `@storybook/nextjs`（Webpack）で、「NativeWind v5 は Metro でしか動かないので
+  // Mobile のストーリーは登録できない」とされていたが、これは誤り。正確には:
+  //
+  //   - Metro が必要なのは **ネイティブ (iOS/Android)** 向けのビルドだけ。
+  //     CSS を JS のスタイルレジストリへコンパイルする必要があるため。
+  //   - **Web では不要**。react-native-css は `runtime.ts -> ./web` で web 実装に解決され、
+  //     `useCssElement` が className を react-native-web の `$$css` エスケープハッチ
+  //     （`{ $$css: true, className: '...' }`）に載せる。CSS は普通の Tailwind 出力を使う。
+  //   - この経路に乗せるのに必要なのは **`react-native-css/babel` の import 書き換えプラグイン**だけ。
+  //     `import { View } from 'react-native'` を `react-native-css/components/View` に差し替え、
+  //     className を解釈できるラッパーコンポーネントに繋ぐ。
+  //
+  // 従来 Mobile が「全部無スタイル」で表示されていた理由:
+  //   `@storybook/nextjs` は SWC パイプラインでこの Babel プラグインが動かないため import が
+  //   書き換わらず、生の react-native-web の `View` に className が渡る。
+  //   react-native-web の `createDOMProps` は className を **自前の StyleSheet 出力で上書き**
+  //   するので（`domProps.className = StyleSheet(...)[0]`）、渡した className は捨てられる。
+  //   Tailwind 側は `.bg-primary` 等を正しく生成できていたので「CSS が当たらない」ように見えた。
+  //
+  // 参考: react-native-css の README にある "officially only supports Metro" は
+  //       **CSS アセットパイプライン（ネイティブ向け）**の話であって、web 対応の話ではない。
+  //       同パッケージには `src/babel/react-native-web.ts` / `src/web/` が同梱されている。
+  // ============================================================
+  framework: {
+    name: '@storybook/react-native-web-vite',
+    options: {
+      pluginReactOptions: {
+        // ------------------------------------------------------------
+        // Babel の対象範囲（`modulesToTranspile` ではなく `exclude` を直接指定している）
+        //
+        // framework は `modulesToTranspile` から exclude 正規表現を組み立てるが、
+        // `pluginReactOptions` の方が後勝ちでマージされるので、細かい制御が要るここでは
+        // exclude を自前で書く。既定は
+        //   /\/node_modules\/(?!react-native|@react-native|expo|@expo)/
+        // で「node_modules は原則対象外、ただし RN / Expo 系だけ対象」という意味。
+        //
+        // ここでの変更点は 2 つ:
+        //
+        //  1. `@gluestack-ui` / `nativewind` を **追加**で対象にする。
+        //     gluestack-ui は内部で react-native のプリミティブを描画するため、外すと
+        //     gluestack 側が描画する要素だけ className が効かない、という分かりにくい崩れ方をする。
+        //
+        //  2. `react-native-web` 本体は **対象外に戻す**（← これが無いと本番ビルドが壊れる）。
+        //     react-native-css の import 書き換えプラグインは
+        //     `react-native-web/dist/...` への **相対 import まで**書き換える
+        //     （`src/babel/react-native-web.ts` の `parseReactNativeWebSource`）。
+        //     その結果 react-native-web 内部の `./FlatList` が
+        //     `react-native-css/components/FlatList` を指し、その FlatList はまた
+        //     `react-native`（= react-native-web）を import するので循環参照になる。
+        //     dev（ESM で遅延評価）では表面化しないが、Rollup の本番ビルドでは
+        //     2 つの束縛が 1 つに畳まれて
+        //       `const FlatList$1 = copyComponentProperties(FlatList$1, ...)`
+        //     という自己参照になり、**全ストーリーが**
+        //     `ReferenceError: Cannot access 'FlatList$1' before initialization`
+        //     で落ちる（storybook build は成功するのでブラウザで開くまで気づけない）。
+        //
+        //     アプリ側のコード（packages/native-ui / stories）の `react-native` import は
+        //     引き続き書き換わるので、className の解決には影響しない。
+        // ------------------------------------------------------------
+        exclude:
+          /\/node_modules\/(?:react-native-web\/|(?!react-native|@react-native|expo|@expo|@gluestack-ui|nativewind))/,
+        babel: {
+          // react-native-css の公式 preset。中身は
+          //   1. import 書き換えプラグイン（react-native / react-native-web -> react-native-css/components）
+          //   2. react-native-worklets/plugin（reanimated 4 を使うコンポーネント用）
+          // framework 側が babelrc / configFile を無効化するので、
+          // apps/mobile/babel.config.js が混ざる心配はない（= ここで明示する必要がある）。
+          presets: [require.resolve('react-native-css/babel')],
+        },
+      },
+    },
+  },
 
   stories: [
     // ============================================
-    // PACKAGES - Web UI のみ
-    //
-    // Mobile (packages/native-ui) のストーリーは意図的に登録していない。
-    // NativeWind v5 は `className` を **Metro のトランスフォーマ**でスタイルへ変換する
-    // 設計で、その実装元 react-native-css は「officially only supports Metro as the
-    // bundler」と明言している（Webpack / Vite / Turbopack はコミュニティ実装待ち）。
-    // このため Webpack ベースの @storybook/nextjs では className が変換されず、
-    // react-native-web が未知の prop として捨てるため **全コンポーネントが無スタイル**で
-    // 描画される（Tailwind 側は .bg-primary 等を正しく生成できており CSS の問題ではない）。
-    // 登録すると「壊れた見た目のカタログ」ができてしまうので無効のままにする。
-    //   - 上流: https://github.com/nativewind/react-native-css （README の Bundler 節）
-    //   - 症状が同じ Storybook 側の issue: storybookjs/storybook#32018 / #31165
-    // 有効化するには Storybook を NativeWind の変換が効く構成
-    // （@storybook/react-native-web-vite + NativeWind preset 等）へ載せ替える必要がある。
+    // PACKAGES - Web UI (shadcn/ui + MagicUI)
     // ============================================
     {
       directory: '../packages/ui/src/components',
@@ -38,7 +102,16 @@ const config: StorybookConfig = {
     },
 
     // ============================================
-    // FSD LAYERS
+    // PACKAGES - Mobile UI (gluestack-ui + NativeWind v5)
+    // ============================================
+    {
+      directory: '../packages/native-ui/components',
+      files: '**/*.stories.@(js|jsx|ts|tsx)',
+      titlePrefix: 'Packages/UI Mobile/Components',
+    },
+
+    // ============================================
+    // FSD LAYERS (apps/web)
     // ============================================
     {
       directory: '../apps/web/src/widgets',
@@ -60,8 +133,6 @@ const config: StorybookConfig = {
     //       (現状の shared 配下: api / config / hooks / lib)
     //       UI を追加する場合はここに { directory: '../apps/web/src/shared/ui', ... } を復活させる
 
-    // TODO: Mobile UI (gluestack-ui) - react-native-css が Metro 以外のバンドラに
-    //       対応したら有効化（詳細は上記 PACKAGES ブロックのコメント）
     // TODO: Views - i18n (@/shared/lib/i18n) 依存の解決後に有効化
   ],
 
@@ -74,32 +145,24 @@ const config: StorybookConfig = {
 
   staticDirs: ['../apps/web/public'],
 
-  // Webpack 設定:
-  //   - `@/`: apps/web/src への FSD エイリアス
-  //   - `@workspace/ui/*`: subpath ごとに alias を張って exports をミラーする。
-  //     Webpack5 の enhanced-resolve は `@workspace/ui` をパッケージとして解釈する。
-  //     Next.js (Turbopack) は exports を解決するが、Storybook の Webpack5 builder では
-  //     subpath alias で明示的にマッピングする必要がある。
-  //     alias は `packages/ui/package.json` の `exports` フィールドと同期させる。
-  //
-  //     CSS など特定のファイルは ExportsFieldPlugin が AliasPlugin より先に走り、
-  //     パッケージ解決に失敗してプレフィックス alias まで届かない場合があるため、
-  //     `$` 付きの exact-match alias でファイル単位に直接マップしてバイパスする
-  //     （webpack docs: resolve.alias で末尾 `$` は exact-match）。
-  webpackFinal: async (config) => {
-    if (config.resolve) {
-      const uiSrc = resolve(__dirname, '../packages/ui/src')
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        '@': resolve(__dirname, '../apps/web/src'),
-        '@workspace/ui/styles/globals.css$': `${uiSrc}/styles/globals.css`,
-        '@workspace/ui/components': `${uiSrc}/components`,
-        '@workspace/ui/magicui': `${uiSrc}/magicui`,
-        '@workspace/ui/lib': `${uiSrc}/lib`,
-        '@workspace/ui/hooks': `${uiSrc}/hooks`,
-        '@workspace/ui/styles': `${uiSrc}/styles`,
-      }
+  // Vite 設定:
+  //   - `@workspace/*` は各パッケージの package.json の `exports` を Vite が解決するので
+  //     alias 不要（Webpack builder 時代に必要だった subpath alias のミラーは削除済み）。
+  //   - `@/` だけは apps/web の tsconfig にしかない paths なので明示する。
+  //     framework が同梱する vite-tsconfig-paths はリポジトリルートの
+  //     solution-style tsconfig（`files: []` + `references` のみ）を見るため paths を拾えない。
+  viteFinal: async (config) => {
+    const { default: tailwindcss } = await import('@tailwindcss/vite')
+
+    config.plugins ??= []
+    config.plugins.push(tailwindcss())
+
+    config.resolve ??= {}
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': resolve(__dirname, '../apps/web/src'),
     }
+
     return config
   },
 }

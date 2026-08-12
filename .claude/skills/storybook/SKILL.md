@@ -11,8 +11,14 @@ description: Storybook ローカル環境でのコンポーネント開発ガイ
 
 | 項目           | 場所                                |
 | -------------- | ----------------------------------- |
-| Storybook 設定 | `frontend/.storybook/`              |
+| Storybook 設定 | `frontend/.storybook/main.ts`       |
+| Preview / デコレータ | `frontend/.storybook/preview.tsx` |
 | CSS            | `frontend/.storybook/storybook.css` |
+| Framework      | `@storybook/react-native-web-vite`（Vite） |
+
+**Web（shadcn/ui）と Mobile（gluestack-ui + NativeWind v5）を 1 つのカタログで扱う。**
+Mobile のスタイルも適用される（仕組みと注意点は末尾の
+「NativeWind v5 (Mobile) を Storybook で動かす」を必読）。
 
 ## 起動方法
 
@@ -32,19 +38,29 @@ dev-web
 
 ### 対象ディレクトリ
 
+`main.ts` の `stories` は **`{ directory, files, titlePrefix }` 形式**で登録している。
+`titlePrefix` がサイドバーの階層を決めるので、**各ストーリーで `title` を書く必要はない**
+（書くと `titlePrefix` と二重になる）。
+
 ```typescript
-// frontend/.storybook/main.ts
+// frontend/.storybook/main.ts（抜粋）
 stories: [
-  // Packages
-  "../packages/ui/**/*.stories.@(ts|tsx)",
-  "../packages/native-ui/**/*.stories.@(ts|tsx)",
-  // Apps - FSD レイヤー
-  "../apps/web/src/entities/**/*.stories.@(ts|tsx)",
-  "../apps/web/src/features/**/*.stories.@(ts|tsx)",
-  "../apps/web/src/widgets/**/*.stories.@(ts|tsx)",
-  "../apps/mobile/src/widgets/**/*.stories.@(ts|tsx)",
-];
+  // Web UI
+  { directory: '../packages/ui/src/components', files: '*.stories.@(ts|tsx)',
+    titlePrefix: 'Packages/UI Web/Components' },
+  { directory: '../packages/ui/src/magicui', files: '**/*.stories.@(ts|tsx)',
+    titlePrefix: 'Packages/UI Web/MagicUI' },
+  // Mobile UI（gluestack-ui + NativeWind v5）
+  { directory: '../packages/native-ui/components', files: '**/*.stories.@(ts|tsx)',
+    titlePrefix: 'Packages/UI Mobile/Components' },
+  // apps/web の FSD レイヤー
+  { directory: '../apps/web/src/widgets',  files: '**/ui/**/*.stories.@(ts|tsx)', titlePrefix: 'Widgets' },
+  { directory: '../apps/web/src/entities', files: '**/ui/**/*.stories.@(ts|tsx)', titlePrefix: 'Entities' },
+  { directory: '../apps/web/src/features', files: '**/ui/**/*.stories.@(ts|tsx)', titlePrefix: 'Features' },
+]
 ```
+
+新しい置き場所を増やしたいときは、**glob を足すのではなくエントリを 1 つ追加**する。
 
 ### サイドバー構造（FSD 準拠）
 
@@ -262,26 +278,29 @@ test("renders loading state", () => {
 
 ### エイリアス設定
 
-**CRITICAL**: 配列形式で定義し、**より具体的なパスを先に**記述する。
+**まず「そもそも alias が要るか」を確認すること。**
+
+| 対象 | alias | 理由 |
+|---|---|---|
+| `@workspace/*`（ui / native-ui / tokens / query …） | **不要** | Vite が各パッケージの `package.json` の `exports` をそのまま解決する |
+| `react-native` → `react-native-web` | **不要** | framework（`@storybook/react-native-web-vite`）が設定済み |
+| `@/`（apps/web の FSD） | **必要** | ルートの tsconfig が solution-style（`files: []` + `references`）で paths を持たないため |
+| `next/*` / `next-intl` | **必要になったときだけ** | 現状どのストーリーも参照していないので mock は置いていない |
+
+> ⚠️ Webpack builder 時代は `@workspace/ui/components` のような **subpath alias を手で
+> ミラーする**必要があったが、Vite 移行で不要になった。**復活させないこと**（`exports` と
+> 二重管理になり、片方だけ更新されて壊れる）。
+
+Next.js のモックを足す場合は **配列形式**で定義し、**より具体的なパスを先に**書く
+（オブジェクト形式は解決順序が保証されない）。
 
 ```typescript
 // frontend/.storybook/main.ts viteFinal
 resolve: {
-  // 配列形式で順序を保証（オブジェクト形式は使用しない）
   alias: [
-    // React Native Web
-    { find: 'react-native', replacement: 'react-native-web' },
-    // Workspace - 具体的なパスを先に
-    { find: '@workspace/ui', replacement: join(__dirname, '../packages/ui') },
-    { find: '@workspace/native-ui', replacement: join(__dirname, '../packages/native-ui') },
-    { find: '@workspace/tokens', replacement: join(__dirname, '../packages/tokens/src') },
     // App aliases - 具体的なパスを先に
     { find: '@/shared/lib/i18n', replacement: join(__dirname, './mocks/shared-lib-i18n.tsx') },
     { find: '@', replacement: join(__dirname, '../apps/web/src') },
-    // Next.js mocks
-    { find: 'next/navigation', replacement: join(__dirname, './mocks/next-navigation.ts') },
-    { find: 'next/link', replacement: join(__dirname, './mocks/next-link.tsx') },
-    { find: 'next/image', replacement: join(__dirname, './mocks/next-image.tsx') },
     // next-intl - 具体的なサブパスを先に
     { find: 'next-intl/navigation', replacement: join(__dirname, './mocks/next-intl.tsx') },
     { find: 'next-intl/routing', replacement: join(__dirname, './mocks/next-intl.tsx') },
@@ -392,13 +411,44 @@ import { Trophy, Flag, TrendingUp } from "lucide-react";
 
 ファイルを編集して自動リロードされることを確認。
 
-## 既知の制限事項
+## NativeWind v5 (Mobile) を Storybook で動かす（解決済み・触るときは必読）
 
-### NativeWind v5 + Storybook
+Mobile（`packages/native-ui`）のストーリーは **Web と同じ 1 つのカタログで動作する**。
+「NativeWind v5 は Metro でしか動かない」「jsx-runtime が無いのでスタイルが当たらない」は
+**いずれも誤り**（過去にそう判断して Mobile を無効化していた。詳細な調査記録は
+`docs/_research/2026-08-12-nativewind-v5-storybook-web.md`）。
 
-**問題**: NativeWind v5 は `jsx-runtime` をエクスポートしていないため、Mobile コンポーネントはスタイルが適用されない状態で表示される。
+Web で className が効く仕組み:
 
-**対応**: NativeWind v5 の安定版リリースを待つ。Mobile コンポーネントは構造のみ確認可能。
+1. `react-native-css` は `runtime.ts -> ./web` で **web 実装**に解決される
+   （`runtime.native.ts -> ./native` が Metro/ネイティブ用。Metro が要るのはこちら）。
+2. web 実装の `useCssElement` が className を react-native-web の **`$$css` エスケープハッチ**
+   （`{ $$css: true, className: '...' }`）に載せる。
+3. CSS 自体は **普通の Tailwind 出力**をそのまま使う。
+
+この経路に乗せるために設定が 3 つ必要で、**どれか 1 つでも欠けると症状が変わる**:
+
+| # | 設定 | 場所 | 欠けたときの症状 |
+|---|------|------|-----------------|
+| 1 | `react-native-css/babel` preset（import 書き換え） | `main.ts` の `pluginReactOptions.babel.presets` | className が **完全に無視**される（react-native-web が捨てる） |
+| 2 | `@source "../packages/native-ui"` | `.storybook/storybook.css` | クラス名が CSS に生成されない |
+| 3 | **レイヤー無し**の `@import "tailwindcss/utilities.css"` を globals.css より**前**に | `.storybook/storybook.css` | `rounded-md` / `h-9` は効くのに **`bg-primary` / `flex-row` だけ効かない** |
+
+3 が特に分かりにくい。react-native-web は `<style id="react-native-stylesheet">` を
+**`<head>` の先頭**に挿入し、その `.css-view-*` が RN 既定値
+（`background-color: transparent` / `flex-direction: column`）を**レイヤー無し**で宣言する。
+CSS のカスケードでは**レイヤー無しが全レイヤーより強い**ので、`@layer utilities` のままでは
+詳細度も記述順も関係なく負ける。RNW が宣言していないプロパティ（border-radius / height）だけ
+通るので「一部だけ効く」状態になる。
+
+また `main.ts` の `exclude` で **`react-native-web` 本体を Babel 対象から外している**。
+外さないと RNW 内部の相対 import まで `react-native-css/components/*` に書き換わって循環参照になり、
+**本番ビルドだけ**が `Cannot access 'FlatList$1' before initialization` で全ストーリー落ちる
+（`storybook build` は成功するのでブラウザで開くまで気づけない）。
+
+> ⚠️ `.storybook/main.ts` / `.storybook/storybook.css` を変更したら、**`build-storybook` の成功だけで
+> 判断せず、必ずブラウザでストーリーを開いて確認する**こと（上記のとおりビルドが通っても
+> 実行時に落ちるパターンがある）。
 
 ## TailwindCSS 4 統合
 

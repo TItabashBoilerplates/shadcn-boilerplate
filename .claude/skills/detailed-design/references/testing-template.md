@@ -147,10 +147,9 @@ describe('use{Feature}Form', () => {
 
   参照: .claude/skills/storybook/SKILL.md
 
-  既知の制限:
-  - NativeWind v5 は jsx-runtime をエクスポートしていないため、
-    Mobile コンポーネントはスタイルが適用されない状態で表示される。
-  - 構造の確認のみ可能。NativeWind v5 安定版リリースを待つ。
+  NativeWind v5 のスタイルは Storybook (Web) でも適用される。
+  仕組みと設定上の注意は .claude/skills/storybook/SKILL.md の
+  「NativeWind v5 (Mobile) を Storybook で動かす」を参照。
 
   title パターン: packages/native-ui/{Component}
   配置先: packages/native-ui/components/{Component}.stories.tsx

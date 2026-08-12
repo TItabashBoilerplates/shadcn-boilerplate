@@ -1,5 +1,12 @@
 # NativeWind v5 + Storybook 対応状況調査
 
+> ⚠️ **SUPERSEDED (2026-08-12)**: 本レポートの結論「Tailwind v4 + Storybook Web + React Native は
+> 安定していないので Mobile の Storybook は保留」は**誤り**であり、現在は解決済み。
+> 「原因（推定）」に挙げた 3 点（JSX トランスフォーム削除 / react-native-css 依存 /
+> Vite の変換パイプライン）はいずれも実際の原因ではなかった。
+> **真因と解決方法は [`2026-08-12-nativewind-v5-storybook-web.md`](./2026-08-12-nativewind-v5-storybook-web.md) を参照。**
+> 本ファイルは当時の判断経緯として残す。
+
 **調査日**: 2026-01-03
 
 ## 概要
