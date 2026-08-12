@@ -450,6 +450,46 @@ CSS のカスケードでは**レイヤー無しが全レイヤーより強い**
 > 判断せず、必ずブラウザでストーリーを開いて確認する**こと（上記のとおりビルドが通っても
 > 実行時に落ちるパターンがある）。
 
+## Expo アプリ（apps/mobile）のコンポーネントを載せるとき
+
+`packages/native-ui`（共有 UI）だけでなく、**`apps/mobile/src` の FSD レイヤーも登録済み**
+（`Apps/Mobile/*`）。Expo アプリ側にコンポーネントを足したら、同じ場所にストーリーを置けば
+自動で拾われる。
+
+### `@/` の衝突に注意（最重要）
+
+**apps/web と apps/mobile はどちらも `@/` を使うが、指す先が違う。**
+
+| アプリ | tsconfig | `@/shared/hooks` の解決先 |
+|---|---|---|
+| apps/web | `"@/*": ["./src/*"]` | `apps/web/src/shared/hooks` |
+| apps/mobile | `"@/shared/*": ["./src/shared/*"]` | `apps/mobile/src/shared/hooks` |
+
+Vite の `resolve.alias` はグローバルなので片方に固定すると、**もう片方が黙って別アプリの
+同名モジュールに解決される**（エラーにならず「なぜか web の実装が動く」という壊れ方をする）。
+`main.ts` の `fsdAliasPlugin` が **importer のパスを見て振り分けて**いる。
+3 つ目のアプリを足すときはこのプラグインに 1 行追加すること。
+
+### expo-* パッケージの扱い
+
+| パッケージ | Storybook での扱い | 理由 |
+|---|---|---|
+| `expo-localization` | **そのまま動く** | `ExpoLocalization.js`（web）と `.native.js` を持つ |
+| `expo-image` / `expo-haptics` / `expo-symbols` | そのまま解決される | web 実装またはフォールバックあり |
+| **`expo-router`** | **モック**（`.storybook/mocks/expo-router.tsx`） | 内部の CJS `require()` で `ReferenceError: require is not defined` になる。カタログにアプリのルーティングを持ち込む意味も無い |
+| `react-native-reanimated` | 動く（CSS アニメーションとして再生） | 実際のネイティブ挙動は実機で確認 |
+
+`expo-router` のモックは **完全一致（`/^expo-router$/`）**で当てているので、
+`expo-router/tabs` のようなサブパスは巻き込まれない。必要になったら
+モックにエクスポートを足すか、サブパス用のモックを追加する。
+
+### 意図的にカタログに載せていないもの
+
+| 対象 | 理由 |
+|---|---|
+| `apps/mobile/src/views/*`（画面まるごと） | apps/web 側で Views を外しているのと同じ判断。カタログの対象は「部品」に絞る |
+| `shared/ui/haptic-tab/HapticTab` | タブナビゲータに渡すボタンで、`BottomTabBarButtonProps` とタブナビゲータのコンテキストが前提。**視覚要素がほぼ無く、ハプティクスはブラウザで再現できない**ため、モックコストに見合わない。実機で確認する |
+
 ## TailwindCSS 4 統合
 
 ```typescript

@@ -1,11 +1,49 @@
 import { createRequire } from 'node:module'
-import { dirname, resolve } from 'node:path'
+import { dirname, join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { StorybookConfig } from '@storybook/react-native-web-vite'
+import type { PluginOption } from 'vite'
 
 // ESM 環境では __dirname / require が使えないため import.meta.url から作る
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
+
+const WEB_SRC = resolve(__dirname, '../apps/web/src')
+const MOBILE_SRC = resolve(__dirname, '../apps/mobile/src')
+
+/**
+ * `@/` を **import 元のアプリごとに**振り分ける Vite プラグイン。
+ *
+ * apps/web と apps/mobile は **どちらも `@/` を使うが指す先が違う**:
+ *   - apps/web/tsconfig.json    : `"@/*": ["./src/*"]`  → apps/web/src
+ *   - apps/mobile/tsconfig.json : `"@/shared/*": ["./src/shared/*"]` 等 → apps/mobile/src
+ *
+ * Vite の `resolve.alias` はグローバルなので、片方に固定すると
+ * **もう片方が黙って別アプリの同名モジュールに解決される**（例: mobile の
+ * `@/shared/hooks` が apps/web/src/shared/hooks に解決される）。エラーにならず
+ * 「なぜか web の実装が動く」という最悪の壊れ方をするので、importer を見て分岐する。
+ *
+ * 単一カタログに 2 つのアプリを載せる以上ここは避けられない。将来 3 つ目のアプリを
+ * 足すときも、このマップに 1 行足すだけで済むようにしてある。
+ */
+function fsdAliasPlugin(): PluginOption {
+  return {
+    name: 'storybook-fsd-alias',
+    enforce: 'pre',
+    async resolveId(source, importer, options) {
+      if (!source.startsWith('@/') || !importer) return null
+
+      const base = importer.includes(`${sep}apps${sep}mobile${sep}`) ? MOBILE_SRC : WEB_SRC
+
+      // 拡張子解決や条件付き exports は Vite 本体に任せる（skipSelf で無限再帰を防ぐ）
+      const resolved = await this.resolve(join(base, source.slice(2)), importer, {
+        ...options,
+        skipSelf: true,
+      })
+      return resolved
+    },
+  }
+}
 
 const config: StorybookConfig = {
   // ============================================================
@@ -110,6 +148,39 @@ const config: StorybookConfig = {
       titlePrefix: 'Packages/UI Mobile/Components',
     },
 
+    {
+      directory: '../packages/native-ui/layout',
+      files: '**/*.stories.@(js|jsx|ts|tsx)',
+      titlePrefix: 'Packages/UI Mobile/Layout',
+    },
+
+    // ============================================
+    // FSD LAYERS (apps/mobile) — Expo アプリ側のコンポーネントカタログ
+    //
+    // `views`（画面まるごと）は登録していない。apps/web 側でも Views を外しているのと
+    // 同じ判断で、カタログの対象は「部品」に絞る。画面全体の確認は実機 / Expo で行う。
+    // ============================================
+    {
+      directory: '../apps/mobile/src/widgets',
+      files: '**/ui/**/*.stories.@(js|jsx|ts|tsx)',
+      titlePrefix: 'Apps/Mobile/Widgets',
+    },
+    {
+      directory: '../apps/mobile/src/features',
+      files: '**/ui/**/*.stories.@(js|jsx|ts|tsx)',
+      titlePrefix: 'Apps/Mobile/Features',
+    },
+    {
+      directory: '../apps/mobile/src/entities',
+      files: '**/ui/**/*.stories.@(js|jsx|ts|tsx)',
+      titlePrefix: 'Apps/Mobile/Entities',
+    },
+    {
+      directory: '../apps/mobile/src/shared/ui',
+      files: '**/*.stories.@(js|jsx|ts|tsx)',
+      titlePrefix: 'Apps/Mobile/Shared',
+    },
+
     // ============================================
     // FSD LAYERS (apps/web)
     // ============================================
@@ -148,20 +219,30 @@ const config: StorybookConfig = {
   // Vite 設定:
   //   - `@workspace/*` は各パッケージの package.json の `exports` を Vite が解決するので
   //     alias 不要（Webpack builder 時代に必要だった subpath alias のミラーは削除済み）。
-  //   - `@/` だけは apps/web の tsconfig にしかない paths なので明示する。
+  //   - `@/` は **web と mobile で指す先が違う**ため単純な alias では解決できない → 下記プラグイン。
   //     framework が同梱する vite-tsconfig-paths はリポジトリルートの
   //     solution-style tsconfig（`files: []` + `references` のみ）を見るため paths を拾えない。
   viteFinal: async (config) => {
     const { default: tailwindcss } = await import('@tailwindcss/vite')
 
     config.plugins ??= []
-    config.plugins.push(tailwindcss())
+    config.plugins.push(tailwindcss(), fsdAliasPlugin())
 
+    // expo-router は Expo アプリのルーターとして動く前提の大きなパッケージで、
+    // 内部の CJS `require()` が Vite で解決できず
+    // `ReferenceError: require is not defined` になる。カタログにアプリのルーティングを
+    // 持ち込む意味も無いので、Web 側で next/link をモックしているのと同じくモックする。
+    // 完全一致（`/^expo-router$/`）にしてサブパスは巻き込まない。
+    // 既存 alias（framework が入れる react-native -> react-native-web 等）を落とさないよう、
+    // オブジェクト形式なら配列形式へ変換してから追記する。
     config.resolve ??= {}
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      '@': resolve(__dirname, '../apps/web/src'),
-    }
+    const existing = config.resolve.alias ?? []
+    config.resolve.alias = [
+      ...(Array.isArray(existing)
+        ? existing
+        : Object.entries(existing).map(([find, replacement]) => ({ find, replacement }))),
+      { find: /^expo-router$/, replacement: resolve(__dirname, './mocks/expo-router.tsx') },
+    ]
 
     return config
   },
