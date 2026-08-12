@@ -9,7 +9,21 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
 
 const WEB_SRC = resolve(__dirname, '../apps/web/src')
-const MOBILE_SRC = resolve(__dirname, '../apps/mobile/src')
+const MOBILE_ROOT = resolve(__dirname, '../apps/mobile')
+
+/**
+ * apps/mobile の tsconfig は `@/` を **2 段構え**でマップしている:
+ *   "@/shared/*": ["./src/shared/*"]  ← FSD レイヤーは src/ 配下
+ *   "@/*":        ["./*"]             ← それ以外（assets 等）はアプリ直下
+ * TypeScript は「より具体的なパターン」を優先するので、同じ優先順を再現する。
+ * これを間違えると `@/assets/images/...` が apps/mobile/src/assets/... を指して壊れる。
+ */
+const MOBILE_FSD_SEGMENTS = new Set(['app', 'views', 'widgets', 'features', 'entities', 'shared'])
+
+function mobileBaseFor(subpath: string): string {
+  const head = subpath.split('/')[0]
+  return MOBILE_FSD_SEGMENTS.has(head) ? join(MOBILE_ROOT, 'src') : MOBILE_ROOT
+}
 
 /**
  * `@/` を **import 元のアプリごとに**振り分ける Vite プラグイン。
@@ -33,10 +47,12 @@ function fsdAliasPlugin(): PluginOption {
     async resolveId(source, importer, options) {
       if (!source.startsWith('@/') || !importer) return null
 
-      const base = importer.includes(`${sep}apps${sep}mobile${sep}`) ? MOBILE_SRC : WEB_SRC
+      const subpath = source.slice(2)
+      const isMobile = importer.includes(`${sep}apps${sep}mobile${sep}`)
+      const base = isMobile ? mobileBaseFor(subpath) : WEB_SRC
 
       // 拡張子解決や条件付き exports は Vite 本体に任せる（skipSelf で無限再帰を防ぐ）
-      const resolved = await this.resolve(join(base, source.slice(2)), importer, {
+      const resolved = await this.resolve(join(base, subpath), importer, {
         ...options,
         skipSelf: true,
       })
@@ -155,11 +171,17 @@ const config: StorybookConfig = {
     },
 
     // ============================================
-    // FSD LAYERS (apps/mobile) — Expo アプリ側のコンポーネントカタログ
+    // FSD LAYERS (apps/mobile) — Expo アプリ側のカタログ
     //
-    // `views`（画面まるごと）は登録していない。apps/web 側でも Views を外しているのと
-    // 同じ判断で、カタログの対象は「部品」に絞る。画面全体の確認は実機 / Expo で行う。
+    // `views`（画面まるごと）も **UI/UX デバッグ目的で**登録している。
+    // ただしこれは実機描画ではないので、**ストア用スクリーンショットには使えない**
+    // （提出用は `screenshots-mobile` = Maestro + simulator/emulator で撮る）。
     // ============================================
+    {
+      directory: '../apps/mobile/src/views',
+      files: '**/ui/**/*.stories.@(js|jsx|ts|tsx)',
+      titlePrefix: 'Apps/Mobile/Views',
+    },
     {
       directory: '../apps/mobile/src/widgets',
       files: '**/ui/**/*.stories.@(js|jsx|ts|tsx)',
