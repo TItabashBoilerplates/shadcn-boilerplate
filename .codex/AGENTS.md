@@ -66,6 +66,44 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 | **UI Testing** | UI は Storybook、単体テスト不要 |
 | **Debugging** | devenv 2.0 の native process manager TUI を主インターフェース |
 | **List Pagination** | 増えうる一覧は指示を待たずページング。UI パターンも自分で選定 |
+| **Auth** | **Mobile はメール + パスワード必須**（OTP のみ禁止）。Web 完結なら OTP 可。メール再設定 / パスワード忘れ（ログイン画面）/ パスワード変更（設定画面）は必須実装 |
+
+### 認証方式（MANDATORY）
+
+**モバイルアプリ（Expo / RN。ストア配布）を実装するなら、主たるログイン手段は必ずメール + パスワード。
+OTP / Magic Link を唯一の手段にしてはならない**（OAuth / パスキー / OTP の併用は可）。
+
+理由は好みではなく審査である。App Store Review Guideline **2.1(a)** は審査担当者へ
+「**an active demo account** ... **login credentials**」を渡すことを求めるが、**OTP しか無いと
+担当者はコードが届く受信箱に触れられずログインできない → 2.1 リジェクト**になる。審査用の
+バックドアや固定コードで回避するのは別の指摘対象。Google Play も同様にテスト用資格情報を求める。
+
+- **Web だけで完結する（モバイルを出さない）なら OTP / Magic Link を主手段にしてよい**
+- **Web + モバイル両方があるなら、同じ資格情報で両方に入れるよう両方をメール + パスワードに揃える**
+  （Web は OTP を併用してよい）
+
+**再設定導線は指示を待たずに最初から実装する**（認証方式を問わない）:
+
+| 導線 | OTP（Web 完結） | メール + パスワード | 置き場所 |
+|---|---|---|---|
+| メールアドレス再設定 | 必須 | 必須 | 設定 / アカウント画面 |
+| パスワードを忘れた方 | — | 必須 | **ログイン画面**（忘れた人はログイン後の画面に到達できない） |
+| パスワード変更 | — | 必須 | 設定 / アカウント画面（現在のパスワードを検証してから） |
+| アカウント削除 | モバイルは必須 | モバイルは必須 | 設定 / アカウント画面 |
+
+```ts
+// モバイルのパスワード再設定はディープリンクより 6 桁コード方式を既定にする
+await supabase.auth.resetPasswordForEmail(email)                    // recovery テンプレートに {{ .Token }} が必要
+await supabase.auth.verifyOtp({ email, token, type: 'recovery' })   // セッション確立
+await supabase.auth.updateUser({ password: newPassword })
+
+// メールアドレス変更。double_confirm_changes = true（既定）を落とさない
+// → 旧・新の両アドレスで確認が完了するまで変わらない。UI にもそう書く
+await supabase.auth.updateUser({ email: newEmail })
+```
+
+認証は自作しない / `double_confirm_changes` を無効化しない / パスワード再設定の応答で
+メールアドレスの登録有無を漏らさない。詳細は `.claude/rules/auth.md`。
 
 ### Minimal Implementation（MANDATORY）
 

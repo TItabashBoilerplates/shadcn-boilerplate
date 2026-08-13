@@ -40,6 +40,7 @@
 | キーワード / 文脈 | 起動候補 Skill |
 |---|---|
 | Supabase / RLS / Auth / Storage / Edge Functions | `supabase`, `supabase-postgres-best-practices`, `rls`, `supabase-config`, `pgtap` |
+| ログイン / サインアップ / 認証を作る / OTP / マジックリンク / パスワード再設定 / メールアドレス変更 / アカウント設定画面 | **まず `.claude/rules/auth.md`**（Mobile はメール+パスワード必須・OTP のみ禁止、再設定導線は必須）+ `supabase` |
 | MCP サーバ (Edge Functions) / BYO MCP / Streamable HTTP / Hono MCP | `edge-functions-mcp` |
 | Next.js / App Router / Server Components / Cache | `nextjs`, `next-best-practices`, `next-cache-components`, `next-upgrade` |
 | Drizzle / スキーマ / マイグレーション | `drizzle` |

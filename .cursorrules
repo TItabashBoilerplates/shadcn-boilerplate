@@ -28,6 +28,7 @@
 | Supabase-First | `@supabase-first` | supabase-js優先 |
 | i18n | `@i18n` | 多言語対応必須 |
 | DateTime | `@datetime` | UTC保存、Frontend変換 |
+| Auth | `@auth` | Mobile はメール+パスワード必須（OTP のみ禁止・審査 2.1）。メール再設定/パスワード忘れ/パスワード変更は必須 |
 | List Pagination | `@list-pagination` | 増えうる一覧は必ずページング（全件取得禁止・UIパターンは自分で選定） |
 
 ## ドメイン別ルール

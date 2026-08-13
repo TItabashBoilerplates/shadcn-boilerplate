@@ -81,6 +81,13 @@ This directory contains guidelines for Antigravity Agent when working in this re
     - 重複コードの禁止
     - 未使用コードの削除
 
+### Authentication
+
+**[Authentication Method Policy](./auth.md)** ⚠️ **MUST READ**
+   - モバイルはメール + パスワード必須（OTP / Magic Link のみは App Store 2.1 でリジェクト）
+   - Web 完結なら OTP 可。Web + モバイル両方なら両方をメール + パスワードに揃える
+   - メールアドレス再設定（設定画面）/ パスワード忘れ（ログイン画面）/ パスワード変更（設定画面）は必須
+
 ### Lists and Data Display
 
 14. **[List Pagination Policy](./list-pagination.md)** ⚠️ **MUST READ**
@@ -131,3 +138,4 @@ For detailed information, refer to the following documentation:
 9. **Debugging via devenv 2.0 native TUI** - `devenv up` で TUI 起動、非対話環境は logs tail
 10. **Paginate every list that can grow** - 指示を待たずページング。全件取得禁止、UI パターンはエージェントが選定 - See `list-pagination.md`
 11. **Write less code** - 既存資産 → 標準機能 → マネージド → 実績ある OSS → スクラッチ の順で検討。star だけでライブラリを選ばない。ただし FSD / monorepo / 品質ゲートは犠牲にしない - See `minimal-implementation.md`
+12. **Mobile auth is email + password** - OTP / Magic Link のみのログインは App Store 2.1 でリジェクトされる。メール再設定 / パスワード忘れ（ログイン画面）/ パスワード変更（設定画面）は指示を待たず実装 - See `auth.md`

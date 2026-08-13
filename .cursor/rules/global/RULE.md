@@ -31,6 +31,7 @@ globs: []
 | DateTime | `@datetime` - UTC保存、Frontend変換 |
 | Debugging | `@debugging` - devenv 2.0 native process manager の TUI 最優先 |
 | List Pagination | `@list-pagination` - 増えうる一覧は指示前提でページング。UI パターンは自分で選ぶ |
+| Auth | `@auth` - Mobile はメール + パスワード必須（OTP のみは審査 2.1 で落ちる）。Web 完結なら OTP 可。メール再設定 / パスワード忘れ / パスワード変更は必須実装 |
 
 ## Commands
 

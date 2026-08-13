@@ -66,6 +66,7 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 | **UI Testing** | UI は Storybook、単体テスト不要 | `ui-testing.md` |
 | **Debugging** | devenv 2.0 の native process manager TUI を主インターフェース | `debugging.md` |
 | **List Pagination** | 増えうる一覧は指示を待たずページング。UI パターン（ページ番号/もっと見る/無限スクロール）も自分で選定 | `list-pagination.md` |
+| **Auth** | **Mobile はメール + パスワード必須**（OTP のみは審査 2.1 で落ちる）。Web 完結なら OTP 可。メール再設定 / パスワード忘れ（ログイン画面）/ パスワード変更（設定画面）は必須 | `auth.md` |
 
 ---
 

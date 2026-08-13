@@ -303,6 +303,51 @@ scaffolds rather than reproducing them by hand; if you must deviate, record the 
 
 Full policy: `.claude/rules/minimal-implementation.md`
 
+### 11. Authentication Method and Recovery Flows
+
+**If the product ships a mobile app, email + password MUST be the primary sign-in method. OTP or
+magic link alone is forbidden.** OAuth, passkeys and OTP may be offered *in addition*, as long as
+email + password alone gets a user all the way in.
+
+The reason is App Review, not preference. App Store Review Guideline **2.1(a)** requires you to
+give the reviewer "an active demo account ... plus any other hardware or resources that might be
+needed to review your app (e.g. **login credentials**)". With OTP-only sign-in the reviewer cannot
+read the inbox the code is sent to, so the app is rejected under 2.1 — and papering over it with a
+review-only backdoor or fixed code creates a separate violation. Google Play asks for test-account
+credentials the same way.
+
+| Product shape | Primary sign-in |
+|---------------|-----------------|
+| Ships a mobile app (Expo / RN, store-distributed) | **Email + password (required)** |
+| Web only, no mobile app | OTP / magic link is fine |
+| Both web and mobile | **Both on email + password** (same credentials work everywhere; web may also offer OTP) |
+
+**Recovery flows are required, and are not optional extras** — a user who changed inboxes or forgot
+their password has no self-service path back into the account without them:
+
+| Flow | OTP (web-only) | Email + password | Where it goes |
+|------|----------------|------------------|---------------|
+| Change email address | **Required** | **Required** | Account settings |
+| Forgot password | — | **Required** | **The login screen** — someone who forgot the password cannot reach a signed-in screen |
+| Change password | — | **Required** | Account settings (verify the current password first) |
+| Delete account | Mobile: required | Mobile: required | Account settings (`.claude/rules/store-review.md`) |
+
+```typescript
+// Mobile password reset — prefer the 6-digit code over deep links
+await supabase.auth.resetPasswordForEmail(email)                       // recovery template needs {{ .Token }}
+await supabase.auth.verifyOtp({ email, token, type: 'recovery' })      // establishes a session
+await supabase.auth.updateUser({ password: newPassword })
+
+// Email change — keep double_confirm_changes = true (default): BOTH the old and the new
+// address must confirm before the address actually changes. Say so in the UI.
+await supabase.auth.updateUser({ email: newEmail })
+```
+
+Never build auth yourself; never disable `double_confirm_changes`; never reveal whether an address
+is registered in the forgot-password response.
+
+Full policy: `.claude/rules/auth.md`
+
 ---
 
 ## Domain Documentation
