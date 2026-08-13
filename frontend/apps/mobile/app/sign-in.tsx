@@ -1,3 +1,13 @@
+import { signInWithPassword } from '@/features/auth'
 import { SignInScreen } from '@/views/auth'
 
-export default SignInScreen
+/**
+ * ルートは**合成点**。ここで初めて実 API を画面に配線する。
+ *
+ * 画面とフォームが副作用を props で受け取るのは、Storybook（ブラウザ）が
+ * Supabase クライアントを読めないため。合成をルートに寄せることで、
+ * カタログ側は純粋な UI として扱える。
+ */
+export default function SignInRoute() {
+  return <SignInScreen signIn={signInWithPassword} />
+}

@@ -2,7 +2,6 @@ import { Button, ButtonText, Pressable, Text, VStack } from '@workspace/native-u
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import { useI18n } from '@/shared/hooks'
-import { requestPasswordResetCode, resetPasswordWithCode } from '../api'
 import type { AuthResult } from '../model/types'
 import { AuthField } from './AuthField'
 import { AuthMessage } from './AuthMessage'
@@ -23,8 +22,23 @@ import { PasswordRequirements } from './PasswordRequirements'
  *
  * 1. メールアドレスを入力 → コード送信（**アカウントの有無は返さない**）
  * 2. コード + 新パスワードを入力 → `verifyOtp` → `updateUser`
+ *
+ * 送信処理を **props で受け取る**のは、`../api` が Supabase クライアント
+ * （`EXPO_PUBLIC_SUPABASE_*` を要求する）に依存していて Storybook で読めないため。
+ * 副作用と UI を分けることで、各状態の見た目をそのまま確認できる。
  */
-export function ForgotPasswordForm() {
+export function ForgotPasswordForm({
+  requestCode,
+  resetPassword,
+}: {
+  requestCode: (email: string) => Promise<AuthResult>
+  resetPassword: (
+    email: string,
+    token: string,
+    password: string,
+    passwordConfirmation: string
+  ) => Promise<AuthResult>
+}) {
   const { t } = useI18n()
   const router = useRouter()
   const [step, setStep] = useState<'request' | 'verify'>('request')
@@ -40,7 +54,7 @@ export function ForgotPasswordForm() {
   const handleRequest = async () => {
     setPending(true)
     setResult(null)
-    const next = await requestPasswordResetCode(email)
+    const next = await requestCode(email)
     setResult(next)
     setPending(false)
     if (next.ok) {
@@ -51,7 +65,7 @@ export function ForgotPasswordForm() {
   const handleReset = async () => {
     setPending(true)
     setResult(null)
-    const next = await resetPasswordWithCode(email, code, password, confirmation)
+    const next = await resetPassword(email, code, password, confirmation)
     setResult(next)
     setPending(false)
     if (next.ok) {

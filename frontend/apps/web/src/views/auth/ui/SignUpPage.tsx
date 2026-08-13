@@ -1,6 +1,6 @@
 import { UserPlus } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
-import { SignUpForm } from '@/features/auth'
+import { SignUpForm, signUpWithPassword } from '@/features/auth'
 import { AuthCard } from './AuthCard'
 
 /**
@@ -14,7 +14,7 @@ export async function SignUpPage() {
 
   return (
     <AuthCard icon={UserPlus} title={t('signUpTitle')} description={t('signUpDescription')}>
-      <SignUpForm />
+      <SignUpForm action={signUpWithPassword} />
     </AuthCard>
   )
 }

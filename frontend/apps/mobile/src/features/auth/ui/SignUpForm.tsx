@@ -2,7 +2,6 @@ import { Button, ButtonText, Pressable, Text, VStack } from '@workspace/native-u
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import { useI18n } from '@/shared/hooks'
-import { signUpWithPassword } from '../api'
 import type { AuthResult } from '../model/types'
 import { AuthField } from './AuthField'
 import { AuthMessage } from './AuthMessage'
@@ -13,8 +12,21 @@ import { PasswordRequirements } from './PasswordRequirements'
  *
  * 本番は確認メールが挟まる（`enable_confirmations = true`）ので、成功しても
  * その場ではログインしない。送信後はフォームを畳んで案内だけを出す。
+ *
+ * 送信処理を **props で受け取る**のは、`../api` が Supabase クライアント
+ * （`EXPO_PUBLIC_SUPABASE_*` を要求する）に依存していて Storybook で読めないため。
+ * 副作用と UI を分けることで、各状態の見た目をそのまま確認できる。
  */
-export function SignUpForm() {
+export function SignUpForm({
+  signUp,
+}: {
+  signUp: (
+    email: string,
+    password: string,
+    passwordConfirmation: string,
+    locale: string
+  ) => Promise<AuthResult>
+}) {
   const { t, locale } = useI18n()
   const router = useRouter()
   const [email, setEmail] = useState('')
@@ -28,7 +40,7 @@ export function SignUpForm() {
   const handleSubmit = async () => {
     setPending(true)
     setResult(null)
-    setResult(await signUpWithPassword(email, password, confirmation, locale))
+    setResult(await signUp(email, password, confirmation, locale))
     setPending(false)
   }
 

@@ -3,7 +3,6 @@
 import { Button } from '@workspace/ui/components/button'
 import { useTranslations } from 'next-intl'
 import { useActionState, useState } from 'react'
-import { changePassword } from '../api'
 import { AUTH_IDLE_STATE, type AuthActionState } from '../model/types'
 import { AuthMessage } from './AuthMessage'
 import { PasswordField } from './PasswordField'
@@ -17,13 +16,27 @@ import { PasswordField } from './PasswordField'
  *
  * この UI だけでは防御にならない点に注意: `[auth.email] secure_password_change = true`
  * が無いと、`current_password` を送らないリクエストがサーバー側で通ってしまう。
+ *
+ * `action` を import ではなく **props で受け取る**のは 2 つの理由から:
+ * 1. Server Action は `next/headers` 等のサーバー専用 API に依存するため、
+ *    import すると Storybook（ブラウザ）で読み込めない
+ * 2. UI と副作用が切り離され、各状態の見た目をそのまま確認・検証できる
+ *
+ * Server Component から Client Component へ Server Action を渡すのは
+ * Next.js の標準パターン。
  */
-export function ChangePasswordForm({ className }: { className?: string }) {
+export function ChangePasswordForm({
+  action,
+  className,
+}: {
+  action: (state: AuthActionState, formData: FormData) => Promise<AuthActionState>
+  className?: string
+}) {
   const t = useTranslations('Auth')
   const [password, setPassword] = useState('')
 
   const [state, formAction, pending] = useActionState<AuthActionState, FormData>(
-    changePassword,
+    action,
     AUTH_IDLE_STATE
   )
 

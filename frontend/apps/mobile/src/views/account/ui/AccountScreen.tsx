@@ -9,9 +9,9 @@ import {
 import { useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { ScrollView } from 'react-native'
-import { ChangeEmailForm, ChangePasswordForm, signOut } from '@/features/auth'
+import type { AuthResult } from '@/features/auth'
+import { ChangeEmailForm, ChangePasswordForm } from '@/features/auth'
 import { useI18n } from '@/shared/hooks'
-import { supabase } from '@/shared/lib/supabase'
 
 /**
  * アカウント設定画面
@@ -23,26 +23,41 @@ import { supabase } from '@/shared/lib/supabase'
  * 「サポートへ連絡」では不可）。実装はデータ保持方針に依存するため
  * boilerplate では意図的に未実装にしてある。
  */
-export function AccountScreen() {
+export function AccountScreen({
+  loadEmail,
+  changeEmail,
+  changePassword,
+  signOut,
+}: {
+  /** 現在のメールアドレスを取得する。認可判断は getUser() 側で行う */
+  loadEmail: () => Promise<string>
+  changeEmail: (newEmail: string) => Promise<AuthResult>
+  changePassword: (
+    currentPassword: string,
+    password: string,
+    passwordConfirmation: string
+  ) => Promise<AuthResult>
+  signOut: () => Promise<void>
+}) {
   const { t } = useI18n()
   const router = useRouter()
   const [email, setEmail] = useState('')
 
   useEffect(() => {
     let active = true
-    supabase.auth.getUser().then(({ data, error }) => {
-      if (error) {
+    loadEmail()
+      .then((value) => {
+        if (active) {
+          setEmail(value)
+        }
+      })
+      .catch((error: unknown) => {
         console.error('Failed to load current user:', error)
-        return
-      }
-      if (active) {
-        setEmail(data.user?.email ?? '')
-      }
-    })
+      })
     return () => {
       active = false
     }
-  }, [])
+  }, [loadEmail])
 
   return (
     <SafeAreaView className="flex-1 bg-background">
@@ -57,14 +72,14 @@ export function AccountScreen() {
             <Text className="text-lg font-semibold text-foreground">
               {t('account.emailSectionTitle')}
             </Text>
-            <ChangeEmailForm currentEmail={email} />
+            <ChangeEmailForm currentEmail={email} submit={changeEmail} />
           </VStack>
 
           <VStack className="gap-3">
             <Text className="text-lg font-semibold text-foreground">
               {t('account.passwordSectionTitle')}
             </Text>
-            <ChangePasswordForm />
+            <ChangePasswordForm submit={changePassword} />
           </VStack>
 
           <VStack className="gap-3">

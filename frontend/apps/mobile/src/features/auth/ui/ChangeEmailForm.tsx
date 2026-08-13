@@ -1,7 +1,6 @@
 import { Button, ButtonText, Text, VStack } from '@workspace/native-ui/components'
 import { useState } from 'react'
 import { useI18n } from '@/shared/hooks'
-import { changeEmail } from '../api'
 import type { AuthResult } from '../model/types'
 import { AuthField } from './AuthField'
 import { AuthMessage } from './AuthMessage'
@@ -14,8 +13,18 @@ import { AuthMessage } from './AuthMessage'
  *
  * `double_confirm_changes = true`（既定）では旧・新の両方で確認するまで
  * 変わらないので、その旨を画面に明示する（説明が無いと問い合わせになる）。
+ *
+ * 送信処理を **props で受け取る**のは、`../api` が Supabase クライアント
+ * （`EXPO_PUBLIC_SUPABASE_*` を要求する）に依存していて Storybook で読めないため。
+ * 副作用と UI を分けることで、各状態の見た目をそのまま確認できる。
  */
-export function ChangeEmailForm({ currentEmail }: { currentEmail: string }) {
+export function ChangeEmailForm({
+  currentEmail,
+  submit,
+}: {
+  currentEmail: string
+  submit: (newEmail: string) => Promise<AuthResult>
+}) {
   const { t } = useI18n()
   const [email, setEmail] = useState('')
   const [pending, setPending] = useState(false)
@@ -24,7 +33,7 @@ export function ChangeEmailForm({ currentEmail }: { currentEmail: string }) {
   const handleSubmit = async () => {
     setPending(true)
     setResult(null)
-    const next = await changeEmail(email)
+    const next = await submit(email)
     setResult(next)
     setPending(false)
     if (next.ok) {

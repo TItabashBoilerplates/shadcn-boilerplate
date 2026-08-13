@@ -8,7 +8,7 @@ import {
 import { Separator } from '@workspace/ui/components/separator'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { ChangeEmailForm, ChangePasswordForm } from '@/features/auth'
+import { ChangeEmailForm, ChangePasswordForm, changeEmail, changePassword } from '@/features/auth'
 import { createServerClient as createClient } from '@/shared/lib/supabase'
 
 /**
@@ -54,7 +54,7 @@ export async function AccountPage() {
           <CardDescription>{t('emailSectionDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <ChangeEmailForm currentEmail={user.email ?? ''} />
+          <ChangeEmailForm action={changeEmail} currentEmail={user.email ?? ''} />
         </CardContent>
       </Card>
 
@@ -64,7 +64,7 @@ export async function AccountPage() {
           <CardDescription>{t('passwordSectionDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <ChangePasswordForm />
+          <ChangePasswordForm action={changePassword} />
         </CardContent>
       </Card>
 

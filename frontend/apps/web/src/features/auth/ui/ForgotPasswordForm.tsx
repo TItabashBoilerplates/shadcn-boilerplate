@@ -4,7 +4,6 @@ import { Button } from '@workspace/ui/components/button'
 import { useTranslations } from 'next-intl'
 import { useActionState, useId } from 'react'
 import { Link } from '@/shared/lib/i18n'
-import { requestPasswordReset } from '../api'
 import { AUTH_IDLE_STATE, type AuthActionState } from '../model/types'
 import { AuthMessage } from './AuthMessage'
 import { EmailField } from './EmailField'
@@ -16,13 +15,27 @@ import { EmailField } from './EmailField'
  * 「登録が無いアドレスです」と返すのはユーザー列挙攻撃の入口になるため、
  * 送れても送れなくても「登録があればメールを送りました」と表示する
  * （`.claude/rules/auth.md` §3.2）。Server Action 側もそう実装してある。
+ *
+ * `action` を import ではなく **props で受け取る**のは 2 つの理由から:
+ * 1. Server Action は `next/headers` 等のサーバー専用 API に依存するため、
+ *    import すると Storybook（ブラウザ）で読み込めない
+ * 2. UI と副作用が切り離され、各状態の見た目をそのまま確認・検証できる
+ *
+ * Server Component から Client Component へ Server Action を渡すのは
+ * Next.js の標準パターン。
  */
-export function ForgotPasswordForm({ className }: { className?: string }) {
+export function ForgotPasswordForm({
+  action,
+  className,
+}: {
+  action: (state: AuthActionState, formData: FormData) => Promise<AuthActionState>
+  className?: string
+}) {
   const t = useTranslations('Auth')
   const emailId = useId()
 
   const [state, formAction, pending] = useActionState<AuthActionState, FormData>(
-    requestPasswordReset,
+    action,
     AUTH_IDLE_STATE
   )
 

@@ -2,7 +2,6 @@ import { Button, ButtonText, Pressable, Text, VStack } from '@workspace/native-u
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import { useI18n } from '@/shared/hooks'
-import { signInWithPassword } from '../api'
 import type { AuthResult } from '../model/types'
 import { AuthField } from './AuthField'
 import { AuthMessage } from './AuthMessage'
@@ -16,8 +15,16 @@ import { AuthMessage } from './AuthMessage'
  *
  * 「パスワードをお忘れですか？」を**この画面に**置いているのは、忘れた人は
  * ログインできず設定画面に到達できないため。
+ *
+ * 送信処理を **props で受け取る**のは、`../api` が Supabase クライアント
+ * （`EXPO_PUBLIC_SUPABASE_*` を要求する）に依存していて Storybook で読めないため。
+ * 副作用と UI を分けることで、各状態の見た目をそのまま確認できる。
  */
-export function SignInForm() {
+export function SignInForm({
+  signIn,
+}: {
+  signIn: (email: string, password: string) => Promise<AuthResult>
+}) {
   const { t } = useI18n()
   const router = useRouter()
   const [email, setEmail] = useState('')
@@ -30,7 +37,7 @@ export function SignInForm() {
   const handleSubmit = async () => {
     setPending(true)
     setResult(null)
-    const next = await signInWithPassword(email, password)
+    const next = await signIn(email, password)
     setResult(next)
     setPending(false)
     if (next.ok) {

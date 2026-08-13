@@ -3,7 +3,6 @@
 import { Button } from '@workspace/ui/components/button'
 import { useTranslations } from 'next-intl'
 import { useActionState, useId } from 'react'
-import { changeEmail } from '../api'
 import { AUTH_IDLE_STATE, type AuthActionState } from '../model/types'
 import { AuthMessage } from './AuthMessage'
 import { EmailField } from './EmailField'
@@ -17,11 +16,21 @@ import { EmailField } from './EmailField'
  * `double_confirm_changes = true`（既定）では**旧アドレスと新アドレスの両方**で
  * 確認が必要になる。ここでその旨を明示しているのは、説明が無いと片方だけ確認して
  * 「変わらない」という問い合わせになるため（`.claude/rules/auth.md` §3.4）。
+ *
+ * `action` を import ではなく **props で受け取る**のは 2 つの理由から:
+ * 1. Server Action は `next/headers` 等のサーバー専用 API に依存するため、
+ *    import すると Storybook（ブラウザ）で読み込めない
+ * 2. UI と副作用が切り離され、各状態の見た目をそのまま確認・検証できる
+ *
+ * Server Component から Client Component へ Server Action を渡すのは
+ * Next.js の標準パターン。
  */
 export function ChangeEmailForm({
+  action,
   currentEmail,
   className,
 }: {
+  action: (state: AuthActionState, formData: FormData) => Promise<AuthActionState>
   currentEmail: string
   className?: string
 }) {
@@ -29,7 +38,7 @@ export function ChangeEmailForm({
   const emailId = useId()
 
   const [state, formAction, pending] = useActionState<AuthActionState, FormData>(
-    changeEmail,
+    action,
     AUTH_IDLE_STATE
   )
 

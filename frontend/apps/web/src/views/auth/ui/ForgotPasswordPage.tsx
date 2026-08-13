@@ -1,6 +1,6 @@
 import { KeyRound } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
-import { ForgotPasswordForm } from '@/features/auth'
+import { ForgotPasswordForm, requestPasswordReset } from '@/features/auth'
 import { AuthCard } from './AuthCard'
 
 /**
@@ -18,7 +18,7 @@ export async function ForgotPasswordPage() {
       title={t('forgotPasswordTitle')}
       description={t('forgotPasswordDescription')}
     >
-      <ForgotPasswordForm />
+      <ForgotPasswordForm action={requestPasswordReset} />
     </AuthCard>
   )
 }

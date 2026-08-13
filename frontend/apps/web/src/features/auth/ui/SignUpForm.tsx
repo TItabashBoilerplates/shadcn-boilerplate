@@ -4,7 +4,6 @@ import { Button } from '@workspace/ui/components/button'
 import { useLocale, useTranslations } from 'next-intl'
 import { useActionState, useId, useState } from 'react'
 import { Link } from '@/shared/lib/i18n'
-import { signUpWithPassword } from '../api'
 import { AUTH_IDLE_STATE, type AuthActionState } from '../model/types'
 import { AuthMessage } from './AuthMessage'
 import { EmailField } from './EmailField'
@@ -18,15 +17,29 @@ import { PasswordField } from './PasswordField'
  *
  * `locale` を hidden で送っているのは、確認メールのテンプレートが
  * `{{ .Data.locale }}` で言語を切り替えているため（`supabase/templates/email/`）。
+ *
+ * `action` を import ではなく **props で受け取る**のは 2 つの理由から:
+ * 1. Server Action は `next/headers` 等のサーバー専用 API に依存するため、
+ *    import すると Storybook（ブラウザ）で読み込めない
+ * 2. UI と副作用が切り離され、各状態の見た目をそのまま確認・検証できる
+ *
+ * Server Component から Client Component へ Server Action を渡すのは
+ * Next.js の標準パターン。
  */
-export function SignUpForm({ className }: { className?: string }) {
+export function SignUpForm({
+  action,
+  className,
+}: {
+  action: (state: AuthActionState, formData: FormData) => Promise<AuthActionState>
+  className?: string
+}) {
   const t = useTranslations('Auth')
   const locale = useLocale()
   const emailId = useId()
   const [password, setPassword] = useState('')
 
   const [state, formAction, pending] = useActionState<AuthActionState, FormData>(
-    signUpWithPassword,
+    action,
     AUTH_IDLE_STATE
   )
 

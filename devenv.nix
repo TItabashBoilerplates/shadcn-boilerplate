@@ -1587,6 +1587,14 @@ in
     "storybook-local" = { exec = ''cd "$DEVENV_ROOT/frontend" && exec bun run storybook''; description = "Storybook standalone (without devenv up)"; };
     "build-storybook" = { exec = ''cd "$DEVENV_ROOT/frontend" && bun run build-storybook''; description = "Build Storybook"; };
 
+    # Storybook は「ビルド成功・型 OK・lint OK」を全部満たしたまま描画だけ壊れることがある
+    # （実際に全ストーリーが無スタイル / 実行時エラーで落ちた事故がある）。
+    # 実行時エラー・未翻訳キー・入力欄の font-size を computed style で実測する。
+    "verify-storybook-render" = {
+      exec = ''exec node "$DEVENV_ROOT/scripts/frontend/verify-storybook-render.mjs" "$@"'';
+      description = "Verify Storybook stories actually render (needs build-storybook first)";
+    };
+
     # ---------- Skill / dev tooling ----------
     # uipro-cli: UI/UX Pro Max skill installer (https://www.npmjs.com/package/uipro-cli)
     # bunx 経由で都度実行（bun のキャッシュを利用、グローバル node_modules を作らない）。

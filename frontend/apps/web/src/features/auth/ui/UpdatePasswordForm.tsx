@@ -4,7 +4,6 @@ import { Button } from '@workspace/ui/components/button'
 import { useTranslations } from 'next-intl'
 import { useActionState, useEffect, useState } from 'react'
 import { Link, useRouter } from '@/shared/lib/i18n'
-import { updatePassword } from '../api'
 import { AUTH_IDLE_STATE, type AuthActionState } from '../model/types'
 import { AuthMessage } from './AuthMessage'
 import { PasswordField } from './PasswordField'
@@ -16,11 +15,21 @@ import { PasswordField } from './PasswordField'
  * 確立した後の着地点。**現在のパスワードは尋ねない**（忘れた人がここに来るため）。
  *
  * ログイン中の変更は `ChangePasswordForm`（現在のパスワードを要求する）を使う。
+ *
+ * `action` を import ではなく **props で受け取る**のは 2 つの理由から:
+ * 1. Server Action は `next/headers` 等のサーバー専用 API に依存するため、
+ *    import すると Storybook（ブラウザ）で読み込めない
+ * 2. UI と副作用が切り離され、各状態の見た目をそのまま確認・検証できる
+ *
+ * Server Component から Client Component へ Server Action を渡すのは
+ * Next.js の標準パターン。
  */
 export function UpdatePasswordForm({
+  action,
   redirectTo = '/account',
   className,
 }: {
+  action: (state: AuthActionState, formData: FormData) => Promise<AuthActionState>
   redirectTo?: string
   className?: string
 }) {
@@ -29,7 +38,7 @@ export function UpdatePasswordForm({
   const [password, setPassword] = useState('')
 
   const [state, formAction, pending] = useActionState<AuthActionState, FormData>(
-    updatePassword,
+    action,
     AUTH_IDLE_STATE
   )
 

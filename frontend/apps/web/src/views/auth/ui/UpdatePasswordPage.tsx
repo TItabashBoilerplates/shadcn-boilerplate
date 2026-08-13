@@ -1,6 +1,6 @@
 import { ShieldCheck } from 'lucide-react'
 import { getTranslations } from 'next-intl/server'
-import { UpdatePasswordForm } from '@/features/auth'
+import { UpdatePasswordForm, updatePassword } from '@/features/auth'
 import { AuthCard } from './AuthCard'
 
 /**
@@ -18,7 +18,7 @@ export async function UpdatePasswordPage() {
       title={t('updatePasswordTitle')}
       description={t('updatePasswordDescription')}
     >
-      <UpdatePasswordForm />
+      <UpdatePasswordForm action={updatePassword} />
     </AuthCard>
   )
 }

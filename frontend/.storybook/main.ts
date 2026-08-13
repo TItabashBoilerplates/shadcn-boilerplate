@@ -47,9 +47,17 @@ function fsdAliasPlugin(): PluginOption {
     async resolveId(source, importer, options) {
       if (!source.startsWith('@/') || !importer) return null
 
+      const isMobileImporter = importer.includes(`${sep}apps${sep}mobile${sep}`)
+
+      // apps/web の i18n ナビゲーション（next-intl の createNavigation）は
+      // Next.js のルーターコンテキストを前提にしており Storybook では落ちる。
+      // 実体の解決より前にモックへ差し替える。
+      if (!isMobileImporter && source === '@/shared/lib/i18n') {
+        return resolve(__dirname, './mocks/web-i18n-navigation.tsx')
+      }
+
       const subpath = source.slice(2)
-      const isMobile = importer.includes(`${sep}apps${sep}mobile${sep}`)
-      const base = isMobile ? mobileBaseFor(subpath) : WEB_SRC
+      const base = isMobileImporter ? mobileBaseFor(subpath) : WEB_SRC
 
       // 拡張子解決や条件付き exports は Vite 本体に任せる（skipSelf で無限再帰を防ぐ）
       const resolved = await this.resolve(join(base, subpath), importer, {
@@ -222,11 +230,15 @@ const config: StorybookConfig = {
       titlePrefix: 'Features',
     },
 
+    {
+      directory: '../apps/web/src/views',
+      files: '**/ui/**/*.stories.@(js|jsx|ts|tsx)',
+      titlePrefix: 'Views',
+    },
+
     // NOTE: apps/web/src/shared/ には ui/ ディレクトリが存在しないため除外
     //       (現状の shared 配下: api / config / hooks / lib)
     //       UI を追加する場合はここに { directory: '../apps/web/src/shared/ui', ... } を復活させる
-
-    // TODO: Views - i18n (@/shared/lib/i18n) 依存の解決後に有効化
   ],
 
   addons: ['@storybook/addon-docs', '@storybook/addon-themes'],
@@ -264,6 +276,15 @@ const config: StorybookConfig = {
         ? existing
         : Object.entries(existing).map(([find, replacement]) => ({ find, replacement }))),
       { find: /^expo-router$/, replacement: resolve(__dirname, './mocks/expo-router.tsx') },
+      // apps/web の i18n ナビゲーション（next-intl の createNavigation）は
+      // Next.js の App Router コンテキストを前提にしており、Storybook では
+      // `useRouter()` が "invariant expected app router to be mounted" で落ちる。
+      // fsdAliasPlugin 側でも同じ差し替えをしているが、プラグインの解決順に
+      // 依存しないよう alias でも明示する（片方だけだと無言で実体が使われる）。
+      {
+        find: /^@\/shared\/lib\/i18n$/,
+        replacement: resolve(__dirname, './mocks/web-i18n-navigation.tsx'),
+      },
     ]
 
     return config

@@ -1,3 +1,26 @@
+import { changeEmail, changePassword, signOut } from '@/features/auth'
+import { supabase } from '@/shared/lib/supabase'
 import { AccountScreen } from '@/views/account'
 
-export default AccountScreen
+/**
+ * 認可判断は `getUser()` で行う（`getSession()` は cookie/ストレージ由来の値を
+ * そのまま返すため真正性が保証されない）。
+ */
+async function loadEmail(): Promise<string> {
+  const { data, error } = await supabase.auth.getUser()
+  if (error) {
+    throw error
+  }
+  return data.user?.email ?? ''
+}
+
+export default function AccountRoute() {
+  return (
+    <AccountScreen
+      loadEmail={loadEmail}
+      changeEmail={changeEmail}
+      changePassword={changePassword}
+      signOut={signOut}
+    />
+  )
+}

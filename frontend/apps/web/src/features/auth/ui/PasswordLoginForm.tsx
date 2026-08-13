@@ -4,7 +4,6 @@ import { Button } from '@workspace/ui/components/button'
 import { useTranslations } from 'next-intl'
 import { useActionState, useEffect, useId } from 'react'
 import { Link, useRouter } from '@/shared/lib/i18n'
-import { signInWithPassword } from '../api'
 import { AUTH_IDLE_STATE, type AuthActionState } from '../model/types'
 import { AuthMessage } from './AuthMessage'
 import { EmailField } from './EmailField'
@@ -25,11 +24,21 @@ import { PasswordField } from './PasswordField'
  *
  * パスワード要件を強化すると、既存ユーザーは `weak_password` でログインに失敗する。
  * このときエラーを出すだけでは行き止まりになるため、再設定リンクを目立たせる。
+ *
+ * `action` を import ではなく **props で受け取る**のは 2 つの理由から:
+ * 1. Server Action は `next/headers` 等のサーバー専用 API に依存するため、
+ *    import すると Storybook（ブラウザ）で読み込めない
+ * 2. UI と副作用が切り離され、各状態の見た目をそのまま確認・検証できる
+ *
+ * Server Component から Client Component へ Server Action を渡すのは
+ * Next.js の標準パターン。
  */
 export function PasswordLoginForm({
+  action,
   redirectTo = '/dashboard',
   className,
 }: {
+  action: (state: AuthActionState, formData: FormData) => Promise<AuthActionState>
   redirectTo?: string
   className?: string
 }) {
@@ -38,7 +47,7 @@ export function PasswordLoginForm({
   const emailId = useId()
 
   const [state, formAction, pending] = useActionState<AuthActionState, FormData>(
-    signInWithPassword,
+    action,
     AUTH_IDLE_STATE
   )
 
