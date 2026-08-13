@@ -10,7 +10,7 @@ import { useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { ScrollView } from 'react-native'
 import type { AuthResult } from '@/features/auth'
-import { ChangeEmailForm, ChangePasswordForm } from '@/features/auth'
+import { ChangeEmailForm, ChangePasswordForm, DeleteAccountForm } from '@/features/auth'
 import { useI18n } from '@/shared/hooks'
 
 /**
@@ -27,6 +27,8 @@ export function AccountScreen({
   loadEmail,
   changeEmail,
   changePassword,
+  deleteAccount,
+  deleteConfirmationWord,
   signOut,
 }: {
   /** 現在のメールアドレスを取得する。認可判断は getUser() 側で行う */
@@ -37,6 +39,9 @@ export function AccountScreen({
     password: string,
     passwordConfirmation: string
   ) => Promise<AuthResult>
+  deleteAccount: (confirmation: string) => Promise<AuthResult>
+  /** 削除確認のために打たせる語句 */
+  deleteConfirmationWord: string
   signOut: () => Promise<void>
 }) {
   const { t } = useI18n()
@@ -87,9 +92,11 @@ export function AccountScreen({
               {t('account.dangerSectionTitle')}
             </Text>
             <Box className="rounded-md border border-destructive/40 p-3">
-              <Text className="text-sm text-muted-foreground">
-                {t('account.deleteAccountPlaceholder')}
-              </Text>
+              <DeleteAccountForm
+                submit={deleteAccount}
+                confirmationWord={deleteConfirmationWord}
+                onDeleted={() => router.replace('/sign-in')}
+              />
             </Box>
           </VStack>
 

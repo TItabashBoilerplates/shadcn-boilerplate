@@ -131,7 +131,8 @@
       "signUpConfirmationSent": "確認メールを送信しました。メールボックスをご確認ください。",
       "passwordResetSent": "ご登録があれば、パスワード再設定用のリンクをお送りしました。",
       "passwordUpdated": "パスワードを更新しました。",
-      "emailChangeRequested": "確認メールを送信しました。現在のアドレスと新しいアドレスの両方をご確認ください。"
+      "emailChangeRequested": "確認メールを送信しました。現在のアドレスと新しいアドレスの両方をご確認ください。",
+      "accountDeleted": "アカウントを削除しました。"
     },
     "errors": {
       "emailRequired": "メールアドレスを入力してください。",
@@ -170,6 +171,13 @@
     "passwordSectionDescription": "パスワードを変更します。現在のパスワードが必要です。",
     "dangerSectionTitle": "アカウントの削除",
     "dangerSectionDescription": "アカウントと関連データを完全に削除します。",
-    "deleteAccountPlaceholder": "アカウント削除はデータ保持方針に依存するため、この boilerplate では未実装です。モバイルアプリではアプリ内削除が必須です（App Store 5.1.1(v)）。"
+    "deleteAccount": "アカウントを削除",
+    "deleteAccountDescription": "アカウントと関連データを完全に削除します。この操作は取り消せません。",
+    "deleteAccountWarning": "アカウントと関連データがすべて完全に削除されます。この操作は取り消せません。",
+    "deleteConfirmationLabel": "確認のため {word} と入力してください",
+    "deleteConfirmationMismatch": "確認のため {word} と正確に入力してください。",
+    "deleteAccountConfirm": "アカウントを削除する",
+    "deletingAccount": "削除しています…",
+    "cancel": "キャンセル"
   }
 }

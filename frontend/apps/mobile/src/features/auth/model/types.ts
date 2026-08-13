@@ -25,6 +25,7 @@ export type AuthSuccessKey =
   | 'passwordResetCodeSent'
   | 'passwordUpdated'
   | 'emailChangeRequested'
+  | 'accountDeleted'
 
 export type AuthValidationKey =
   | 'emailRequired'
@@ -33,3 +34,4 @@ export type AuthValidationKey =
   | 'passwordTooWeak'
   | 'passwordMismatch'
   | 'currentPasswordRequired'
+  | 'deleteConfirmationMismatch'

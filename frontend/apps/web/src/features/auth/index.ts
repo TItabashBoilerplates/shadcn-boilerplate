@@ -18,6 +18,8 @@
 export {
   changeEmail,
   changePassword,
+  DELETE_ACCOUNT_CONFIRMATION,
+  deleteAccount,
   requestPasswordReset,
   resendOtp,
   signInWithOtp,
@@ -39,6 +41,7 @@ export { AUTH_IDLE_STATE } from './model/types'
 export { AuthMessage } from './ui/AuthMessage'
 export { ChangeEmailForm } from './ui/ChangeEmailForm'
 export { ChangePasswordForm } from './ui/ChangePasswordForm'
+export { DeleteAccountForm } from './ui/DeleteAccountForm'
 export { EmailField } from './ui/EmailField'
 export { ForgotPasswordForm } from './ui/ForgotPasswordForm'
 export { LoginForm } from './ui/LoginForm'

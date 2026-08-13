@@ -14,6 +14,7 @@
 
 export { changeEmail } from './changeEmail'
 export { changePassword } from './changePassword'
+export { DELETE_ACCOUNT_CONFIRMATION, deleteAccount } from './deleteAccount'
 export { requestPasswordReset } from './requestPasswordReset'
 export { resendOtp } from './resendOtp'
 export { signInWithOtp } from './signInWithOtp'

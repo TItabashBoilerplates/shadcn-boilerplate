@@ -250,6 +250,45 @@ export async function changeEmail(newEmail: string): Promise<AuthResult> {
   return { ok: true, messageKey: 'emailChangeRequested' }
 }
 
+/** 誤操作で消えないよう、ユーザーにこの語句を打たせる */
+export const DELETE_ACCOUNT_CONFIRMATION = 'DELETE'
+
+/**
+ * アカウント削除
+ *
+ * **App Store 5.1.1(v) によりモバイルでは必須**（「サポートへ連絡」では不可）。
+ *
+ * 実削除は `delete-account` Edge Function が行う。`auth.admin.deleteUser()` は
+ * service_role を要求し、それをアプリに埋め込むことは絶対にできないため。
+ */
+export async function deleteAccount(confirmation: string): Promise<AuthResult> {
+  if (confirmation.trim() !== DELETE_ACCOUNT_CONFIRMATION) {
+    return { ok: false, messageKey: 'deleteConfirmationMismatch' }
+  }
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser()
+
+  if (userError || !user) {
+    console.error('Delete account without a valid session:', userError)
+    return { ok: false, messageKey: 'sessionExpired' }
+  }
+
+  const { error } = await supabase.functions.invoke('delete-account', { method: 'POST' })
+
+  if (error) {
+    console.error('Delete account failed:', error)
+    return { ok: false, messageKey: 'unexpected' }
+  }
+
+  // 残しておくと「消えたはずのアカウントでログイン済みに見える」状態になる
+  await supabase.auth.signOut()
+
+  return { ok: true, messageKey: 'accountDeleted' }
+}
+
 export async function signOut(): Promise<void> {
   const { error } = await supabase.auth.signOut()
   if (error) {

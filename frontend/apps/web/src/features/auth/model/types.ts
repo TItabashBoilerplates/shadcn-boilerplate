@@ -35,6 +35,7 @@ export type AuthSuccessKey =
   | 'passwordResetSent'
   | 'passwordUpdated'
   | 'emailChangeRequested'
+  | 'accountDeleted'
 
 /** クライアント側の入力検証で弾いたときのキー（`Auth.errors.*`） */
 export type AuthValidationKey =
@@ -44,6 +45,7 @@ export type AuthValidationKey =
   | 'passwordTooWeak'
   | 'passwordMismatch'
   | 'currentPasswordRequired'
+  | 'deleteConfirmationMismatch'
 
 export const AUTH_IDLE_STATE: AuthActionState = { status: 'idle' }
 

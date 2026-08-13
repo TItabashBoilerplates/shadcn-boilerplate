@@ -21,6 +21,7 @@ schemas for complete type safety across the stack.
 
 ```
 supabase/functions/
+├── delete-account/           # アプリ内アカウント削除（App Store 5.1.1(v) 対応）
 ├── helloworld/               # Example Edge Function
 │   ├── index.ts              # Function implementation
 │   ├── deno.json             # Function-specific dependencies

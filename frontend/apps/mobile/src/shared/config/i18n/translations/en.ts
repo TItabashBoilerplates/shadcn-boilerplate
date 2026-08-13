@@ -46,6 +46,7 @@ export const en = {
       signUpConfirmationSent: "Check your inbox — we've sent a link to confirm your email address.",
       passwordResetCodeSent: "If an account exists for that address, we've sent a 6-digit code.",
       passwordUpdated: 'Your password has been updated.',
+      accountDeleted: 'Your account has been deleted.',
       emailChangeRequested: 'Confirmation sent. Check both your current and your new address.',
     },
     errors: {
@@ -81,9 +82,17 @@ export const en = {
     description: 'Manage the email address and password you use to sign in.',
     emailSectionTitle: 'Email address',
     passwordSectionTitle: 'Password',
+    deleteAccount: 'Delete account',
+    deleteAccountDescription:
+      'Permanently delete your account and all associated data. This cannot be undone.',
+    deleteAccountWarning:
+      'This will permanently delete your account and all associated data. This action cannot be undone.',
+    deleteConfirmationLabel: 'Type %{word} to confirm',
+    deleteConfirmationMismatch: 'Type %{word} exactly to confirm.',
+    deleteAccountConfirm: 'Delete my account',
+    deletingAccount: 'Deleting...',
+    cancel: 'Cancel',
     dangerSectionTitle: 'Delete account',
-    deleteAccountPlaceholder:
-      'Account deletion is not implemented in this boilerplate — the behaviour depends on your data retention policy. Shipping to the App Store requires in-app account deletion (5.1.1(v)).',
     signOut: 'Sign out',
   },
   common: {

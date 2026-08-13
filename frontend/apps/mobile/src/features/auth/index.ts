@@ -9,6 +9,8 @@
 export {
   changeEmail,
   changePassword,
+  DELETE_ACCOUNT_CONFIRMATION,
+  deleteAccount,
   requestPasswordResetCode,
   resetPasswordWithCode,
   signInWithPassword,
@@ -20,6 +22,7 @@ export { AuthField } from './ui/AuthField'
 export { AuthMessage } from './ui/AuthMessage'
 export { ChangeEmailForm } from './ui/ChangeEmailForm'
 export { ChangePasswordForm } from './ui/ChangePasswordForm'
+export { DeleteAccountForm } from './ui/DeleteAccountForm'
 export { ForgotPasswordForm } from './ui/ForgotPasswordForm'
 export { PasswordRequirements } from './ui/PasswordRequirements'
 export { SignInForm } from './ui/SignInForm'

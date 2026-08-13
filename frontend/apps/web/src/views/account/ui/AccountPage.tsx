@@ -8,7 +8,15 @@ import {
 import { Separator } from '@workspace/ui/components/separator'
 import { redirect } from 'next/navigation'
 import { getTranslations } from 'next-intl/server'
-import { ChangeEmailForm, ChangePasswordForm, changeEmail, changePassword } from '@/features/auth'
+import {
+  ChangeEmailForm,
+  ChangePasswordForm,
+  changeEmail,
+  changePassword,
+  DELETE_ACCOUNT_CONFIRMATION,
+  DeleteAccountForm,
+  deleteAccount,
+} from '@/features/auth'
 import { createServerClient as createClient } from '@/shared/lib/supabase'
 
 /**
@@ -75,16 +83,10 @@ export async function AccountPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <Separator />
-          {/*
-            アカウント削除はモバイル配布時に必須（App Store 5.1.1(v)。
-            「サポートへ連絡してください」では要件を満たさない）。
-
-            削除の実装はプロダクトのデータ保持方針に強く依存する
-            （即時削除 / 猶予期間 / 関連データの扱い / 課金の解約）ため、
-            boilerplate では意図的に未実装にしてある。派生プロジェクトで
-            方針を決めてから実装すること。
-          */}
-          <p className="text-sm text-muted-foreground">{t('deleteAccountPlaceholder')}</p>
+          <DeleteAccountForm
+            action={deleteAccount}
+            confirmationWord={DELETE_ACCOUNT_CONFIRMATION}
+          />
         </CardContent>
       </Card>
     </div>

@@ -1,4 +1,10 @@
-import { changeEmail, changePassword, signOut } from '@/features/auth'
+import {
+  changeEmail,
+  changePassword,
+  DELETE_ACCOUNT_CONFIRMATION,
+  deleteAccount,
+  signOut,
+} from '@/features/auth'
 import { supabase } from '@/shared/lib/supabase'
 import { AccountScreen } from '@/views/account'
 
@@ -20,6 +26,8 @@ export default function AccountRoute() {
       loadEmail={loadEmail}
       changeEmail={changeEmail}
       changePassword={changePassword}
+      deleteAccount={deleteAccount}
+      deleteConfirmationWord={DELETE_ACCOUNT_CONFIRMATION}
       signOut={signOut}
     />
   )

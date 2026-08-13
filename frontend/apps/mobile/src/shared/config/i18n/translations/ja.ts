@@ -47,6 +47,7 @@ export const ja = {
       signUpConfirmationSent: '確認メールを送信しました。メールボックスをご確認ください。',
       passwordResetCodeSent: 'ご登録があれば、6 桁の確認コードをお送りしました。',
       passwordUpdated: 'パスワードを更新しました。',
+      accountDeleted: 'アカウントを削除しました。',
       emailChangeRequested:
         '確認メールを送信しました。現在のアドレスと新しいアドレスの両方をご確認ください。',
     },
@@ -83,9 +84,17 @@ export const ja = {
     description: 'ログインに使うメールアドレスとパスワードを管理します。',
     emailSectionTitle: 'メールアドレス',
     passwordSectionTitle: 'パスワード',
+    deleteAccount: 'アカウントを削除',
+    deleteAccountDescription:
+      'アカウントと関連データを完全に削除します。この操作は取り消せません。',
+    deleteAccountWarning:
+      'アカウントと関連データがすべて完全に削除されます。この操作は取り消せません。',
+    deleteConfirmationLabel: '確認のため %{word} と入力してください',
+    deleteConfirmationMismatch: '確認のため %{word} と正確に入力してください。',
+    deleteAccountConfirm: 'アカウントを削除する',
+    deletingAccount: '削除しています...',
+    cancel: 'キャンセル',
     dangerSectionTitle: 'アカウントの削除',
-    deleteAccountPlaceholder:
-      'アカウント削除はデータ保持方針に依存するため、この boilerplate では未実装です。App Store に出す場合はアプリ内削除が必須です（5.1.1(v)）。',
     signOut: 'ログアウト',
   },
   common: {

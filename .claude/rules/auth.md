@@ -299,6 +299,17 @@ subject = "Your email address was changed / メールアドレスが変更され
 content_path = "./supabase/templates/email/email_changed.html"
 ```
 
+- **アカウント削除の Edge Function は `verify_jwt` を落とさない**（既定 `true`）:
+
+  ```toml
+  [functions.delete-account]
+  verify_jwt = true   # 呼び出し元の JWT を検証する。false にすると誰でも叩ける
+  ```
+
+  実削除は `auth.admin.deleteUser()` でしか行えず **service_role を要求する**ため、
+  クライアントからは実行できない。**消す対象は JWT から解決した本人だけ**にし、
+  body で渡された id は絶対に信用しない（他人を消せる穴になる）。
+  関連データは **DB 側の `on delete cascade`** で消す（個別 delete の列挙は消し漏れる）。
 - **モバイルでコード方式を使うなら、`recovery` テンプレートに `{{ .Token }}` を必ず含める**
   （リンクだけのテンプレートだとアプリ側でコードを入力させられない）。
   本リポジトリのテンプレートは **1 通にリンクとコードの両方**を載せてあるので、

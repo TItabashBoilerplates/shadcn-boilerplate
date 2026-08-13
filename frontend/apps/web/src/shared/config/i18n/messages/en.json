@@ -131,7 +131,8 @@
       "signUpConfirmationSent": "Check your inbox — we've sent a link to confirm your email address.",
       "passwordResetSent": "If an account exists for that address, we've sent a link to reset the password.",
       "passwordUpdated": "Your password has been updated.",
-      "emailChangeRequested": "Confirmation sent. Check both your current and your new address."
+      "emailChangeRequested": "Confirmation sent. Check both your current and your new address.",
+      "accountDeleted": "Your account has been deleted."
     },
     "errors": {
       "emailRequired": "Enter your email address.",
@@ -170,6 +171,13 @@
     "passwordSectionDescription": "Change your password. You'll need your current one.",
     "dangerSectionTitle": "Delete account",
     "dangerSectionDescription": "Permanently delete your account and its data.",
-    "deleteAccountPlaceholder": "Account deletion is not implemented in this boilerplate — the behaviour depends on your data retention policy. Mobile apps must ship in-app account deletion (App Store 5.1.1(v))."
+    "deleteAccount": "Delete account",
+    "deleteAccountDescription": "Permanently delete your account and all associated data. This cannot be undone.",
+    "deleteAccountWarning": "This will permanently delete your account and all associated data. This action cannot be undone.",
+    "deleteConfirmationLabel": "Type {word} to confirm",
+    "deleteConfirmationMismatch": "Type {word} exactly to confirm.",
+    "deleteAccountConfirm": "Delete my account",
+    "deletingAccount": "Deleting…",
+    "cancel": "Cancel"
   }
 }
