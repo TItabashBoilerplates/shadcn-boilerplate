@@ -5,7 +5,7 @@ import { Input } from '@workspace/ui/components/input'
 import { Label } from '@workspace/ui/components/label'
 import { Check, Eye, EyeOff, X } from 'lucide-react'
 import { useTranslations } from 'next-intl'
-import { useId, useState } from 'react'
+import { useState } from 'react'
 
 /**
  * パスワード入力欄（表示切替 + 要件チェックリスト）
@@ -42,7 +42,9 @@ export function PasswordField({
   onValueChange?: (value: string) => void
 }) {
   const t = useTranslations('Auth')
-  const inputId = useId()
+  // id は `name` をそのまま使う（フォーム内で一意）。`useId()` はレンダーごとに
+  // 変わる値なので、E2E（Maestro）のセレクタが安定しない。
+  const inputId = name
   const [visible, setVisible] = useState(false)
   const [internalValue, setInternalValue] = useState('')
 

@@ -1,0 +1,75 @@
+# Web: メールアドレス再設定（旧・新の両方で確認するまで変わらないこと）
+#
+# `double_confirm_changes = true`（既定）では**両方の確認が完了するまで
+# メールアドレスは変わらない**。UI にその旨が出ていることと、確認メールが
+# 実際に飛ぶことをここで守る。
+
+appId: com.example.web
+name: "Web Email Change"
+jsEngine: graaljs
+tags:
+  - auth
+  - web
+  - e2e
+
+env:
+  SUPABASE_URL: ${SUPABASE_URL}
+  SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+  MAILPIT_URL: ${MAILPIT_URL}
+
+onFlowStart:
+  - runScript:
+      file: ../../scripts/setup-test-user.js
+      env:
+        SUPABASE_URL: ${SUPABASE_URL}
+        SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+        TEST_PASSWORD: "E2ePassw0rd!x"
+
+onFlowComplete:
+  - runScript:
+      file: ../../scripts/cleanup-test-user.js
+      env:
+        SUPABASE_URL: ${SUPABASE_URL}
+        SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+        USER_ID: ${output.userId}
+
+---
+# ログイン
+- launchApp:
+    arguments:
+      url: "http://localhost:3000/en/login"
+- tapOn:
+    id: "email"
+- inputText: ${output.testEmail}
+- tapOn:
+    id: "password"
+- inputText: ${output.testPassword}
+- tapOn: "Sign in"
+- assertVisible: "Dashboard"
+
+# 設定画面に 3 つの導線が揃っていること（消えたら審査でも実運用でも困る）
+- openLink: "http://localhost:3000/en/account"
+- assertVisible: "Account settings"
+- assertVisible: "Email address"
+- assertVisible: "Password"
+- assertVisible: "Delete account"
+
+# メールアドレス変更を申請
+- tapOn:
+    id: "newEmail"
+- inputText: "changed_${output.userId}@test.local"
+- tapOn: "Send confirmation"
+
+# 旧・新の両方を確認する必要がある旨が UI に出ていること
+- assertVisible: "Check both your current and your new address."
+
+# 実際に確認メールが飛んでいること
+- runScript:
+    file: ../../scripts/get-auth-email.js
+    env:
+      MAILPIT_URL: ${MAILPIT_URL}
+      TO_EMAIL: "changed_${output.userId}@test.local"
+      SUBJECT_MATCH: "Confirm"
+      MAX_RETRIES: "20"
+
+- takeScreenshot: web-email-change-requested

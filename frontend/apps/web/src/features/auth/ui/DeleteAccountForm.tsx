@@ -4,7 +4,7 @@ import { Button } from '@workspace/ui/components/button'
 import { Input } from '@workspace/ui/components/input'
 import { Label } from '@workspace/ui/components/label'
 import { useTranslations } from 'next-intl'
-import { useActionState, useEffect, useId, useState } from 'react'
+import { useActionState, useEffect, useState } from 'react'
 import { useRouter } from '@/shared/lib/i18n'
 import { AUTH_IDLE_STATE, type AuthActionState } from '../model/types'
 import { AuthMessage } from './AuthMessage'
@@ -37,7 +37,6 @@ export function DeleteAccountForm({
   // エラー文言は Auth namespace 側に集約してあるので、翻訳関数を分ける
   const tAuth = useTranslations('Auth')
   const router = useRouter()
-  const inputId = useId()
   const [armed, setArmed] = useState(false)
 
   const [state, formAction, pending] = useActionState<AuthActionState, FormData>(
@@ -68,9 +67,11 @@ export function DeleteAccountForm({
       <p className="text-sm text-muted-foreground">{t('deleteAccountWarning')}</p>
 
       <div className="space-y-2">
-        <Label htmlFor={inputId}>{t('deleteConfirmationLabel', { word: confirmationWord })}</Label>
+        <Label htmlFor="confirmation">
+          {t('deleteConfirmationLabel', { word: confirmationWord })}
+        </Label>
         <Input
-          id={inputId}
+          id="confirmation"
           name="confirmation"
           type="text"
           autoComplete="off"

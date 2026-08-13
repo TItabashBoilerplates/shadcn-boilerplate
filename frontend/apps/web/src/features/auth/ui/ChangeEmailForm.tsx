@@ -2,7 +2,7 @@
 
 import { Button } from '@workspace/ui/components/button'
 import { useTranslations } from 'next-intl'
-import { useActionState, useId } from 'react'
+import { useActionState } from 'react'
 import { AUTH_IDLE_STATE, type AuthActionState } from '../model/types'
 import { AuthMessage } from './AuthMessage'
 import { EmailField } from './EmailField'
@@ -35,7 +35,6 @@ export function ChangeEmailForm({
   className?: string
 }) {
   const t = useTranslations('Auth')
-  const emailId = useId()
 
   const [state, formAction, pending] = useActionState<AuthActionState, FormData>(
     action,
@@ -49,7 +48,7 @@ export function ChangeEmailForm({
       </div>
 
       <EmailField
-        id={emailId}
+        id="newEmail"
         label={t('newEmailLabel')}
         placeholder={t('emailPlaceholder')}
         disabled={pending}

@@ -1,13 +1,11 @@
-# Web Authentication Flow - OTP Login
-# Tests the complete OTP authentication flow for Next.js web app
+# Web: メールアドレス + パスワードでログインする
 #
-# This flow:
-# 1. Creates a unique test user via Supabase Admin API (onFlowStart)
-# 2. Performs OTP login flow
-# 3. Cleans up the test user (onFlowComplete)
+# `.claude/rules/auth.md` により、モバイルアプリを配布するプロダクトでは
+# これが主たるログイン手段でなければならない（OTP のみは App Store 2.1(a) で
+# リジェクトされる）。Web も同じ資格情報で入れる必要があるため、この経路を守る。
 
 appId: com.example.web
-name: "Web OTP Login Flow"
+name: "Web Password Login"
 jsEngine: graaljs
 tags:
   - auth
@@ -15,21 +13,20 @@ tags:
   - e2e
 
 env:
-  # Environment variables are loaded from .maestro/.env
-  # Override defaults here if needed
   SUPABASE_URL: ${SUPABASE_URL}
   SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
   MAILPIT_URL: ${MAILPIT_URL}
 
-# Setup: Create test user before flow starts
 onFlowStart:
   - runScript:
       file: ../../scripts/setup-test-user.js
       env:
         SUPABASE_URL: ${SUPABASE_URL}
         SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+        # パスワードポリシー（12 文字以上 + 大小英字 + 数字 + 記号）を満たす値。
+        # ここを緩くすると Supabase 側で弾かれてフロー全体が落ちる。
+        TEST_PASSWORD: "E2ePassw0rd!x"
 
-# Cleanup: Delete test user after flow completes
 onFlowComplete:
   - runScript:
       file: ../../scripts/cleanup-test-user.js
@@ -39,51 +36,25 @@ onFlowComplete:
         USER_ID: ${output.userId}
 
 ---
-# Step 1: Navigate to login page
 - launchApp:
     arguments:
       url: "http://localhost:3000/en/login"
 
-# Step 2: Verify login page loaded
-- assertVisible: "Email Address"
-- assertVisible: "Send One-Time Password"
+- assertVisible: "Sign in"
+- assertVisible: "Email address"
+# パスワードを忘れた人はログインできない = この画面に導線が無いと詰む。
+# 導線が消えていないことを E2E でも守る。
+- assertVisible: "Forgot your password?"
 
-# Step 3: Enter email address (from setup-test-user.js output)
 - tapOn:
     id: "email"
 - inputText: ${output.testEmail}
 
-# Step 4: Submit OTP request
-- tapOn: "Send One-Time Password"
-
-# Step 5: Verify success message
-- assertVisible: "Check Your Email"
-
-# Step 6: Wait for OTP email and extract code
-- runScript:
-    file: ../../scripts/get-otp-from-mailpit.js
-    env:
-      MAILPIT_URL: ${MAILPIT_URL}
-      WAIT_FOR_EMAIL: "true"
-      MAX_RETRIES: "15"
-
-# Step 7: Navigate to verify page
-- openLink: "http://localhost:3000/en/verify?email=${output.testEmail}"
-
-# Step 8: Verify OTP page loaded
-- assertVisible: "Verify Your Email"
-- assertVisible: "Enter the 6-digit code"
-
-# Step 9: Enter OTP code
 - tapOn:
-    id: "token"
-- inputText: ${output.otpCode}
+    id: "password"
+- inputText: ${output.testPassword}
 
-# Step 10: Submit verification
-- tapOn: "Verify Code"
+- tapOn: "Sign in"
 
-# Step 11: Verify successful authentication - redirected to dashboard
 - assertVisible: "Dashboard"
-
-# Step 12: Take screenshot of successful login
-- takeScreenshot: login-success
+- takeScreenshot: web-password-login-success

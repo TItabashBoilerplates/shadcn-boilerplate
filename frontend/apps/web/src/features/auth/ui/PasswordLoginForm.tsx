@@ -2,7 +2,7 @@
 
 import { Button } from '@workspace/ui/components/button'
 import { useTranslations } from 'next-intl'
-import { useActionState, useEffect, useId } from 'react'
+import { useActionState, useEffect } from 'react'
 import { Link, useRouter } from '@/shared/lib/i18n'
 import { AUTH_IDLE_STATE, type AuthActionState } from '../model/types'
 import { AuthMessage } from './AuthMessage'
@@ -44,7 +44,6 @@ export function PasswordLoginForm({
 }) {
   const t = useTranslations('Auth')
   const router = useRouter()
-  const emailId = useId()
 
   const [state, formAction, pending] = useActionState<AuthActionState, FormData>(
     action,
@@ -63,7 +62,7 @@ export function PasswordLoginForm({
   return (
     <form action={formAction} className={className ? `space-y-4 ${className}` : 'space-y-4'}>
       <EmailField
-        id={emailId}
+        id="email"
         label={t('emailLabel')}
         placeholder={t('emailPlaceholder')}
         disabled={pending}

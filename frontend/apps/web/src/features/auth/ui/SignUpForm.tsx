@@ -2,7 +2,7 @@
 
 import { Button } from '@workspace/ui/components/button'
 import { useLocale, useTranslations } from 'next-intl'
-import { useActionState, useId, useState } from 'react'
+import { useActionState, useState } from 'react'
 import { Link } from '@/shared/lib/i18n'
 import { AUTH_IDLE_STATE, type AuthActionState } from '../model/types'
 import { AuthMessage } from './AuthMessage'
@@ -35,7 +35,6 @@ export function SignUpForm({
 }) {
   const t = useTranslations('Auth')
   const locale = useLocale()
-  const emailId = useId()
   const [password, setPassword] = useState('')
 
   const [state, formAction, pending] = useActionState<AuthActionState, FormData>(
@@ -61,7 +60,7 @@ export function SignUpForm({
       <input type="hidden" name="locale" value={locale} />
 
       <EmailField
-        id={emailId}
+        id="email"
         label={t('emailLabel')}
         placeholder={t('emailPlaceholder')}
         disabled={pending}

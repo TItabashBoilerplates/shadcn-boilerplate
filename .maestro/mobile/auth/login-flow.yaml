@@ -1,61 +1,65 @@
-# Mobile Authentication Flow - OTP Login (Template)
-# Tests the complete OTP authentication flow for Expo mobile app
+# Mobile: メールアドレス + パスワードでログインする
 #
-# NOTE: This is a template. Update when mobile auth screens are implemented.
-# Required implementations:
-#   - Login screen with email input
-#   - OTP verification screen
+# **審査担当者が通る経路そのもの**。App Store Review Guideline 2.1(a) は
+# 「an active demo account ... login credentials」の提供を求めるが、渡せるのは
+# メールアドレスとパスワードの組だけ。OTP しか無いと担当者は受信箱に触れられず
+# ログインできないまま 2.1 でリジェクトされる（`.claude/rules/auth.md`）。
+#
+# したがって「この経路だけでログインし切れる」ことは E2E で守る価値がある。
 
 appId: ${APP_ID}
-name: "Mobile OTP Login Flow"
+name: "Mobile Password Login"
+jsEngine: graaljs
 tags:
   - auth
   - mobile
   - e2e
-  - wip  # Mark as work-in-progress until auth screens are ready
 
 env:
-  # Android emulator uses 10.0.2.2 for host localhost
-  # iOS simulator can use localhost directly
-  MAILPIT_URL: "http://10.0.2.2:54324"
-  TEST_EMAIL: "testuser@example.com"
+  # Android エミュレータからホストの localhost は 10.0.2.2。
+  # iOS シミュレータは localhost で届く。
+  SUPABASE_URL: ${SUPABASE_URL}
+  SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+  MAILPIT_URL: ${MAILPIT_URL}
+
+onFlowStart:
+  - runScript:
+      file: ../../scripts/setup-test-user.js
+      env:
+        SUPABASE_URL: ${SUPABASE_URL}
+        SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+        TEST_PASSWORD: "E2ePassw0rd!x"
+
+onFlowComplete:
+  - runScript:
+      file: ../../scripts/cleanup-test-user.js
+      env:
+        SUPABASE_URL: ${SUPABASE_URL}
+        SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+        USER_ID: ${output.userId}
 
 ---
-# Step 1: Launch app and clear state
 - launchApp:
     clearState: true
     permissions:
       all: allow
 
-# Step 2: Navigate to login screen (update selector when implemented)
-# - tapOn: "Login"
+# expo-router の /sign-in へ直接入る
+- openLink: "mobile://sign-in"
 
-# Step 3: Enter email address (update selector when implemented)
-# - tapOn:
-#     id: "email-input"
-# - inputText: ${TEST_EMAIL}
+- assertVisible: "Sign in"
+- assertVisible: "Email address"
+# パスワードを忘れた人はログインできない = この画面に導線が無いと詰む
+- assertVisible: "Forgot your password?"
 
-# Step 4: Submit OTP request (update selector when implemented)
-# - tapOn: "Send OTP"
+- tapOn: "Email address"
+- inputText: ${output.testEmail}
 
-# Step 5: Wait for OTP email and extract code
-# - runScript:
-#     file: ../../scripts/get-otp-from-mailpit.js
-#     env:
-#       MAILPIT_URL: ${MAILPIT_URL}
-#       WAIT_FOR_EMAIL: "true"
-#       MAX_RETRIES: "15"
+- tapOn: "Password"
+- inputText: ${output.testPassword}
 
-# Step 6: Enter OTP code (update selector when implemented)
-# - tapOn:
-#     id: "otp-input"
-# - inputText: ${output.otpCode}
+- tapOn: "Sign in"
 
-# Step 7: Submit verification (update selector when implemented)
-# - tapOn: "Verify"
-
-# Step 8: Verify successful authentication
-# - assertVisible: "Home"
-
-# Placeholder: Take screenshot of current state
-- takeScreenshot: mobile-app-state
+# ログイン後はホームへ戻る
+- assertNotVisible: "Sign in"
+- takeScreenshot: mobile-password-login-success
