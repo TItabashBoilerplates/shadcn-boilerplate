@@ -167,6 +167,26 @@ await supabase.storage.from('files').upload(path, file)
 const path = `avatar.png`
 ```
 
+### Image Transformation (MANDATORY)
+
+**フロントエンドで表示する画像は、必ず Image Transformation API 経由で配信する。**
+`getPublicUrl` / `createSignedUrl` の戻り値をそのまま `<img>` / `next/image` / `expo-image` に
+渡してはならない（無変換配信は元サイズがそのまま egress になる）。
+
+```tsx
+// ❌ Wrong: 無変換の URL をそのまま表示
+const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+<Image src={data.publicUrl} width={40} height={40} alt="" />
+
+// ✅ Correct: 共有コンポーネント経由（transform が必ず付く）
+<SupabaseImage bucket="public-assets" path={path} width={40} height={40} alt="" />
+```
+
+private バケットでは **`createSignedStorageImageUrl()` で transform 付きの署名 URL** を
+サーバー側で発行する（transform は署名時に固定され、後から変更できない）。
+
+→ 詳細・禁止パターン・チェックリストは **`.claude/rules/storage-images.md`** を参照。
+
 ### When to Use Public Buckets
 
 Public buckets are allowed **ONLY** when:

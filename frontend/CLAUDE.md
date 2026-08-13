@@ -423,6 +423,24 @@ For complete hydration prevention patterns, see `docs/rendering-strategy.md` - "
 
 For complete examples and detailed patterns, see `docs/rendering-strategy.md` - "Next.js + Supabase ベストプラクティス" section.
 
+#### Storage Images (MANDATORY)
+
+**Supabase Storage の画像は、必ず Image Transformation API 経由で表示する。**
+`next/image` / `expo-image` に元画像の URL を渡す実装は却下される（無変換配信は元サイズが
+そのまま egress になる）。
+
+| バケット | 使うもの |
+|---|---|
+| public | `<SupabaseImage bucket="..." path="..." width={...} height={...} alt="" />`（`@/shared/ui`） |
+| private（既定） | サーバー側で `createSignedStorageImageUrl()` → `<SupabaseImage signedUrl={...} ... />` |
+| URL だけ欲しい | `@workspace/client-supabase/storage-image` の `buildStorageImageUrl` / `toStorageImageUrl` |
+
+- 幅は `IMAGE_WIDTH_LADDER` の段に丸まる（CDN キャッシュのため）。自前で計算しない。
+- `next.config.ts` の `images.imageSizes` / `deviceSizes` はこの段と一致させる（Supabase の上限は 2500）。
+- `images.loaderFile` は使わない（全 `next/image` に効いてローカル静的画像まで壊れる）。
+
+→ 詳細は `.claude/rules/storage-images.md`
+
 ### Example: FSD-Compliant Implementation with SSR/CSR
 
 ```typescript
