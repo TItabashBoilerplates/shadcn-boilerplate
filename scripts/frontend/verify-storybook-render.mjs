@@ -21,6 +21,7 @@
  * |---|---|
  * | 何も描画されない / エラーオーバーレイ | プロバイダー不足で例外（next-intl / SafeArea 等） |
  * | console / page error | ルーターコンテキスト無しで `useRouter()` |
+ * | 画像が読み込めていない（`naturalWidth === 0`） | 画像 URL の組み立てミス・アセットの置き場所ミス |
  * | i18n キーがそのまま見えている | メッセージ未追加、namespace 取り違え |
  * | 入力欄の font-size < 16px | iOS Safari のオートズーム（`form-controls.md`） |
  *
@@ -118,8 +119,34 @@ for (const id of ids) {
 		const root = document.querySelector("#storybook-root");
 		if (!root) return { ok: false, reason: "no #storybook-root" };
 		const text = (root.textContent ?? "").trim();
-		if (text.length === 0 && root.querySelectorAll("*").length < 2) {
+		// 画像・図形コンポーネントは要素 1 つ（<img> 等）でテキストも持たないため、
+		// 要素数だけで「何も描画されていない」と判定すると誤検出になる。
+		// 実際に読み込めている置換要素があれば「描画された」とみなす。
+		const media = [...root.querySelectorAll("img, svg, canvas, video")];
+		const renderedMedia = media.filter((el) => {
+			const box = el.getBoundingClientRect();
+			if (box.width === 0 || box.height === 0) return false;
+			// <img> は「箱はあるが読み込めていない」（= 壊れた URL）が起こりうる
+			return el.tagName !== "IMG" || (el.complete && el.naturalWidth > 0);
+		});
+		if (
+			text.length === 0 &&
+			root.querySelectorAll("*").length < 2 &&
+			renderedMedia.length === 0
+		) {
 			return { ok: false, reason: "rendered nothing" };
+		}
+		// 読み込みに失敗した画像（URL の組み立てミス・アセットの置き場所ミス）
+		const brokenImages = media
+			.filter(
+				(el) => el.tagName === "IMG" && el.complete && el.naturalWidth === 0,
+			)
+			.map((el) => el.getAttribute("src") ?? "(no src)");
+		if (brokenImages.length > 0) {
+			return {
+				ok: false,
+				reason: `image failed to load: ${brokenImages.join(", ")}`,
+			};
 		}
 		// Storybook のエラーオーバーレイ。#error-message はテンプレートに常在するので
 		// 存在チェックではなく body のクラス（表示中のみ付く）を見る。

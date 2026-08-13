@@ -236,9 +236,11 @@ const config: StorybookConfig = {
       titlePrefix: 'Views',
     },
 
-    // NOTE: apps/web/src/shared/ には ui/ ディレクトリが存在しないため除外
-    //       (現状の shared 配下: api / config / hooks / lib)
-    //       UI を追加する場合はここに { directory: '../apps/web/src/shared/ui', ... } を復活させる
+    {
+      directory: '../apps/web/src/shared/ui',
+      files: '**/*.stories.@(js|jsx|ts|tsx)',
+      titlePrefix: 'Shared',
+    },
   ],
 
   addons: ['@storybook/addon-docs', '@storybook/addon-themes'],

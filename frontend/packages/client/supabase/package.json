@@ -7,7 +7,8 @@
   "exports": {
     ".": "./index.ts",
     "./client": "./client.ts",
-    "./native": "./native.ts"
+    "./native": "./native.ts",
+    "./storage-image": "./storage-image.ts"
   },
   "scripts": {
     "type-check": "tsc --noEmit"

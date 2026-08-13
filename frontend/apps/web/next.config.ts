@@ -74,6 +74,18 @@ const nextConfig: NextConfig = {
   // @see https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
   allowedDevOrigins: ['127.0.0.1'],
 
+  // Supabase Storage の画像変換 API（/storage/v1/render/image/...）は
+  // **width が 1〜2500** に制限されている。Next.js の既定 `deviceSizes` は 3840 を含むため、
+  // そのままだと srcset に「Supabase が配信できない幅」が並ぶ（400 が返る）。
+  // 末尾を 2500 に置き換え、`@workspace/client-supabase/storage-image` の
+  // IMAGE_WIDTH_LADDER（= imageSizes + deviceSizes）と一致させる。
+  // ⚠️ 値を変えたら storage-image.policy.test.ts が両者の一致を検査して落ちる。
+  // @see https://supabase.com/docs/guides/storage/serving/image-transformations#limits
+  images: {
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 2500],
+  },
+
   // PostHog リバースプロキシ: ブラウザ → PostHog のリクエストを自ドメイン(/ingest)経由にし、
   // アドブロッカー起因の計測欠損を回避する（US リージョン用の宛先）。
   // @see https://posthog.com/docs/advanced/proxy/nextjs
