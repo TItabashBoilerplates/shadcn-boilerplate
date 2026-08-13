@@ -142,6 +142,19 @@ grep -E 'AD_ID|POST_NOTIFICATIONS' android/app/src/main/AndroidManifest.xml
 | Play の文字数上限 | title(30) / shortDescription(80) / fullDescription(4000) |
 | 課金商品の整合 | productId の重複、両ストアぶんの定義、ロケールの対、benefits ≤ 4、トライアルの enum |
 
+`frontend/apps/{web,mobile}/src/features/auth/model/required-flows.test.ts` は
+**認証の必須導線**を同じ考え方で守っている（`.claude/rules/auth.md`）:
+
+| 検査 | 落ちたときに防いでいる事故 |
+|---|---|
+| ログイン画面がパスワード認証を使っている | OTP のみ → **2.1(a) でリジェクト** |
+| ログイン画面に「パスワードを忘れた方」がある | 忘れた人が復帰できない |
+| 設定画面にメール変更 / パスワード変更 / アカウント削除がある | 5.1.1(v) 違反・ユーザーがアカウントを失う |
+| `current_password` で検証している（`signInWithPassword` で代用していない） | 新セッション発行の副作用 |
+| サーバー側が `getUser()` を使っている | cookie 由来の値でページを保護してしまう |
+| Mobile クライアントに `persistSession` 等がある | 起動のたびにログインになる |
+| en / ja のキー集合が一致している | 片方だけ翻訳を足す事故 |
+
 **派生プロジェクトでは、§1〜§4 のうち自分が実装したものに対する検査を追加すること**
 （AI 同意ゲートの存在、privacy manifest の宣言、target API 36、**メール + パスワードのログイン導線**、
 **パスワード再設定・メールアドレス再設定の導線**、アカウント削除導線）。
