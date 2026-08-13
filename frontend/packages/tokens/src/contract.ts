@@ -66,6 +66,33 @@ export const BUTTON_SEMANTICS = {
   link: ['primary'],
 } as const satisfies Record<ButtonVariant, readonly string[]>
 
+export const INPUT_SIZES = ['sm', 'default', 'lg'] as const
+
+export type InputSize = (typeof INPUT_SIZES)[number]
+
+export const INPUT_DEFAULTS = {
+  size: 'default',
+} as const satisfies { size: InputSize }
+
+/**
+ * 入力欄が表現すべきセマンティックトークン。
+ *
+ * バリアントを持たない（Web の shadcn Input も単一形）ので、状態ではなく
+ * **枠・背景・文字**の 3 要素をトークンで表していることだけを担保する。
+ * `aria-invalid` / `isInvalid` の見た目は `destructive` で表す。
+ */
+export const INPUT_SEMANTICS = ['input', 'background', 'foreground'] as const
+
+/**
+ * フォーム要素の最小フォントサイズ（px）。
+ *
+ * **iOS Safari は 16px 未満の入力欄にフォーカスすると自動でズームする**ため、
+ * Web 側はモバイル幅で 16px 以上が必須（`.claude/rules/form-controls.md`）。
+ * Native の `TextInput` はズームしないが、**同じ体感サイズに揃える**ために
+ * 同じ下限を共有する。Tailwind では `text-base` = 16px。
+ */
+export const FORM_CONTROL_MIN_FONT_SIZE_PX = 16
+
 /**
  * 生のパレット色・生の白黒を検出する正規表現。
  *

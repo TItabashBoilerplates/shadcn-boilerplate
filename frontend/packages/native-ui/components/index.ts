@@ -22,6 +22,7 @@ export { GluestackUIProvider } from './gluestack-ui-provider'
 export { HStack, type HStackProps } from './hstack'
 export { createIcon, Icon, type IconProps } from './icon'
 export { IconSymbol } from './icon-symbol'
+export { Input, InputField, InputIcon, type InputProps, InputSlot } from './input'
 export { Pressable, type PressableProps } from './pressable'
 export {
   DEFAULT_SAFE_AREA_EDGES,

@@ -15,6 +15,8 @@
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/native": "^7.3.14",
     "@supabase/supabase-js": "^2.112.1",
+    "@workspace/auth": "workspace:*",
+    "@workspace/client-supabase": "workspace:*",
     "@workspace/native-ui": "workspace:*",
     "@workspace/tokens": "workspace:*",
     "expo": "~57.0.10",
