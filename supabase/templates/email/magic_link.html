@@ -1,35 +1,83 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ if eq .Data.locale "ja" }}マジックリンク{{ else }}Your Magic Link{{ end }}</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb;">
-  <div style="background-color: #ffffff; border-radius: 8px; padding: 32px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
-    {{ if eq .Data.locale "ja" }}
-    <!-- 日本語 -->
-    <h2 style="color: #1a1a1a; margin-top: 0; margin-bottom: 24px; font-size: 24px;">ログイン</h2>
-    <p style="margin-bottom: 24px;">以下のボタンをクリックしてログインしてください：</p>
-    <p style="margin: 24px 0; text-align: center;">
-      <a href="{{ .ConfirmationURL }}" style="background-color: #0070f3; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">ログイン</a>
-    </p>
-    <p style="color: #666; font-size: 14px; margin-bottom: 8px;">または、以下のワンタイムコードを入力してください：</p>
-    <p style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #1a1a1a; text-align: center; margin: 16px 0; font-family: monospace;">{{ .Token }}</p>
-    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
-    <p style="color: #999; font-size: 12px; margin: 0;">このメールに心当たりがない場合は無視してください。リンクは1時間後に無効になります。</p>
-    {{ else }}
-    <!-- English (default) -->
-    <h2 style="color: #1a1a1a; margin-top: 0; margin-bottom: 24px; font-size: 24px;">Log In</h2>
-    <p style="margin-bottom: 24px;">Click the button below to log in:</p>
-    <p style="margin: 24px 0; text-align: center;">
-      <a href="{{ .ConfirmationURL }}" style="background-color: #0070f3; color: white; padding: 12px 32px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 500;">Log In</a>
-    </p>
-    <p style="color: #666; font-size: 14px; margin-bottom: 8px;">Or enter this one-time code:</p>
-    <p style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #1a1a1a; text-align: center; margin: 16px 0; font-family: monospace;">{{ .Token }}</p>
-    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
-    <p style="color: #999; font-size: 12px; margin: 0;">If you did not request this, please ignore this email. This link will expire in 1 hour.</p>
-    {{ end }}
-  </div>
-</body>
+<!doctype html>
+<html lang="{{ if eq .Data.locale "ja" }}ja{{ else }}en{{ end }}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="x-apple-disable-message-reformatting" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="supported-color-schemes" content="light dark" />
+    <title>{{ if eq .Data.locale "ja" }}ログイン用リンク{{ else }}Your sign-in link{{ end }}</title>
+  </head>
+  <body
+    style="margin: 0; padding: 0; width: 100%; background-color: #f4f4f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;"
+  >
+    <!-- プレビューテキスト。受信箱の一覧に出る 1 行で、開封するかの判断材料になる。
+         後ろの &#8203; の連打は、本文の続きがプレビューに混ざるのを防ぐための定石。 -->
+    <div
+      style="display: none; max-height: 0; overflow: hidden; opacity: 0; mso-hide: all;"
+    >
+      {{ if eq .Data.locale "ja" }}ログイン用のリンクとコードです。{{ else }}Here's your sign-in link and code.{{ end }}&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;&#8203;
+    </div>
+
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #f4f4f5;">
+      <tr>
+        <td align="center" style="padding: 32px 16px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width: 560px;">
+            <tr>
+              <td
+                style="background-color: #ffffff; border: 1px solid #e4e4e7; border-radius: 12px; padding: 32px;"
+              >
+                <h1 style="margin: 0 0 16px; font-size: 20px; line-height: 1.4; color: #18181b; font-weight: 600;">
+                  {{ if eq .Data.locale "ja" }}ログイン{{ else }}Sign in{{ end }}
+                </h1>
+
+                <p style="margin: 0 0 16px; font-size: 15px; line-height: 1.6; color: #3f3f46;">
+                  {{ if eq .Data.locale "ja" }}{{ .Email }} でログインのリクエストを受け付けました。{{ else }}We received a sign-in request for {{ .Email }}.{{ end }}
+                </p>
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 16px;">
+                  <tr>
+                    <td bgcolor="#18181b" style="border-radius: 8px;">
+                      <a
+                        href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=magiclink"
+                        style="display: inline-block; padding: 12px 28px; font-size: 15px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px;"
+                        >{{ if eq .Data.locale "ja" }}ログインする{{ else }}Sign in{{ end }}</a
+                      >
+                    </td>
+                  </tr>
+                </table>
+                <p style="margin: 0 0 24px; font-size: 12px; line-height: 1.6; color: #71717a; word-break: break-all;">
+                  {{ if eq .Data.locale "ja" }}ボタンが動作しない場合は、次の URL を開いてください:{{ else }}If the button doesn't work, open this URL:{{ end }}<br />
+                  <span style="color: #3f3f46;">{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=magiclink</span>
+                </p>
+                <p style="margin: 0 0 8px; font-size: 13px; line-height: 1.6; color: #71717a;">
+                  {{ if eq .Data.locale "ja" }}アプリで入力する場合はこちらのコード:{{ else }}Or enter this code in the app:{{ end }}
+                </p>
+                <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 0 0 24px;">
+                  <tr>
+                    <td
+                      style="background-color: #f4f4f5; border: 1px solid #e4e4e7; border-radius: 8px; padding: 12px 20px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 28px; font-weight: 700; letter-spacing: 6px; color: #18181b;"
+                    >
+                      {{ .Token }}
+                    </td>
+                  </tr>
+                </table>
+                <div style="height: 1px; background-color: #e4e4e7; margin: 24px 0;"></div>
+                <p style="margin: 0 0 16px; font-size: 13px; line-height: 1.6; color: #71717a;">
+                  {{ if eq .Data.locale "ja" }}このリンクは一度しか使えません。心当たりがない場合は破棄してください。{{ else }}This link can only be used once. If you didn't request it, ignore this email.{{ end }}
+                </p>
+
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 24px 8px 0; text-align: center;">
+                <p style="margin: 0; font-size: 12px; line-height: 1.6; color: #71717a;">
+                  {{ if eq .Data.locale "ja" }}このメールは送信専用です。{{ else }}This message was sent from an unmonitored address.{{ end }}
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
 </html>

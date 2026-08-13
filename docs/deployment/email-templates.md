@@ -41,6 +41,21 @@ content_path = "./supabase/templates/email/invite.html"
 [auth.email.template.email_change]
 subject = "Confirm Email Change / メールアドレス変更確認"
 content_path = "./supabase/templates/email/email_change.html"
+
+[auth.email.template.reauthentication]
+subject = "Your verification code / 確認コード"
+content_path = "./supabase/templates/email/reauthentication.html"
+
+# セキュリティ通知（乗っ取りに本人が気づける唯一の手段。必ず有効化する）
+[auth.email.notification.password_changed]
+enabled = true
+subject = "Your password was changed / パスワードが変更されました"
+content_path = "./supabase/templates/email/password_changed.html"
+
+[auth.email.notification.email_changed]
+enabled = true
+subject = "Your email address was changed / メールアドレスが変更されました"
+content_path = "./supabase/templates/email/email_changed.html"
 ```
 
 対応テンプレート種別: `invite` / `confirmation` / `recovery` / `magic_link` / `email_change` / `reauthentication`。
@@ -116,14 +131,26 @@ supabase/
         ├── confirmation.html            # サインアップ確認
         ├── invite.html                  # 招待
         ├── magic_link.html              # マジックリンク
-        ├── recovery.html                # パスワードリセット
-        └── email_change.html            # メールアドレス変更
+        ├── recovery.html                # パスワードリセット（リンク + 6 桁コード）
+        ├── email_change.html            # メールアドレス変更（旧・新の両方へ届く）
+        ├── reauthentication.html        # 再認証コード
+        ├── password_changed.html        # 通知: パスワード変更
+        └── email_changed.html           # 通知: メールアドレス変更
 ```
 
 ## 注意事項
 
 - **locale未設定時**: 英語がデフォルト表示
 - **既存ユーザー**: `user_metadata.locale` がない場合は英語表示
+- **Web のリンクは `{{ .ConfirmationURL }}` ではなく token_hash 形式**
+  （`{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=...&next=...`）。
+  `@supabase/ssr` は PKCE なのでセッションをサーバー側で確立する必要があり、
+  既定の `ConfirmationURL` は URL フラグメントで返すためサーバーから読めない
+- **リンクとコードを 1 通に併記している**。スパム対策（Safe Links 等）がリンクを
+  先に開いて消費してしまう「事前消費」は Supabase 公式が Limitations として挙げる
+  既知の問題で、その回避策が `{{ .Token }}` の OTP 方式。モバイルはコードを使う
+- **外部 SMTP を使うなら email tracking を無効化する**。有効だとリンクが
+  トラッキング URL に書き換えられ、認証リンクが期待どおりに動かない（公式 Limitations）
 - **設定変更後**: ローカルは再起動（`stop && supabase-start`）、本番は `infra-deploy <app> production` で反映を確認
 
 ## トラブルシューティング

@@ -86,7 +86,7 @@ project_id = "<develop branch の BRANCH PROJECT ID>"
 
 ### 配線の正規スニペット（config.toml に記載する内容）
 
-本リポジトリには既に以下5テンプレートが存在する（`supabase/templates/email/`）。`config.toml` には次を記載して配線する:
+本リポジトリには既に以下 8 テンプレート（認証 6 + セキュリティ通知 2）が存在する（`supabase/templates/email/`）。`config.toml` には次を記載して配線する:
 
 ```toml
 [auth.email.template.confirmation]

@@ -282,16 +282,31 @@ content_path = "./supabase/templates/email/recovery.html"
 subject = "Confirm Email Change / メールアドレス変更確認"
 content_path = "./supabase/templates/email/email_change.html"
 
+# 再認証（§3.3 方式 B を使う場合）
+[auth.email.template.reauthentication]
+subject = "Your verification code / 確認コード"
+content_path = "./supabase/templates/email/reauthentication.html"
+
 # セキュリティ通知（乗っ取りにユーザー自身が気づける唯一の手段）
 [auth.email.notification.password_changed]
 enabled = true
+subject = "Your password was changed / パスワードが変更されました"
+content_path = "./supabase/templates/email/password_changed.html"
+
 [auth.email.notification.email_changed]
 enabled = true
+subject = "Your email address was changed / メールアドレスが変更されました"
+content_path = "./supabase/templates/email/email_changed.html"
 ```
 
 - **モバイルでコード方式を使うなら、`recovery` テンプレートに `{{ .Token }}` を必ず含める**
   （リンクだけのテンプレートだとアプリ側でコードを入力させられない）。
-  Web のリンク方式と両立させるなら、1 つのテンプレートに**リンクとコードの両方**を載せる。
+  本リポジトリのテンプレートは **1 通にリンクとコードの両方**を載せてあるので、
+  Web（リンク）と Mobile（コード）が同じテンプレートで両立する。
+- **Web 向けのリンクは `{{ .ConfirmationURL }}` ではなく token_hash 形式**にする:
+  `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=...`。
+  `@supabase/ssr` は PKCE なのでセッションをサーバー側で確立する必要があり、
+  既定の `ConfirmationURL` は URL フラグメントで返すためサーバーから読めない。
 - §3.3 の方式 B（再認証 nonce）を使うなら `[auth.email.template.reauthentication]` も配線する。
 - ディープリンクを使う場合は `additional_redirect_urls` にアプリスキームを登録する。
 - **漏洩パスワード保護（HaveIBeenPwned）は `config.toml` のキーではなく Dashboard / Management API
