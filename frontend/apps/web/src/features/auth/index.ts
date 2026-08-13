@@ -1,17 +1,49 @@
 /**
- * Auth Feature - Public API
+ * 認証 feature の Public API
  *
- * 認証機能のパブリックAPIです。
- * Feature Sliced Designの原則に従い、実装詳細を隠蔽し、
- * 明示的にエクスポートされたインターフェースのみを公開します。
+ * ## パスワード認証（主たるログイン手段）
+ *
+ * `.claude/rules/auth.md` により、モバイルアプリを配布するプロダクトでは
+ * メール + パスワードが必須。以下 3 つの復帰導線もセットで必須:
+ *
+ * - `ForgotPasswordForm` … ログイン画面から（忘れた人は設定画面に到達できない）
+ * - `ChangePasswordForm` … 設定画面から（現在のパスワードを検証する）
+ * - `ChangeEmailForm` … 設定画面から（認証方式を問わず必須）
+ *
+ * ## OTP（補助手段）
+ *
+ * Web のみで完結するプロダクトなら OTP を主手段にしてよい。併用も可。
  */
 
-// API (Server Actions)
-export { resendOtp, signInWithOtp, signOut, verifyOtp } from './api'
-
-// Types
-export type { AuthFormState, LoginFormProps, VerifyOTPFormProps } from './model/types'
-
-// UI Components
+export {
+  changeEmail,
+  changePassword,
+  requestPasswordReset,
+  resendOtp,
+  signInWithOtp,
+  signInWithPassword,
+  signOut,
+  signUpWithPassword,
+  updatePassword,
+  verifyOtp,
+} from './api'
+export type {
+  AuthActionState,
+  AuthFormState,
+  AuthSuccessKey,
+  AuthValidationKey,
+  LoginFormProps,
+  VerifyOTPFormProps,
+} from './model/types'
+export { AUTH_IDLE_STATE } from './model/types'
+export { AuthMessage } from './ui/AuthMessage'
+export { ChangeEmailForm } from './ui/ChangeEmailForm'
+export { ChangePasswordForm } from './ui/ChangePasswordForm'
+export { EmailField } from './ui/EmailField'
+export { ForgotPasswordForm } from './ui/ForgotPasswordForm'
 export { LoginForm } from './ui/LoginForm'
+export { PasswordField } from './ui/PasswordField'
+export { PasswordLoginForm } from './ui/PasswordLoginForm'
+export { SignUpForm } from './ui/SignUpForm'
+export { UpdatePasswordForm } from './ui/UpdatePasswordForm'
 export { VerifyOTPForm } from './ui/VerifyOTPForm'

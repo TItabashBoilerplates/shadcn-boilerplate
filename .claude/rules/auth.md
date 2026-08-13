@@ -213,7 +213,9 @@ const { error } = await supabase.auth.updateUser({ email: newEmail })
 
 - **最低長は 8 文字未満にしない**（"Anything less than 8 characters is not recommended"）。
   本リポジトリの既定は `minimum_password_length = 12`。
-- **`password_requirements` は最も強い `letters_digits_symbols`** を使う。
+- **`password_requirements` は最も強い `lower_upper_letters_digits_symbols`** を使う
+  （CLI が受け付けるのは `""` / `letters_digits` / `lower_upper_letters_digits` /
+  `lower_upper_letters_digits_symbols` の 4 つだけ。**他の値は config push が落ちる**）。
 - **漏洩パスワード保護（HaveIBeenPwned Pwned Passwords API）を有効化する**。既知の流出パスワードを
   拒否でき、credential stuffing に効く。**Pro Plan 以上**の機能なので、プランが下位のときは
   その旨をユーザーに伝える（黙って無効のままにしない）。
@@ -262,7 +264,7 @@ Server Component / Route Handler / Proxy でユーザーを判定するときは
 ```toml
 [auth]
 minimum_password_length = 12
-password_requirements   = "letters_digits_symbols"
+password_requirements   = "lower_upper_letters_digits_symbols"
 
 [auth.email]
 enable_signup          = true

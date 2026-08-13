@@ -24,7 +24,7 @@ enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
 enable_signup = true
 minimum_password_length = 12
-password_requirements = "letters_digits_symbols"  # 空文字で無制限
+password_requirements = "lower_upper_letters_digits_symbols"  # 空文字で無制限
 
 [auth.email]
 enable_signup = true
@@ -312,7 +312,7 @@ allow_dynamic_registration = false  # 企業向けは false 固定
 | `rate_limit.email_sent` | 2 | 5 | 10+（SMTP 次第） |
 | `enable_signup` | true | true | true or false（招待制なら false） |
 | `enable_anonymous_sign_ins` | 用途次第 | 用途次第 | ほぼ false |
-| `password_requirements` | - | - | `"letters_digits_symbols"` |
+| `password_requirements` | - | - | `"lower_upper_letters_digits_symbols"` |
 
 ---
 

@@ -1,44 +1,23 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@workspace/ui/components/card'
 import { LogIn } from 'lucide-react'
-import { LoginForm } from '@/features/auth'
+import { getTranslations } from 'next-intl/server'
+import { PasswordLoginForm } from '@/features/auth'
+import { AuthCard } from './AuthCard'
 
 /**
- * ログインページ
+ * ログイン画面
  *
- * パスワードレスOTP認証のログインページ
- * メールアドレスを入力してOTPコードを送信
+ * **メールアドレス + パスワード**が主たるログイン手段（`.claude/rules/auth.md`）。
+ * OTP のみのログインはストア審査 2.1(a) で落ちるため、モバイルアプリを持つ
+ * プロダクトではこの構成が必須になる。
  *
- * @example
- * ```tsx
- * // app/[locale]/auth/login/page.tsx
- * import { LoginPage } from '@/views/auth'
- *
- * export default function Page() {
- *   return <LoginPage />
- * }
- * ```
+ * 「パスワードをお忘れですか？」はフォーム内（パスワード欄の直下）にある。
  */
-export function LoginPage() {
+export async function LoginPage() {
+  const t = await getTranslations('Auth')
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <div className="flex items-center gap-2">
-            <LogIn className="h-6 w-6 text-primary" />
-            <CardTitle className="text-2xl">Sign In</CardTitle>
-          </div>
-          <CardDescription>Enter your email address to receive a one-time password</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <LoginForm />
-        </CardContent>
-      </Card>
-    </div>
+    <AuthCard icon={LogIn} title={t('signInTitle')} description={t('signInDescription')}>
+      <PasswordLoginForm />
+    </AuthCard>
   )
 }
