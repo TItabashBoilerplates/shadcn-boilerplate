@@ -329,19 +329,34 @@ their password has no self-service path back into the account without them:
 |------|----------------|------------------|---------------|
 | Change email address | **Required** | **Required** | Account settings |
 | Forgot password | — | **Required** | **The login screen** — someone who forgot the password cannot reach a signed-in screen |
-| Change password | — | **Required** | Account settings (verify the current password first) |
+| Change password | — | **Required** | Account settings (send `current_password` — see below) |
 | Delete account | Mobile: required | Mobile: required | Account settings (`.claude/rules/store-review.md`) |
 
 ```typescript
-// Mobile password reset — prefer the 6-digit code over deep links
+// Mobile password reset — prefer the 6-digit code over deep links. Link prefetching by spam
+// scanners (e.g. Safe Links) consuming {{ .ConfirmationURL }} is a documented Supabase limitation,
+// and using {{ .Token }} is the official workaround.
 await supabase.auth.resetPasswordForEmail(email)                       // recovery template needs {{ .Token }}
 await supabase.auth.verifyOtp({ email, token, type: 'recovery' })      // establishes a session
 await supabase.auth.updateUser({ password: newPassword })
+
+// Changing the password while signed in — send current_password. Do NOT "verify" the current
+// password by calling signInWithPassword: that issues a new session and is not the documented flow.
+// Requires [auth.email] secure_password_change = true (defaults to false).
+await supabase.auth.updateUser({ email, current_password: currentPassword, password: newPassword })
 
 // Email change — keep double_confirm_changes = true (default): BOTH the old and the new
 // address must confirm before the address actually changes. Say so in the UI.
 await supabase.auth.updateUser({ email: newEmail })
 ```
+
+Also required: set password strength (`minimum_password_length` ≥ 8, `password_requirements`) plus
+leaked-password protection (HaveIBeenPwned, Pro plan and above), and surface `WeakPasswordError`
+from `signInWithPassword` into the reset flow — otherwise existing users hit a dead end the day you
+tighten the rules. On mobile, configure the client with a storage adapter, `persistSession: true`,
+`autoRefreshToken: true` and `detectSessionInUrl: false`, or the session is lost on every launch.
+Server-side, authorize with `getUser()` — never `getSession()`, whose values "may not be authentic"
+when storage is request cookies.
 
 Never build auth yourself; never disable `double_confirm_changes`; never reveal whether an address
 is registered in the forgot-password response.

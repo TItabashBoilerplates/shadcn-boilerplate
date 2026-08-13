@@ -40,6 +40,10 @@ Google Play も同様にテスト用資格情報を求める。OAuth / パスキ
 ```ts
 await supabase.auth.signInWithPassword({ email, password })
 
+// パスワード変更は current_password を同送する（signInWithPassword での「検証」は誤り）
+// [auth.email] secure_password_change = true（既定 false）を必ず有効化
+await supabase.auth.updateUser({ email, current_password: currentPassword, password: newPassword })
+
 // パスワード再設定（Mobile はディープリンクより 6 桁コード方式を既定に）
 await supabase.auth.resetPasswordForEmail(email)                    // recovery テンプレートに {{ .Token }}
 await supabase.auth.verifyOtp({ email, token, type: 'recovery' })
@@ -55,5 +59,7 @@ await supabase.auth.updateUser({ email: newEmail })
 - 審査用のバックドア・固定コードを仕込む
 - メールアドレス再設定の導線が無い / 「パスワードを忘れた方」をログイン画面に置かない
 - `double_confirm_changes = false` にする
-- 現在のパスワードを検証せずに `updateUser({ password })` する
+- 現在のパスワードを検証せずに `updateUser({ password })` する / 検証を `signInWithPassword` で代用する
+- サーバー側で `getSession()` の結果を信じてページを保護する（`getUser()` を使う）
+- Mobile で `storage` / `persistSession` を設定せず、起動のたびにログインさせる
 - パスワード再設定の応答でメールアドレスの登録有無を漏らす

@@ -127,27 +127,64 @@ const { data, error } = await supabase.auth.verifyOtp({ email, token, type: 'rec
 await supabase.auth.updateUser({ password: newPassword })
 ```
 
-> **なぜモバイルはコード方式を既定にするか**: ディープリンク（`redirectTo` にアプリスキーム）方式は、
-> スキーム登録・`additional_redirect_urls`・メールクライアントのリンクプレビューによる**リンクの
-> 事前消費**など、環境要因で無言に壊れる箇所が多い。コード方式は経路が 1 本で、審査担当者も追える。
-> ディープリンクを採用する場合は `expo-linking` の設定と `additional_redirect_urls` への登録を
-> セットで行い、実機で必ず往復を確認すること。
+> **なぜモバイルはコード方式を既定にするか**: ディープリンク方式はスキーム登録・
+> `additional_redirect_urls` など環境要因で無言に壊れる箇所が多い。加えて**リンクの事前消費は
+> Supabase が公式に "Limitations" として挙げている既知の問題**である:
+>
+> > Certain email providers may have spam detection or other security features that prefetch URL
+> > links from incoming emails (e.g. Safe Links in Microsoft Defender for Office 365). In this
+> > scenario, the `{{ .ConfirmationURL }}` sent will be consumed instantly which leads to a
+> > **"Token has expired or is invalid"** error.
+>
+> 公式が挙げる回避策の 1 つ目がまさに「`{{ .Token }}` を使った OTP 方式にする」ことなので、
+> コード方式は妥協ではなく**公式の推奨回避策**にあたる。ディープリンクを採用する場合は
+> `expo-linking` の設定と `additional_redirect_urls` への登録をセットで行い、実機で往復を確認する。
+>
+> **外部 SMTP（Resend 等）を使うなら "email tracking" を無効にする**。有効だとリンクが
+> トラッキング URL に書き換えられ、認証リンクが期待どおりに動かない（これも公式の Limitations）。
 
 **「パスワードを忘れた」の応答はメールの存在を漏らさない**。送信できてもできなくても
 「登録があればメールを送りました」と表示する（ユーザー列挙攻撃の防止）。
 
 ### 3.3 パスワードの変更（ログイン中）
 
-```ts
-// 変更前に必ず現在のパスワードを検証する（本人以外が端末を触っている場合の防御）
-const { error: verifyError } = await supabase.auth.signInWithPassword({
-  email: currentUser.email,
-  password: currentPassword,
-})
-if (verifyError) { /* ログ出力のうえエラーとして扱う */ }
+**現在のパスワードの検証は Supabase 側の機能で行う。`signInWithPassword` を「検証目的で」呼ぶのは誤り**
+（新しいセッションが発行される副作用があり、公式が示す手順でもない）。方式は 2 つある。
 
-const { error } = await supabase.auth.updateUser({ password: newPassword })
+**方式 A（既定・推奨）— `current_password` を同時に送る**:
+
+```ts
+const { data, error } = await supabase.auth.updateUser({
+  email: currentUser.email,
+  current_password: currentPassword,   // Supabase 側が正しさを検証してから更新する
+  password: newPassword,
+})
 ```
+
+> 公式: 「Enforce that users supply their current password when trying to change the password.
+> When enabled, the password change request will **validate that the current password is correct**
+> before updating the user's password.」
+> **`[auth.email] secure_password_change = true`（既定 `false`）を必ず有効化する**（§4）。
+> 有効化しないと `current_password` を送らない変更が通ってしまう。
+
+**方式 B — 再認証 nonce（`secure_password_change` ではなく再認証を要求する設定を使う場合）**:
+
+```ts
+const { error } = await supabase.auth.reauthenticate()   // メールで nonce（6 桁）が届く
+// ユーザーが入力した nonce を添えて変更する
+const { data, error: updateError } = await supabase.auth.updateUser({
+  email: currentUser.email,
+  nonce,
+  password: newPassword,
+})
+```
+
+> **注意**: この設定は「**直近 24 時間以内に作成されたセッション**なら再認証不要」という緩和がある
+> （公式: "A user is considered recently logged in if the session was created within the last 24 hours."）。
+> つまり**再認証だけに頼ると、ログイン直後は現在のパスワードを聞かずに変更できてしまう**。
+> 常に現在のパスワードを要求したいなら**方式 A を使う**。
+> 再認証を使うなら `[auth.email.template.reauthentication]` テンプレートの配線も必要
+> （既定の件名が `{{ .Token }} is your verification code` であることからも分かるとおりコード方式）。
 
 - 変更成功後は**他端末のセッションを落とすか**を設計として決める（`signOut({ scope: 'others' })` 等）。
   黙って全端末を維持するのも全端末を落とすのも、どちらも「決めていない」状態にしない。
@@ -170,6 +207,51 @@ const { error } = await supabase.auth.updateUser({ email: newEmail })
 - `users` テーブル等にメールアドレスを複製している場合、**`auth.users` の確定と同期させる**
   （確定前に自前テーブルを書き換えない）。
 
+### 3.5 パスワード強度と漏洩パスワード保護
+
+公式の推奨（[Password security](https://supabase.com/docs/guides/auth/password-security)）に従う。
+
+- **最低長は 8 文字未満にしない**（"Anything less than 8 characters is not recommended"）。
+  本リポジトリの既定は `minimum_password_length = 12`。
+- **`password_requirements` は最も強い `letters_digits_symbols`** を使う。
+- **漏洩パスワード保護（HaveIBeenPwned Pwned Passwords API）を有効化する**。既知の流出パスワードを
+  拒否でき、credential stuffing に効く。**Pro Plan 以上**の機能なので、プランが下位のときは
+  その旨をユーザーに伝える（黙って無効のままにしない）。
+- **要件を強化しても既存ユーザーは古いパスワードのままサインインできる**が、その際
+  **`signInWithPassword` が `WeakPasswordError` を返す**。**ログイン画面はこのエラーを握りつぶさず**、
+  「パスワードの再設定が必要」という導線（§2 の #2）へ誘導すること。ここを実装し忘れると、
+  要件強化の日から既存ユーザーがログイン画面で行き止まりになる。
+
+### 3.6 クライアント設定（モバイルはここを外すと毎回ログインになる）
+
+**Mobile（Expo / RN）** — セッション永続化はストレージアダプタを渡さないと機能しない:
+
+```ts
+// ネイティブは expo-secure-store（暗号化）、Web ビルドは AsyncStorage
+export const supabase = createClient(
+  process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
+  process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? '',
+  {
+    auth: {
+      storage: SecureStoreAdapter,
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: false,   // RN に URL コールバックは無い
+    },
+  },
+)
+```
+
+**Server（Next.js / `@supabase/ssr`）** — **`getSession()` をサーバー側の認可判断に使わない**:
+
+> 公式（`auth.getSession()` リファレンス）: 「This method loads values directly from the storage
+> attached to the client. If that storage is based on request cookies for example, the values in it
+> **may not be authentic** and therefore it's strongly advised against using this method and its
+> results in such circumstances. **Use GoTrueClient.getUser instead.**」
+
+Server Component / Route Handler / Proxy でユーザーを判定するときは **`getUser()`**（または
+`getClaims()`）を使う。`getSession()` の戻り値でページを保護しない。
+
 ---
 
 ## 4. `config.toml` 側の要件（派生プロジェクトで `config.toml` を作る時点から適用）
@@ -183,10 +265,11 @@ minimum_password_length = 12
 password_requirements   = "letters_digits_symbols"
 
 [auth.email]
-enable_signup        = true
-enable_confirmations = true    # 本番は必ず true（ローカルのみ false 可）
-double_confirm_changes = true  # 既定 true。落とさない
-max_frequency        = "1m"
+enable_signup          = true
+enable_confirmations   = true   # 本番は必ず true（ローカルのみ false 可）
+double_confirm_changes = true   # 既定 true。落とさない（旧・新の両方で確認）
+secure_password_change = true   # 既定 false。パスワード変更に current_password を必須化（§3.3 方式 A）
+max_frequency          = "1m"
 
 # パスワード + メール変更の導線に必要なテンプレート（パスは repo root 基準）
 [auth.email.template.recovery]
@@ -207,7 +290,10 @@ enabled = true
 - **モバイルでコード方式を使うなら、`recovery` テンプレートに `{{ .Token }}` を必ず含める**
   （リンクだけのテンプレートだとアプリ側でコードを入力させられない）。
   Web のリンク方式と両立させるなら、1 つのテンプレートに**リンクとコードの両方**を載せる。
+- §3.3 の方式 B（再認証 nonce）を使うなら `[auth.email.template.reauthentication]` も配線する。
 - ディープリンクを使う場合は `additional_redirect_urls` にアプリスキームを登録する。
+- **漏洩パスワード保護（HaveIBeenPwned）は `config.toml` のキーではなく Dashboard / Management API
+  の設定**（Pro Plan 以上）。`config.toml` に無いからといって「対応不要」と判断しない。
 - 本ファイルの設定は `supabase config push` で反映する。`[remotes.<name>]` の宣言が無いと
   **無言でスキップされる**（`.claude/rules/supabase-config.md` §1.5）。
 
@@ -271,6 +357,11 @@ if (email === 'review@example.com' && code === '000000') { /* ... */ }
 
 // ❌ double_confirm_changes = false にして旧アドレスの確認を省く（乗っ取り経路）
 // ❌ 現在のパスワードを検証せずに updateUser({ password }) する
+// ❌ 現在のパスワードの「検証」を signInWithPassword で代用する（新セッションが発行される副作用。
+//    正しくは updateUser({ current_password, password }) + secure_password_change = true）
+// ❌ サーバー側で getSession() の結果を信じてページ・データを保護する（getUser() を使う）
+// ❌ Mobile で storage / persistSession を設定せず、起動のたびにログインさせる
+// ❌ パスワード要件を強化したのに、ログイン画面で WeakPasswordError を握りつぶす（既存ユーザーが詰む）
 // ❌ パスワード再設定で「そのメールアドレスは登録されていません」と返す（ユーザー列挙）
 // ❌ 認証・セッション・パスワードハッシュを自作する
 // ❌ 確定前に自前の users テーブルのメールアドレスを書き換える
@@ -285,11 +376,14 @@ if (email === 'review@example.com' && code === '000000') { /* ... */ }
 | 1 | モバイルがある（出す予定がある）なら、メール + パスワードだけでログインし切れるか |
 | 2 | メールアドレス再設定が設定画面にあるか（OTP / パスワード どちらでも） |
 | 3 | 「パスワードを忘れた方」が**ログイン画面**から到達できるか |
-| 4 | 設定画面にパスワード変更があり、現在のパスワードを検証しているか |
+| 4 | 設定画面にパスワード変更があり、`updateUser({ current_password, password })` + `secure_password_change = true` で検証しているか（`signInWithPassword` での代用になっていないか） |
 | 5 | メール変更が旧・新の両方確認（`double_confirm_changes`）で、UI にもそう書いてあるか |
 | 6 | `recovery` / `email_change` テンプレートが配線され、モバイルなら `{{ .Token }}` が入っているか |
 | 7 | パスワード変更・メール変更のセキュリティ通知が有効か |
 | 8 | 5 状態（初期 / 送信中 / 成功 / 失敗 / レート制限）の UI があるか |
+| 8b | パスワード強度設定（`minimum_password_length` ≥ 8 / `password_requirements`）と漏洩パスワード保護を設定し、ログイン画面で `WeakPasswordError` を再設定導線に繋げているか |
+| 8c | Mobile クライアントに `storage` / `persistSession` / `autoRefreshToken` / `detectSessionInUrl: false` を設定したか |
+| 8d | サーバー側の認可判断が `getUser()`（`getSession()` ではない）になっているか |
 | 9 | 文言が en / ja 両方あるか |
 | 10 | api / model に単体テスト、ui に Storybook、E2E にメール往復があるか |
 | 11 | モバイルならアカウント削除導線があるか、審査メモの資格情報が有効か |
@@ -313,6 +407,9 @@ if (email === 'review@example.com' && code === '000000') { /* ... */ }
 - [App Store Review Guidelines 2.1 App Completeness](https://developer.apple.com/app-store/review/guidelines/#app-completeness) — demo account / login credentials
 - [App Store Review Guidelines 5.1.1(v)](https://developer.apple.com/app-store/review/guidelines/#data-collection-and-storage) — アプリ内アカウント削除
 - [Supabase: Password-based Auth](https://supabase.com/docs/guides/auth/passwords) — `signUp` / `signInWithPassword` / `resetPasswordForEmail` / `updateUser`
-- [Supabase: Auth email templates](https://supabase.com/docs/guides/local-development/customizing-email-templates) — `recovery` / `email_change` / 通知テンプレート・`{{ .Token }}`
+- [Supabase: Password security](https://supabase.com/docs/guides/auth/password-security) — `current_password` / `reauthenticate()` + `nonce`・24 時間の緩和・強度設定・HaveIBeenPwned・`WeakPasswordError`
+- [Supabase: Auth email templates](https://supabase.com/docs/guides/auth/auth-email-templates) — 変数一覧と **Limitations**（リンクの事前消費 / email tracking）
+- [Supabase: Auth email templates（ローカル設定）](https://supabase.com/docs/guides/local-development/customizing-email-templates) — `recovery` / `email_change` / 通知テンプレート・`{{ .Token }}`
+- [Supabase: `auth.getSession()` リファレンス](https://supabase.com/docs/reference/javascript/auth-getsession) — サーバー側では `getUser()` を使う根拠
 - [Supabase CLI config: `auth.email.double_confirm_changes`](https://supabase.com/docs/guides/local-development/cli/config) — 既定 `true`（旧・新の両方で確認）
 - `.claude/rules/store-review.md` / `.claude/rules/supabase-config.md` / `.claude/rules/supabase-first.md` / `.claude/skills/supabase/`

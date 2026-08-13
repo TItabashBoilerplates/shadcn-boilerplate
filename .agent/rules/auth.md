@@ -53,9 +53,26 @@ await supabase.auth.updateUser({ email: newEmail })
 ```
 
 - Web の再設定は PKCE（`/auth/confirm` の Route Handler で `verifyOtp({ type, token_hash })`）
-- パスワード変更前に `signInWithPassword` で現在のパスワードを検証する
+- **パスワード変更は `current_password` を同送する**（`signInWithPassword` での代用は誤り。
+  新しいセッションが発行される副作用があり公式手順でもない）:
+
+```ts
+// [auth.email] secure_password_change = true（既定 false）を必ず有効化する
+await supabase.auth.updateUser({
+  email: currentUser.email,
+  current_password: currentPassword,
+  password: newPassword,
+})
+```
+
 - `[auth.email.notification.password_changed]` / `email_changed` を有効化して通知を出す
 - 「パスワードを忘れた」の応答でメールアドレスの登録有無を漏らさない
+- **Mobile クライアントは `storage`（expo-secure-store）/ `persistSession: true` /
+  `autoRefreshToken: true` / `detectSessionInUrl: false` を設定**（未設定だと毎回ログインになる）
+- **サーバー側の認可判断は `getUser()`**。`getSession()` の結果でページを保護しない
+  （公式: cookie ベースのストレージでは "may not be authentic"）
+- パスワード強度（`minimum_password_length` ≥ 8 / `password_requirements`）と漏洩パスワード保護
+  （HaveIBeenPwned・Pro Plan 以上）を設定し、ログイン画面で `WeakPasswordError` を再設定導線へ繋ぐ
 
 ## 禁止
 
@@ -64,4 +81,5 @@ await supabase.auth.updateUser({ email: newEmail })
 - メールアドレス再設定の導線が無い
 - 「パスワードを忘れた方」をログイン後の画面にだけ置く
 - `double_confirm_changes = false` にして旧アドレスの確認を省く
-- 現在のパスワードを検証せずに `updateUser({ password })` する
+- 現在のパスワードを検証せずに `updateUser({ password })` する / 検証を `signInWithPassword` で代用する
+- サーバー側で `getSession()` の結果を信じてページ・データを保護する（`getUser()` を使う）

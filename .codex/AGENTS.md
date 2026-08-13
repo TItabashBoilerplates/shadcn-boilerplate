@@ -88,7 +88,7 @@ OTP / Magic Link を唯一の手段にしてはならない**（OAuth / パス�
 |---|---|---|---|
 | メールアドレス再設定 | 必須 | 必須 | 設定 / アカウント画面 |
 | パスワードを忘れた方 | — | 必須 | **ログイン画面**（忘れた人はログイン後の画面に到達できない） |
-| パスワード変更 | — | 必須 | 設定 / アカウント画面（現在のパスワードを検証してから） |
+| パスワード変更 | — | 必須 | 設定 / アカウント画面（`current_password` を同送。下記参照） |
 | アカウント削除 | モバイルは必須 | モバイルは必須 | 設定 / アカウント画面 |
 
 ```ts
@@ -97,10 +97,25 @@ await supabase.auth.resetPasswordForEmail(email)                    // recovery 
 await supabase.auth.verifyOtp({ email, token, type: 'recovery' })   // セッション確立
 await supabase.auth.updateUser({ password: newPassword })
 
+// ログイン中のパスワード変更は current_password を同送する
+// （signInWithPassword での「検証」は誤り = 新セッションが発行される副作用があり公式手順でもない）
+// [auth.email] secure_password_change = true（既定 false）を必ず有効化
+await supabase.auth.updateUser({ email, current_password: currentPassword, password: newPassword })
+
 // メールアドレス変更。double_confirm_changes = true（既定）を落とさない
 // → 旧・新の両アドレスで確認が完了するまで変わらない。UI にもそう書く
 await supabase.auth.updateUser({ email: newEmail })
 ```
+
+あわせて必須:
+
+- パスワード強度（`minimum_password_length` ≥ 8 / `password_requirements`）＋ 漏洩パスワード保護
+  （HaveIBeenPwned・Pro Plan 以上）。要件強化後は `signInWithPassword` が `WeakPasswordError` を
+  返すので、ログイン画面でこれを再設定導線へ繋ぐ（放置すると既存ユーザーが詰む）
+- Mobile クライアントは `storage` / `persistSession: true` / `autoRefreshToken: true` /
+  `detectSessionInUrl: false`（未設定だと起動のたびにログインになる）
+- サーバー側の認可判断は **`getUser()`**。`getSession()` は cookie ストレージでは
+  "may not be authentic" なのでページ保護に使わない
 
 認証は自作しない / `double_confirm_changes` を無効化しない / パスワード再設定の応答で
 メールアドレスの登録有無を漏らさない。詳細は `.claude/rules/auth.md`。
