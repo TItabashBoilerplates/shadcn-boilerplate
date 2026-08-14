@@ -202,6 +202,7 @@ script は次の順で安全を担保している。**手で真似するとき�
 **その部分もコマンドになっている**ので、手で画面を開かないこと。
 
 ```bash
+store-preflight                    # ★ 初回。人が画面で入力するしかない申告を値つきで出す（資格情報不要）
 store-status                       # ★ まずこれ。両ストアの状態と「次の一手」（書き込まない）
 
 # iOS
@@ -223,6 +224,20 @@ store-release-play --track production --halt                          # ロー�
 | **外部 TestFlight はグループに入れても届かない** | Beta App Review の通過が必要。画面上は入っているように見える |
 | **審査中の版を編集すると審査が取り下がる** | `store-submit-ios` は状態を見て危険なら実行前に落ちる（判断は `release-plan.mjs`・テスト済み） |
 | **`--rollout` の 0 と 1 は割合ではない** | 全公開は `--rollout 1`（= `completed`）、停止は `--halt` |
+
+### 「API が無い」と思い込まない（自動化できるものを人にやらせない）
+
+| 項目 | API | 手段 |
+|---|---|---|
+| **年齢レーティング** | ✅ `ageRatingDeclarations` | `store.config.js` の `apple.advisory` → `mobile-metadata`。**2026-01-31 以降、未回答だと提出できない** |
+| **Play の Data safety** | ✅ `applications.dataSafety` | `store-push-data-safety`（CSV を POST）。**edits に乗らず即時反映・取り消し不可** |
+| **Play のテスター登録** | ✅ `edits.testers` | Google グループ単位 |
+| **App Privacy（Apple）** | ❌ | 画面。fastlane の upload は**非公式 API + Apple ID パスワード**なので使わない |
+| **EU DSA トレーダーステータス** | ❌ | 画面。未申告だと**EU 27 か国で販売停止**（審査では弾かれない） |
+| **Play のコンテンツレーティング / 対象年齢** | ❌ | 画面 |
+
+**`store-preflight` が「何を・どこで・どんな値で」入力するかを出す**ので、
+❌ の項目はその出力をそのままユーザーに提示する。
 
 **手順・状態遷移表・人でしかできない作業は
 [`docs/store/release-runbook.md`](../../../docs/store/release-runbook.md) が正本。**

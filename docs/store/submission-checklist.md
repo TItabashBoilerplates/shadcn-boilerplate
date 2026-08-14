@@ -20,13 +20,23 @@
 | 4 | Play Console でアプリを作成し、**1 度は内部テストへ提出** | 掲載情報 API が対象アプリを見つけられない |
 | 5 | App Store Connect API キー（Key ID / Issuer ID / .p8）の発行 | ストア反映スクリプトが動かない |
 | 6 | Play の**サービスアカウント**を作り、Play Console の Users & Permissions で権限を付与 | 鍵は正しいのに 403。**GCP の IAM ロールでは付かない** |
-| 7 | **App Privacy ラベル（Apple）/ Data safety（Play）**、年齢レーティング | **どちらも API が無い**。画面で入力しないと提出できない |
+| 7 | **App Privacy ラベル（Apple）** | **API が無い**。ASC の画面で入力しないと提出できない |
 | 8 | **EU DSA トレーダーステータスの申告（Apple）** | 2025-02-17 以降、**新規提出にも更新にも必須**。**審査では弾かれず**、未申告だと **EU 27 か国で販売停止**になる。EU に出さない場合も「非トレーダー」として申告が要る |
-| 9 | **Play のクローズドテスト（12 人 × 14 日間の継続参加）** | **2023-11-13 以降に作成した個人アカウント**のみ対象。本番公開の前提条件。却下理由の最多は「テスト参加が不十分」＝**インストールされただけで使われていない**こと。組織アカウントは対象外 |
+| 9 | **Play のコンテンツレーティング / 対象年齢** | **API が無い**。Play Console の「アプリのコンテンツ」で回答する |
+| 10 | **Play のクローズドテスト（12 人 × 14 日間の継続参加）** | **2023-11-13 以降に作成した個人アカウント**のみ対象。本番公開の前提条件。却下理由の最多は「テスト参加が不十分」＝**インストールされただけで使われていない**こと。組織アカウントは対象外 |
 
-> 輸出コンプライアンスは `app.json` の `ios.config.usesNonExemptEncryption` で
-> **自動化済み**（毎回の質問が消える）。消すと版が `WAITING_FOR_EXPORT_COMPLIANCE` で
-> 止まるので、`release-plan.test.ts` が検査している。
+```bash
+store-preflight   # ★ 上記を「何を・どこで・どんな値で」入力するか具体値つきで出す
+                  #    資格情報も通信も要らないので、アカウントを作る前に実行できる
+```
+
+> **以下は API があるので手作業にしないこと**（よく誤解される）:
+> - **年齢レーティング** → `store.config.js` の `apple.advisory` + `mobile-metadata`。
+>   **2026-01-31 以降、未回答だとアップデートを提出できない**
+> - **Data safety（Play）** → `store-push-data-safety`（CSV を公式 API へ POST）
+> - **Play のテスター登録** → `edits.testers`（Google グループ単位）
+> - **輸出コンプライアンス** → `app.json` の `ios.config.usesNonExemptEncryption`。
+>   消すと版が `WAITING_FOR_EXPORT_COMPLIANCE` で止まるので `release-plan.test.ts` が検査
 
 5 と 6 の資格情報は **Doppler に登録**する（`.claude/rules/mcp-doppler.md`。値はチャットにも
 ログにも出さない）。キー名は `APPLE_API_KEY` / `APPLE_API_ISSUER` / `APPLE_API_KEY_P8` /

@@ -67,6 +67,49 @@ module.exports = () => {
       copyright: `${new Date().getFullYear()} Your Company`,
       // https://developer.apple.com/app-store/categories/ の値を使う
       categories: ['PRODUCTIVITY'],
+      /**
+       * 年齢レーティングのアンケート（App Store Connect の Age Rating）。
+       *
+       * **省略しない。** 2026-01-31 以降、年齢レーティングの質問に答えていないと
+       * **アップデートを提出できない**。ここに書いておけば `mobile-metadata`
+       * （= `eas metadata:push`）が App Store Connect の
+       * `ageRatingDeclarations` へ反映するので、画面で答える必要は無い。
+       *
+       * 値は下記が「最も制限のない回答」。**実装に合わせて正直に答えること**
+       * （申告と実態が食い違うと審査で落ちる。とくにユーザー投稿・チャット・
+       * Web ビューを持つアプリは NONE のままにしない）。
+       *
+       * 各項目は 'NONE' / 'INFREQUENT_OR_MILD' / 'FREQUENT_OR_INTENSE'。
+       *
+       * ⚠️ **EAS Metadata が扱えない新しい申告がある。** App Store Connect API には
+       * `socialMedia` / `socialMediaAgeRestricted` / `ageAssurance` /
+       * `userGeneratedContent` / `messagingAndChat` / `lootBox` 等が増えているが、
+       * EAS Metadata のスキーマは未対応。とくに **2026 年 9 月以降は
+       * 「ソーシャル機能の有無」の申告が提出の必須条件**になるため、
+       * 該当する場合は App Store Connect の画面で追加回答が要る
+       * （`store-preflight` が案内する）。
+       */
+      advisory: {
+        alcoholTobaccoOrDrugUseOrReferences: 'NONE',
+        contests: 'NONE',
+        gamblingSimulated: 'NONE',
+        horrorOrFearThemes: 'NONE',
+        matureOrSuggestiveThemes: 'NONE',
+        medicalOrTreatmentInformation: 'NONE',
+        profanityOrCrudeHumor: 'NONE',
+        sexualContentGraphicAndNudity: 'NONE',
+        sexualContentOrNudity: 'NONE',
+        violenceCartoonOrFantasy: 'NONE',
+        violenceRealistic: 'NONE',
+        violenceRealisticProlongedGraphicOrSadistic: 'NONE',
+        gambling: false,
+        // Web ビューで任意の URL を開けるなら true にする（申告漏れが多い）
+        unrestrictedWebAccess: false,
+        // Kids カテゴリに出す場合のみ 'FIVE_AND_UNDER' 等を設定する
+        kidsAgeBand: null,
+        ageRatingOverride: 'NONE',
+        koreaAgeRatingOverride: 'NONE',
+      },
       info: {
         // ── 主ロケール ────────────────────────────────────────────────────
         ja: {

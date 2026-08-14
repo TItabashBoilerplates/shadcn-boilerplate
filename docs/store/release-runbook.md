@@ -13,6 +13,12 @@
 ## 0. まず状態を見る（迷ったら必ずこれ）
 
 ```bash
+store-preflight   # 人が画面で入力するしかない項目（初回・資格情報不要）
+store-status      # 今どこまで進んでいるか（毎回・書き込まない）
+```
+
+
+```bash
 store-status            # 人が読む形
 store-status --json     # エージェント / CI 用
 ```
@@ -177,8 +183,37 @@ store-release-play --track production --halt           # 進行中のロール�
 
 ## 4. 人でしかできないこと（公開 API が無い）
 
-**ここは自動化できない。** エージェントは「できない」と報告して人に依頼すること。
-黙って進めても、エラーにならず「反映されない」形で失敗する。
+```bash
+store-preflight          # ★ 何を・どこで・どんな値で入力するかを一覧で出す
+store-preflight --json   # 機械が読む形
+```
+
+**資格情報も通信も要らない**ので、ストアのアカウントを作る前でも実行できる。
+以下はその要約で、**実際の作業時は `store-preflight` の出力に従うこと**
+（依存関係から「申告が要りそうなデータ種別」まで出る）。
+
+### 4.0 「API が無い」の正誤表（思い込みが多いので必ず確認する）
+
+**自動化できるのに手作業だと思われているもの**が多い。下表の左側は**すべて自動化済み**。
+
+| 項目 | API | 本リポジトリでの手段 |
+|---|---|---|
+| **年齢レーティング** | ✅ `ageRatingDeclarations` | `mobile-metadata`（`store.config.js` の `apple.advisory`） |
+| **Play の Data safety** | ✅ `applications.dataSafety`（CSV を POST） | `store-push-data-safety` |
+| **Play のテスター登録** | ✅ `edits.testers`（Google グループ単位） | Play Console か API |
+| **輸出コンプライアンス** | ✅ Info.plist | `app.json` の `ios.config.usesNonExemptEncryption` |
+| **審査提出・TestFlight・ロールアウト** | ✅ | §2 / §3 |
+| ── ここから下は**本当に API が無い** ── | | |
+| **App Privacy（Apple のラベル）** | ❌ | 画面で回答（§4.2） |
+| **EU DSA トレーダーステータス** | ❌ | 画面で回答（§4.2） |
+| **Play のコンテンツレーティング / 対象年齢** | ❌ | 画面で回答（§4.2） |
+| **有料 App 契約 / デベロッパー認証** | ❌ | 画面で締結（§4.1） |
+
+> **App Privacy について**: fastlane には
+> `upload_app_privacy_details_to_app_store` があるが、**公式 API ではなく**
+> Apple ID のパスワードと 2FA セッションを要求する非公式エンドポイントを使う
+> （fastlane 自身が「App Store Connect API Key は使えない」と明記している）。
+> 本リポジトリは API キーだけで完結させる方針なので採用しない。
 
 ### 4.1 一度だけ（アカウント初期設定）
 
@@ -191,21 +226,50 @@ store-release-play --track production --halt           # 進行中のロール�
 | 5 | ASC API キー（Key ID / Issuer ID / .p8）発行 | 全スクリプトが動かない |
 | 6 | Play のサービスアカウント作成 + **Play Console の Users & Permissions で権限付与** | 鍵は正しいのに 403。**GCP の IAM では付かない** |
 
-### 4.2 申告フォーム（API が存在しない）
+### 4.2 申告フォーム（API が存在しないもの）
 
-| 申告 | 状況 |
+**入力する値の詳細は `store-preflight` が出す。** ここは概要のみ。
+
+| 申告 | 場所と要点 |
 |---|---|
-| **App Privacy（Apple のプライバシーラベル）** | **API 無し。**App Store Connect の画面で入力する。未入力だと提出できない |
-| **Data safety（Play）** | **API 無し。**Play Console の画面で入力する |
-| **EU DSA トレーダーステータス** | **API 無し。**2025-02-17 以降、**新規提出・更新のいずれにも必須**。未申告だと**EU 27 か国で販売停止**になる。EU に出さない場合も「非トレーダー」として申告が要る |
-| 年齢レーティング | ASC は API があるが、内容は事業判断。Play は画面で回答 |
-| 輸出コンプライアンス | **`app.json` で自動化済み**（§5） |
+| **App Privacy（Apple）** | ASC → 対象アプリ → App Privacy。**未入力だと提出できない**。収集するデータ種別・用途・ユーザーとの紐付け・トラッキングの有無を答える。`ios/PrivacyInfo.xcprivacy`（privacy manifest）とは**別物で両方必要** |
+| **EU DSA トレーダーステータス** | ASC → Business → Agreements → Compliance。**2025-02-17 以降、新規提出・更新のいずれにも必須**。未申告だと**EU 27 か国で販売停止**。**審査では弾かれない**ので気づけない。EU に出さない場合も「非トレーダー」として申告が要る。権限は **Account Holder / Admin** |
+| **Play のコンテンツレーティング（IARC）** | Play Console → ポリシー → アプリのコンテンツ。アンケート形式。未回答だと公開できない |
+| **Play の対象年齢・その他の申告** | 同上。広告の有無 / ニュース / 金融 / 健康 の該当有無 |
+| ~~Data safety（Play）~~ | **API がある** → `store-push-data-safety`（§4.3） |
+| ~~年齢レーティング（Apple）~~ | **API がある** → `store.config.js` の `apple.advisory` + `mobile-metadata` |
+| ~~輸出コンプライアンス~~ | **`app.json` で自動化済み**（§5） |
+
+> ⚠️ **年齢レーティングには EAS Metadata が扱えない新項目がある。**
+> ASC API には `socialMedia` / `ageAssurance` / `userGeneratedContent` /
+> `messagingAndChat` 等が増えているが EAS のスキーマは未対応で、
+> **2026 年 9 月以降は「ソーシャル機能の有無」の申告が提出の必須条件**になる。
+> 該当するアプリは ASC の画面で追加回答が要る。
+
+### 4.3 Data safety は CSV で自動化する（API あり）
+
+```bash
+store-push-data-safety --dry-run
+store-push-data-safety
+```
+
+**CSV の初回取得だけ画面操作が要る**（以降はそのファイルが正本になる）:
+
+1. Play Console → 対象アプリ → ポリシー → アプリのコンテンツ → データセーフティ
+2. 右上の「**CSV にエクスポート**」（未回答ならテンプレートを取得）
+3. `frontend/apps/mobile/store-listing/play-data-safety.csv` に置く
+
+| 注意 | 内容 |
+|---|---|
+| **edits に乗らない** | このエンドポイントだけトランザクション外。**成功した瞬間に反映**され、commit も rollback も無い |
+| **申告は実装と一致させる** | Google は APK と SDK の挙動を申告と突き合わせる。食い違うと**アプリ削除・アカウント警告**。SDK を足したら CSV も更新する |
+| CSV を Git に置く意味 | 画面で答えると誰がいつ何を変えたか追えない。ファイルなら履歴が残る |
 
 ### 4.3 期間が要る要件
 
 | 要件 | 内容 |
 |---|---|
-| **Play のクローズドテスト（12 人 × 14 日）** | **2023-11-13 以降に作成した個人アカウント**は、本番公開の前に「12 人以上のテスターが 14 日間**継続して**参加するクローズドテスト」が必須。組織アカウントは対象外。最頻出の却下理由は「テスト参加が不十分」＝**インストールだけで使われていない**こと |
+| **Play のクローズドテスト（12 人 × 14 日）** | **2023-11-13 以降に作成した個人アカウント**は、本番公開の前に「12 人以上のテスターが 14 日間**継続して**参加するクローズドテスト」が必須。組織アカウントは対象外。最頻出の却下理由は「テスト参加が不十分」＝**インストールだけで使われていない**こと。**テスターの登録自体は `edits.testers` API（Google グループ単位）で自動化できる**が、14 日間の参加そのものは当然できない |
 | **Android デベロッパー認証** | 2026-09-30 からブラジル・インドネシア・シンガポール・タイで開始。順次拡大 |
 | Apple の審査 | 通常 24〜48 時間。`store-submit-ios --status` で確認する |
 

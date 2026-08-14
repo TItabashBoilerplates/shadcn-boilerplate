@@ -1301,9 +1301,21 @@ in
     # TestFlight への配布・審査提出・Play のロールアウトはここから先で、
     # 以前は App Store Connect / Play Console を人が開いて押す必要があった。
     # 迷ったら書き込まない `store-status` を先に実行する。
+    # 人が画面で入力するしかない項目を出す。**資格情報も通信も要らない**ので、
+    # ストアのアカウントを作る前でも実行できる（最初に実行するのが正しい）。
+    "store-preflight" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/store.sh" preflight "$@"'';
+      description = "人が入力するしかない申告を値つきで一覧（API が無いものだけ。--json 可）";
+    };
+
     "store-status" = {
       exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/store.sh" status "$@"'';
       description = "両ストアの状態と次にすべきことを表示（書き込まない。--json 可）";
+    };
+
+    "store-push-data-safety" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/store.sh" push-data-safety "$@"'';
+      description = "Play の Data safety を CSV から反映（公式 API。edits に乗らず即時反映）";
     };
 
     "store-testflight" = {

@@ -4,7 +4,9 @@
 #   store.sh <サブコマンド> [--dry-run]
 #
 # サブコマンド:
+#   preflight                  人が画面で入力するしかない項目を値つきで一覧（資格情報も通信も不要）
 #   status                     両ストアの状態と「次にすべきこと」（**書き込まない**）
+#   push-data-safety           Play の Data safety を CSV から反映（公式 API。edits に乗らない）
 #   push-ios-screenshots       スクリーンショットを App Store Connect へ
 #   push-play-listing          掲載文・アイコン・スクショを Google Play へ（1 トランザクション）
 #   create-ios-subscriptions   iap.config.js のサブスク商品を App Store Connect に作る
@@ -31,6 +33,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPT_DIR/lib.sh"
 
 declare -A COMMANDS=(
+  [preflight]=store-preflight.mjs
+  [push-data-safety]=play-data-safety.mjs
   [status]=store-status.mjs
   [push-ios-screenshots]=asc-push-screenshots.mjs
   [push-play-listing]=play-push-listing.mjs
@@ -66,8 +70,17 @@ for arg in "$@"; do
 done
 
 mobile_load_config
-# 再実行するので、ここより後の処理は「シークレット注入済み」の 1 回だけ走る
-mobile_doppler_reexec "$CMD" "$@"
+
+# 資格情報が要らないサブコマンドは Doppler の再実行を挟まない。
+# preflight は「ストアのアカウントをまだ作っていない段階」で真っ先に実行したいものなので、
+# ここで Doppler を要求すると**一番必要なときに使えない**。
+case "$CMD" in
+  preflight) ;;
+  *)
+    # 再実行するので、ここより後の処理は「シークレット注入済み」の 1 回だけ走る
+    mobile_doppler_reexec "$CMD" "$@"
+    ;;
+esac
 
 command -v node >/dev/null || mdie "node が見つかりません（devenv shell 内で実行してください）"
 
