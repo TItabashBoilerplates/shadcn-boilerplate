@@ -1,6 +1,6 @@
 ---
 name: mobile-release
-description: Expo / EAS のモバイルリリース手順（iOS TestFlight / Android Play 内部テスト）。クラウドビルド（expo.dev）とローカルビルド（--local）の両方に対応。「アプリをリリースして」「TestFlight に上げて」「Play に出して」「ビルドして提出して」「EAS でビルド」「mobile-release-ios」「起動直後にクラッシュする（EXPO_PUBLIC_* が焼き込まれていない）」といった指示・症状が出たら必ず最初に起動する。資格情報の扱い、eas.json への一時注入と復元、EAS への env push、既知のビルド失敗の回避策を提供する。
+description: Expo / EAS のモバイルリリースを**ユーザーに届くところまで**回すための手順。ビルドとアップロード（クラウド / --local 両対応）に加え、**アップロード後**の TestFlight 配布・App Store の審査提出・Google Play のトラック昇格と段階的公開まで扱う。「アプリをリリースして」「TestFlight に上げて」「Play に出して」「審査に出して」「ストアに公開して」「段階的に配って」「ロールアウトを止めて」「審査を取り下げて」「リリースの状況を見て」「ビルドして提出して」「EAS でビルド」「mobile-release-ios」「アップロードしたのに配布されない / TestFlight に出ない」「起動直後にクラッシュする（EXPO_PUBLIC_* が焼き込まれていない）」といった指示・症状が出たら必ず最初に起動する。資格情報の扱い、eas.json への一時注入と復元、EAS への env push、審査中の版を壊さないための状態判断、既知のビルド失敗の回避策を提供する。
 ---
 
 # モバイルリリース（EAS）
@@ -9,15 +9,19 @@ description: Expo / EAS のモバイルリリース手順（iOS TestFlight / And
 資格情報の復元・eas.json の注入と復元・env の push・既知バグの回避が全部入っている。
 
 ```bash
-mobile-release-ios                 # expo.dev（EAS クラウド）でビルド → TestFlight
+mobile-release-ios                 # expo.dev（EAS クラウド）でビルド → アップロード
 mobile-release-ios --local         # ローカルビルド（macOS + Xcode。ビルド枠を消費しない）
-mobile-release-android             # expo.dev でビルド → Play 内部テスト
+mobile-release-android             # expo.dev でビルド → Play へアップロード
 mobile-release-android --local     # ローカルビルド（要 devenv shell -P android）
 
 mobile-release-ios --dry-run       # 何を実行するかだけ表示（ビルドも提出もしない）
 mobile-metadata                    # store.config.js を App Store Connect へ同期するだけ
 sync-eas-env production            # EXPO_PUBLIC_* を EAS へ同期するだけ
 ```
+
+> ⚠️ **これらは「アップロードまで」で、リリースは完了しない。**
+> TestFlight への配布・App Store の審査提出・Play のロールアウトは
+> **§6 のコマンド**で行う。状態が分からなくなったら、まず書き込まない `store-status`。
 
 実体は `scripts/mobile/release-ios.sh` / `release-android.sh` / `sync-eas-env.sh`（共通部は `lib.sh`）。
 
@@ -186,13 +190,50 @@ script は次の順で安全を担保している。**手で真似するとき�
 
 ---
 
-## 6. 配布は自動で始まらない（意図的）
+## 6. アップロードの後がある（`mobile-release-*` はリリースを完了させない）
 
-- **iOS**: アップロード後、Apple の Processing（数分〜30 分）を経て TestFlight に出る。
-  内部テスターへの配布は App Store Connect で行う。
+**`mobile-release-ios` / `-android` はバイナリを上げるまでで終わる。** その時点では
+
+- **iOS**: Apple の Processing（数分〜30 分）待ち。**テスターにも届かず、審査にも出ていない**
 - **Android**: `eas.json` の submit プロファイルが `releaseStatus: "draft"` なので
-  **Play Console でリリースを手動開始するまでテスターへ配られない**。
-  いきなり配布したい場合だけ `completed` に変える（変更はレビュー対象）。
+  **誰にも配られていない**
+
+という状態で、以前はここから先を App Store Connect / Play Console で人が押していた。
+**その部分もコマンドになっている**ので、手で画面を開かないこと。
+
+```bash
+store-status                       # ★ まずこれ。両ストアの状態と「次の一手」（書き込まない）
+
+# iOS
+store-testflight --wait            # 処理完了を待つ → グループ配布 → 外部なら Beta App Review
+store-submit-ios                   # 版作成 → ビルド紐付け → ノート → 審査情報 → 審査提出
+store-submit-ios --status          # 状態のみ / --cancel で取り下げ / --phased で段階的リリース
+
+# Android
+store-release-play --track internal --rollout 1                       # テスターへ配る
+store-release-play --from internal --track production --rollout 0.1   # 本番へ 10%
+store-release-play --track production --rollout 1                     # 全公開
+store-release-play --track production --halt                          # ロールアウト停止
+```
+
+| 落とし穴 | 内容 |
+|---|---|
+| **`eas submit` は審査に出さない** | バイナリを上げるだけ。「提出」は別操作で、版の作成・ビルド紐付け・**審査担当者用のログイン情報**・3 段階の提出 API が要る |
+| **Play は draft のままだと誰にも届かない** | 「アップロードしたのに反映されない」の最頻出原因 |
+| **外部 TestFlight はグループに入れても届かない** | Beta App Review の通過が必要。画面上は入っているように見える |
+| **審査中の版を編集すると審査が取り下がる** | `store-submit-ios` は状態を見て危険なら実行前に落ちる（判断は `release-plan.mjs`・テスト済み） |
+| **`--rollout` の 0 と 1 は割合ではない** | 全公開は `--rollout 1`（= `completed`）、停止は `--halt` |
+
+**手順・状態遷移表・人でしかできない作業は
+[`docs/store/release-runbook.md`](../../../docs/store/release-runbook.md) が正本。**
+
+### 審査情報は Doppler（値をチャット・ログ・コミットに出さない）
+
+| キー | 用途 |
+|---|---|
+| `APPLE_REVIEW_CONTACT_FIRST_NAME` / `_LAST_NAME` / `_EMAIL` / `_PHONE` | 審査担当者からの連絡先。**未設定だと `store-submit-ios` が落ちる** |
+| `APPLE_REVIEW_DEMO_ACCOUNT` / `APPLE_REVIEW_DEMO_PASSWORD` | 審査用アカウント。ログインが要るアプリで無いと **2.1(a) でリジェクト** |
+| `APPLE_REVIEW_NOTES` | 審査メモ（任意） |
 
 ---
 
@@ -332,8 +373,8 @@ store-create-play-offers           # 無料トライアル（作成 → activate
 ## 7. リリース前に必ず通すこと
 
 1. `ci-check`（lint / format / type-check）
-2. `unit-test`
-3. アプリ側の回帰テスト（`frontend/apps/mobile/src/shared/config/` 配下の検査があれば）
+2. `unit-test`（`store-metadata` / `release-plan` / `required-flows` の検査を含む）
+3. `store-status` で**今の状態**を確認する（審査中の版に手を入れないため）
 4. `mobile-release-ios --dry-run` で注入内容と push 対象キーを目視
 
 **All Green でないままリリースしない**（`.claude/rules/tdd.md`）。
@@ -344,14 +385,22 @@ store-create-play-offers           # 無料トライアル（作成 → activate
 
 - ビルドモード（クラウド / ローカル）と **profile**
 - EAS へ push した **EXPO_PUBLIC_* のキー名**と、空値で落としたキー（値は出さない）
-- 成果物のサイズ、提出先（TestFlight / Play の track）
+- 成果物のサイズ、提出先（TestFlight のグループ名 / Play の track）
 - **eas.json が git のクリーンな状態に戻っていること**
-- 残っている手作業（TestFlight のテスター配布 / Play のリリース開始）
+- **リリースがどこまで進んだか** — 審査提出済みか、Play は何 % で配布中か
+- **残っている手作業**（§4.2 の申告フォームなど。`docs/store/release-runbook.md` §4）
+
+「ビルドが通った」で完了報告しないこと。**ユーザーに届いていないなら未完**であり、
+どこで止まっていて誰が何をすれば進むのかまで書く。
 
 ---
 
 ## 参照
 
+- **リリース手順の正本（状態遷移表・人でしかできない作業）**:
+  [`docs/store/release-runbook.md`](../../../docs/store/release-runbook.md)
+- 初回提出の全体手順: `docs/store/submission-checklist.md` / 掲載文: `docs/store/aso.md`
+- 審査要件のコード側不変条件: `.claude/rules/store-review.md`
 - EAS のビルドプロファイル・提出設定: `expo-deployment` / `expo-cicd-workflows` skill
 - Expo のアップグレード: `upgrading-expo` skill
 - シークレットの扱い: `.claude/skills/doppler/SKILL.md` / `.claude/rules/mcp-doppler.md`
@@ -359,3 +408,6 @@ store-create-play-offers           # 無料トライアル（作成 → activate
   [Environment variables](https://docs.expo.dev/eas/environment-variables/) /
   [Submit to the App Store](https://docs.expo.dev/submit/ios/) /
   [eas.json reference](https://docs.expo.dev/eas/json/)
+- ストア API（**エンドポイントの形は推測せず一次情報で確認する**）:
+  [App Store Connect API](https://developer.apple.com/documentation/appstoreconnectapi)（OpenAPI 仕様が公開されている） /
+  [Google Play Developer API: Edits](https://developers.google.com/android-publisher/edits)

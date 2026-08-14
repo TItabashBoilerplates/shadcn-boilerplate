@@ -35,8 +35,17 @@ process.on("unhandledRejection", fail);
 
 const target = process.argv[2];
 if (!target) {
-	console.error("usage: store-run.mjs <script.mjs>");
+	console.error("usage: store-run.mjs <script.mjs> [args...]");
 	process.exit(2);
 }
+
+/**
+ * 自分の引数（対象スクリプト名）を argv から抜く。
+ *
+ * これをしないと、対象スクリプトの `process.argv.slice(2)` の先頭に
+ * `asc-testflight.mjs` のようなファイル名が混ざる。**エラーにはならず**、
+ * 「オプションを渡したのに効かない」形で静かに壊れるので必ず取り除く。
+ */
+process.argv.splice(2, 1);
 
 await import(pathToFileURL(new URL(target, import.meta.url).pathname).href);

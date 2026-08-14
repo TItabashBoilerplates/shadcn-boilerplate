@@ -20,7 +20,13 @@
 | 4 | Play Console でアプリを作成し、**1 度は内部テストへ提出** | 掲載情報 API が対象アプリを見つけられない |
 | 5 | App Store Connect API キー（Key ID / Issuer ID / .p8）の発行 | ストア反映スクリプトが動かない |
 | 6 | Play の**サービスアカウント**を作り、Play Console の Users & Permissions で権限を付与 | 鍵は正しいのに 403。**GCP の IAM ロールでは付かない** |
-| 7 | Data safety / App Privacy ラベル、年齢レーティング、輸出コンプライアンスの申告 | 提出できない |
+| 7 | **App Privacy ラベル（Apple）/ Data safety（Play）**、年齢レーティング | **どちらも API が無い**。画面で入力しないと提出できない |
+| 8 | **EU DSA トレーダーステータスの申告（Apple）** | 2025-02-17 以降、**新規提出にも更新にも必須**。**審査では弾かれず**、未申告だと **EU 27 か国で販売停止**になる。EU に出さない場合も「非トレーダー」として申告が要る |
+| 9 | **Play のクローズドテスト（12 人 × 14 日間の継続参加）** | **2023-11-13 以降に作成した個人アカウント**のみ対象。本番公開の前提条件。却下理由の最多は「テスト参加が不十分」＝**インストールされただけで使われていない**こと。組織アカウントは対象外 |
+
+> 輸出コンプライアンスは `app.json` の `ios.config.usesNonExemptEncryption` で
+> **自動化済み**（毎回の質問が消える）。消すと版が `WAITING_FOR_EXPORT_COMPLIANCE` で
+> 止まるので、`release-plan.test.ts` が検査している。
 
 5 と 6 の資格情報は **Doppler に登録**する（`.claude/rules/mcp-doppler.md`。値はチャットにも
 ログにも出さない）。キー名は `APPLE_API_KEY` / `APPLE_API_ISSUER` / `APPLE_API_KEY_P8` /
@@ -113,15 +119,41 @@ store-create-play-offers        --dry-run && store-create-play-offers
 
 ---
 
-## 5. ビルドして提出する
+## 5. ビルドしてアップロードする
 
 ```bash
 sync-eas-env production        # Doppler の EXPO_PUBLIC_* を EAS へ（これが無いと起動直後に落ちる）
-mobile-release-ios             # build → TestFlight
-mobile-release-android         # build → Play 内部テスト
+mobile-release-ios             # build → App Store Connect へアップロード
+mobile-release-android         # build → Play へアップロード（draft）
 ```
 
+⚠️ **ここまでではリリースは完了していない。** iOS は処理待ちで誰にも届いておらず、
+Android は `draft` なのでテスターにも配られていない。
+
 詳細と既知の失敗は `.claude/skills/mobile-release/`。
+
+---
+
+## 5.5. 配布して公開する（アップロードの後）
+
+```bash
+store-status                   # ★ まずこれ。状態と「次の一手」を出す（書き込まない）
+
+# iOS
+store-testflight --wait        # 処理待ち → グループ配布 → 外部なら Beta App Review
+store-submit-ios --dry-run && store-submit-ios      # 審査へ提出
+
+# Android
+store-release-play --track internal --rollout 1                      # テスターへ
+store-release-play --from internal --track production --rollout 0.1  # 本番へ 10%
+store-release-play --track production --rollout 1                    # 全公開
+```
+
+審査情報（連絡先・**審査用アカウント**）は Doppler の `APPLE_REVIEW_*`。
+未設定だと `store-submit-ios` が落ちる（ログインが要るアプリで審査用アカウントが
+無いと **2.1(a) でリジェクト**されるため）。
+
+手順・状態遷移表・トラブル対応は [`release-runbook.md`](./release-runbook.md) が正本。
 
 ---
 

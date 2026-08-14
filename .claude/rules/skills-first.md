@@ -49,7 +49,7 @@
 | モノレポ / Bun workspace / packages 追加 / パッケージ間の依存 | `monorepo`（本リポジトリ規約）+ `turborepo`（公式 vercel/turborepo） |
 | デザインシステム / トークン / Web と Native で UI を揃える / デスクトップ対応 | `monorepo`（`design-system.md`）, `shadcn`（公式）, `gluestack` |
 | Vercel 連携 / デプロイ / 本番に出す / Vercel project 作成 / rootDirectory / 15000 files エラー | `vercel-deploy`（自作） |
-| リリース / TestFlight / Play ストア / EAS ビルド / アプリを提出 / ストア配信 | `mobile-release`（自作）, `expo-deployment`, `expo-cicd-workflows` |
+| リリース / TestFlight / Play ストア / EAS ビルド / アプリを提出 / ストア配信 / **審査に出す / 公開する / 段階的に配る / ロールアウトを止める / 審査を取り下げる / リリースの状況を見る / アップロードしたのに配布されない** | `mobile-release`（自作。**アップロード後の配布・審査提出・ロールアウトまで**）, `expo-deployment`, `expo-cicd-workflows`。手順の正本は `docs/store/release-runbook.md` |
 | ストアのスクショ / 掲載画像 / ASO の画像 / フィーチャーグラフィック / iPad の掲載画像 | `store-screenshots`（自作） |
 | 掲載文 / ストアの説明文 / キーワード / 審査に落ちた / 課金商品を作る / サブスク商品 / 無料トライアル | `mobile-release`（§6.6）+ `.claude/rules/store-review.md` + `docs/store/` |
 | マイクロフロントエンド / multi-zones / microfrontends.json / @vercel/microfrontends / 単一ドメイン合成 / パスルーティング | `vercel-microfrontends`（公式）, `monorepo` |

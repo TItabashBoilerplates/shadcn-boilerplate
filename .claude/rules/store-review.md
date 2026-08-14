@@ -73,9 +73,28 @@ Expo はパッケージ側の宣言と**マージ**するので、`NSPrivacyAcce
 
 | 項目 | 要件 |
 |---|---|
-| `targetSdkVersion` | **36 以上**（Play は 2026-08-31 以降 36 必須）。**Expo の既定は 35** なので `expo-build-properties` で明示する。書かなくても**ビルドは通り、Play へのアップロードだけが弾かれる** |
+| `targetSdkVersion` | **36 以上**（Play は 2026-08-31 以降、新規アプリに 36 必須）。**Expo の既定は 35** なので `expo-build-properties` で明示する。書かなくても**ビルドは通り、Play へのアップロードだけが弾かれる** |
 | `com.google.android.gms.permission.AD_ID` | Android 13+ で広告 SDK を使うなら必須。SDK のマージ任せにせず明示し、Play Console の広告 ID 申告と一致させる |
 | `android.permission.POST_NOTIFICATIONS` | Android 13+ のプッシュ通知に必須 |
+
+---
+
+## 3.5. アカウント側の要件（コードでは満たせないが、知らないと出せない）
+
+**コードが完璧でも、これらが未了だと提出できない / 公開が止まる。**
+いずれも公開 API が無いので、**エージェントは「人がやる必要がある」と報告する**こと。
+黙って進めても、エラーではなく「反映されない」形で失敗する。
+
+| 要件 | 内容 |
+|---|---|
+| **EU DSA トレーダーステータス**（Apple） | **2025-02-17 以降、新規提出にも更新にも必須**。未申告だと**EU 27 か国で販売停止**になる。**審査時には弾かれない**ので気づきにくい。EU に配信しない場合も「非トレーダー」として申告が要る |
+| **App Privacy（Apple のプライバシーラベル）** | **API が無い**。App Store Connect の画面で入力しないと提出できない。§2 の privacy manifest とは**別物**で、両方が要る |
+| **Data safety（Play）** | **API が無い**。Play Console の画面で入力する |
+| **Play のクローズドテスト（12 人 × 14 日）** | **2023-11-13 以降に作成した個人アカウント**は、本番公開の前に「12 人以上が 14 日間**継続**参加するクローズドテスト」が必須。組織アカウントは対象外。最頻出の却下理由は「テスト参加が不十分」＝**インストールされただけで使われていない**こと |
+| **Android デベロッパー認証** | 2026-09-30 からブラジル・インドネシア・シンガポール・タイで開始し、順次拡大 |
+| **有料 App 契約** | 未締結だとサブスク商品が永久に `MISSING_METADATA` |
+
+手順は `docs/store/release-runbook.md` §4。
 
 ---
 
@@ -132,6 +151,12 @@ grep -E 'AD_ID|POST_NOTIFICATIONS' android/app/src/main/AndroidManifest.xml
 
 `frontend/apps/mobile/src/shared/config/store-metadata.test.ts` が、**boilerplate でも
 常時検査できるもの**を見ている。**削除・スキップしない。**
+
+`frontend/apps/mobile/src/shared/config/release-plan.test.ts` は、**リリースを人の操作
+なしで完了させる前提**を守っている。とくに `app.json` の
+`ios.config.usesNonExemptEncryption` が無いと、アップロードのたびに輸出コンプライアンスを
+聞かれて**版が `WAITING_FOR_EXPORT_COMPLIANCE` で止まる**（ビルドも提出も成功して見えるのに
+配布されない）。あわせて、審査中の版に書き込まないための状態判断も固定している。
 
 | 検査 | 内容 |
 |---|---|

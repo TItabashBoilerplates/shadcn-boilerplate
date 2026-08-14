@@ -81,7 +81,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     │ # ↓ 本リポジトリ固有の運用手順（自作 Skill・lock 管理外）
     ├── ai-usage-metering/ # ★ LLM/生成AI のトークン使用量・コスト集計を設計へ標準で織り込む（集計軸・単価表・計上の罠）
     ├── vercel-deploy/    # ★ Vercel の GitHub 連携 + デプロイ（vercel-deploy script の使い方と落とし穴）
-    ├── mobile-release/   # ★ EAS リリース（TestFlight / Play。クラウド=expo.dev とローカルの両対応）
+    ├── mobile-release/   # ★ EAS リリース（ビルド → アップロード → TestFlight 配布 → 審査提出 → Play のロールアウト）
     ├── store-screenshots/ # ★ ストア掲載画像（撮影ハーネス → 生成AIで背景と見出し → 合成 → 両ストアへ API 反映）
     │
     │ # ↓ 公式 Skill が存在しない外部サービス向けの自作 Skill（lock 管理外）
@@ -176,6 +176,8 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 **MANDATORY**: **モバイルアプリ（Expo / RN。ストア配布するもの）を実装する場合、主たるログイン手段は必ず「メールアドレス + パスワード」にする。OTP / Magic Link を唯一のログイン手段にしてはならない**（OAuth / パスキー / OTP の**併用**は可）。理由は App Store Review Guideline **2.1(a)** が審査担当者へ「**an active demo account** ... **login credentials**」の提供を求めているため — OTP しか無いと**レビュー担当者は 6 桁コードやリンクが届く受信箱に触れず、ログインできないまま 2.1 リジェクト**になる（審査用のバックドアや固定コードで回避するのも別の指摘対象）。Google Play も同様にテストアカウントの資格情報を求める。**Web だけで完結する（モバイルを出さない）プロダクトなら OTP / Magic Link を主手段にしてよい**。**Web とモバイルの両方がある場合は、同じ資格情報で両方に入れるよう両方をメール + パスワードに揃える**（Web 側は OTP 併用可）。さらに**認証方式が OTP でもメール + パスワードでも、アプリ内に「メールアドレスの再設定」導線を必ず用意する**（設定 / アカウント画面）。**メール + パスワードの場合は、加えて「パスワードを忘れた方」導線を必ずログイン画面に置き**（忘れた人はログイン後の画面に到達できないため、設定画面だけに置くのは実装ミス）、**設定画面にパスワード変更導線を置く**（**`updateUser({ current_password, password })` + `[auth.email] secure_password_change = true` で検証する。`signInWithPassword` を検証目的で呼ぶのは新セッションが発行される副作用があり誤り**）。メール変更は `double_confirm_changes = true`（既定）を落とさず**旧・新の両アドレスで確認**し、その旨を UI にも明示する。モバイルのパスワード再設定は**ディープリンクではなく 6 桁コード方式（`resetPasswordForEmail` → `verifyOtp({ type: 'recovery' })` → `updateUser({ password })`）を既定**にする（`recovery` テンプレートに `{{ .Token }}` が必要）。これらは開発者からの指示を待たずに最初から実装する。詳細は `.claude/rules/auth.md` を参照。
 
 **MANDATORY**: **Vercel への連携・デプロイ、およびモバイル（EAS）のリリースは、必ず専用 script 経由で行う**。`vercel` / `eas` を Bash で直接叩いて手順を再発明しない。Vercel は `vercel-deploy`（`scripts/infra/vercel_deploy.sh`）、モバイルは `mobile-release-ios` / `mobile-release-android`（`scripts/mobile/release-*.sh`）が正規経路で、**GitHub 連携・rootDirectory 設定・`--archive=tgz`（15000 files 上限の回避）・資格情報の復元と後始末・eas.json の一時注入と復元・EAS への `EXPO_PUBLIC_*` push** といった、抜けると無言で壊れる手順がすべて入っている。**モバイルビルドは expo.dev（クラウド）とローカル（`--local`）の両方に対応**し、既定はクラウド。**認証情報はすべて Doppler が唯一のソース**（Vercel は `VC_TOKEN`、モバイルは `EXPO_TOKEN` / `APPLE_*` / `PLAY_SERVICE_ACCOUNT_JSON`）で、モバイル script は起動時に `doppler run` で自身を再実行して注入するため呼び出す側の準備は不要。**値はチャット / ログ / コミットに出さない**（キー名のみで会話）。runtime secret は Doppler→Vercel のネイティブ連携、Supabase の値は Vercel Marketplace 連携が供給するので**手で env に入れない**。詳細は `.claude/skills/vercel-deploy/` および `.claude/skills/mobile-release/` を参照。
+
+**MANDATORY**: **`mobile-release-ios` / `mobile-release-android` は「アップロードまで」しか行わない。リリースはそこで終わりではない。** アップロード直後の iOS は Apple 側の処理待ちで**テスターにも届かず審査にも出ておらず**、Android は `eas.json` の submit プロファイルが `releaseStatus: "draft"` なので**誰にも配られていない**。この続き（TestFlight 配布 / App Store の審査提出 / Play のトラック昇格と段階的公開）も**専用 script があるので、App Store Connect / Play Console を人に開かせない**: **`store-status`（★ 迷ったらまずこれ。書き込まないので随時実行してよい）/ `store-testflight` / `store-submit-ios` / `store-release-play`**。とくに **`eas submit` は審査に出さない**（版の作成・ビルド紐付け・リリースノート・**審査担当者用のログイン情報**・3 段階の提出 API が別途必要で、どれが欠けても「一部のフィールドが不足しています」としか出ない）。**審査中の版を編集すると審査が取り下げられる**ため、操作の可否判断は `scripts/mobile/release-plan.mjs`（単体テストで固定）に集約してあり、危険な状態では script が実行前に落ちる — **この判断を各 script やエージェントの推測で上書きしないこと**。**Play の `--rollout` は 0 と 1 が「割合」ではない**（全公開は `--rollout 1` = `completed`、停止は `--halt`。停止しても既にインストール済みの端末は戻らないので本番は 10% から始める）。審査情報は Doppler の `APPLE_REVIEW_CONTACT_*` / `APPLE_REVIEW_DEMO_ACCOUNT` / `APPLE_REVIEW_DEMO_PASSWORD`（**値はチャット・ログ・コミットに出さない**）。**App Privacy ラベル（Apple）・Data safety（Play）・EU DSA トレーダーステータス・Play のクローズドテスト（12 人 × 14 日、2023-11-13 以降の個人アカウントのみ）には公開 API が無い**ので、これらは「人がやる必要がある」と報告する（黙って進めてもエラーではなく「反映されない」形で失敗する）。**「ビルドが通った」で完了報告しない** — ユーザーに届いていないなら未完であり、どこで止まっていて誰が何をすれば進むのかまで書く。手順・状態遷移表・トラブル対応の正本は `docs/store/release-runbook.md`。
 
 **MANDATORY**: **ストアへの反映（掲載情報・スクリーンショット・課金商品）も専用 script 経由で行う**（`scripts/mobile/store.sh` = `store-push-*` / `store-create-*` / `store-equalize-*`）。**必ず先に `--dry-run` を通す**（本番の掲載情報と課金商品を書き換えるため）。正本は `frontend/apps/mobile/` の **`store.config.js`（App Store の文言）/ `play.config.js`（Play の文言・画像）/ `iap.config.js`（サブスク商品。両ストア共通）** で、スクリーンショットは `store-listing/`。**EAS Metadata はスクリーンショットを扱えず Google Play にも対応しない**ため、画像と Play の掲載情報は App Store Connect API / Play Developer API を直接叩く（fastlane は使わない）。**`store-create-ios-subscriptions` の後は `store-equalize-ios-prices` が必須**（基準地域の価格しか作られないので、省くと商品が永久に `MISSING_METADATA` のままになり原因が非常に分かりにくい）。**Play の base plan / offer は DRAFT で作成される**ので有効化を忘れない。審査要件のコード側不変条件は `.claude/rules/store-review.md`、初回提出の全体手順は `docs/store/submission-checklist.md`、掲載文の設計は `docs/store/aso.md`、掲載画像の作り方は `.claude/skills/store-screenshots/` を参照。
 
@@ -308,7 +310,17 @@ store-equalize-ios-prices          #   ↑ の後に必須（全地域へ等価�
 store-create-play-subscriptions    # サブスク商品を Play に作成
 store-create-play-offers           # Play の無料トライアル (作成 → activate)
 screenshots-mobile                 # スクショ撮影 → 検証 (--upload で上記 push へ委譲)
+
+# リリースの進行（mobile-release-* は「アップロードまで」。ここから先が配布と公開）
+store-status                       # ★ 両ストアの状態と「次の一手」（書き込まない。--json 可）
+store-testflight --wait            # iOS: 処理待ち → グループ配布 → 外部なら Beta App Review
+store-submit-ios                   # iOS: 版作成 → ビルド紐付け → ノート → 審査情報 → 審査提出
+store-submit-ios --status          #   状態のみ / --cancel 取り下げ / --phased 段階的リリース
+store-release-play --track internal --rollout 1                      # Play: テスターへ配る
+store-release-play --from internal --track production --rollout 0.1  # Play: 本番へ 10%
+store-release-play --track production --halt                         # Play: ロールアウト停止
 # → 手順・落とし穴は .claude/skills/vercel-deploy/ / mobile-release/ / store-screenshots/
+#    リリース手順の正本は docs/store/release-runbook.md
 #    初回提出の全体手順は docs/store/submission-checklist.md
 
 # Task graph 確認 (依存・実行順序を可視化)

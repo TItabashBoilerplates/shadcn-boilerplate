@@ -1296,6 +1296,31 @@ in
       description = "Play の無料トライアル（offer）を作成して有効化";
     };
 
+    # ---------- アップロード後のリリース進行（mobile-release-* の続き）----------
+    # `mobile-release-ios` / `-android` は**アップロードまで**しかやらない。
+    # TestFlight への配布・審査提出・Play のロールアウトはここから先で、
+    # 以前は App Store Connect / Play Console を人が開いて押す必要があった。
+    # 迷ったら書き込まない `store-status` を先に実行する。
+    "store-status" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/store.sh" status "$@"'';
+      description = "両ストアの状態と次にすべきことを表示（書き込まない。--json 可）";
+    };
+
+    "store-testflight" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/store.sh" testflight "$@"'';
+      description = "TestFlight へ配布（--wait で処理完了待ち／--groups で配布先指定）";
+    };
+
+    "store-submit-ios" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/store.sh" submit-ios "$@"'';
+      description = "App Store の審査へ提出（--status / --cancel / --phased）";
+    };
+
+    "store-release-play" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/store.sh" release-play "$@"'';
+      description = "Play のトラック公開・段階的公開（--track / --rollout / --halt）";
+    };
+
     "build-play-feature-graphic" = {
       exec = ''exec node "$DEVENV_ROOT/scripts/mobile/build-play-feature-graphic.mjs" "$@"'';
       description = "Play のフィーチャーグラフィック(1024x500)を生成（要 -P store-listing）";
