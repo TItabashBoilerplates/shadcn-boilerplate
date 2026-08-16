@@ -256,6 +256,53 @@ const textareaClass = '... text-sm'
 
 → 詳細・チェックリスト・検出コマンドは `.claude/rules/form-controls.md` を参照
 
+## Mobile UI/UX (MANDATORY)
+
+**モバイル（Expo / RN、およびスマホ幅の Web）は、キーボードが画面の約半分を覆う前提で実装する。**
+指示を待たずに最初から入れる。**これらの不具合はビルド・型・lint・Storybook・DevTools の
+デバイスモードでは一切検出できない**（シミュレータは既定でハードウェアキーボード扱い）。
+
+```tsx
+// ❌ Bad: RN 標準。Android の edge-to-edge 下で構造的に壊れている
+import { KeyboardAvoidingView } from 'react-native'
+<KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+
+// ✅ Good: KeyboardProvider をルートに 1 つ + 画面は下表のコンポーネント
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
+<KeyboardAwareScrollView keyboardShouldPersistTaps="handled" bottomOffset={24}>
+
+// ❌ Bad: 属性なし（英字キーボード・オートフィル無し・Enter の意味不明）
+<TextInput placeholder="メールアドレス" onChangeText={setEmail} />
+
+// ✅ Good
+<TextInput
+  inputMode="email" autoComplete="email" textContentType="emailAddress"
+  autoCapitalize="none" autoCorrect={false}
+  enterKeyHint="next" submitBehavior="submit"
+  onSubmitEditing={() => passwordRef.current?.focus()}
+/>
+```
+
+| 画面の形 | 使うもの |
+|---|---|
+| スクロールする入力フォーム | `KeyboardAwareScrollView` |
+| 固定レイアウト（入力 1〜2 個） | `KeyboardAvoidingView`（`behavior="padding"`） |
+| 下部固定 CTA / ツールバー | `KeyboardStickyView` |
+| チャット | `KeyboardChatScrollView` / `behavior="translate-with-padding"` |
+| 仮想化リスト内の入力 | `renderScrollComponent` に `KeyboardAwareScrollView` |
+
+- **セーフエリアは二重に足さない**（`edges` で絞る・キーボード表示中に `insets.bottom` を加算しない）。
+  `react-native-safe-area-context` の `SafeAreaView` は直接 import しない（`@workspace/native-ui` を使う）。
+- **OTP は必ずオートフィル**: iOS `oneTimeCode` / Android `sms-otp` / Web `one-time-code`。
+- **タップ標的は 44×44（HIG）/ 48dp（Material）、WCAG 2.2 の 24×24 が絶対下限**。
+  アイコンが小さくても `hitSlop` / padding でヒットエリアを広げる。
+- **Web で `maximumScale` / `userScalable: false` を書かない**（WCAG 1.4.4。
+  **Next.js 公式の `generateViewport` サンプルに載っているのでコピーしないこと**）。
+- **スマホ幅のモーダルは Drawer**（中央 Dialog はキーボードと衝突する）。
+
+→ 詳細・チェックリスト・症状別の原因表は `.claude/rules/mobile-uiux.md` と
+  `.claude/skills/mobile-uiux/` を参照
+
 ## List Pagination (MANDATORY)
 
 **件数が増えうる一覧は、指示を待たずに最初からページングを実装する。** UI パターンもエージェントが選ぶ。

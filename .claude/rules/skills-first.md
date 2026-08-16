@@ -41,7 +41,8 @@
 |---|---|
 | Supabase / RLS / Auth / Storage / Edge Functions | `supabase`, `supabase-postgres-best-practices`, `rls`, `supabase-config`, `pgtap` |
 | 画像を表示する / アバター / サムネイル / OGP 画像 / 画像アップロード後の表示 / 「画像が重い」 | **まず `.claude/rules/storage-images.md`**（Storage の画像は必ず transform 経由・`SupabaseImage` 必須）+ `supabase` |
-| ログイン / サインアップ / 認証を作る / OTP / マジックリンク / パスワード再設定 / メールアドレス変更 / アカウント設定画面 | **まず `.claude/rules/auth.md`**（Mobile はメール+パスワード必須・OTP のみ禁止、再設定導線は必須）+ `supabase` |
+| ログイン / サインアップ / 認証を作る / OTP / マジックリンク / パスワード再設定 / メールアドレス変更 / アカウント設定画面 | **まず `.claude/rules/auth.md`**（Mobile はメール+パスワード必須・OTP のみ禁止、再設定導線は必須）+ `mobile-uiux`（入力属性・キーボード回避）+ `supabase` |
+| フォーム / 入力欄を作る / `TextInput` / `<input>` / `<textarea>` を足す / 検索バー / チャット入力 / 設定画面 / モバイル画面全般 / レスポンシブ / 「入力欄がキーボードに隠れる」「送信ボタンが押せない」「1 回目のタップが効かない」「Android だけ挙動が違う」「下部バーがキーボードの裏に入る」「小さくてタップしづらい」「セーフエリアがおかしい」 | **`mobile-uiux`（自作。正本）** + `.claude/rules/mobile-uiux.md` + `.claude/rules/form-controls.md`。Mobile は `gluestack`、Web は `shadcn` も併せて起動 |
 | MCP サーバ (Edge Functions) / BYO MCP / Streamable HTTP / Hono MCP | `edge-functions-mcp` |
 | Next.js / App Router / Server Components / Cache | `nextjs`, `next-best-practices`, `next-cache-components`, `next-upgrade` |
 | Drizzle / スキーマ / マイグレーション | `drizzle` |
@@ -126,6 +127,7 @@ Claude: → `rls` Skill を起動 → `supabase` Skill を確認 → ガイダ�
 | `.claude/rules/minimal-implementation.md` | Skill / 公式ドキュメントで確認した**最小の実装**を選ぶ（既存資産 → 標準機能 → マネージド → 実績ある OSS → スクラッチ） |
 | `.claude/rules/research.md` | Skill で足りない部分を Context7 MCP / WebSearch / WebFetch で補完 |
 | `.claude/rules/commands.md` | コマンド実行時は devenv の scripts / tasks を使用 |
+| `.claude/rules/mobile-uiux.md` | モバイル UI/UX の不変条件（キーボード回避・セーフエリア・入力属性・タップ標的） |
 | `.claude/rules/mcp-supabase.md` | Supabase インフラ操作は `supabase` / `supabase-prod` MCP |
 | `.claude/rules/mcp-doppler.md` | Doppler シークレットの読み書きは `doppler` MCP（書込はフェーズ制: 初期構築=full / 本番=prd 承認制・値の露出禁止） |
 | `.claude/rules/env-naming.md` | 環境変数・シークレットの命名（`GITHUB_`/`SUPABASE_`/`VERCEL_` prefix の登録禁止・Supabase env は PF が注入） |

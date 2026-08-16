@@ -29,6 +29,22 @@ apps/mobile/
 > NativeWind v5 / TailwindCSS v4 は **CSS-first 設定**なので `tailwind.config.ts` は存在しない。
 > スキャン対象は `global.css` の `@source` で宣言する。
 
+## Mobile UI/UX (MANDATORY)
+
+**入力を含む画面は、キーボードが画面の約半分を覆う前提で実装する。**
+とくに Android は edge-to-edge（Android 15 で強制 / 16 で opt-out 不可）により
+**`react-native` 標準の `KeyboardAvoidingView` が構造的に壊れている**ため、
+キーボード回避は **`react-native-keyboard-controller`** で実装する。
+
+セーフエリアの二重適用、入力属性（`inputMode` / `autoComplete` / `textContentType` /
+`enterKeyHint` / `submitBehavior`）、OTP のオートフィル、タップ標的 44×44 も必須要件。
+
+→ 不変条件は [`.claude/rules/mobile-uiux.md`](../../../.claude/rules/mobile-uiux.md)、
+  実装手順・API・症状別の原因表は [`.claude/skills/mobile-uiux/`](../../../.claude/skills/mobile-uiux/SKILL.md)
+
+> ⚠️ 現状 `src/views/auth/ui/AuthScreen.tsx` は RN 標準の `KeyboardAvoidingView` を使っている。
+> 認証画面に手を入れるときに `react-native-keyboard-controller` へ移行すること。
+
 ## UI Components
 
 This app uses **gluestack-ui** components from `@workspace/native-ui`:

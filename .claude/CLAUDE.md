@@ -33,6 +33,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 │   ├── clean-code.md     # クリーンコード（後方互換禁止・重複禁止）
 │   ├── frontend.md       # Frontend コード規約
 │   ├── form-controls.md  # フォーム要素（iOS Safari オートズーム禁止=16px以上・共有コンポーネント必須）
+│   ├── mobile-uiux.md    # モバイル UI/UX（キーボードが画面半分を覆う前提・RN標準 KeyboardAvoidingView 禁止・入力属性必須・タップ標的44px）
 │   ├── backend-py.md     # Python コード規約
 │   ├── edge-functions.md # Edge Functions 規約
 │   ├── i18n.md           # 多言語対応（必須）
@@ -67,6 +68,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     ├── debugging/        # デバッグ手順（devenv 2.0 native CLI 優先・Supabase）
     ├── shadcn-ui/        # shadcn/ui + TailwindCSS (Web)
     ├── gluestack/        # gluestack-ui 本リポジトリ規約 (Mobile) → 一般論は公式 gluestack-ui-v5
+    ├── mobile-uiux/      # ★ モバイル UI/UX の正本（キーボード回避・セーフエリア・入力属性・タップ標的）
+    │   ├── references/keyboard-native.md   # Expo/RN のキーボード内部仕様と edge-to-edge が壊したもの
+    │   ├── references/input-attributes.md  # 意味→属性の対応表（Native/Web）・OTP オートフィル
+    │   ├── references/web-mobile.md        # ビューポート / interactive-widget / dvh / safe-area / Drawer
+    │   └── references/touch-and-layout.md  # タップ標的・親指の到達範囲・ジェスチャ衝突・a11y
     ├── storybook/        # Storybook 10 コンポーネントカタログ
     ├── pgtap/            # RLS・DB 関数テスト（pgTAP + supabase test db）
     ├── python-testing/   # Python単体テスト（外部SDK/TypeError検知）
@@ -150,6 +156,8 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 **MANDATORY**: コードは常にクリーンな状態を維持。後方互換コード・重複コード・未使用コードは残さない（明示的な指示がある場合を除く）。詳細は `.claude/rules/clean-code.md` を参照。
 
 **MANDATORY**: **テキスト入力を受け付けるフォーム要素（`<input>` / `<textarea>` / ネイティブ `<select>` / `contenteditable`）は、モバイル幅で必ず font-size 16px 以上**にする（`text-base md:text-sm` が標準形）。**iOS Safari は 16px 未満のフォーム要素にフォーカスすると自動でズームイン**するため、`text-sm`(14px) / `text-xs`(12px) は禁止。`maximum-scale=1` / `user-scalable=no` による回避も **WCAG 1.4.4 違反**につき禁止。あわせて、**フォーム要素のスタイルは `@workspace/ui` の共有コンポーネント 1 か所にのみ定義**し、`textareaClass` のようなローカル定数を各画面にコピペすることを禁止する（実際に textarea が 6 ファイルに重複し全部ズーム対象になった事故がある）。checkbox / radio / file や Radix の `SelectTrigger`（実体は `<button>`）はズームしないため対象外。詳細は `.claude/rules/form-controls.md` を参照。
+
+**MANDATORY**: **モバイル（Expo / RN、および「スマホ幅で見られる Web」）の UI は、キーボードが画面の約 40〜55% を覆う前提で最初から実装する**（開発者からの指示を待たない）。**これらの不具合は開発中に一切顕在化しない** — シミュレータは既定でハードウェアキーボード扱い（iOS Simulator は `⌘K` でソフトウェアキーボードをトグル）、DevTools のデバイスモードは仮想キーボードもセーフエリアもエミュレートせず、ビルド・型・lint・Storybook はすべて通る。**とくに Android は `edge-to-edge` が Android 15（targetSdk 35）で強制・Android 16 で opt-out 不可になった結果、`adjustResize` がウィンドウをリサイズしなくなり、`react-native` 標準の `KeyboardAvoidingView` が構造的に壊れている**（IME inset を見ず、アニメーション完了後に発火する `keyboardDidShow` に依存しているため）。したがって **`apps/mobile` のキーボード回避は `react-native-keyboard-controller` で実装し、RN 標準の `KeyboardAvoidingView` を新規に使ってはならない**（Expo 公式も edge-to-edge の案内で "ideally react-native-keyboard-controller" と明記。MIT / peer は `react-native-reanimated >= 3.0.0` で本リポジトリは 4.5.x を満たす。**Expo Go では動かず development build が必要**）。`KeyboardProvider` は**アプリのルートに 1 つだけ**置き（無いと**エラーも出さずに何もしない**）、スクロールするフォームは `KeyboardAwareScrollView`、下部固定 CTA は `KeyboardStickyView` を使う。**`behavior` をプラットフォームで書き分けない**（`Platform.OS === 'ios' ? 'padding' : undefined` は RN 標準版の回避策で、このライブラリでは誤り）。**入力を含むスクロール容器の `keyboardShouldPersistTaps="handled"` は必須**（無いとキーボード表示中の 1 タップ目が吸われ「送信ボタンが 1 回目は効かない」になる）。**セーフエリアは二重に足さない**（ナビゲーターが処理している辺に再度 inset を足さない・キーボード表示中に `insets.bottom` を加算しない・`SafeAreaView` と `useSafeAreaInsets` を混ぜない）。**入力属性は必須**で、`inputMode` / `autoComplete` / `textContentType`(iOS) / `enterKeyHint` / `submitBehavior`（`blurOnSubmit` は deprecated）を意味に合わせて付け、**OTP は必ずオートフィルさせる**（iOS `textContentType="oneTimeCode"` / Android `autoComplete="sms-otp"` / Web `autocomplete="one-time-code"`。本リポジトリの認証はモバイルのパスワード再設定を 6 桁コード方式にしているため、無いと SMS とアプリを往復させることになる）。**タップ標的は 44×44（Apple HIG）/ 48dp（Material）を既定とし、WCAG 2.2 SC 2.5.8 の 24×24 を絶対下限**とする（アイコンが 20px でも `hitSlop` / padding でヒットエリアを広げる。「間隔の例外」に頼らない）。**主要 CTA は画面下部（親指の届く範囲）に置き、破壊的操作を主要操作の隣に置かない**。Web 側は **`maximumScale` / `userScalable: false` を絶対に書かない**（WCAG 1.4.4 違反。**Next.js 公式の `generateViewport` サンプルにこの 2 つがそのまま載っているのでコピーしないこと**）、**iOS Safari の既定は `interactive-widget=resizes-visual` なので `position: fixed` の下部バーはキーボードの裏に残り `dvh` も変化しない**（必要なら `viewport.interactiveWidget = 'resizes-content'`）、**`env(keyboard-inset-*)` は VirtualKeyboard API 前提の Chromium 限定なので依存しない**（iOS で常に 0 になり「Android だけ直る」実装になる）、**スマホ幅のモーダルは中央 Dialog ではなく Drawer**（切り替えロジックは `@workspace/ui` に 1 か所）。検証は**実機または Simulator でソフトウェアキーボードを表示した状態**で行い、Android は **API 35+** で確認する（古い端末では edge-to-edge の影響が出ない）。詳細は `.claude/rules/mobile-uiux.md`、実装手順・API・症状別の原因表は `.claude/skills/mobile-uiux/` を参照。
 
 **MANDATORY**: コンポーネントの再描画は必要最小限に抑える。FSD のスライス単位でステートを局所化し、状態変更の影響範囲をそのスライス内に閉じ込める。TanStack Query の invalidation はピンポイント、Zustand は必ずセレクター使用、Widget/View にビジネスステートを持たせない。詳細は `.claude/rules/render-optimization.md` を参照。
 

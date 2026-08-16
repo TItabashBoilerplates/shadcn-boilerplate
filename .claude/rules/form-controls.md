@@ -226,12 +226,19 @@ Storybook / dev サーバを **iOS Safari（実機 or Simulator）**で開き、
 - **`react-native-web` / `use-dom` 経由で Web に出るコンポーネントは本ルールの対象**（実体が
   `<input>` / `<textarea>` になるため）。
 
+**ただし「font-size が 16px 以上」はフォーム UI の要件のごく一部にすぎない。**
+モバイルでは**キーボードが画面の約半分を覆う**ため、入力欄と送信ボタンがキーボードに
+隠れないこと・オートフィル属性・Enter キーの意味・タップ標的サイズまで揃って初めて
+「使えるフォーム」になる。**入力を含む画面を作る／直すときは、本ルールと合わせて必ず
+`.claude/rules/mobile-uiux.md` と `.claude/skills/mobile-uiux/` に従うこと。**
+
 ---
 
 ## 7. 関連ルール
 
 | ルール | 関係 |
 |---|---|
+| `.claude/rules/mobile-uiux.md` | **キーボード回避・入力属性（オートフィル / Enter キー / OTP）・タップ標的。本ルールと必ずセットで適用する** |
 | `.claude/rules/clean-code.md` | 重複コード禁止 — 今回の根本原因。共有化されていない時点で違反 |
 | `.claude/rules/ui-testing.md` | UI は Storybook 必須（単体テスト不要） |
 | `.claude/rules/frontend.md` | デザインシステム共有（`@workspace/tokens` 正本） |
