@@ -56,7 +56,7 @@
 | マイクロフロントエンド / multi-zones / microfrontends.json / @vercel/microfrontends / 単一ドメイン合成 / パスルーティング | `vercel-microfrontends`（公式）, `monorepo` |
 | Python モノレポ / uv workspace / backend-py の apps・packages / src-layout / MCP サーバ追加 | `python-monorepo` |
 | shadcn/ui / TailwindCSS | `shadcn`, `shadcn-ui`, `web-design-guidelines`, `frontend-design` |
-| gluestack / NativeWind / Expo / RN | `gluestack`（本リポジトリ規約）, `gluestack-ui-v5`（公式）, `tailwind-setup`, `building-ui`, `building-native-ui`, `vercel-react-native-skills`, `use-dom`, `expo-deployment`, `dev-client`, `expo-dev-client`, `upgrading-expo`, `expo-cicd-workflows`, `cicd-workflows`, `expo-tailwind-setup`, `expo-api-routes`, `api-routes` |
+| gluestack / NativeWind / Expo / RN | `gluestack`（本リポジトリ規約）, `gluestack-ui-v5`（公式）, `building-native-ui`, `vercel-react-native-skills`, `use-dom`, `expo-deployment`, `expo-dev-client`, `upgrading-expo`, `expo-cicd-workflows`, `expo-tailwind-setup`, `expo-api-routes` |
 | TanStack Query | `tanstack-query` |
 | 状態管理 / 取得 (web) | `data-fetching` |
 | 状態管理 / 取得 (mobile) | `native-data-fetching` |
@@ -84,7 +84,14 @@
 | Doppler / シークレット管理 / secret manager / .env 暗号化 / トークン取り扱い | `doppler` |
 | 多言語対応 / next-intl | `i18n` |
 | Figma 連携 | `figma:figma-*` |
-| UI 一般 / レビュー / アクセシビリティ | `ui-ux-pro-max`, `web-design-guidelines`, `vercel-react-best-practices`, `vercel-composition-patterns` |
+| **UI を新しく作る / デザインを決める**（画面設計・配色・タイポ・スタイル選定） | **`ui-ux-pro-max`**（起点。検索可能な UI データ）→ `frontend-design`（意匠の作り込み）。Web は `shadcn`、Mobile は `gluestack` も併せて起動 |
+| **既存 UI を直す / 整える / レビューする**（「なんかダサい」「余白がバラバラ」「デザインが崩れてる」「UI レビューして」） | **`baseline-ui`**（間隔・階層・タイポの整地）/ **`improve-ui`**（監査 → 改善計画。read-only）/ **`web-design-guidelines`**（Web Interface Guidelines 準拠チェック） |
+| **アクセシビリティ / a11y / WCAG / スクリーンリーダー / キーボード操作 / コントラスト** | **`accessibility`**（addyosmani。WCAG 2.2 監査）+ `web-design-guidelines` |
+| **表示が遅い / Core Web Vitals / LCP / INP / CLS / レイアウトシフト / バンドルサイズ** | **`core-web-vitals`** / **`performance`**（addyosmani。Lighthouse 由来）+ `vercel-react-best-practices`（React 層） |
+| **アニメーションがカクつく / スクロール連動 / blur が重い** | **`fixing-motion-performance`** |
+| **ページ遷移アニメーション / 共有要素アニメーション / View Transition** | **`vercel-react-view-transitions`** + `.claude/rules/page-navigation.md` |
+| コンポーネント API 設計 / boolean prop が増えすぎた / 再利用可能な UI の設計 | `vercel-composition-patterns` |
+| UI 一般 / React・Next の性能 | `vercel-react-best-practices`, `modern-web-guidance` |
 | PR レビュー / セキュリティレビュー | `review`, `security-review` |
 | シンプル化 | `simplify` |
 | Skill / 設定の作成・拡張 | `skill-creator`, `find-skills`, `update-config`, `keybindings-help`, `fewer-permission-prompts` |

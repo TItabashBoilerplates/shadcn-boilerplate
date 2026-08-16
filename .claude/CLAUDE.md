@@ -108,7 +108,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 #     revenuecat-{entitlements-gate,paywall,purchase-flow,identify-user,
 #     testing-setup,troubleshoot}
 # 選定理由・見送ったもの: docs/_research/2026-08-06-service-clis.md
+#
+# UI/UX 系の外部 Skill（skills-lock.json 管理。役割が重ならないよう選定済み）:
+#   ui-ux-pro-max                    → nextlevelbuilder/ui-ux-pro-max-skill（設計の起点。
+#                                       スタイル/パレット/フォント/UX ガイドラインの検索可能データ付き）
+#   frontend-design                  → anthropics/skills（"AI っぽい既定値" を避ける意匠の作り込み）
+#   web-design-guidelines            → vercel-labs/agent-skills（Web Interface Guidelines での UI レビュー）
+#   baseline-ui / improve-ui /       → ibelick/ui-skills（間隔・階層・タイポの整地 / 既存 UI の
+#     fixing-motion-performance         監査と改善計画 / アニメーションのカクつき修正）
+#   accessibility / core-web-vitals  → addyosmani/web-quality-skills（WCAG 2.2 監査 /
+#     / performance                     LCP・INP・CLS / 読み込み最適化。Lighthouse 由来）
+#   vercel-react-best-practices /    → vercel-labs/agent-skills（React/Next の性能・合成パターン・
+#     vercel-composition-patterns /     RN/Expo の性能・View Transition API）
+#     vercel-react-native-skills /
+#     vercel-react-view-transitions
+# 選定理由・見送ったもの: docs/_research/2026-08-16-ui-ux-skills.md
 ```
+
+> **Skill の追加・更新は必ず `npx skills add <owner>/<repo> -s <skill>` で行う**（`skills-lock.json` に
+> source と hash が記録され、`.agents/skills/` の実体へ `.claude/skills/` からシンボリックリンクが張られる）。
+> **`.claude/skills/` へディレクトリを手でコピーしない** — lock 管理外の実体ができ、上流の改名時に
+> 旧名と新名が二重に残る（実際に expo/skills が 7 スキル二重登録されていた）。
+> ⚠️ **`npx skills add` は必ずリポジトリルートで実行する。** `.claude/skills/` 内で実行すると
+> そこが新しいプロジェクトルートと誤認され、入れ子の `.agents/` と `skills-lock.json` が作られる。
+> 復元は `npx skills experimental_install`、更新は `npx skills update`。
 
 ## Domain Documentation
 

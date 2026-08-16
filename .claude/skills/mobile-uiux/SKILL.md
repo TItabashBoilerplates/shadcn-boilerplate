@@ -216,4 +216,7 @@ dev-mobile             # Expo Metro（別ターミナルで mobile-ios / mobile-
 - `.claude/rules/auth.md` — ログイン・OTP・パスワード再設定の導線
 - `.claude/skills/gluestack/` — Mobile UI 実装規約（`SafeAreaView` の罠）
 - `.claude/skills/shadcn-ui/` / `shadcn` — Web の UI コンポーネント
-- `.claude/skills/building-native-ui/` / `gluestack-ui-v5` — 公式スキル
+- `building-native-ui` / `gluestack-ui-v5` / `vercel-react-native-skills` — Mobile の公式スキル
+- `ui-ux-pro-max` / `frontend-design` — UI を新規に設計するとき
+- `baseline-ui` / `improve-ui` / `web-design-guidelines` — 既存 UI を整える・レビューする
+- `accessibility`（WCAG 2.2） / `core-web-vitals` / `fixing-motion-performance` — 品質監査
