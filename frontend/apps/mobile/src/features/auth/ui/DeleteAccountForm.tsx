@@ -61,6 +61,8 @@ export function DeleteAccountForm({
         value={confirmation}
         onChangeText={setConfirmation}
         placeholder={confirmationWord}
+        // 保存済みの値がオートフィルされると誤って削除が通りかねないので明示的に切る
+        purpose="confirmation"
         isDisabled={pending}
       />
 

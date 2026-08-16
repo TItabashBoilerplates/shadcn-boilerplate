@@ -52,9 +52,7 @@ export function ChangeEmailForm({
         value={email}
         onChangeText={setEmail}
         placeholder={t('auth.emailPlaceholder')}
-        keyboardType="email-address"
-        autoComplete="email"
-        textContentType="emailAddress"
+        purpose="email"
         isDisabled={pending}
       />
 

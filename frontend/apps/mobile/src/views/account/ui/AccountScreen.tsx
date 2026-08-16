@@ -8,7 +8,7 @@ import {
 } from '@workspace/native-ui/components'
 import { useRouter } from 'expo-router'
 import { useEffect, useState } from 'react'
-import { ScrollView } from 'react-native'
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller'
 import type { AuthResult } from '@/features/auth'
 import { ChangeEmailForm, ChangePasswordForm, DeleteAccountForm } from '@/features/auth'
 import { useI18n } from '@/shared/hooks'
@@ -22,6 +22,14 @@ import { useI18n } from '@/shared/hooks'
  * **モバイルではアカウント削除がストア要件**（App Store 5.1.1(v)。
  * 「サポートへ連絡」では不可）。実装はデータ保持方針に依存するため
  * boilerplate では意図的に未実装にしてある。
+ *
+ * ## キーボード
+ *
+ * 入力欄が 3 セクションに分かれており、下のセクションほどキーボードに隠れやすい。
+ * `KeyboardAwareScrollView` がフォーカスされた欄まで**必要な分だけ**スクロールする。
+ * `keyboardShouldPersistTaps="handled"` が無いとキーボード表示中の 1 タップ目が
+ * 吸われ、「保存ボタンが 1 回目は効かない」ように見える
+ * （`.claude/rules/mobile-uiux.md` / `mobile-uiux.policy.test.ts`）。
  */
 export function AccountScreen({
   loadEmail,
@@ -65,8 +73,13 @@ export function AccountScreen({
   }, [loadEmail])
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
-      <ScrollView contentContainerStyle={{ padding: 24 }} keyboardShouldPersistTaps="handled">
+    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+      <KeyboardAwareScrollView
+        contentContainerStyle={{ padding: 24 }}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        bottomOffset={24}
+      >
         <VStack className="gap-8">
           <VStack className="gap-1">
             <Text className="text-2xl font-bold text-foreground">{t('account.title')}</Text>
@@ -110,7 +123,7 @@ export function AccountScreen({
             <ButtonText>{t('account.signOut')}</ButtonText>
           </Button>
         </VStack>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   )
 }

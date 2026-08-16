@@ -4,12 +4,23 @@ import { NavigationDarkTheme, NavigationLightTheme } from '@workspace/native-ui/
 import { useColorScheme } from '@workspace/native-ui/hooks'
 import { PostHogProvider } from 'posthog-react-native'
 import type { PropsWithChildren } from 'react'
+import { KeyboardProvider } from 'react-native-keyboard-controller'
 import { posthog } from '@/shared/lib/analytics'
 import { OneSignalInitializer } from './OneSignalInitializer'
 
 /**
  * アプリケーションプロバイダー
  * テーマ、認証状態、QueryClient などを提供
+ *
+ * ## KeyboardProvider（アプリに 1 つだけ・最上位）
+ *
+ * `react-native-keyboard-controller` のコンポーネント
+ * （`KeyboardAwareScrollView` / `KeyboardStickyView` 等）はこの Provider を前提にする。
+ * **無いとエラーも警告も出さずに何もしない**ので、「キーボード回避が効かない」ときは
+ * 最初にここを疑う。画面ごとに置かず、**ナビゲーターより外側**に 1 つだけ置くこと
+ * （`.claude/rules/mobile-uiux.md` §1.2 / `mobile-uiux.policy.test.ts` が検査する）。
+ *
+ * ネイティブコードを含むため **Expo Go では動かない**（development build が必要）。
  *
  * ## OneSignal 連携
  *
@@ -32,15 +43,18 @@ export function AppProvider({ children }: PropsWithChildren) {
     // PostHog: usePostHog() を配下で利用可能にする。画面遷移は _layout で手動計測するため
     // captureScreens は無効化し、タッチ autocapture のみ有効にする。
     <PostHogProvider client={posthog} autocapture={{ captureScreens: false, captureTouches: true }}>
-      {/* ナビゲーションの配色も @workspace/tokens 由来（Web / Desktop と共通） */}
-      <ThemeProvider value={colorScheme === 'dark' ? NavigationDarkTheme : NavigationLightTheme}>
-        {/* gluestack-ui のオーバーレイ / トーストのポータル */}
-        <GluestackUIProvider>
-          {/* OneSignal 初期化（認証連携は user?.id を渡す） */}
-          <OneSignalInitializer userId={undefined} />
-          {children}
-        </GluestackUIProvider>
-      </ThemeProvider>
+      {/* キーボード回避の土台。アプリ全体で 1 つだけ */}
+      <KeyboardProvider>
+        {/* ナビゲーションの配色も @workspace/tokens 由来（Web / Desktop と共通） */}
+        <ThemeProvider value={colorScheme === 'dark' ? NavigationDarkTheme : NavigationLightTheme}>
+          {/* gluestack-ui のオーバーレイ / トーストのポータル */}
+          <GluestackUIProvider>
+            {/* OneSignal 初期化（認証連携は user?.id を渡す） */}
+            <OneSignalInitializer userId={undefined} />
+            {children}
+          </GluestackUIProvider>
+        </ThemeProvider>
+      </KeyboardProvider>
     </PostHogProvider>
   )
 }

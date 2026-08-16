@@ -20,7 +20,7 @@ const meta = {
       </View>
     ),
   ],
-  args: { label: 'メールアドレス', value: '', onChangeText: () => {} },
+  args: { label: 'メールアドレス', value: '', onChangeText: () => {}, purpose: 'email' },
 } satisfies Meta<typeof AuthField>
 
 export default meta
@@ -52,7 +52,7 @@ export const Disabled: Story = { args: { value: 'user@example.com', isDisabled: 
 export const Password: Story = {
   args: {
     label: 'パスワード',
-    secure: true,
+    purpose: 'currentPassword',
     value: 'Sup3rStr0ng!Pass',
     toggleLabels: { show: '表示', hide: '非表示' },
   },

@@ -7,7 +7,7 @@ export default async function DashboardLoading() {
   const t = await getTranslations('Loading')
 
   return (
-    <div className="min-h-screen pt-16">
+    <div className="min-h-dvh pt-16">
       <Header />
       <main
         aria-busy="true"

@@ -19,7 +19,7 @@ export default function LocaleError({ error, reset }: ErrorProps) {
   }, [error])
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
+    <div className="flex min-h-dvh items-center justify-center px-4">
       <div className="w-full max-w-md space-y-6 text-center">
         <div className="space-y-2">
           <h2 className="text-2xl font-bold tracking-tight">{t('title')}</h2>

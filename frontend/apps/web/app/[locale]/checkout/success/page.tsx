@@ -11,7 +11,7 @@ export default async function CheckoutSuccessPage({ params }: PageProps) {
   setRequestLocale(locale)
 
   return (
-    <div className="min-h-screen pt-16">
+    <div className="min-h-dvh pt-16">
       <Header />
       <CheckoutSuccessView />
     </div>

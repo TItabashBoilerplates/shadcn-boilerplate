@@ -19,12 +19,23 @@ type StyleContext = {
 
 const UIInputRoot = withStyleContext(View, SCOPE)
 
-const UIInputField = ({
-  className,
-  ...props
-}: React.ComponentProps<typeof TextInput> & { className?: string }) => {
+/**
+ * `ref` を**明示的に受けて素の `TextInput` へ渡す**。
+ *
+ * React 19 では `ref` は通常の prop なので実行時はスプレッドでも届くが、
+ * `createInput()` を通すと型が `Ref<Props>` に潰れてしまい、
+ * `Ref<TextInput>` を渡す呼び出し側が型エラーになる。
+ * **複数入力の Enter キー連鎖（`onSubmitEditing` → 次の欄へ `focus()`）**に必要なので、
+ * ここで型を保つ（`.claude/rules/mobile-uiux.md` §3）。
+ */
+type UIInputFieldProps = React.ComponentProps<typeof TextInput> & {
+  className?: string
+  ref?: React.Ref<TextInput>
+}
+
+const UIInputField = ({ className, ref, ...props }: UIInputFieldProps) => {
   const { size } = useStyleContext(SCOPE) as StyleContext
-  return <TextInput className={inputFieldStyle({ size, class: className })} {...props} />
+  return <TextInput ref={ref} className={inputFieldStyle({ size, class: className })} {...props} />
 }
 
 const UIInputIcon = ({
@@ -86,6 +97,16 @@ export function Input({ className, size, isInvalid, isDisabled, ...props }: Inpu
   )
 }
 
-export const InputField = AccessibleInput.Input
+/**
+ * `createInput()` は内部で ref を **`Ref<Props>`** として型付けしてしまう
+ * （実体は `UIInputField` が素の `TextInput` へ渡すので、**実行時は正しく
+ * `TextInput` のインスタンスが入る**）。この誤った型のままだと
+ * `Ref<TextInput>` を渡す呼び出し側がコンパイルできず、
+ * **複数入力の Enter キー連鎖（次の欄へ `focus()`）が書けない**。
+ *
+ * 上流の型だけを正すための限定的なキャスト。`any` は使わず、
+ * 実体と一致する `UIInputFieldProps` へ寄せている。
+ */
+export const InputField = AccessibleInput.Input as unknown as React.FC<UIInputFieldProps>
 export const InputIcon = AccessibleInput.Icon
 export const InputSlot = AccessibleInput.Slot

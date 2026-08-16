@@ -34,16 +34,22 @@ apps/mobile/
 **入力を含む画面は、キーボードが画面の約半分を覆う前提で実装する。**
 とくに Android は edge-to-edge（Android 15 で強制 / 16 で opt-out 不可）により
 **`react-native` 標準の `KeyboardAvoidingView` が構造的に壊れている**ため、
-キーボード回避は **`react-native-keyboard-controller`** で実装する。
+キーボード回避は **`react-native-keyboard-controller`** で実装する（導入済み）。
 
-セーフエリアの二重適用、入力属性（`inputMode` / `autoComplete` / `textContentType` /
-`enterKeyHint` / `submitBehavior`）、OTP のオートフィル、タップ標的 44×44 も必須要件。
+| 配線 | 場所 |
+|---|---|
+| `KeyboardProvider`（アプリに 1 つだけ） | `src/app/providers/AppProvider.tsx` |
+| フォーム画面のスクロール | `KeyboardAwareScrollView`（`AuthScreen` / `AccountScreen`） |
+| 入力属性（キーボード種別・オートフィル） | `src/features/auth/model/input-attributes.ts` → `<AuthField purpose="..." />` |
+| 静的検査 | `src/shared/config/mobile-uiux.policy.test.ts`（**消さない**） |
+
+⚠️ **ネイティブモジュールを含むため Expo Go では動かない**（development build が必要）。
+
+⚠️ **`autoComplete` は Android に hint が無い値がある**（`one-time-code` / `new-password` /
+`current-password`）。画面で直書きせず、必ず `purpose` 経由で使うこと。
 
 → 不変条件は [`.claude/rules/mobile-uiux.md`](../../../.claude/rules/mobile-uiux.md)、
   実装手順・API・症状別の原因表は [`.claude/skills/mobile-uiux/`](../../../.claude/skills/mobile-uiux/SKILL.md)
-
-> ⚠️ 現状 `src/views/auth/ui/AuthScreen.tsx` は RN 標準の `KeyboardAvoidingView` を使っている。
-> 認証画面に手を入れるときに `react-native-keyboard-controller` へ移行すること。
 
 ## UI Components
 

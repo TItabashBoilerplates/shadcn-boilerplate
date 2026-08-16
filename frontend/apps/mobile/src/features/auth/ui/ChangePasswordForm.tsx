@@ -54,9 +54,7 @@ export function ChangePasswordForm({
         label={t('auth.currentPasswordLabel')}
         value={currentPassword}
         onChangeText={setCurrentPassword}
-        secure
-        autoComplete="password"
-        textContentType="password"
+        purpose="currentPassword"
         isDisabled={pending}
         toggleLabels={toggleLabels}
       />
@@ -66,9 +64,7 @@ export function ChangePasswordForm({
           label={t('auth.newPasswordLabel')}
           value={password}
           onChangeText={setPassword}
-          secure
-          autoComplete="new-password"
-          textContentType="newPassword"
+          purpose="newPassword"
           isDisabled={pending}
           toggleLabels={toggleLabels}
         />
@@ -79,9 +75,7 @@ export function ChangePasswordForm({
         label={t('auth.passwordConfirmationLabel')}
         value={confirmation}
         onChangeText={setConfirmation}
-        secure
-        autoComplete="new-password"
-        textContentType="newPassword"
+        purpose="newPassword"
         isDisabled={pending}
         toggleLabels={toggleLabels}
       />

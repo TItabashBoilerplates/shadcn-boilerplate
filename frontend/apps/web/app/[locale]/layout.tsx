@@ -1,7 +1,7 @@
 import { AuthProvider } from '@workspace/auth'
 import { OneSignalProvider } from '@workspace/onesignal'
 import { QueryProvider } from '@workspace/query'
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { notFound } from 'next/navigation'
 import { hasLocale, NextIntlClientProvider } from 'next-intl'
@@ -21,6 +21,40 @@ const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
 })
+
+/**
+ * ビューポート設定（スマホ幅で壊れないための最低限）
+ *
+ * ## `maximumScale` / `userScalable` を**絶対に書かない**
+ *
+ * ズームを禁止すると **WCAG 1.4.4 (Resize Text) 違反**になり、axe / Deque の
+ * "Zooming and scaling must not be disabled" でも failure として検出される。
+ * ⚠️ **Next.js 公式の `generateViewport` のサンプルコードには
+ * `maximumScale: 1, userScalable: false` がそのまま載っているので、コピーしないこと。**
+ * iOS Safari のフォーカス時オートズームは、**フォーム要素の font-size を 16px 以上**に
+ * することで止める（`.claude/rules/form-controls.md`）。
+ *
+ * ## `viewportFit: 'cover'`
+ *
+ * ノッチ / ホームインジケータのある端末で `env(safe-area-inset-*)` を有効にする。
+ * これが無いと固定フッターがホームインジケータに潜り込む。
+ *
+ * ## `interactiveWidget` を書いていない理由
+ *
+ * 既定（iOS Safari は `resizes-visual`）のままにしてある。**下部固定バー
+ * （`position: fixed; bottom: 0`）を持つ画面を追加するときは
+ * `interactiveWidget: 'resizes-content'` を検討する** — 既定のままだと
+ * iOS でレイアウトビューポートが縮まないため、バーがキーボードの裏に残り
+ * `dvh` も変化しない。アプリ全体に効く設定なので、必要になった時点で判断する。
+ *
+ * @see .claude/rules/mobile-uiux.md §4
+ * @see .claude/skills/mobile-uiux/references/web-mobile.md
+ */
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+}
 
 export async function generateMetadata({
   params,

@@ -62,9 +62,7 @@ export function SignUpForm({
         value={email}
         onChangeText={setEmail}
         placeholder={t('auth.emailPlaceholder')}
-        keyboardType="email-address"
-        autoComplete="email"
-        textContentType="emailAddress"
+        purpose="email"
         isDisabled={pending}
       />
 
@@ -73,9 +71,7 @@ export function SignUpForm({
           label={t('auth.passwordLabel')}
           value={password}
           onChangeText={setPassword}
-          secure
-          autoComplete="new-password"
-          textContentType="newPassword"
+          purpose="newPassword"
           isDisabled={pending}
           toggleLabels={toggleLabels}
         />
@@ -86,9 +82,7 @@ export function SignUpForm({
         label={t('auth.passwordConfirmationLabel')}
         value={confirmation}
         onChangeText={setConfirmation}
-        secure
-        autoComplete="new-password"
-        textContentType="newPassword"
+        purpose="newPassword"
         isDisabled={pending}
         toggleLabels={toggleLabels}
       />

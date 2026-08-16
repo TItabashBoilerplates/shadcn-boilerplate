@@ -1,6 +1,7 @@
 import { Button, ButtonText, Pressable, Text, VStack } from '@workspace/native-ui/components'
 import { useRouter } from 'expo-router'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import type { TextInput } from 'react-native'
 import { useI18n } from '@/shared/hooks'
 import type { AuthResult } from '../model/types'
 import { AuthField } from './AuthField'
@@ -34,6 +35,9 @@ export function SignInForm({
 
   const toggleLabels = { show: t('auth.showPassword'), hide: t('auth.hidePassword') }
 
+  // Enter（次へ）でパスワード欄へフォーカスを移すため
+  const passwordRef = useRef<TextInput>(null)
+
   const handleSubmit = async () => {
     setPending(true)
     setResult(null)
@@ -52,21 +56,22 @@ export function SignInForm({
         value={email}
         onChangeText={setEmail}
         placeholder={t('auth.emailPlaceholder')}
-        keyboardType="email-address"
-        autoComplete="email"
-        textContentType="emailAddress"
+        purpose="email"
         isDisabled={pending}
+        enterKeyHint="next"
+        onSubmitEditing={() => passwordRef.current?.focus()}
       />
 
       <AuthField
         label={t('auth.passwordLabel')}
         value={password}
         onChangeText={setPassword}
-        secure
-        autoComplete="password"
-        textContentType="password"
+        purpose="currentPassword"
         isDisabled={pending}
         toggleLabels={toggleLabels}
+        inputRef={passwordRef}
+        enterKeyHint="go"
+        onSubmitEditing={handleSubmit}
       />
 
       <Pressable

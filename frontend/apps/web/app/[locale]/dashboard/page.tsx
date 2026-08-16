@@ -35,7 +35,7 @@ export default async function Page() {
   const accessToken = session?.access_token ?? null
 
   return (
-    <div className="min-h-screen pt-16">
+    <div className="min-h-dvh pt-16">
       <Header />
       <DashboardPage
         userEmail={user.email || 'Unknown'}

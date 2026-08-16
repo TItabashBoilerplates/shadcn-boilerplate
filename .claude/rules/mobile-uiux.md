@@ -129,13 +129,20 @@ import { KeyboardAvoidingView, KeyboardAwareScrollView } from 'react-native-keyb
 | メール | `inputMode="email"` `autoComplete="email"` `textContentType="emailAddress"` `autoCapitalize="none"` `autoCorrect={false}` | `type="email"` `inputmode="email"` `autocomplete="email"` `autocapitalize="off"` |
 | 現在のパスワード | `secureTextEntry` `autoComplete="current-password"` `textContentType="password"` | `type="password"` `autocomplete="current-password"` |
 | 新しいパスワード | `secureTextEntry` `autoComplete="new-password"` `textContentType="newPassword"` | `type="password"` `autocomplete="new-password"` |
-| **OTP / 6 桁コード** | `inputMode="numeric"` + **iOS `textContentType="oneTimeCode"`** / **Android `autoComplete="sms-otp"`** | `inputmode="numeric"` **`autocomplete="one-time-code"`** |
+| **OTP / 6 桁コード** | `inputMode="numeric"` + **iOS `textContentType="oneTimeCode"`** / **Android `autoComplete="email-otp"`（メール配信）/ `"sms-otp"`（SMS 配信）** | `inputmode="numeric"` **`autocomplete="one-time-code"`** |
 | 電話番号 | `inputMode="tel"` `autoComplete="tel"` | `type="tel"` `autocomplete="tel"` |
 | 検索 | `inputMode="search"` `returnKeyType="search"` | `type="search"` `enterkeyhint="search"` |
 
 - **OTP のオートフィル属性を落とすのは禁止。** 本リポジトリの認証はモバイルのパスワード再設定を
-  **6 桁コード方式**と定めており（`.claude/rules/auth.md`）、`oneTimeCode` / `sms-otp` が無いと
-  ユーザーは SMS / メールとアプリを往復して手打ちすることになる。
+  **6 桁コード方式**と定めており（`.claude/rules/auth.md`）、これが無いと
+  ユーザーはメールとアプリを往復して手打ちすることになる。
+- ⚠️ **`autoComplete` は「クロスプラットフォーム」に見えて Android に hint が無い値がある。**
+  RN の Android 実装（`REACT_PROPS_AUTOFILL_HINTS_MAP`）に **`one-time-code` /
+  `new-password` / `current-password` は存在しない**（それぞれ `email-otp`・`sms-otp` /
+  `password-new` / `password` が正）。**iOS では動くのに Android のオートフィルだけが
+  無言で死ぬ**ため、値はプラットフォームごとに出し分ける。本リポジトリでは
+  `features/auth/model/input-attributes.ts` の `resolveAuthFieldAttributes()` に集約済みで、
+  画面側は意味（`purpose`）を渡すだけでよい。
 - **Enter キーの意味を明示する**: 次の欄があるなら `returnKeyType="next"`（Web は
   `enterkeyhint="next"`）＋ `ref.focus()` で移動、最後の欄は `"done"` / `"go"` で送信。
 - **`blurOnSubmit` は deprecated。`submitBehavior`（`'submit' | 'blurAndSubmit' | 'newline'`）を使う。**

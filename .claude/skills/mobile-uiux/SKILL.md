@@ -23,27 +23,27 @@ description: モバイル（Expo / React Native）と「スマホ幅で見られ
 
 ---
 
-## 1. 現状（このリポジトリ）と最初にやること
+## 1. 現状（このリポジトリ）— **配線は済んでいる**
 
 | 項目 | 現状 |
 |---|---|
 | Expo / RN | **Expo SDK 57 / React Native 0.86**（`app.json` は `android.edgeToEdgeEnabled: true`） |
 | Reanimated | **4.5.x**（`react-native-keyboard-controller` の peer `>=3.0.0` を満たす） |
-| キーボード制御 | **`react-native-keyboard-controller` は未導入**。`views/auth/ui/AuthScreen.tsx` が **RN 標準の `KeyboardAvoidingView`** を使っている（= Android edge-to-edge 下で構造的に壊れる構成） |
+| キーボード制御 | **`react-native-keyboard-controller` 導入済み**（`bunx expo install` が SDK 57 互換の **1.21.9** を選ぶ）。`KeyboardProvider` は `app/providers/AppProvider.tsx` の最上位 |
+| フォーム画面 | `views/auth/ui/AuthScreen.tsx` / `views/account/ui/AccountScreen.tsx` が **`KeyboardAwareScrollView`** |
+| 入力属性 | `features/auth/model/input-attributes.ts` の `resolveAuthFieldAttributes(purpose, platform)` に集約。画面側は `<AuthField purpose="email" />` のように**意味だけ**を渡す |
 | セーフエリア | `@workspace/native-ui` の `SafeAreaView`（`react-native-safe-area-context` の直接 import は禁止 → `.claude/skills/gluestack/`） |
-| Web | `apps/web` に明示的な `viewport` export は無い（Next.js 既定） |
+| Web | `apps/web/app/[locale]/layout.tsx` が `viewport`（`viewportFit: 'cover'`）を export。高さは `min-h-dvh` |
+| 静的検査 | `apps/{mobile,web}/src/shared/config/mobile-uiux.policy.test.ts` が CI で検査（**消さない**） |
 
-**入力を含む画面に手を入れるときは、まず導入から**:
+> **Expo Go では動かない**（ネイティブコードを含む）。**development build が必要**
+> → `.claude/skills/expo-dev-client/`
+>
+> `app.json` の `android.softwareKeyboardLayoutMode` は**既定の `"resize"` のまま**にする
+> （`"pan"` は keyboard-controller を使わない場合の下タブ回避策。併用すると二重に動く）。
 
-```bash
-cd frontend/apps/mobile && bunx expo install react-native-keyboard-controller
-```
-
-- **Expo Go では動かない**（ネイティブコードを含む）。**development build が必要**
-  → `.claude/skills/expo-dev-client/`
-- 導入後は `app/providers/AppProvider.tsx` の**最上位**に `KeyboardProvider` を置く（§2）。
-- `app.json` の `android.softwareKeyboardLayoutMode` は**既定の `"resize"` のまま**にする
-  （`"pan"` は下タブの回避策であり、keyboard-controller を使うなら不要）。
+**新しい入力画面を足すときは、下の §2〜§4 の形をそのまま踏襲する。**
+逸脱するとポリシーテストが落ちる。
 
 ---
 
@@ -112,6 +112,26 @@ export function LoginScreen() {
 ---
 
 ## 4. 入力フィールドの属性（ここを省くと「使えない入力」になる）
+
+本リポジトリでは **`AuthField` に `purpose` を渡すだけ**でよい（属性は
+`features/auth/model/input-attributes.ts` が導出する）:
+
+```tsx
+<AuthField
+  label={t('auth.emailLabel')}
+  value={email}
+  onChangeText={setEmail}
+  purpose="email"                       // 'email' | 'currentPassword' | 'newPassword'
+  enterKeyHint="next"                   //          | 'oneTimeCode'   | 'confirmation'
+  onSubmitEditing={() => passwordRef.current?.focus()}
+/>
+```
+
+⚠️ **`autoComplete` は「クロスプラットフォーム」に見えて Android に hint が無い値がある。**
+RN の Android 実装（`REACT_PROPS_AUTOFILL_HINTS_MAP`）に **`one-time-code` /
+`new-password` / `current-password` は存在しない**（正しくは `email-otp`・`sms-otp` /
+`password-new` / `password`）。**iOS では動くのに Android のオートフィルだけが無言で死ぬ**ため、
+新しい `purpose` を足すときも必ず `input-attributes.ts` の表に追加する（テストが対応表を固定している）。
 
 意味ごとの属性は **[references/input-attributes.md](references/input-attributes.md)** に
 Native / Web 対応表としてまとめてある。最低限の原則:

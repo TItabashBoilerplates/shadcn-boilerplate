@@ -81,9 +81,7 @@ export function ForgotPasswordForm({
           value={email}
           onChangeText={setEmail}
           placeholder={t('auth.emailPlaceholder')}
-          keyboardType="email-address"
-          autoComplete="email"
-          textContentType="emailAddress"
+          purpose="email"
           isDisabled={pending}
         />
 
@@ -113,9 +111,7 @@ export function ForgotPasswordForm({
         value={code}
         onChangeText={setCode}
         placeholder="123456"
-        keyboardType="number-pad"
-        autoComplete="one-time-code"
-        textContentType="oneTimeCode"
+        purpose="oneTimeCode"
         isDisabled={pending}
       />
 
@@ -124,9 +120,7 @@ export function ForgotPasswordForm({
           label={t('auth.newPasswordLabel')}
           value={password}
           onChangeText={setPassword}
-          secure
-          autoComplete="new-password"
-          textContentType="newPassword"
+          purpose="newPassword"
           isDisabled={pending}
           toggleLabels={toggleLabels}
         />
@@ -137,9 +131,7 @@ export function ForgotPasswordForm({
         label={t('auth.passwordConfirmationLabel')}
         value={confirmation}
         onChangeText={setConfirmation}
-        secure
-        autoComplete="new-password"
-        textContentType="newPassword"
+        purpose="newPassword"
         isDisabled={pending}
         toggleLabels={toggleLabels}
       />

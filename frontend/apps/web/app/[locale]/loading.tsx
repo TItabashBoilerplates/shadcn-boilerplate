@@ -6,7 +6,7 @@ export default async function LocaleLoading() {
   const t = await getTranslations('Loading')
 
   return (
-    <div className="min-h-screen pt-16">
+    <div className="min-h-dvh pt-16">
       <Header />
       <main
         aria-busy="true"

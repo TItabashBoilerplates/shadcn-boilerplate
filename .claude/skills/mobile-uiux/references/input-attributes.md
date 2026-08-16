@@ -41,12 +41,36 @@
 | URL | `inputMode="url"` `autoCapitalize="none"` `autoCorrect={false}` |
 | 自由記述（本文・メモ） | `multiline` **`textAlignVertical="top"`** |
 
-`autoComplete` は cross-platform 値と片側だけの値が混在する。**Android 専用値
-（`sms-otp` / `username-new` / `password-new` / `postal-address*` / `tel-national` 等）と
-iOS 専用値（`nickname` / `organization` / `cc-name` / `url` 等）を、もう一方に渡さない。**
-共通で使える主な値: `email` / `username` / `name` / `given-name` / `family-name` /
-`current-password` / `new-password` / `one-time-code` / `tel` / `postal-code` /
-`street-address` / `address-line1` / `address-line2` / `country` / `cc-number` / `off`。
+### ⚠️ 「クロスプラットフォーム」に見えて Android に hint が無い値がある（実測）
+
+RN のドキュメントは `autoComplete` の多くを cross-platform として列挙するが、**Android 実装
+（`ReactTextInputManager.kt` の `REACT_PROPS_AUTOFILL_HINTS_MAP`）を実際に読むと、
+マップに入っていない値がある**。マップに無い値を渡すと **hint が一切付かず、
+エラーも警告も出ないまま Android のオートフィルだけが死ぬ**。
+
+| 用途 | ✅ Android にある | ❌ Android に**無い** |
+|---|---|---|
+| 現在のパスワード | **`password`** | `current-password` |
+| 新しいパスワード | **`password-new`** | `new-password` |
+| ワンタイムコード | **`sms-otp`**（SMS） / **`email-otp`**（メール） | `one-time-code` |
+
+つまり `autoComplete="one-time-code"` は **iOS では `textContentType` のおかげで動くが
+Android では無効**。iOS 側は `textContentType`（`autoComplete` に優先）で指定するので、
+**プラットフォームごとに値を出し分けるのが正しい**。
+
+本リポジトリはこの対応表を
+`apps/mobile/src/features/auth/model/input-attributes.ts` の
+`resolveAuthFieldAttributes(purpose, platform)` に閉じ込め、
+`input-attributes.test.ts` で固定している（画面側は意味＝`purpose` を渡すだけ）。
+
+> **コードの配信経路で値が変わる**: SMS で届くなら `sms-otp`、メールで届くなら `email-otp`。
+> 本リポジトリの再設定コードは `resetPasswordForEmail` なので**メール**（`email-otp`）。
+
+Android 専用値（`sms-otp` / `email-otp` / `username-new` / `password-new` /
+`postal-address*` / `tel-national` 等）と iOS 専用値（`nickname` / `organization` /
+`cc-name` / `url` 等）を、もう一方に渡さないこと。
+両方で確実に使える主な値: `email` / `username` / `name` / `given-name` / `family-name` /
+`tel` / `postal-code` / `street-address` / `country` / `cc-number` / `off`。
 
 ### Web（`apps/web` / `@workspace/ui`）
 
@@ -77,8 +101,12 @@ iOS 専用値（`nickname` / `organization` / `cc-name` / `url` 等）を、も�
 | プラットフォーム | 属性 | 追加条件 |
 |---|---|---|
 | iOS | `textContentType="oneTimeCode"` | SMS の場合は Apple のドメイン紐付け形式に沿った本文が必要 |
-| Android | `autoComplete="sms-otp"` | — |
+| Android（**メール**配信） | `autoComplete="email-otp"` | **`one-time-code` は Android に hint が無い**（上表） |
+| Android（**SMS** 配信） | `autoComplete="sms-otp"` | 同上 |
 | Web | `autocomplete="one-time-code"` | iOS Safari は SMS 本文の形式条件あり |
+
+本リポジトリは `AuthField` に `purpose="oneTimeCode"` を渡すだけでよい
+（配信経路はメールなので Android は `email-otp` になる）。
 
 - **6 桁を 6 個の入力に分割しない。** 分割 UI はオートフィル・貼り付け・スクリーンリーダーの
   すべてを壊す。1 つの入力にして表示だけを分けるなら、オートフィルが効くことを実機で確認する。

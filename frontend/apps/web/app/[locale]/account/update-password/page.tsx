@@ -11,7 +11,7 @@ import { Header } from '@/widgets/header'
  */
 export default function Page() {
   return (
-    <div className="min-h-screen pt-16">
+    <div className="min-h-dvh pt-16">
       <Header />
       <UpdatePasswordPage />
     </div>

@@ -29,7 +29,7 @@ export default async function Page({ searchParams }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen pt-16">
+    <div className="min-h-dvh pt-16">
       <Header />
       <VerifyOTPPage email={email} />
     </div>
