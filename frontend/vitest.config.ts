@@ -24,6 +24,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './apps/web/src'),
+      '@workspace/app': path.resolve(__dirname, './packages/app'),
       '@workspace/ui': path.resolve(__dirname, './packages/ui'),
       '@workspace/native-ui': path.resolve(__dirname, './packages/native-ui'),
       '@workspace/auth': path.resolve(__dirname, './packages/auth'),

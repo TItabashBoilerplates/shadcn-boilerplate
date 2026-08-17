@@ -1,8 +1,8 @@
 'use client'
 
+import type { User as UserType } from '@workspace/app'
 import { Avatar, AvatarFallback, AvatarImage } from '@workspace/ui/components/avatar'
 import { User } from 'lucide-react'
-import type { User as UserType } from '../model/types'
 
 interface UserAvatarProps {
   user: UserType

@@ -1,83 +1,55 @@
-/**
- * ユーザープロファイル用Zustandストア
- *
- * 認証状態とは別に、ユーザープロファイル情報を管理
- */
-
 import { create } from 'zustand'
-import type { AppUser } from './types'
-
-export interface UserProfileState {
-  /**
-   * ユーザープロファイル情報
-   */
-  profile: AppUser | null
-
-  /**
-   * プロファイルローディング状態
-   */
-  isLoading: boolean
-
-  /**
-   * エラーメッセージ
-   */
-  error: string | null
-
-  /**
-   * プロファイルを設定
-   */
-  setProfile: (profile: AppUser | null) => void
-
-  /**
-   * ローディング状態を設定
-   */
-  setLoading: (isLoading: boolean) => void
-
-  /**
-   * エラーを設定
-   */
-  setError: (error: string | null) => void
-
-  /**
-   * 状態をリセット
-   */
-  reset: () => void
-}
+import type { AuthUser, User } from './types'
 
 /**
- * ユーザープロファイル管理用ストア
+ * ユーザー情報を管理する Zustand ストア（Web / Mobile / Desktop 共有の正本）
+ *
+ * **必ずセレクター付きで購読すること**（`.claude/rules/render-optimization.md`）。
+ * 引数なしの `useUserStore()` はストア全体を購読するため、無関係な変更で再描画される。
+ * 用途別のセレクター付きフックを `./hooks` に用意してあるのでそちらを使う。
  *
  * @example
  * ```tsx
- * const { profile, isLoading } = useUserProfileStore()
+ * import { useAuthUser } from '@workspace/app/entities/user'
+ *
+ * function Header() {
+ *   const { authUser, isLoading } = useAuthUser()
+ *   if (isLoading) return <Skeleton />
+ *   return <span>{authUser?.email}</span>
+ * }
  * ```
  */
-export const useUserProfileStore = create<UserProfileState>((set) => ({
-  profile: null,
-  isLoading: false,
-  error: null,
+interface UserState {
+  /** 認証ユーザー（Supabase Auth 由来） */
+  authUser: AuthUser | null
 
-  setProfile: (profile) =>
-    set({
-      profile,
-      error: null,
-    }),
+  /** プロフィール（public.users 由来）。認証済みでも行が無い間は null */
+  user: User | null
 
-  setLoading: (isLoading) =>
-    set({
-      isLoading,
-    }),
+  /**
+   * 認証状態をまだ確認していない間だけ true。
+   *
+   * 「未ログイン」と「確認前」を区別できないと、起動直後に一瞬ログイン画面が
+   * 出る（ちらつき）ので必ず持つ。
+   */
+  isLoading: boolean
 
-  setError: (error) =>
-    set({
-      error,
-      isLoading: false,
-    }),
+  setAuthUser: (authUser: AuthUser | null) => void
+  setUser: (user: User | null) => void
+  clearUser: () => void
+}
 
-  reset: () =>
-    set({
-      profile: null,
-      isLoading: false,
-      error: null,
-    }),
+export const useUserStore = create<UserState>((set) => ({
+  authUser: null,
+  user: null,
+  isLoading: true,
+
+  // 認証状態が判明した時点で読込中を解除する（null = 未ログイン確定も含む）
+  setAuthUser: (authUser) => set({ authUser, isLoading: false }),
+
+  setUser: (user) => set({ user }),
+
+  clearUser: () => set({ authUser: null, user: null, isLoading: false }),
 }))
+
+export type { UserState }
