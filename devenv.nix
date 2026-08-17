@@ -185,6 +185,10 @@ let
   #   - exec  : exec body 全体を上書き（既定は `cd frontend/apps/<name> && exec nr dev`）
   frontendApps = {
     web   = { port = 3000; };
+    # Tauri の devUrl（src-tauri/tauri.conf.json）と一致させること。
+    # `dev-desktop` は Vite だけを起動する。ネイティブウィンドウを出すのは
+    # `cd frontend/apps/desktop && nr tauri:dev`（Rust のビルドが要るため devenv 外）。
+    desktop = { port = 1420; };
     mobile = {
       port = 8081;
       ready = "/status";
@@ -576,6 +580,44 @@ in
           abis = [ "x86_64" ];
         };
       };
+    };
+
+    # ===== desktop: Tauri v2（apps/desktop）のネイティブビルド toolchain =====
+    #
+    # **opt-in profile にしている理由**: Linux で Tauri をビルドするには WebKitGTK と
+    # GTK3 の開発ヘッダが要り、closure が数 GB になる。web / mobile しか触らない開発者と
+    # CI に負わせる理由が無いので、デスクトップを触るときだけ有効化する（android と同じ方針）。
+    #
+    #   devenv shell -P desktop                    # Tauri toolchain 入りの shell
+    #   devenv shell -P desktop -- bash -c 'cd frontend/apps/desktop && nr tauri:dev'
+    #   devenv shell -P desktop -- bash -c 'cd frontend/apps/desktop && nr tauri:build'
+    #
+    # **macOS / Windows ではこの profile は不要**（Xcode Command Line Tools / MSVC +
+    # WebView2 という OS 側の前提だけで足りる）。ここで入れているのは
+    # **Linux の WebKitGTK 依存**であり、Tauri 公式の Linux 前提条件に対応する。
+    # @see https://v2.tauri.app/start/prerequisites/
+    #
+    # ⚠️ これらが無いと `cargo check` の時点で
+    #    「HINT: you may need to install a package such as glib-2.0」等で落ちる
+    #    （Rust さえあればビルドできる、ではない）。
+    desktop.module = { pkgs, ... }: {
+      packages = with pkgs; [
+        # Tauri 本体（wry / tao）がリンクする WebView とウィンドウ系
+        webkitgtk_4_1
+        gtk3
+        libsoup_3
+        glib-networking
+
+        # ビルド時に pkg-config でヘッダを探すため必須
+        pkg-config
+
+        # AppImage / deb / rpm のバンドルに使う
+        openssl
+        librsvg
+        patchelf
+      ];
+
+      languages.rust.enable = true;
     };
   };
 

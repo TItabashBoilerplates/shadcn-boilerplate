@@ -86,6 +86,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
     │
     │ # ↓ 本リポジトリ固有の運用手順（自作 Skill・lock 管理外）
     ├── ai-usage-metering/ # ★ LLM/生成AI のトークン使用量・コスト集計を設計へ標準で織り込む（集計軸・単価表・計上の罠）
+    ├── tauri/            # ★ Tauri v2 デスクトップ（apps/desktop）。IPC / capabilities / CSP /
+    │                     #   Linux の WebKitGTK 依存（devenv の desktop profile）/ Next.js を載せられない理由
     ├── vercel-deploy/    # ★ Vercel の GitHub 連携 + デプロイ（vercel-deploy script の使い方と落とし穴）
     ├── mobile-release/   # ★ EAS リリース（ビルド → アップロード → TestFlight 配布 → 審査提出 → Play のロールアウト）
     ├── store-screenshots/ # ★ ストア掲載画像（撮影ハーネス → 生成AIで背景と見出し → 合成 → 両ストアへ API 反映）
