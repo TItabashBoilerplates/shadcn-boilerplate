@@ -993,18 +993,29 @@ in
         "backend-py/packages/*/pyproject.toml"
       ];
     };
+    # ⚠️ 失敗を握りつぶさないこと（`.claude/rules/error-handling.md`）。
+    # 以前は各 function の `deno check` を `|| echo "⚠️ Type check failed"` で受けていたため、
+    # **型エラーがあっても task は exit 0 になり ci-check が緑のまま通っていた**。
+    # 実際にこれで `delete-account` の deno.json 欠落（`@supabase/supabase-js` が
+    # not a dependency）が CI をすり抜けている。ログに警告は出るが誰も読まない。
+    # → 失敗した function 名を集めたうえで、最後に必ず非 0 で落とす。
     "type-check:functions" = {
       exec = ''
+        failed=""
         for dir in "$DEVENV_ROOT"/supabase/functions/*/; do
           [ -f "$dir/index.ts" ] || continue
           func_name=$(basename "$dir")
           if [ -f "$dir/deno.json" ]; then
             (cd "$dir" && deno cache --config=deno.json index.ts) >/dev/null 2>&1 || true
-            (cd "$dir" && deno check --config=deno.json index.ts) || echo "  ⚠️  Type check failed for $func_name"
+            (cd "$dir" && deno check --config=deno.json index.ts) || failed="$failed $func_name"
           else
-            deno check "$dir/index.ts" || echo "  ⚠️  Type check failed for $func_name"
+            deno check "$dir/index.ts" || failed="$failed $func_name"
           fi
         done
+        if [ -n "$failed" ]; then
+          echo "❌ Type check failed for:$failed"
+          exit 1
+        fi
       '';
       execIfModified = [
         "supabase/functions/**/*.ts"
