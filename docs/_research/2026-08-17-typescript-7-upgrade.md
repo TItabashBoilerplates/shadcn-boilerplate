@@ -438,3 +438,38 @@ expo-symbols@57.0.1     → ~57.0.2
 - [Tauri: Next.js](https://v2.tauri.app/start/frontend/nextjs/) — SSG のみ対応
 - [Expo SDK 57 changelog](https://expo.dev/changelog/sdk-57) — RN 0.86 / React 19.2
 - 実測: `typescript@7.0.2` / `@typescript/typescript6@6.0.2` / `@typescript-eslint/parser@8.65.0` / `bun 1.3.11` / `npm`
+
+---
+
+## 10. 追補: Web / Mobile / Desktop の共通化（実施内容と、あえてやらなかったもの）
+
+デスクトップアプリ追加にあたり、3 プラットフォームで重複しているものを機械的に洗い出した。
+**「同名のファイルがある」ことは重複ではない**（UI は shadcn/ui と gluestack-ui で実体が違う）ため、
+内容を突き合わせて判断した。
+
+### 10.1 共通化したもの
+
+| 対象 | 何が起きていたか | 移した先 |
+|---|---|---|
+| **user エンティティ**（型 / ストア / フック） | web・mobile・`packages/app` に **3 つの別形の定義**があり、**どのアプリからも使われていなかった**。実際の `users` テーブルは `id` / `display_name` / `account_name` / `created_at` / `updated_at` のみなのに、**mobile は `email` / `avatarUrl` / `bio` を、`packages/app` は `user_metadata` 由来の `AppUser` を手書き**していた（マイグレーションに追従せず、列を消しても型が残る） | **`@workspace/app`**。`User = Tables<'users'>` として生成物から導出 |
+| **認証の i18n メッセージキー**（`AuthSuccessKey` / `AuthValidationKey`） | web と mobile に別定義があり、**実際に集合がズレていた**（web=`passwordResetSent` / mobile=`passwordResetCodeSent`）。翻訳ファイルとの契約なので、ズレると**そのプラットフォームでだけキー文字列が画面に出る**（型も lint も通る） | **`@workspace/auth/validation`**（既に「同じ規則を 2 か所に書かない」ための層として存在） |
+
+いずれも `.claude/rules/minimal-implementation.md` §2.1 の「**不整合が事故になるもの
+（バリデーション規則・API 契約）は 2 回目で即共通化**」に該当する。
+
+### 10.2 あえて共通化しなかったもの（理由つき）
+
+| 対象 | 理由 |
+|---|---|
+| **UI コンポーネント**（`UserAvatar` 等） | 実体が shadcn/ui（Radix + DOM）と gluestack-ui（RN）で別物。`frontend.md` のデザインシステム方針どおり、**共有するのはトークンと API 契約であってクラス文字列ではない**。共有すると `hover:` / `focus-visible:` / `shadow-xs` を表現できない Native に合わせて **Web を最小公倍数まで劣化**させる |
+| **認証 API の戻り値の器**（`AuthActionState` vs `AuthResult`） | Web は Server Actions + `useActionState` の形、Mobile は直接呼び出しの形。**揃えると Server Actions の制約に Mobile が引きずられる**。共有したのはキーの集合だけ |
+| **Supabase クライアント生成** | Web は cookie ベースの SSR、Mobile は `expo-secure-store`。前提が違う（`@workspace/client-supabase` が既に両方の入口を持っている） |
+| **analytics（PostHog）ラッパー** | SDK が `posthog-js` と `posthog-react-native` で別物。イベント名を共有する価値はあるが、**現状イベント定義自体がまだ無い**ので、実装が入る時点で判断するほうが正しい（今やると使われない抽象になる） |
+| **i18n メッセージカタログ本体** | Web は `next-intl`（JSON）、Mobile は `i18n-js`（TS）。ライブラリの形式が違い、**共有すると片方に変換層が要る**。キー契約（§10.1）だけを共有すれば事故は防げる |
+| **ルーティング / ナビゲーション** | Next.js App Router と expo-router で概念が違う |
+
+### 10.3 デスクトップの扱い
+
+`apps/desktop` は **Web と同じ `@workspace/ui` をそのまま使う**（実体が DOM なので分岐が要らない）。
+CSS エントリも `@import "@workspace/ui/styles/globals.css"` の 1 行だけで、
+`frontend.md` が「新しいアプリ（デスクトップ等）を足すとき」として想定していた形にそのまま乗った。
