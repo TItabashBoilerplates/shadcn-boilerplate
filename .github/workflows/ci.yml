@@ -83,28 +83,29 @@ jobs:
             frontend/tooling/*/node_modules
             drizzle/node_modules
           key: ${{ runner.os }}-node-modules-${{ hashFiles('frontend/bun.lock', 'drizzle/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-node-modules-
+          # ⚠️ restore-keys（prefix fallback）は付けないこと。
+          # 付けると lockfile hash が変わった時に**別の lockfile で作られた
+          # node_modules がそのまま復元される**。しかも `bun install --frozen-lockfile`
+          # は既存ツリーを浅く検証するだけ（実測「Checked 2075 installs (no changes)」）で
+          # 中身が古いパッケージを修復しないため、stale なまま検査に入ってしまう。
+          # さらに cache の保存は job 失敗時に skip されるので、CI が赤い間は
+          # 古いツリーが延々と再利用され続ける。
+          # exact key のみにすれば miss 時は空 → 下の Sync step が本物の install を行う。
       - name: Install devenv.sh
         shell: bash
         run: nix profile add nixpkgs#devenv
-      # ⚠️ 復元した node_modules を必ずロックファイルと突き合わせる（消さないこと）。
+      # ⚠️ この step は消さないこと（install を確実に走らせる唯一の場所）。
       #
-      # 上の cache は `restore-keys` による prefix fallback を持つため、lockfile hash が
-      # 変わると**別の lockfile で作られた node_modules がそのまま復元される**。
-      # 一方 `setup:install-frontend` / `setup:install-drizzle` は execIfModified 付きで、
-      # enterShell 経由だと **skip されて stale なツリーが是正されないまま verify に入る**
+      # `setup:install-frontend` / `setup:install-drizzle` は execIfModified 付きなので、
+      # enterShell 経由だと **skip されて install が走らない**
       # （実測: CI の setup:install-frontend は bun の出力すら無く 103ms で完了 = 未実行。
-      #  ローカルで整合済みでも `bun install --frozen-lockfile` は 209ms かかり必ず出力が出る）。
+      #  整合済みでも `bun install --frozen-lockfile` は 209ms かかり必ず出力が出る）。
+      # ここは execIfModified を通らない素の `run:` なので必ず実行される。
       #
-      # これが原因で「ローカルは緑なのに CI だけ TS2305」が起きていた。nativewind は
-      # `styled` を react-native-css から re-export しているだけなので、stale なツリーで
-      # 解決に失敗すると `has no exported member 'styled'` として現れる（skipLibCheck が
-      # d.ts 内の解決失敗を隠すため、利用側の 1 行だけがエラーになる）。
-      #
-      # ここは execIfModified を通らない素の `run:` なので必ず実行され、
+      # 上の cache を exact key のみにしてあるので、miss 時は node_modules が空の状態から
+      # 本物の install が走る（＝ロックファイルと必ず一致したツリーになる）。
       # 差分があれば --frozen-lockfile が非 0 で落ちる（黙って直さない）。
-      - name: Sync JS dependencies (reconcile restored cache)
+      - name: Sync JS dependencies (install into a lockfile-matched tree)
         run: |
           cd "$DEVENV_ROOT/frontend" && bun install --frozen-lockfile
           cd "$DEVENV_ROOT/drizzle"  && bun install --frozen-lockfile
@@ -149,14 +150,19 @@ jobs:
             frontend/tooling/*/node_modules
             drizzle/node_modules
           key: ${{ runner.os }}-node-modules-${{ hashFiles('frontend/bun.lock', 'drizzle/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-node-modules-
+          # ⚠️ restore-keys（prefix fallback）は付けないこと。
+          # 付けると lockfile hash が変わった時に**別の lockfile で作られた
+          # node_modules がそのまま復元される**。しかも `bun install --frozen-lockfile`
+          # は既存ツリーを浅く検証するだけ（実測「Checked 2075 installs (no changes)」）で
+          # 中身が古いパッケージを修復しないため、stale なまま検査に入ってしまう。
+          # さらに cache の保存は job 失敗時に skip されるので、CI が赤い間は
+          # 古いツリーが延々と再利用され続ける。
+          # exact key のみにすれば miss 時は空 → 下の Sync step が本物の install を行う。
       - name: Install devenv.sh
         shell: bash
         run: nix profile add nixpkgs#devenv
-      # ci-check job と同じ理由（restore-keys の prefix fallback × execIfModified の skip）。
-      # このジョブも復元した node_modules で走るので同様に突き合わせる。
-      - name: Sync JS dependencies (reconcile restored cache)
+      # ci-check job と同じ理由（execIfModified による install の skip）。
+      - name: Sync JS dependencies (install into a lockfile-matched tree)
         run: |
           cd "$DEVENV_ROOT/frontend" && bun install --frozen-lockfile
           cd "$DEVENV_ROOT/drizzle"  && bun install --frozen-lockfile
