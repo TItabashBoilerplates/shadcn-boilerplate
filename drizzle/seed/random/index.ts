@@ -9,7 +9,7 @@
  *
  * Available generator functions (f):
  * - f.fullName(), f.firstName(), f.lastName()
- * - f.email({ isUnique: true })
+ * - f.email()  … 既定で一意（isUnique オプションは無い）
  * - f.phoneNumber({ template: '###-####-####' })
  * - f.streetAddress(), f.city(), f.state(), f.country(), f.postcode()
  * - f.companyName(), f.jobTitle()
@@ -20,11 +20,10 @@
  * - f.weightedRandom([{ weight, value }])
  * - f.default({ defaultValue })
  */
-import type { RefinementsType } from 'drizzle-seed'
-import { usersRefinement } from './users'
+import { type GeneratorFunctions, usersRefinement } from './users'
 
 // Combine all refinements
-export const refinements: RefinementsType = (f) => ({
+export const refinements = (f: GeneratorFunctions) => ({
   ...usersRefinement(f),
   // Add more table refinements as needed
   // ...chatRoomsRefinement(f),

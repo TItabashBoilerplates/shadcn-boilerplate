@@ -32,7 +32,13 @@
  */
 
 // Client configuration
-export { client } from '@hey-api/client-fetch'
+//
+// Hey API はクライアント実装を `src/generated/client/` へ**バンドル出力**するため、
+// ランタイムの `@hey-api/client-fetch` から `client` を取り出すことはできない
+// （同パッケージは `client` を named export していない）。
+// 生成物の `client.gen.ts` が `createClient()` 済みのインスタンスを持っているので、
+// Public API はそちらを再 export する。
+export { client } from './src/generated/client.gen'
 
 // SDK functions
 export * from './src/generated/sdk.gen'
