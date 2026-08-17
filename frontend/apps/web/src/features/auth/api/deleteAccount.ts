@@ -2,10 +2,7 @@
 
 import { resolveAuthError } from '@workspace/auth/validation'
 import { createServerClient as createClient } from '@/shared/lib/supabase'
-import type { AuthActionState } from '../model/types'
-
-/** 誤操作で消えないよう、ユーザーにこの語句を打たせる */
-export const DELETE_ACCOUNT_CONFIRMATION = 'DELETE'
+import { type AuthActionState, DELETE_ACCOUNT_CONFIRMATION } from '../model/types'
 
 /**
  * アカウント削除

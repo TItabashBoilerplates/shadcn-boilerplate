@@ -18,7 +18,6 @@
 export {
   changeEmail,
   changePassword,
-  DELETE_ACCOUNT_CONFIRMATION,
   deleteAccount,
   requestPasswordReset,
   resendOtp,
@@ -37,7 +36,7 @@ export type {
   LoginFormProps,
   VerifyOTPFormProps,
 } from './model/types'
-export { AUTH_IDLE_STATE } from './model/types'
+export { AUTH_IDLE_STATE, DELETE_ACCOUNT_CONFIRMATION } from './model/types'
 export { AuthMessage } from './ui/AuthMessage'
 export { ChangeEmailForm } from './ui/ChangeEmailForm'
 export { ChangePasswordForm } from './ui/ChangePasswordForm'

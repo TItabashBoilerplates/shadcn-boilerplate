@@ -50,6 +50,16 @@ export type AuthValidationKey =
 export const AUTH_IDLE_STATE: AuthActionState = { status: 'idle' }
 
 /**
+ * 誤操作で消えないよう、アカウント削除時にユーザーへ打たせる語句。
+ *
+ * **`api/deleteAccount.ts`（`"use server"`）に置いてはならない。** Next.js は
+ * `"use server"` ファイルからの export を async 関数に限定しており、定数を混ぜると
+ * **モジュール全体の export が消えて `next build` が失敗する**（実際に起きた）。
+ * `shared/lib/server-actions.policy.test.ts` がこれを検査している。
+ */
+export const DELETE_ACCOUNT_CONFIRMATION = 'DELETE'
+
+/**
  * OTP送信フォームのプロパティ
  */
 export interface LoginFormProps {
