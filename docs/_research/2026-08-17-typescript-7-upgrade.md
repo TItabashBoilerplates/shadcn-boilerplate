@@ -122,6 +122,40 @@ See also https://github.com/typescript-eslint/typescript-eslint/issues/10940
 
 typescript-eslint 自身がバージョンを検出して**明示的に拒否**している（peer も `typescript: >=4.8.4 <6.1.0`）。type-aware ルールを切っても回避できない。
 
+### 3.0 「設定が TS7 に最適化されていないだけ」ではないことの確認
+
+最初の実測は `eslint-config-next` / `eslint-config-expo` が transitive に持ち込む 8.46.2 / 8.65.0
+だったため、**最新版なら対応しているのではないか**を別途検証した。結論は「設定の問題ではない」。
+
+| 検証 | 結果 |
+|---|---|
+| `typescript-eslint@latest` の実バージョン | **8.67.0** |
+| その `peerDependencies.typescript` | **`>=4.8.4 <6.1.0`**（TS 7 は範囲外） |
+| 8.67.0 + `typescript@7.0.2` で parse | ❌ `typescript-eslint does not support TS 7.0.` |
+| 同じ 8.67.0 で `typescript@6.0.3` に戻す（対照実験） | ✅ parse 成功 |
+| ESLint 本体を最新（**10.8.1**）にする | 無関係。ブロッカーは parser 側 |
+| 公式ドキュメント [Dependency Versions](https://typescript-eslint.io/users/dependency-versions/) | 「The version range of TypeScript currently supported is **`>=4.8.4 <6.1.0`**」。**TS 7 への言及すら無い** |
+| [issue #10940](https://github.com/typescript-eslint/typescript-eslint/issues/10940) | **open**。メンテナ曰く tsgo は「won't likely be the primary stable version of TypeScript within the next ~1-2 major versions of typescript-eslint」。障害は ESLint 側の**非同期パーサ未対応**と tsgo の不安定さ |
+
+**つまり「正しい設定」は存在しない。** バージョン範囲で弾かれる未実装の機能であり、
+**公式が案内している唯一の設定方法が TS 6 との側置き（= 案 B）である**。
+
+> 参考: typescript-eslint 8.65.0 で TS 7 検出時の警告と `onUnsupportedTypeScriptVersion` オプションが
+> 追加されている。つまり上流は「TS 7 では動かないことを分かりやすく伝える」方向に実装を進めており、
+> 「動かす設定」を用意する方向には進んでいない。
+
+### 3.0.1 ESLint だけ TS 6 に隔離できないか（検討して却下）
+
+`typescript` をルートで 7 にしたまま ESLint に 6 を渡す方法も検討した:
+
+| 方法 | 判定 |
+|---|---|
+| `apps/web` に `typescript@6.0.3` を nested 依存として持たせる | ❌ typescript-eslint は `frontend/node_modules` に hoist されるため、そこから上に辿って 7 を掴む |
+| Bun workspace 外に ESLint 専用ディレクトリを作る（`e2e/` と同じ手法） | ⚠️ 隔離自体は成立（実測: runner 側の `typescript` は 6.0.3）。ただし ESLint 9.33 の `basePath` は**内部値で flat config のキーとして公開されていない**ため、cwd 外のファイルを lint する構成が素直に書けない |
+| Node の module resolution hook で `typescript` を差し替える | ❌ boilerplate に持ち込む仕掛けとして過剰・脆い |
+
+**いずれも「素直な設定」にならないので採らない。**
+
 ### 本リポジトリでの影響範囲
 
 typescript-eslint は**直接依存していないが、2 経路で必ず入る**:
@@ -203,9 +237,25 @@ const tscBinPath = tscBin ? path.resolve(packageDir, tscBin) : undefined;
 | **B** | **6.0.3** + `@typescript/native`=7.0.2 | **TS7（明示パス, 速い）** | TS6（遅い） | ✅ 動く | `next build` 内の型検査を `typescript.ignoreBuildErrors: true` で切り、独立した TS7 型チェックに寄せれば整合する |
 | **C** | 6.0.3 のまま | TS6 | TS6 | ✅ | 現状維持（TS 7.1 待ち） |
 
-**案 B の補足**: `ignoreBuildErrors: true`（Next 16.3 に存在を確認）は「型検査をやめる」ことではない。
-`ci:check` は既に型チェックを独立 task として持っているので、**ビルドと型検査を分離する**だけであり、
-むしろ責務が明確になる。この構成なら TS7 の高速化を型チェックで享受しつつ ESLint も生かせる。
+**案 B の補足（重要）**: 表の「`next build` の型検査が TS6 = 遅い」は、`ignoreBuildErrors: true`
+（Next 16.3 に存在を確認）を入れると**そもそも型検査が走らないので論点ごと消える**。
+`ci:check` は既に型チェックを独立 task として持っているため、これは「型検査をやめる」ことではなく
+**ビルドと型検査を分離する**だけで、むしろ責務が明確になり `next build` 自体も速くなる。
+
+整理すると、案 B で実際に失うものは次の 2 点だけになる:
+
+1. `package.json` の表記が `"typescript": "6.0.3"` になり、一見 TS6 のプロジェクトに見える
+2. **エディタ / IDE が TS6 のまま**（TS7 の LSP を使いたい場合は別途設定が必要）
+
+一方 **案 A で失うものは `lint-fsd`（FSD 境界検査）を含む ESLint 一式**であり、`eslint-plugin-boundaries`
+の `element-types` ルール（レイヤー階層 + `@x` cross-import + same-slice 許可）は
+Biome の `noRestrictedImports` では等価に書けない（Biome にはレイヤー種別を捕捉する `capture` 相当が無く、
+`${from.slice}` のような動的な同一スライス判定ができない）。**FSD 境界は `ci:check` のゲートであり、
+`.claude/rules/minimal-implementation.md` が「削減のために FSD の依存方向を壊すのは本ポリシー違反」と
+明記している**ため、案 A は再実装コストと引き換えに検査精度を落とすことになる。
+
+> **したがって公式が案内する設定方法（側置き）= 案 B が推奨。** 案 A は「ESLint が設定不足で
+> 動いていないだけ」という前提が成り立つ場合のみ妥当だったが、§3.0 でその前提は否定された。
 
 ---
 
