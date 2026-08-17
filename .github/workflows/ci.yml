@@ -88,6 +88,26 @@ jobs:
       - name: Install devenv.sh
         shell: bash
         run: nix profile add nixpkgs#devenv
+      # ⚠️ 復元した node_modules を必ずロックファイルと突き合わせる（消さないこと）。
+      #
+      # 上の cache は `restore-keys` による prefix fallback を持つため、lockfile hash が
+      # 変わると**別の lockfile で作られた node_modules がそのまま復元される**。
+      # 一方 `setup:install-frontend` / `setup:install-drizzle` は execIfModified 付きで、
+      # enterShell 経由だと **skip されて stale なツリーが是正されないまま verify に入る**
+      # （実測: CI の setup:install-frontend は bun の出力すら無く 103ms で完了 = 未実行。
+      #  ローカルで整合済みでも `bun install --frozen-lockfile` は 209ms かかり必ず出力が出る）。
+      #
+      # これが原因で「ローカルは緑なのに CI だけ TS2305」が起きていた。nativewind は
+      # `styled` を react-native-css から re-export しているだけなので、stale なツリーで
+      # 解決に失敗すると `has no exported member 'styled'` として現れる（skipLibCheck が
+      # d.ts 内の解決失敗を隠すため、利用側の 1 行だけがエラーになる）。
+      #
+      # ここは execIfModified を通らない素の `run:` なので必ず実行され、
+      # 差分があれば --frozen-lockfile が非 0 で落ちる（黙って直さない）。
+      - name: Sync JS dependencies (reconcile restored cache)
+        run: |
+          cd "$DEVENV_ROOT/frontend" && bun install --frozen-lockfile
+          cd "$DEVENV_ROOT/drizzle"  && bun install --frozen-lockfile
       # `ci-check` script = `devenv tasks run ci:check`（aggregator）。
       # `devenv test` は使わない: process phase が Supabase Docker / Storybook を起動し、
       # かつ prek (git-hooks) が verify task と並行実行されて false failure を出すため
@@ -134,5 +154,11 @@ jobs:
       - name: Install devenv.sh
         shell: bash
         run: nix profile add nixpkgs#devenv
+      # ci-check job と同じ理由（restore-keys の prefix fallback × execIfModified の skip）。
+      # このジョブも復元した node_modules で走るので同様に突き合わせる。
+      - name: Sync JS dependencies (reconcile restored cache)
+        run: |
+          cd "$DEVENV_ROOT/frontend" && bun install --frozen-lockfile
+          cd "$DEVENV_ROOT/drizzle"  && bun install --frozen-lockfile
       - name: Run unit tests
         run: unit-test
