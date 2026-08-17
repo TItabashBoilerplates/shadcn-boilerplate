@@ -17,6 +17,8 @@
       "!!**/build",
       "!!**/storybook-static",
       "!!**/.cache",
+      "!!**/src-tauri/target",
+      "!!**/src-tauri/gen",
       "!!**/packages/types/schema.ts",
       "!!**/packages/api-client/src/generated",
       "!!**/styles/globals.css",
