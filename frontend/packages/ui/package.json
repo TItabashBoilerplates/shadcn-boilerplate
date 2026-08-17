@@ -17,7 +17,7 @@
     "./postcss.config": "./postcss.config.mjs"
   },
   "scripts": {
-    "type-check": "tsc --noEmit"
+    "type-check": "workspace-tsc --noEmit"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.7.1",
@@ -44,8 +44,8 @@
   },
   "devDependencies": {
     "@types/react": "^19.2.4",
-    "react": "19.2.3",
-    "typescript": "~6.0.3"
+    "@workspace/tsc": "workspace:*",
+    "react": "19.2.3"
   },
   "peerDependencies": {
     "react": "^19.0.0"

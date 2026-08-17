@@ -15,7 +15,7 @@
     "./validation": "./validation/index.ts"
   },
   "scripts": {
-    "type-check": "tsc --noEmit"
+    "type-check": "workspace-tsc --noEmit"
   },
   "dependencies": {
     "@workspace/client-supabase": "workspace:*",
@@ -24,8 +24,8 @@
   },
   "devDependencies": {
     "@types/react": "^19.2.4",
-    "react": "19.2.3",
-    "typescript": "~6.0.3"
+    "@workspace/tsc": "workspace:*",
+    "react": "19.2.3"
   },
   "peerDependencies": {
     "react": "^19.0.0"

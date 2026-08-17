@@ -14,10 +14,10 @@
   },
   "scripts": {
     "build": "bun run scripts/generate-css.ts",
-    "type-check": "tsc --noEmit"
+    "type-check": "workspace-tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "typescript": "~6.0.3"
+    "@workspace/tsc": "workspace:*"
   }
 }

@@ -11,12 +11,12 @@
   },
   "scripts": {
     "generate": "bun run ../../scripts/generate-types.ts",
-    "type-check": "tsc --noEmit"
+    "type-check": "workspace-tsc --noEmit"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.1"
   },
   "devDependencies": {
-    "typescript": "~6.0.3"
+    "@workspace/tsc": "workspace:*"
   }
 }

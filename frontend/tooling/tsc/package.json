@@ -1,0 +1,12 @@
+{
+  "name": "@workspace/tsc",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "workspace-tsc": "./bin.mjs"
+  },
+  "exports": {
+    "./resolve": "./resolve.mjs"
+  }
+}

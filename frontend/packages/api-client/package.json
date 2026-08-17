@@ -11,7 +11,7 @@
   },
   "scripts": {
     "generate": "bun run scripts/generate.ts",
-    "type-check": "tsc --noEmit"
+    "type-check": "workspace-tsc --noEmit"
   },
   "dependencies": {
     "@hey-api/client-fetch": "^0.9.0"
@@ -20,7 +20,7 @@
     "@hey-api/openapi-ts": "0.89.2",
     "@types/bun": "latest",
     "@types/node": "^22.0.0",
-    "typescript": "~6.0.3"
+    "@workspace/tsc": "workspace:*"
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5"

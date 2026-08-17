@@ -966,13 +966,28 @@ in
         "frontend/**/package.json"
       ];
     };
+    # `nlx tsc` は node_modules/.bin/tsc を引くが、**TS6 と TS7 が同じ bin 名を要求するため
+    # どちらが勝つかがインストール順に依存する**（= ある日静かに TS6 に戻る）。
+    # `nr type-check` は workspace-tsc 経由で TS7 を明示的に解決する
+    # （解決ロジックと 7.1 移行手順は frontend/tooling/tsc/resolve.mjs）。
     "type-check:mobile" = {
-      exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && nlx tsc --noEmit'';
+      exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && nr type-check'';
       execIfModified = [
         "frontend/apps/mobile/**/*.ts"
         "frontend/apps/mobile/**/*.tsx"
         "frontend/apps/mobile/tsconfig*.json"
         "frontend/apps/mobile/package.json"
+      ];
+    };
+    # drizzle は Bun workspace の外（独立プロジェクト）で typescript を持たないため、
+    # frontend の workspace-tsc を絶対パスで呼ぶ。
+    # ⚠️ この task が無かったせいで drizzle の型エラー 5 件が長期間検出されていなかった。
+    "type-check:drizzle" = {
+      exec = ''cd "$DEVENV_ROOT/drizzle" && "$DEVENV_ROOT/frontend/node_modules/.bin/workspace-tsc" --noEmit'';
+      execIfModified = [
+        "drizzle/**/*.ts"
+        "drizzle/tsconfig.json"
+        "drizzle/package.json"
       ];
     };
     # `--all-packages` 必須。backend-py は uv の **virtual workspace** (root は package = false) なので、
@@ -1070,6 +1085,7 @@ in
         "format-check:terraform"
         "type-check:frontend"
         "type-check:mobile"
+        "type-check:drizzle"
         "type-check:backend-py"
         "type-check:functions"
         "type-check:terraform"
@@ -1574,6 +1590,7 @@ in
     # tasks (type-check:*) の wrapper → execIfModified キャッシュ
     "type-check-frontend"   = { exec = ''exec devenv tasks run type-check:frontend''; description = "TS type check (frontend, cached)"; };
     "type-check-mobile"     = { exec = ''exec devenv tasks run type-check:mobile''; description = "TS type check (mobile, cached)"; };
+    "type-check-drizzle"    = { exec = ''exec devenv tasks run type-check:drizzle''; description = "TS type check (drizzle, cached)"; };
     "type-check-backend-py" = { exec = ''exec devenv tasks run type-check:backend-py''; description = "MyPy type check (backend-py, cached)"; };
     "check-functions"       = { exec = ''exec devenv tasks run type-check:functions''; description = "Deno check (edge functions, cached)"; };
 
