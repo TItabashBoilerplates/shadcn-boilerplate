@@ -82,7 +82,11 @@ jobs:
             frontend/packages/*/node_modules
             frontend/tooling/*/node_modules
             drizzle/node_modules
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('frontend/bun.lock', 'drizzle/bun.lock') }}
+          # `v2-` は cache 世代。**古い cache を捨てたい時はここを上げる**。
+          # v1 の頃は restore-keys の prefix fallback があったため、stale なツリーを
+          # 掴んだまま成功した unit-test job がそれを exact key で保存してしまい、
+          # fallback を外しただけでは「毒入りの exact key」を引き続き掴んでいた。
+          key: v2-${{ runner.os }}-node-modules-${{ hashFiles('frontend/bun.lock', 'drizzle/bun.lock') }}
           # ⚠️ restore-keys（prefix fallback）は付けないこと。
           # 付けると lockfile hash が変わった時に**別の lockfile で作られた
           # node_modules がそのまま復元される**。しかも `bun install --frozen-lockfile`
@@ -149,7 +153,11 @@ jobs:
             frontend/packages/*/node_modules
             frontend/tooling/*/node_modules
             drizzle/node_modules
-          key: ${{ runner.os }}-node-modules-${{ hashFiles('frontend/bun.lock', 'drizzle/bun.lock') }}
+          # `v2-` は cache 世代。**古い cache を捨てたい時はここを上げる**。
+          # v1 の頃は restore-keys の prefix fallback があったため、stale なツリーを
+          # 掴んだまま成功した unit-test job がそれを exact key で保存してしまい、
+          # fallback を外しただけでは「毒入りの exact key」を引き続き掴んでいた。
+          key: v2-${{ runner.os }}-node-modules-${{ hashFiles('frontend/bun.lock', 'drizzle/bun.lock') }}
           # ⚠️ restore-keys（prefix fallback）は付けないこと。
           # 付けると lockfile hash が変わった時に**別の lockfile で作られた
           # node_modules がそのまま復元される**。しかも `bun install --frozen-lockfile`
