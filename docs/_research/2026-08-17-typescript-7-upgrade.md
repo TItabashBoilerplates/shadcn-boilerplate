@@ -144,7 +144,72 @@ typescript-eslint@8.46.2
 
 ---
 
-## 4. Bun 固有の落とし穴（重要 / 実測）
+### 3.1 実リポジトリでの実測（node_modules の `typescript` を 7.0.2 に差し替えて実行）
+
+推測ではなく、このリポジトリで実際に走らせた結果:
+
+| コマンド | 結果 |
+|---|---|
+| `apps/web` の `eslint src` | ❌ `TypeError: Cannot read properties of undefined (reading 'Cjs')` |
+| `apps/mobile` の `eslint src` | ❌ `Error: typescript-eslint does not support TS 7.0.` |
+| `vitest run`（frontend 全体） | ✅ **21 files / 263 tests 全て pass**（10.16s） |
+| `tsc --noEmit`（全 11 プロジェクト） | ✅ 新規エラー 0 件（§2） |
+| `next build` | ⚠️ 失敗するが **TS6 でも同じ 7 エラー = 既存バグ**（下記） |
+
+**ESLint は「型を使うルールだから遅い/危ない」ではなく、`.ts` を parse する時点で落ちる。** 回避不能。
+
+### 3.2 付随発見: `next build` が現在 main で壊れている（TS 7 とは無関係）
+
+TS 6.0.3 のままでも `next build` が **7 エラー**で失敗する:
+
+```
+./apps/web/src/features/auth/api/deleteAccount.ts:8:1
+Error: Only async functions are allowed to be exported in a "use server" file.
+→ The export DELETE_ACCOUNT_CONFIRMATION was not found ... The module has no exports at all.
+```
+
+`"use server"` ファイルは **async 関数以外を export できない**のに、`deleteAccount.ts` が定数
+`DELETE_ACCOUNT_CONFIRMATION` を export している。結果としてモジュール全体の export が消え、
+`@/features/auth` 経由の import が連鎖的に壊れている。
+
+**`ci:check` は lint / format / type-check のみで `next build` を含まないため、これが検出されていない。**
+（`build-frontend` script は存在するが CI ゲートに入っていない）
+
+---
+
+## 4. `next build` と ESLint が同じ `typescript` を奪い合う（最重要の設計上の制約）
+
+Next.js 16.3.0 は既定で **`useTypeScriptCli: true`**（`config-shared.js` で確認）。その tsc を
+どう探すかが `node_modules/next/dist/esm/lib/typescript/runTypeScriptCli.js` に書かれている:
+
+```js
+packageJsonPath = resolveFrom(baseDir, 'typescript/package.json');   // ← 名前 "typescript" 固定
+const tscBin = packageJson.bin?.tsc;
+const tscBinPath = tscBin ? path.resolve(packageDir, tscBin) : undefined;
+// TS7 の拡張子なし ESM bin は Node 20.9 で main entry にできないため lib/tsc.js へ差し替える分岐もある
+```
+
+`hasNativeTypeScriptPreview()` は `@typescript/native-preview` を見るが、**バイナリ選択には使われず
+メッセージ用**。つまり:
+
+> **`next build` に TS 7 を使わせる唯一の方法は、`typescript` という名前のパッケージ自体を 7 にすること。**
+> しかし typescript-eslint も同じ `typescript` を `require` する。**両者は同じ 1 つの名前を奪い合う。**
+
+これが本移行の核心。組み合わせは 3 つしかない。
+
+| 案 | `typescript` の中身 | 型チェック task | `next build` の型検査 | ESLint | 評価 |
+|---|---|---|---|---|---|
+| **A** | **7.0.2** | TS7（速い） | TS7（速い） | ❌ **全滅** | lint を捨てられるなら最速 |
+| **B** | **6.0.3** + `@typescript/native`=7.0.2 | **TS7（明示パス, 速い）** | TS6（遅い） | ✅ 動く | `next build` 内の型検査を `typescript.ignoreBuildErrors: true` で切り、独立した TS7 型チェックに寄せれば整合する |
+| **C** | 6.0.3 のまま | TS6 | TS6 | ✅ | 現状維持（TS 7.1 待ち） |
+
+**案 B の補足**: `ignoreBuildErrors: true`（Next 16.3 に存在を確認）は「型検査をやめる」ことではない。
+`ci:check` は既に型チェックを独立 task として持っているので、**ビルドと型検査を分離する**だけであり、
+むしろ責務が明確になる。この構成なら TS7 の高速化を型チェックで享受しつつ ESLint も生かせる。
+
+---
+
+## 5. Bun 固有の落とし穴（重要 / 実測）
 
 公式が案内する側置き構成は次のとおり:
 
@@ -199,9 +264,9 @@ Bun は、ルートで `typescript` という**名前**をシムにエイリア�
 
 ---
 
-## 5. 依存パッケージの最新化（`bun outdated` 実測）
+## 6. 依存パッケージの最新化（`bun outdated` 実測）
 
-### 5.1 そのまま上げてよいもの（patch / minor）
+### 6.1 そのまま上げてよいもの（patch / minor）
 
 | パッケージ | 現在 | 最新 |
 |---|---|---|
@@ -220,7 +285,7 @@ Bun は、ルートで `typescript` という**名前**をシムにエイリア�
 | `react-native-safe-area-context` | 5.7.0 | 5.9.0 |
 | `react-native-svg` | 15.15.4 | 15.15.5 |
 
-### 5.2 メジャー跨ぎ（個別に検証が必要）
+### 6.2 メジャー跨ぎ（個別に検証が必要）
 
 | パッケージ | 現在 | 最新 | 懸念 |
 |---|---|---|---|
@@ -230,7 +295,7 @@ Bun は、ルートで `typescript` という**名前**をシムにエイリア�
 | `@types/node` | 24.9.1 / 22.19.3 | **26.2.0** | `engines.node: >=20.19.0` と整合するか。ワークスペース間で 22 系と 24 系が混在しており先に統一すべき |
 | `playwright-core` | 1.56.0 | 1.62.1 | `e2e/` は Bun workspace 外。プリベイク Chromium との整合に注意 |
 
-### 5.3 上げてはいけないもの（Expo SDK 57 の制約）
+### 6.3 上げてはいけないもの（Expo SDK 57 の制約）
 
 `bunx expo install --check` の出力（公式ツールの判断）:
 
@@ -253,7 +318,7 @@ expo-symbols@57.0.1     → ~57.0.2
 
 ---
 
-## 6. Tauri デスクトップアプリ（新規追加前提）
+## 7. Tauri デスクトップアプリ（新規追加前提）
 
 ### 現状
 
@@ -277,13 +342,13 @@ expo-symbols@57.0.1     → ~57.0.2
 
 ---
 
-## 7. 移行計画（案）
+## 8. 移行計画（案）
 
 ### Phase 0: 前提を整える（TS 7 とは独立・低リスク）
 
 1. 既存型エラー 6 件を修正（`packages/api-client` 1 件 / `drizzle` 5 件）
 2. **CI の穴を塞ぐ**: `@workspace/api-client` に `type-check` script を追加、`devenv.nix` に `type-check:drizzle` task を追加して `ci:check` に載せる
-3. patch / minor の依存更新（§5.1）+ `expo install --check` が示す `expo-*` の patch 更新（§5.3）
+3. patch / minor の依存更新（§6.1）+ `expo install --check` が示す `expo-*` の patch 更新（§6.3）
 4. `@types/node` のワークスペース間バージョン統一
 
 ### Phase 1: TS 7 を型チェックに導入（二本立て）
@@ -304,12 +369,12 @@ expo-symbols@57.0.1     → ~57.0.2
 
 ---
 
-## 8. 判断が必要な点（推測で進めない）
+## 9. 判断が必要な点（推測で進めない）
 
 1. **二本立てを受け入れるか**。`typescript` が 6.0.3、型チェックだけ TS 7 という構成は、`package.json` を読んだ人に「TS 6 のプロジェクト」と見える。**boilerplate としての分かりやすさを損なうという見方もある**ため、「TS 7.1 まで待つ」という判断も十分に合理的
 2. **`react` / `react-native` を Expo SDK 57 の上限に留めることの合意**。「全て最新」の要望とは衝突する
 3. **`vite 8` を今回の範囲に含めるか**（Storybook 互換の調査コストが別途かかる）
-4. **Tauri デスクトップを別タスクにするか**（§6 の選択肢 1 を採るなら新規アプリ追加であり、TS 7 移行とは独立）
+4. **Tauri デスクトップを別タスクにするか**（§7 の選択肢 1 を採るなら新規アプリ追加であり、TS 7 移行とは独立）
 
 ---
 
