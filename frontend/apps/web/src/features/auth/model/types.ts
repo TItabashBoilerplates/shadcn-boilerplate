@@ -1,4 +1,8 @@
-import type { AuthErrorMessageKey } from '@workspace/auth/validation'
+import type {
+  AuthErrorMessageKey,
+  AuthSuccessKey,
+  AuthValidationKey,
+} from '@workspace/auth/validation'
 
 /**
  * 認証フォームの状態（OTP フロー用・既存）
@@ -28,24 +32,8 @@ export type AuthActionState =
       requiresPasswordReset?: boolean
     }
 
-/** 成功時に表示するメッセージのキー（`Auth.success.*`） */
-export type AuthSuccessKey =
-  | 'signedIn'
-  | 'signUpConfirmationSent'
-  | 'passwordResetSent'
-  | 'passwordUpdated'
-  | 'emailChangeRequested'
-  | 'accountDeleted'
-
-/** クライアント側の入力検証で弾いたときのキー（`Auth.errors.*`） */
-export type AuthValidationKey =
-  | 'emailRequired'
-  | 'emailInvalidFormat'
-  | 'passwordRequired'
-  | 'passwordTooWeak'
-  | 'passwordMismatch'
-  | 'currentPasswordRequired'
-  | 'deleteConfirmationMismatch'
+// キーの集合は @workspace/auth/validation が正本（web/mobile で集合がズレる事故を防ぐ）
+export type { AuthSuccessKey, AuthValidationKey }
 
 export const AUTH_IDLE_STATE: AuthActionState = { status: 'idle' }
 

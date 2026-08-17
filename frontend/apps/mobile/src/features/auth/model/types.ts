@@ -1,4 +1,8 @@
-import type { AuthErrorMessageKey } from '@workspace/auth/validation'
+import type {
+  AuthErrorMessageKey,
+  AuthSuccessKey,
+  AuthValidationKey,
+} from '@workspace/auth/validation'
 
 /**
  * Mobile 認証 API の戻り値
@@ -19,19 +23,5 @@ export type AuthResult =
       requiresPasswordReset?: boolean
     }
 
-export type AuthSuccessKey =
-  | 'signedIn'
-  | 'signUpConfirmationSent'
-  | 'passwordResetCodeSent'
-  | 'passwordUpdated'
-  | 'emailChangeRequested'
-  | 'accountDeleted'
-
-export type AuthValidationKey =
-  | 'emailRequired'
-  | 'emailInvalidFormat'
-  | 'passwordRequired'
-  | 'passwordTooWeak'
-  | 'passwordMismatch'
-  | 'currentPasswordRequired'
-  | 'deleteConfirmationMismatch'
+// キーの集合は @workspace/auth/validation が正本（web/mobile で集合がズレる事故を防ぐ）
+export type { AuthSuccessKey, AuthValidationKey }

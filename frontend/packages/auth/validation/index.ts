@@ -17,6 +17,12 @@ export {
   resolveAuthError,
 } from './errors'
 export {
+  AUTH_SUCCESS_KEYS,
+  AUTH_VALIDATION_KEYS,
+  type AuthSuccessKey,
+  type AuthValidationKey,
+} from './message-keys'
+export {
   getPasswordIssues,
   isPasswordValid,
   PASSWORD_ISSUES,
