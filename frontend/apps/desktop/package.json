@@ -10,7 +10,8 @@
     "type-check": "workspace-tsc --noEmit",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "lint:fsd": "eslint . --max-warnings 0 --rule 'boundaries/element-types: error'"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.9.0",
@@ -25,8 +26,12 @@
     "@tauri-apps/cli": "^2.11.4",
     "@types/react": "^19.2.4",
     "@types/react-dom": "^19.2.3",
+    "@typescript-eslint/parser": "^8.65.0",
     "@vitejs/plugin-react": "^5.1.4",
+    "@workspace/eslint-config": "workspace:*",
     "@workspace/tsc": "workspace:*",
+    "eslint": "^9",
+    "eslint-import-resolver-typescript": "^3.10.1",
     "tailwindcss": "^4.3.3",
     "vite": "7.3.1"
   }

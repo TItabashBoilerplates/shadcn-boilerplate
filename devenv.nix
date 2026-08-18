@@ -956,18 +956,28 @@ in
         "supabase/functions/**/deno.json"
       ];
     };
+    # ⚠️ 新しいアプリを apps/ に足したら**必ずここにも足す**。
+    # 足し忘れても ci-check は緑のままなので、FSD 境界が検査されていないことに
+    # 気づけない（実際に apps/desktop 追加時に漏れた）。
+    # また各アプリの eslint.config.mjs には **パーサと import/resolver の両方**が
+    # 必要で、resolver が無いと `@/...` を解決できず boundaries が
+    # **external とみなして黙って飛ばす**（エラーにならない）。
     "lint-ci:fsd" = {
       exec = ''
         cd "$DEVENV_ROOT/frontend/apps/web" && nr lint:fsd
         cd "$DEVENV_ROOT/frontend/apps/mobile" && nr lint:fsd
+        cd "$DEVENV_ROOT/frontend/apps/desktop" && nr lint:fsd
       '';
       execIfModified = [
         "frontend/apps/web/**/*.ts"
         "frontend/apps/web/**/*.tsx"
         "frontend/apps/mobile/**/*.ts"
         "frontend/apps/mobile/**/*.tsx"
+        "frontend/apps/desktop/**/*.ts"
+        "frontend/apps/desktop/**/*.tsx"
         "frontend/apps/web/steiger.config.*"
         "frontend/apps/mobile/steiger.config.*"
+        "frontend/apps/*/eslint.config.mjs"
       ];
     };
 
