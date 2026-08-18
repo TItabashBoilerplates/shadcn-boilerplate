@@ -602,14 +602,32 @@ in
     #    （Rust さえあればビルドできる、ではない）。
     desktop.module = { pkgs, ... }: {
       packages = with pkgs; [
-        # Tauri 本体（wry / tao）がリンクする WebView とウィンドウ系
+        # Tauri 本体（wry / tao）がリンクする WebView とウィンドウ系。
+        # webkitgtk は **abi=4.1 の派生**を使う（4.0 は EOL で Tauri 2 が要求しない）。
         webkitgtk_4_1
         gtk3
         libsoup_3
         glib-networking
 
+        # ⚠️ gtk3 / webkitgtk からの伝播に頼らず **明示的に並べる**。
+        # `cargo check` は `glib-2.0.pc` `cairo.pc` 等を pkg-config で直接引くため、
+        # 伝播が効かない構成に変わった瞬間に
+        #   「HINT: you may need to install a package such as glib-2.0」
+        # で落ちる。実際にこのメッセージで詰まった。
+        glib
+        cairo
+        pango
+        gdk-pixbuf
+        atk
+
         # ビルド時に pkg-config でヘッダを探すため必須
         pkg-config
+
+        # Tauri 公式の Linux 前提（https://v2.tauri.app/start/prerequisites/）:
+        #   libayatana-appindicator3 … システムトレイ
+        #   libxdo(xdotool)          … ウィンドウ操作
+        libayatana-appindicator
+        xdotool
 
         # AppImage / deb / rpm のバンドルに使う
         openssl
