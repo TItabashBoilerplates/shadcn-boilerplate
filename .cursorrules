@@ -22,6 +22,7 @@
 |---------|--------|------|
 | Minimal Implementation | `@minimal-implementation` | 実装量を最小化（既存資産 → 標準機能 → マネージド → 実績ある OSS → スクラッチ）。star だけで選定しない・FSD / monorepo は壊さない |
 | Research-First | `@research` | 実装前に公式ドキュメント確認必須 |
+| Design Research | `@design-research` | **設計前**に一次情報（公式 / Context7 / 型定義）を読む。デザインパターン / DB 設計もベストプラクティス調査必須。**設計書・既存実装との乖離は勝手に解消せず、意図的かミスかをユーザーに確認** |
 | TDD | `@tdd` | テスト駆動開発、All Green必須 |
 | Commands | `@commands` | Makefileコマンド使用必須 |
 | Auto-Generated | `@auto-generated` | 自動生成ファイル編集禁止 |

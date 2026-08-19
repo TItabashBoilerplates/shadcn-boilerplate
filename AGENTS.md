@@ -81,7 +81,7 @@ type-check-frontend
 
 ## Core Policies (NON-NEGOTIABLE)
 
-### 1. Research-First Development
+### 1. Research-First Development & Design-Time Verification
 
 **Before implementation, you MUST**:
 
@@ -93,6 +93,47 @@ type-check-frontend
 - Make assumptions based on memory or general knowledge
 - Use outdated patterns without verification
 - Guess API signatures or parameter types
+
+#### 設計フェーズ（実装より前）で必須のこと
+
+**設計を書き始める前に、その設計で使うツール・API・パッケージ・サービスの一次情報を実際に読む。**
+canonical rule: `.claude/rules/design-research.md`
+
+1. **該当 Skill を先に起動する**（DB なら `supabase-postgres-best-practices` / `rls` / `drizzle`、
+   配置なら `fsd` / `feature-sliced-design` / `monorepo`、UI なら `ui-ux-pro-max` ほか）。
+2. **実際に入っているバージョンを確認する**（`bun info` / `bun outdated` / `package.json` /
+   `uv tree` / `deno.json`）。ドキュメントはバージョンごとに違う。
+3. **そのバージョンの一次情報を読む**。Context7 は
+   `mcp__context7__resolve-library-id` → `mcp__context7__query-docs`
+   （**`get-library-docs` は存在しない**。1 呼び出し 1 トピック、同一の問いに 3 回まで）。
+   Supabase は `mcp__supabase__search_docs`。載っていなければ WebFetch で公式サイトを直接読む。
+4. **型定義・スキーマを実物で確認する**（`*.d.ts` / OpenAPI / `supabase gen types`）。
+5. 埋めるべき項目: **API シグネチャ / 設定ファイル形式 / 非推奨・破壊的変更 / 制限値・クォータ /
+   料金体系 / 前提プラン・前提設定 / ライセンス / 認証と鍵の扱い**。
+6. **デザインパターン・アーキテクチャ・DB 設計もベストプラクティスを調査してから決める。**
+   DB は「テーブル定義」で終わらせず、**制約は DB 側 / `timestamptz` で UTC / RLS はテーブルと同時 /
+   ポリシー列とソートキーに index / ページングの tiebreaker / 削除カスケード / テナント境界 /
+   監査・使用量の集計軸**まで設計する（集計軸は後から足しても過去行が埋まらない）。
+7. 調査結果は `docs/_research/YYYY-MM-DD-<topic>.md`、設計と選定理由・出典は `docs/designs/` に残す。
+
+#### 乖離を見つけたら、必ずユーザーに確認する（勝手に解消しない）
+
+次の 4 類型はいずれも「**意図的な逸脱なのか、単なる記載ミスなのか**」をユーザーに聞く。
+**黙って設計書に合わせるのも、黙って自分の設計に差し替えるのも違反。**
+
+| 類型 | 内容 |
+|---|---|
+| A | 設計書 × 一次情報（公式仕様上できない / 非推奨 / 制限超過） |
+| B | 設計書 × ベストプラクティス（動くが既知の落とし穴を踏む） |
+| C | 設計書 × 本リポジトリのルール・既存の技術選定 |
+| D | 実装 × 設計書（設計書に無い実装 / 設計書にあるのに無い実装） |
+
+確認には **①該当箇所 ②事実 ③出典 URL とバージョン ④影響 ⑤選択肢と推奨** の 5 点を必ず添える。
+
+**後戻りできない論点**（DB スキーマ・集計軸・API 契約・認証方式・課金と単価・URL 設計・
+テナント境界・Storage パス）と**セキュリティ / 個人情報 / 決済 / ストア審査**に関わる乖離は、
+**回答が来るまでその部分に着手しない**。巻き戻せる論点は仮定を明記して進め、まとめて報告する。
+意図的だと回答されたら、その判断を受け入れて理由を記録し、同じ指摘を繰り返さない。
 
 ### 2. Test-Driven Development (TDD)
 

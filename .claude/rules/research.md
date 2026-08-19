@@ -2,6 +2,10 @@
 
 **MANDATORY**: Before starting any implementation or planning, you MUST conduct thorough research.
 
+> **設計フェーズには上位ルールがある**: 設計を書き始める前の一次情報の読み方、デザインパターン・DB 設計の
+> ベストプラクティス調査、そして**設計書・指示・既存実装との乖離をユーザーに確認する手順**は
+> **`.claude/rules/design-research.md`** が正本。本ファイルは実装前の調査を規定する。
+
 ## Pre-Implementation Research (REQUIRED)
 
 Before writing any code or creating a plan, you MUST:

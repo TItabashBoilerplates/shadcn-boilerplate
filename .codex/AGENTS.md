@@ -6,6 +6,8 @@
 
 - **推測・記憶・一般知識に基づく実装は一切禁止**
 - 実装前に必ず公式ドキュメントを確認すること
+- **設計の前に**、使うツール・API・パッケージの一次情報（公式ドキュメント / Context7 / 型定義）を実際に読むこと。デザインパターン・アーキテクチャ・DB 設計も**世の中のベストプラクティスを調査してから**決める
+- **受け取った設計書・指示・既存実装が調査結果と食い違う場合は、勝手に直しても勝手に従ってもならない**。「意図的な逸脱か、単なる記載ミスか」を必ずユーザーに確認する
 - ライブラリの API、設定ファイル形式、CLI 構文は**必ずファクトを調査**してから使用
 - 「たぶんこうだろう」「以前こうだった」という推測での実装は**絶対に行わない**
 - **モジュール・パッケージは必ず最新バージョンを調査し、最新のAPIを使用すること**
@@ -55,6 +57,7 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 | ポリシー | 説明 |
 |---------|------|
 | **Research-First** | 実装前に公式ドキュメント確認必須 |
+| **Design Research** | **設計前**に一次情報（公式 / Context7 / 型定義）を実際に読む。デザインパターン・DB 設計もベストプラクティスを調査してから決める。**設計書・指示・既存実装との乖離は勝手に解消せず、意図的かミスかをユーザーに確認**（`.claude/rules/design-research.md`） |
 | **TDD** | テスト駆動開発、All Green必須 |
 | **Commands** | devenv の scripts / `devenv tasks run` 使用必須 |
 | **Auto-Generated** | 自動生成ファイル編集禁止 |
@@ -67,6 +70,32 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 | **Debugging** | devenv 2.0 の native process manager TUI を主インターフェース |
 | **List Pagination** | 増えうる一覧は指示を待たずページング。UI パターンも自分で選定 |
 | **Auth** | **Mobile はメール + パスワード必須**（OTP のみ禁止）。Web 完結なら OTP 可。メール再設定 / パスワード忘れ（ログイン画面）/ パスワード変更（設定画面）は必須実装 |
+
+### 設計前調査と乖離の確認（MANDATORY）
+
+**設計を書き始める前に、その設計で使うツール・API・パッケージ・サービスの一次情報を実際に読む。**
+正本は `.claude/rules/design-research.md`。
+
+1. **該当 Skill を先に起動**（DB: `supabase-postgres-best-practices` / `rls` / `drizzle`、
+   配置: `fsd` / `feature-sliced-design` / `monorepo`、UI: `ui-ux-pro-max` ほか）
+2. **実際に入っているバージョンを確認**（`bun info` / `package.json` / `uv tree` / `deno.json`）
+3. **そのバージョンの一次情報を読む**（Context7 は `resolve-library-id` → `query-docs`。
+   `get-library-docs` は存在しない。1 呼び出し 1 トピック・同一の問いに 3 回まで。
+   Supabase は `search_docs`。無ければ WebFetch で公式サイトを直接）
+4. **型定義・スキーマを実物で確認**
+5. 埋める項目: API シグネチャ / 設定形式 / 非推奨・破壊的変更 / **制限値・クォータ** /
+   **料金体系** / **前提プラン・前提設定** / ライセンス / 鍵の扱い
+6. **デザインパターン・DB 設計もベストプラクティスを調査してから決める**。DB は
+   制約は DB 側 / `timestamptz` で UTC / RLS はテーブルと同時 / ポリシー列とソートキーに index /
+   ページングの tiebreaker / 削除カスケード / テナント境界 / 監査・使用量の集計軸まで設計する
+7. 調査は `docs/_research/`、設計と選定理由・出典は `docs/designs/` に残す
+
+**乖離は勝手に解消しない。** ①設計書 × 一次情報 ②設計書 × ベストプラクティス
+③設計書 × リポジトリのルール / 既存実装 ④実装 × 設計書 — いずれも
+**「意図的な逸脱か、単なる記載ミスか」をユーザーに確認する**。
+確認には **該当箇所 / 事実 / 出典 URL とバージョン / 影響 / 選択肢と推奨** の 5 点を添える。
+**後戻りできない論点**（DB スキーマ・集計軸・API 契約・認証方式・課金と単価・URL 設計・
+テナント境界・Storage パス）とセキュリティ・審査要件は、**回答が来るまで着手しない**。
 
 ### 認証方式（MANDATORY）
 

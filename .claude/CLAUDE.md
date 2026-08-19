@@ -6,6 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **タスク開始前に、必ず利用可能な Skill を確認し、該当するものがあれば最初に `Skill` ツールで起動すること**（詳細は `.claude/rules/skills-first.md`）
 - **実装量は常に最小化すること**。既存資産 → 標準機能 → マネージドサービス → 実績ある OSS → スクラッチ の順で必ず検討し、上位で解決できるものをスクラッチしない（詳細は `.claude/rules/minimal-implementation.md`）
+- **設計を始める前に、使うツール・API・パッケージの一次情報（公式ドキュメント / Context7 / 型定義）を実際に読むこと**。デザインパターン・アーキテクチャ・DB 設計も**世の中のベストプラクティスを調査してから**決める。**受け取った設計書・指示・既存実装が調査結果と食い違う場合は、勝手に直しても勝手に従ってもならず、「意図的な逸脱か、単なるミスか」を必ずユーザーに確認すること**（詳細は `.claude/rules/design-research.md`）
 - **推測・記憶・一般知識に基づく実装は一切禁止**
 - 実装前に必ず **Context7 MCP** または **WebSearch/WebFetch** で公式ドキュメントを確認すること
 - ライブラリの API、設定ファイル形式、CLI 構文は**必ずファクトを調査**してから使用
@@ -25,6 +26,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 │   ├── skills-first.md   # タスク開始前に Skill 確認・起動を必須化
 │   ├── tdd.md            # テスト駆動開発（TDD）必須
 │   ├── research.md       # Research-First ポリシー
+│   ├── design-research.md # 設計前調査（一次情報・BP 調査必須・設計書乖離はユーザー確認）
 │   ├── supabase-first.md # Supabase優先アーキテクチャ
 │   ├── commands.md       # Makefile コマンド必須
 │   ├── database.md       # マイグレーション承認必須
@@ -169,6 +171,8 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 | **Auth**              | Supabase Auth                                    |
 
 **MANDATORY**: 調査・実装・レビュー・デバッグなど、**あらゆるタスクを開始する前に必ず利用可能な Skill 一覧を確認**し、該当するものがあれば**最初に `Skill` ツールで起動**すること。Next.js / Supabase / Drizzle / FSD / shadcn / gluestack / Better Auth / Stripe / Resend / Maestro / LangChain / TanStack Query 等、本リポジトリで使用する主要技術には Skill が用意されている。Skill を確認せずに着手する実装はやり直しとなる。詳細は `.claude/rules/skills-first.md` を参照。
+
+**MANDATORY**: **設計の前に、その設計で使うツール・API・パッケージ・サービスの一次情報を実際に読み、理解すること**（記憶・一般知識・第三者のブログを根拠にしない）。手順は **①該当 Skill を起動 → ②実際に入っているバージョンを確認（`bun info` / `bun outdated` / `package.json` / `uv tree` / `deno.json`）→ ③そのバージョンの公式ドキュメントを Context7 MCP（`mcp__context7__resolve-library-id` → `mcp__context7__query-docs`。`get-library-docs` は存在しない。1 呼び出し 1 トピック・同一の問いに 3 回まで）/ `mcp__supabase__search_docs` / WebFetch で読む → ④型定義・スキーマを実物で確認**。**API シグネチャ・設定ファイル形式・非推奨と破壊的変更・制限値やクォータ・料金体系・前提プラン（Pro Plan 必須等）・ライセンス**は必ず埋めてから設計に入る（ここが空のまま書かれた設計は、実装は完走できるのに本番で壊れる）。**デザインパターン・アーキテクチャ・DB 設計も同様に、世の中のベストプラクティスを調査したうえで設計する**（DB なら `supabase-postgres-best-practices` / `rls` / `drizzle` を起動し、**制約は DB 側・`timestamptz` で UTC・RLS はテーブルと同時に設計・ポリシー列とソートキーに index・ページングの tiebreaker・削除カスケード・テナント境界・監査/使用量の集計軸**まで決める。配置は `fsd` / `feature-sliced-design` / `monorepo`、バックエンドの置き場は supabase-first の判断順）。そのうえで、**受け取った設計書・ユーザーの指示・既存実装と突き合わせ、乖離を見つけたら勝手に解消してはならない**: **①設計書 × 一次情報（実現不可・非推奨・制限超過）②設計書 × ベストプラクティス ③設計書 × 本リポジトリのルール/既存実装 ④実装 × 設計書（設計書に無い実装・設計書にあるのに無い実装）**のいずれも、**「意図的な逸脱なのか、単なる記載ミスなのか」を必ずユーザーに確認する**（黙って設計書に合わせるのも、黙って自分の設計に差し替えるのも違反）。確認は**該当箇所 / 事実 / 出典 URL とバージョン / 影響 / 選択肢と推奨**の 5 点を添えて行い、**後戻りできない論点（DB スキーマ・集計軸・API 契約・認証方式・課金と単価・URL 設計・テナント境界・Storage パス）とセキュリティ・審査要件は、回答が来るまで着手しない**（巻き戻せる論点は仮定を明記して進め、まとめて報告する）。意図的だと回答されたら、その判断を受け入れて理由を設計書に記録し、同じ指摘を繰り返さない。調査結果は `docs/_research/YYYY-MM-DD-<topic>.md`、設計と選定理由・出典は `docs/designs/` に残す。詳細は `.claude/rules/design-research.md` を参照。
 
 **MANDATORY**: すべてのユーザー向けテキストは多言語対応（i18n）必須。詳細は `.claude/skills/i18n/` を参照。
 

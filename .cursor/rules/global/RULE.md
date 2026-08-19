@@ -23,6 +23,7 @@ globs: []
 |---------|--------|
 | Minimal Implementation | `@minimal-implementation` - 実装量を最小化（既存資産 → 標準機能 → マネージド → 実績ある OSS → スクラッチ）。star だけで選定しない |
 | Research-First | `@research` - 実装前に公式ドキュメント確認 |
+| Design Research | `@design-research` - **設計前**に一次情報を読む。デザインパターン / DB 設計もベストプラクティス調査必須。**設計書との乖離は勝手に解消せず、意図的かミスかを確認** |
 | TDD | `@tdd` - テスト駆動開発、All Green必須 |
 | Commands | `@commands` - devenv scripts/tasks 使用必須 (Makefile は削除済み) |
 | Auto-Generated | `@auto-generated` - 自動生成ファイル編集禁止 |

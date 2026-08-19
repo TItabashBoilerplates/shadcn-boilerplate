@@ -765,7 +765,8 @@ Always use Context7 MCP when working with external libraries or frameworks:
 
 ```bash
 # Use mcp__context7__resolve-library-id to find correct library ID
-# Then use mcp__context7__get-library-docs for up-to-date documentation
+# Then use mcp__context7__query-docs for up-to-date documentation
+# (get-library-docs does not exist; one topic per call, max 3 calls per question)
 ```
 
 2. **Required for**: React, Next.js, TypeScript, TailwindCSS, Zustand, Supabase, and any other external dependencies

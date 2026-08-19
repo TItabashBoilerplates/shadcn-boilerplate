@@ -22,7 +22,8 @@ model: inherit
    - その他の設定ファイル
 3. Context7 MCP でライブラリドキュメントを取得
    - `mcp__context7__resolve-library-id` でライブラリIDを解決
-   - `mcp__context7__get-library-docs` で最新ドキュメントを取得
+   - `mcp__context7__query-docs` で最新ドキュメントを取得（**`get-library-docs` は存在しない**。
+     `query` は 1 呼び出し 1 トピックに絞り、同一の問いに対しては 3 回まで）
 4. WebSearch で公式ドキュメントを検索
 5. WebFetch でインストール・セットアップページを取得・分析
 
