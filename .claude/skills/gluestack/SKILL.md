@@ -241,6 +241,7 @@ CLI で雛形を取る場合は `bun run ui:add:mobile <component>`（= `bunx gl
 | native バンドルが lightningcss で落ちる | `lightningcss` はルートの `overrides` で 1.30.1 に固定している。外さない |
 | **画面が真っ黒 / 何も描画されない（エラーなし）** | `apps/mobile/babel.config.js` が無いと、`react-native-reanimated` / `react-native-worklets` が要求する **worklets babel plugin が一切登録されない**。`useAnimatedStyle` 等（`ParallaxScrollView` が使用）が動かず、ビルドも通ってしまうため気づきにくい。`babel.config.js` に `presets: ['babel-preset-expo']` + `plugins: ['react-native-worklets/plugin']`（**必ず最後**）が必要。**`nativewind/babel` preset や `jsxImportSource: 'nativewind'` は逆に不要**（v5 は import-rewrite 方式で、公式 v5 移行ガイドが明示的に削除を指示している：https://www.nativewind.dev/v5/guides/migrate-from-v4）。babel.config.js 自体は現在 `apps/mobile/` に配置済み — 削除しないこと |
 | `react-native-safe-area-context` の `SafeAreaView` に `className` を付けても効かない | 型もビルドも通るのに実行時だけ壊れる。詳細と正しい使い方は下の「SafeArea の罠」参照 — 必ず `@workspace/native-ui` の `SafeAreaView` を使う |
+| **1 行の `Input` なのに中でスクロールする / 文字が上端に貼りついて切れる**（Android） | ボックスを固定高（`h-11` 等）にすると、カスタムフォントやフォントスケールで中身が収まらず `TextInput`（EditText）が内部スクロールを生やす（`ReactEditText.onTouchEvent` がドラッグを消費）。加えて `includeFontPadding`（既定 true）が確保する高さと描画位置がずれて上に貼りつく。**入力系のボックスは `min-h-*` のみ + フィールドが `py-*` を持ち、`includeFontPadding: false` + `textAlignVertical="center"` を当てる**（`components/input/` が実装例。`input-height.test.ts` が機械的に守る） |
 | `useSafeAreaInsets()` が例外を投げる | `SafeAreaProvider` が無い。`GluestackUIProvider` 経由なら供給済み（下の「SafeArea の罠」参照） |
 
 ## 検証

@@ -15,14 +15,24 @@ import { INPUT_DEFAULTS, type InputSize } from '@workspace/tokens/contract'
  * （`.claude/rules/form-controls.md`）。Native の `TextInput` はズームしないが、
  * **同じ画面を Web ビルド（react-native-web）で出す可能性があり**、かつ
  * 体感サイズを揃えるべきなので同じ下限を守る。`text-base` = 16px。
+ *
+ * ## 高さは `min-h-*` のみ（固定高 `h-*` 禁止）
+ *
+ * カスタムフォントや端末のフォントスケールで中身がボックスより高くなると、
+ * Android の `TextInput`（EditText extends TextView）は**内部スクロールを生やし**、
+ * `ReactEditText.onTouchEvent` が `canScrollVertically()` の間ドラッグを消費する
+ * （= 1 行なのに中でスクロールし、文字が切れる）。Web と違いネイティブでは
+ * この症状がビルド・型・Storybook のどこにも出ないため、ボックスは下限だけ
+ * 指定して中身に追従させる。縦の余白はフィールド側の `py-2` が持つ。
+ * `__tests__/input-height.test.ts` が機械的に守っている。
  */
 export const inputStyle = tva({
   base: 'flex-row items-center rounded-md border border-input bg-background',
   variants: {
     size: {
-      sm: 'h-9 px-3',
-      default: 'h-11 px-3',
-      lg: 'h-12 px-4',
+      sm: 'min-h-9 px-3',
+      default: 'min-h-11 px-3',
+      lg: 'min-h-12 px-4',
     } satisfies Record<InputSize, string>,
     isInvalid: {
       true: 'border-destructive',
@@ -37,7 +47,8 @@ export const inputStyle = tva({
 })
 
 export const inputFieldStyle = tva({
-  base: 'flex-1 text-foreground',
+  // py-2: 縦の余白はボックスの固定高ではなくフィールドが持つ（上の「高さ」コメント参照）
+  base: 'flex-1 py-2 text-foreground',
   variants: {
     size: {
       // 16px 未満にしないこと（上のコメント参照）

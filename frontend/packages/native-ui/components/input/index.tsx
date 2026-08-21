@@ -19,12 +19,27 @@ type StyleContext = {
 
 const UIInputRoot = withStyleContext(View, SCOPE)
 
+/**
+ * Android の `includeFontPadding`（既定 true）はフォントの ascent/descent 分の
+ * 余白を確保するが、確保した高さと実際の描画位置がずれ、カスタムフォントで
+ * **文字が上端に貼りついて切れる**。TextStyle にしか無いので style で当てる。
+ */
+const fieldMetricsStyle = { includeFontPadding: false } as const
+
 const UIInputField = ({
   className,
+  style,
   ...props
 }: React.ComponentProps<typeof TextInput> & { className?: string }) => {
   const { size } = useStyleContext(SCOPE) as StyleContext
-  return <TextInput className={inputFieldStyle({ size, class: className })} {...props} />
+  return (
+    <TextInput
+      className={inputFieldStyle({ size, class: className })}
+      textAlignVertical="center"
+      style={[fieldMetricsStyle, style]}
+      {...props}
+    />
+  )
 }
 
 const UIInputIcon = ({
