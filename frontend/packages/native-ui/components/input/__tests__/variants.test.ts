@@ -41,11 +41,8 @@ describe('native Input / design system conformance', () => {
     expect(inputFieldStyle({})).toBe(inputFieldStyle(INPUT_DEFAULTS))
   })
 
-  it('gives every contract size a height', () => {
-    for (const size of INPUT_SIZES) {
-      expect(inputStyle({ size }), size).toMatch(/\bh-\d+\b/)
-    }
-  })
+  // サイズごとの高さの担保は __tests__/input-height.test.ts が持つ
+  // （固定高 h-* はフォントスケールで内部スクロールを生む欠陥なので、min-h-* のみ許可）
 
   /**
    * これが本テストの主目的。
