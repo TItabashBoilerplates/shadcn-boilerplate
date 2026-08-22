@@ -1,5 +1,14 @@
 # Vercel Container Services (`vercel.json`) 調査レポート
 
+> ⚠️ **訂正（2026-08-22）**: 本レポートの結論
+> 「`entrypoint: "apps/api/Dockerfile.vercel"` は正しい」は**誤り**だった。
+> 実デプロイの結果、**ビルドコンテキストは `services.<name>.root` ではなく Dockerfile が
+> 置かれているディレクトリ**であり、また **Dockerfile 名は `Dockerfile.vercel` /
+> `Containerfile.vercel` しか受け付けない**ことが判明した。正しい構成と根拠は
+> [2026-08-22-vercel-services-container-build-context.md](./2026-08-22-vercel-services-container-build-context.md)
+> を参照すること。本レポートは「公式ドキュメントだけでは判断しきれない箇所がどこだったか」の
+> 記録として残す（本文中の §「注意」で、まさにその点を未確認事項として挙げている）。
+
 ## 調査情報
 - **調査日**: 2026-07-07
 - **調査者**: spec agent

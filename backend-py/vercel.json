@@ -4,7 +4,7 @@
 		"api": {
 			"runtime": "container",
 			"root": ".",
-			"entrypoint": "apps/api/Dockerfile.vercel"
+			"entrypoint": "Dockerfile.vercel"
 		}
 	},
 	"rewrites": [{ "source": "/(.*)", "destination": { "service": "api" } }]

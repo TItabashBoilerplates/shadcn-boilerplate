@@ -236,12 +236,11 @@ async def get_user(
 
 ## Container / Deploy
 
-### Vercel (Production — アプリごとに 1 コンテナ)
+### Vercel (Production — Services のコンテナサービス)
 
-**モノレポ = アプリ 1 つにつき Dockerfile 1 つ**。各アプリの Dockerfile を
-`apps/<app>/Dockerfile.vercel` に置き、`backend-py/vercel.json` の [`services`](https://vercel.com/docs/functions/container-images)
-から entrypoint として参照する。Vercel は **service ごとに別コンテナ**をビルドし、`rewrites` で
-パスを振り分ける。
+**Dockerfile は `backend-py/Dockerfile.vercel`（uv workspace ルート）に 1 つだけ置く。**
+`backend-py/vercel.json` の [`services`](https://vercel.com/docs/functions/container-images) から
+entrypoint として参照し、`rewrites` でパスを振り分ける。
 
 ```jsonc
 // backend-py/vercel.json
@@ -249,20 +248,28 @@ async def get_user(
   "services": {
     // runtime: "container" で Docker イメージとしてビルド（公式 Services 仕様。これが無いと
     // Vercel が runtime を自動検出し、entrypoint を Dockerfile ではなく module:app と誤解する）。
-    "api": { "runtime": "container", "root": ".", "entrypoint": "apps/api/Dockerfile.vercel" }
-    // アプリ追加時はここに service を足す（例: "mcp": { "runtime": "container", "root": ".", "entrypoint": "apps/mcp/Dockerfile.vercel" }）
+    "api": { "runtime": "container", "root": ".", "entrypoint": "Dockerfile.vercel" }
   },
   "rewrites": [{ "source": "/(.*)", "destination": { "service": "api" } }]
 }
 ```
 
-> **重要（uv workspace）**: Vercel の backend project は **Root Directory を `backend-py`**
-> （uv workspace ルート）に設定する。各 Dockerfile の**ビルドコンテキストは workspace ルート**
-> （`services.<app>.root = "."`）なので、`uv.lock` / `packages/core` / 他 member の pyproject を
-> 解決できる。アプリ単体（`backend-py/apps/api`）を Root にすると workspace 解決が壊れる。
-> project 作成・Root Directory 設定は `scripts/infra/vercel.sh`（`infra-bootstrap vercel`）が行う。
+> **重要（この 3 点を外すと、ローカルでは何も起きないまま本番のビルドだけが落ちる）**
+>
+> 1. **Dockerfile の名前は `Dockerfile.vercel` か `Containerfile.vercel` しか受け付けない。**
+>    `Dockerfile.api.vercel` のようなアプリ名入りの派生名は entrypoint に書いても拒否される。
+> 2. **Docker のビルドコンテキストは `services.<name>.root` ではなく「Dockerfile が置かれている
+>    ディレクトリ」。** uv workspace は `uv.lock` とルート `pyproject.toml` と全 member の
+>    pyproject が同一コンテキストに無いと解決できないので、Dockerfile は
+>    **workspace ルートに置くしかない**（`apps/api/` に置くと `uv sync --frozen` が落ちる）。
+> 3. Vercel project の **Root Directory は `backend-py`**（`scripts/infra/vercel.sh` が設定する）。
+>
+> ビルドコンテキストを上書きする設定は公式スキーマに存在しない（`services.<name>` は
+> `additionalProperties: false`）。実測と出典は
+> [`docs/_research/2026-08-22-vercel-services-container-build-context.md`](../docs/_research/2026-08-22-vercel-services-container-build-context.md)。
+> これらは `apps/api/tests/test_vercel_container_config.py` が CI で検査している（消さないこと）。
 
-各コンテナ（apps/api）のポイント:
+コンテナ（apps/api）のポイント:
 
 | 項目 | 内容 |
 |------|------|
@@ -274,13 +281,20 @@ async def get_user(
 | ヘルスチェック | `GET /healthcheck` |
 | runtime env | **Supabase 系（`SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `POSTGRES_*`）は Vercel Marketplace の Supabase 連携が自動注入**。外部 API キーのみ Doppler→Vercel ネイティブ連携で届く。Doppler に `SUPABASE_` prefix のキーを作らないこと（`.claude/rules/env-naming.md`）。詳細は `docs/deployment/README.md` |
 
-**新しいアプリ（例: apps/mcp）をコンテナ化する手順**:
-1. `apps/mcp/Dockerfile.vercel` を作る（`--package mcp-server` で対象アプリだけ入れ、`$PORT` で HTTP listen）。
-2. `backend-py/vercel.json` の `services` に `mcp` を追加し、`rewrites` に振り分けを足す（例: `/mcp/(.*)` → `mcp`）。
-3. provisioning（`vercel.sh` / Root Directory）は変更不要。
+#### 2 つ目のアプリ（apps/mcp）をコンテナで出したくなったら
+
+**同じ vercel.json に container service をもう 1 つ足すことはできない。** 2 つ目のアプリも
+`backend-py/Dockerfile.vercel` という同じ名前・同じ位置を要求するためである（上記 1 + 2 の帰結）。
+選択肢は次の 3 つで、いずれも代償があるので**その時点で判断する**（勝手に決めない）:
+
+| 案 | 内容 | 代償 |
+|---|---|---|
+| A. 1 コンテナに同居 | `api` の FastAPI に MCP のルータをマウントし、アプリ内でパス分岐 | スケール単位・依存・障害範囲が共有になる |
+| B. 別の Vercel project | `apps/mcp` 用に Root Directory を分けた project を作る | ドメイン・env・デプロイが二重管理になる |
+| C. workspace を分割 | `apps/mcp` を独立した uv プロジェクトにする | 単一 `uv.lock` の利点（`.claude/rules/python-monorepo.md`）を失う |
 
 システムライブラリ（LiveKit / PyAV 等の音声・映像系 = devenv の `libopus` / `libvpx`）を導入した
-場合は該当アプリの `Dockerfile.vercel` の final stage に runtime 共有ライブラリを追記する（ファイル内コメント参照）。
+場合は `Dockerfile.vercel` の final stage に runtime 共有ライブラリを追記する（ファイル内コメント参照）。
 
 ### devenv dockerTools (Other platforms / ローカル OCI — apps/api)
 

@@ -1,21 +1,30 @@
 # syntax=docker/dockerfile:1
 #
-# Vercel 用 Dockerfile（uv workspace の apps/api = FastAPI サーバ **1 アプリ 1 コンテナ**）。
+# Vercel Services のコンテナサービス（uv workspace の apps/api = FastAPI サーバ）。
 #
-# モノレポ構成: backend-py は uv workspace（apps/api, apps/mcp, packages/core）。
-# アプリごとに `apps/<app>/Dockerfile.vercel` を置き、`backend-py/vercel.json` の `services`
-# から entrypoint として参照する（Vercel が service ごとに別コンテナをビルドする。
-# https://vercel.com/docs/functions/container-images）。
+# ── 置き場所とファイル名は自由に選べない（ここを外すと無言で壊れる）────────────────
+# Vercel が受け付ける Dockerfile 名は **`Dockerfile.vercel` / `Containerfile.vercel` だけ**で、
+# `Dockerfile.api.vercel` のようなアプリ名入りの派生名は entrypoint に指定しても拒否される。
+# さらに **Docker のビルドコンテキストは「この Dockerfile が置かれているディレクトリ」**であって
+# `services.<name>.root` ではない（公式ドキュメントに明記が無く、実デプロイのビルドログで確認した
+# 事実。詳細と出典は docs/_research/2026-08-22-vercel-services-container-build-context.md）。
 #
-#   - **ビルドコンテキストは workspace ルート（backend-py/）**。Vercel project の Root Directory を
-#     `backend-py` にし、`vercel.json` の `services.api.entrypoint = "apps/api/Dockerfile.vercel"` で
-#     この Dockerfile を指す。コンテキストが workspace ルートなので `uv.lock` / `packages/core` /
-#     他 member の pyproject を解決できる（この Dockerfile 内のパスはすべてコンテキスト基準）。
+# uv workspace は `uv.lock` / ルート `pyproject.toml` / 全 member の pyproject が同一コンテキストに
+# 無いと解決できないので、**この Dockerfile は workspace ルート（backend-py/）に置く**必要がある。
+# 結果として backend-py/vercel.json はこう書く（root と Dockerfile の位置を一致させる = 公式例と同じ形）:
+#
+#   "services": { "api": { "runtime": "container", "root": ".", "entrypoint": "Dockerfile.vercel" } }
+#
+# Vercel project の Root Directory は `backend-py`。したがってコンテキスト = backend-py/ となり、
+# 以下の COPY / bind mount のパスはすべて backend-py/ 基準で書いてある。
+#
+# ⚠️ この構成では **1 つの uv workspace につきコンテナサービスは 1 つ**しか置けない
+#    （2 つ目のアプリも同じ `Dockerfile.vercel` という名前を workspace ルートで要求するため）。
+#    apps/mcp をコンテナで出す必要が生じたときの選択肢は backend-py/README.md に整理してある。
+#
+# ── ランタイムの前提 ────────────────────────────────────────────────────────
 #   - サーバは `$PORT`（Vercel 既定 80）で listen する必要がある。api.main が $PORT を読む。
 #   - scale-in 時は SIGTERM + 30s grace。uvicorn が SIGTERM で graceful shutdown する。
-#
-# 別アプリを足すときは `apps/<app>/Dockerfile.vercel` を作り、`vercel.json` に service + rewrite を
-# 追加する（詳細は docs/deployment/README.md / backend-py/README.md）。
 #
 # ── devenv とローカル/本番の環境を揃えるための工夫 ──────────────────────────────
 # ローカルは devenv（devenv.nix）が Nix で環境を作り、本番はこの Dockerfile。両者を drift させない
@@ -32,7 +41,6 @@
 #                        builder の build-essential で用意。libopus/libvpx（音声・映像=将来の LiveKit/PyAV 用）は
 #                        現状の依存では不要なので final には入れず、導入時に足す（下の final stage コメント参照）。
 # uv 公式 Docker ベストプラクティス（multi-stage / cache mount / --no-editable）に準拠。
-
 ARG PYTHON_VERSION=3.13
 
 # ---------- builder: uv workspace を /app/.venv に解決・インストール ----------

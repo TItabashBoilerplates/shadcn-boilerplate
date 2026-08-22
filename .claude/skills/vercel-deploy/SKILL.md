@@ -1,6 +1,6 @@
 ---
 name: vercel-deploy
-description: Vercel との GitHub 連携（repo 接続 + rootDirectory 設定）と、それを使った本番/プレビューデプロイの手順。「Vercel に連携して」「デプロイして」「このアプリを本番に出して」「Vercel project を作って」「vercel-deploy」「デプロイが 15000 files で落ちる」「本番 URL を env に入れたい」といった指示・症状が出たら必ず最初に起動する。モノレポ（frontend/apps/*）で rootDirectory を正しく設定し、`--archive=tgz` を含む既知の落とし穴を踏まないためのファクトと、`vercel-deploy` script の使い方を提供する。
+description: Vercel との GitHub 連携（repo 接続 + rootDirectory 設定）と、それを使った本番/プレビューデプロイの手順。「Vercel に連携して」「デプロイして」「このアプリを本番に出して」「Vercel project を作って」「vercel-deploy」「デプロイが 15000 files で落ちる」「本番 URL を env に入れたい」といった指示・症状が出たら必ず最初に起動する。モノレポ（frontend/apps/*）で rootDirectory を正しく設定し、`--archive=tgz` を含む既知の落とし穴を踏まないためのファクトと、`vercel-deploy` script の使い方を提供する。**backend-py（FastAPI / uv workspace）を Vercel Services のコンテナとして出す場合も対象**で、「backend をデプロイして」「Dockerfile が検出されない」「entrypoint が拒否される」「ビルドで uv.lock が見つからない」「vercel.json の services / runtime: container」「デプロイは成功するのに 502」といった話題でも必ず起動する。
 ---
 
 # Vercel 連携 & デプロイ
@@ -135,6 +135,30 @@ install / build をリポジトリルートへ戻さないとビルドが落ち�
 
 ---
 
+## 4.5 backend-py をコンテナで出す場合（`services` + `runtime: "container"`）
+
+Next.js アプリと違い、backend は **`vercel.json` の `services` から Dockerfile を建てる**。
+ここは**公式ドキュメントに書かれていない制約が 3 つ**あり、外すと**ローカルでは何も起きないまま
+本番のビルドだけが落ちる**:
+
+1. **Dockerfile の名前は `Dockerfile.vercel` / `Containerfile.vercel` のみ**（派生名は拒否）。
+2. **ビルドコンテキストは `services.<name>.root` ではなく Dockerfile が置かれているディレクトリ**。
+   uv workspace なので Dockerfile は **workspace ルート（`backend-py/`）に置くしかない**。
+3. **コンテキストを上書きするフィールドは公式スキーマに存在しない**（`additionalProperties: false`）。
+
+```jsonc
+// backend-py/vercel.json（Root Directory = backend-py / Dockerfile = backend-py/Dockerfile.vercel）
+{
+  "services": {
+    "api": { "runtime": "container", "root": ".", "entrypoint": "Dockerfile.vercel" }
+  },
+  "rewrites": [{ "source": "/(.*)", "destination": { "service": "api" } }]
+}
+```
+
+**詳細・症状別の原因表・出典は [references/services-container.md](references/services-container.md)。
+コンテナを触るなら必ずそちらを読む。**
+
 ## 5. 本番 URL は推測せず実測する
 
 canonical / sitemap / OG 画像 / メールのリンクに焼き込まれるため、URL を 1 文字間違えると
@@ -229,6 +253,7 @@ vercel deploy --prod --yes --archive=tgz
 ## 参照
 
 - REST API のエンドポイントと curl 例: [references/rest-api.md](references/rest-api.md)
+- **backend-py をコンテナで出す（Services / Dockerfile / ビルドコンテキスト）**: [references/services-container.md](references/services-container.md)
 - 初期構築の全体像: `docs/deployment/README.md`
 - env / secret の命名規約: `.claude/rules/env-naming.md`
 - マイクロフロントエンド構成で複数 project を 1 ドメインに合成する場合: `vercel-microfrontends` skill

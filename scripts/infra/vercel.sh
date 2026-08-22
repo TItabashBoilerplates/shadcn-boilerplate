@@ -4,10 +4,12 @@
 # 2 つの Vercel project を作る:
 #   - web     : Next.js フロント（framework=nextjs, rootDirectory=frontend/apps/web）
 #   - backend : uv workspace（rootDirectory=backend-py）。framework は付けない（"other"）。
-#     → backend-py/vercel.json の `services` がアプリごとに Dockerfile を指し（api =
-#       apps/api/Dockerfile.vercel）、Vercel が service 単位で別コンテナをビルドする
-#       （https://vercel.com/docs/functions/container-images）。アプリ追加時は vercel.json に
-#       service + rewrite を足すだけ（provisioning 側の変更不要）。
+#     → backend-py/vercel.json の `services.api` が backend-py/Dockerfile.vercel を entrypoint に
+#       指し、Vercel が container としてビルドする（https://vercel.com/docs/functions/container-images）。
+#     ⚠️ rootDirectory=backend-py は必須。Vercel は Dockerfile が置かれているディレクトリを
+#        ビルドコンテキストにするため、Dockerfile は uv workspace ルート（backend-py/）に
+#        `Dockerfile.vercel` という名前で置く以外に選択肢が無い（派生名は拒否される）。
+#        実測と出典: docs/_research/2026-08-22-vercel-services-container-build-context.md
 #
 # CLI には既知の対話プロンプトバグ(#15763: preview env)や rootDirectory 設定フラグ欠如が
 # あるため、**REST API(https://api.vercel.com) を直叩き**する（VC_TOKEN で Bearer 認証）。
