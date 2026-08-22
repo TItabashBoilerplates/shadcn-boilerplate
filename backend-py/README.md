@@ -266,18 +266,41 @@ async def get_user(
 
 | 項目 | 内容 |
 |------|------|
-| ポート | サーバは `$PORT`（Vercel 既定 80）で listen。`api.main` が `$PORT` を読む（ローカルは 4040 fallback） |
+| ポート | サーバは `$PORT` で listen（`api.main` が読む。ローカルは 4040 fallback）。**本番は 8080 固定**: Vercel の既定は 80 だがコンテナは非 root で動くため特権ポートを bind できない。**Vercel project の env `PORT` も 8080**（`scripts/infra/vercel.sh` が Dockerfile から読んで自動投入） |
 | ビルド | uv 公式 multi-stage（cache mount / `--no-editable` / bytecode プリコンパイル）。Python 3.13 |
 | 分離 | `uv sync --package api` で api + `core` だけを入れる（`apps/mcp` は含めない） |
-| 起動 | `CMD ["api"]`（`[project.scripts] api = "api.main:main"`） |
+| 起動 | `CMD ["/app/.venv/bin/api"]`（`[project.scripts] api = "api.main:main"`）。**絶対パス必須** — Vercel の起動 wrapper でイメージの `ENV PATH` が失われ、`CMD ["api"]` は `exec: "api": executable file not found in $PATH` で無言に死ぬ |
 | shutdown | scale-in 時は SIGTERM + 30s grace。uvicorn が graceful shutdown |
 | ヘルスチェック | `GET /healthcheck` |
 | runtime env | **Supabase 系（`SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `POSTGRES_*`）は Vercel Marketplace の Supabase 連携が自動注入**。外部 API キーのみ Doppler→Vercel ネイティブ連携で届く。Doppler に `SUPABASE_` prefix のキーを作らないこと（`.claude/rules/env-naming.md`）。詳細は `docs/deployment/README.md` |
 
+> ⚠️ **ポートと CMD の 2 点は、間違えてもビルド・型・lint・テスト・ローカルの `docker run` が
+> すべて通り、Vercel 上でだけ 500（`INTERNAL_FUNCTION_INVOCATION_FAILED`）になる**（しかも
+> アプリのログが 1 行も出ない）。`apps/api/tests/test_vercel_container_contract.py` が CI で
+> 検査しているので**消さないこと**。Dockerfile を触ったら、push の前に **Vercel 相当の条件**で
+> 起動を確認する:
+>
+> ```bash
+> cd backend-py && docker build -f apps/api/Dockerfile.vercel -t api-vercel .
+> docker run --rm -p 8080:8080 \
+>   -e PATH=/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin \
+>   --sysctl net.ipv4.ip_unprivileged_port_start=1024 api-vercel
+> curl -fsS localhost:8080/healthcheck   # → {"message":"OK"}
+> ```
+>
+> 切り分け手順とランタイムログの取り方は `.claude/skills/vercel-deploy/references/containers.md`。
+
 **新しいアプリ（例: apps/mcp）をコンテナ化する手順**:
-1. `apps/mcp/Dockerfile.vercel` を作る（`--package mcp-server` で対象アプリだけ入れ、`$PORT` で HTTP listen）。
+1. `apps/mcp/Dockerfile.vercel` を作る。**`apps/api/Dockerfile.vercel` をそのまま雛形にする**
+   （`--package mcp-server` に差し替えるだけ）。守る不変条件は 3 つ:
+   - `0.0.0.0:$PORT` で listen する（`127.0.0.1` は受けられない）
+   - 非 root で動かすなら `ENV PORT` は **1024 以上**（api と同じ 8080 でよい）
+   - `CMD` は **絶対パス + exec 形式**（`["/app/.venv/bin/<script>"]`）
 2. `backend-py/vercel.json` の `services` に `mcp` を追加し、`rewrites` に振り分けを足す（例: `/mcp/(.*)` → `mcp`）。
 3. provisioning（`vercel.sh` / Root Directory）は変更不要。
+4. `test_backend-py`（`test_vercel_container_contract.py`）が新しい Dockerfile も自動で検査する。
+   ポートを別の値にするなら、Vercel project の env `PORT` との整合も見直すこと
+   （現状 `scripts/infra/vercel.sh` は api の Dockerfile の値を投入する = 全 service 共通前提）。
 
 システムライブラリ（LiveKit / PyAV 等の音声・映像系 = devenv の `libopus` / `libvpx`）を導入した
 場合は該当アプリの `Dockerfile.vercel` の final stage に runtime 共有ライブラリを追記する（ファイル内コメント参照）。

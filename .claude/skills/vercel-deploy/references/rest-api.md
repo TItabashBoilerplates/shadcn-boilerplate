@@ -25,6 +25,7 @@ curl -fsS "https://api.vercel.com/v9/projects?teamId=$VERCEL_TEAM_ID" \
 | team 一覧 | GET | `/v2/teams` | scope 解決 |
 | team 取得 | GET | `/v2/teams/{id}` | `.slug` は CLI の `--scope` に使う |
 | 個人アカウント | GET | `/v2/user` | team が無い場合の `.user.username` |
+| **ランタイムログ** | GET | `/v1/projects/{projectId}/deployments/{deploymentId}/runtime-logs` | **パスに projectId が要る**（`/deployments/{id}/runtime-logs` は 404）。stream で返る。空のことがあり、空 = 正常ではない（[containers.md](containers.md) §3-4） |
 
 ## project 作成の body
 

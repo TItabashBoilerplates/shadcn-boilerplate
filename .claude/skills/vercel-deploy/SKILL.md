@@ -1,6 +1,6 @@
 ---
 name: vercel-deploy
-description: Vercel との GitHub 連携（repo 接続 + rootDirectory 設定）と、それを使った本番/プレビューデプロイの手順。「Vercel に連携して」「デプロイして」「このアプリを本番に出して」「Vercel project を作って」「vercel-deploy」「デプロイが 15000 files で落ちる」「本番 URL を env に入れたい」といった指示・症状が出たら必ず最初に起動する。モノレポ（frontend/apps/*）で rootDirectory を正しく設定し、`--archive=tgz` を含む既知の落とし穴を踏まないためのファクトと、`vercel-deploy` script の使い方を提供する。
+description: Vercel との GitHub 連携（repo 接続 + rootDirectory 設定）と、それを使った本番/プレビューデプロイ、および **Docker コンテナ（Services / Container Images = backend-py）の起動不具合の切り分け**の手順。「Vercel に連携して」「デプロイして」「このアプリを本番に出して」「Vercel project を作って」「vercel-deploy」「デプロイが 15000 files で落ちる」「本番 URL を env に入れたい」に加え、「デプロイは成功したのに 500 になる」「INTERNAL_FUNCTION_INVOCATION_FAILED」「コンテナが起動しない / 起動直後に落ちる」「ランタイムログが空で何も出ない」「Dockerfile.vercel を書いた・直した」「backend が 502」といった指示・症状が出たら必ず最初に起動する。モノレポ（frontend/apps/*）の rootDirectory 設定・`--archive=tgz`・**非 root コンテナが特権ポートを bind できない / CMD の $PATH 依存で exec に失敗する**という、ローカルでは絶対に再現しない落とし穴を踏まないためのファクトと、`vercel-deploy` script の使い方を提供する。
 ---
 
 # Vercel 連携 & デプロイ
@@ -205,6 +205,39 @@ vercel deploy --prod --yes --archive=tgz
 
 ---
 
+## 9.5. Docker コンテナ（backend-py）を載せるとき
+
+`backend-py` は Next.js ではなく **Vercel Services + Container Images**（`vercel.json` の
+`services` + `apps/<app>/Dockerfile.vercel`）で動く。ここには **frontend と全く別の
+落とし穴**があり、しかも **ローカルでは 100% 再現しない**:
+
+| 症状 | 原因 |
+|---|---|
+| デプロイは READY なのに 500（`INTERNAL_FUNCTION_INVOCATION_FAILED`） | 非 root コンテナが特権ポート（既定の 80）を bind できない / `CMD` が `$PATH` 解決に依存して exec に失敗 |
+| ランタイムログが空のまま何も出ない | **起動する前に死んでいる**サイン。ログを掘っても何も出ない |
+
+守ること（`backend-py/apps/api/tests/test_vercel_container_contract.py` が CI で検査する）:
+
+1. `ENV PORT` は **1024 以上**（本リポジトリは 8080）。**Vercel project の env `PORT` も同じ値**に揃える
+   （`scripts/infra/vercel.sh` が Dockerfile から読んで自動投入する）。
+2. `CMD` は **絶対パス**（`["/app/.venv/bin/api"]`）。`CMD ["api"]` は Vercel 上で exec に失敗する。
+3. **push する前にローカルで「Vercel 相当」を再現**して起動を確認する:
+
+```bash
+cd backend-py && docker build -f apps/api/Dockerfile.vercel -t api-vercel .
+docker run --rm -p 8080:8080 \
+  -e PATH=/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin \
+  --sysctl net.ipv4.ip_unprivileged_port_start=1024 api-vercel
+curl -fsS localhost:8080/healthcheck
+```
+
+4. **デプロイ後は必ず叩く**。「READY」は「動いている」ではない。
+
+→ 原因の詳細・切り分け順序・**ランタイムログの正しい取り方**は
+  [references/containers.md](references/containers.md)
+
+---
+
 ## 10. トラブルシュート
 
 | 症状 | 原因 / 対処 |
@@ -214,6 +247,8 @@ vercel deploy --prod --yes --archive=tgz
 | ビルドが「lockfile が無い」で落ちる | `<app>/vercel.json` の install/build が `cd ../..` していない（§4） |
 | デプロイは成功するのに 404 | rootDirectory が違う。`PATCH /v9/projects/{name}` で再設定（script が冪等に行う） |
 | 疎通確認が 401 | Deployment Protection が有効。dashboard の Settings > Deployment Protection |
+| コンテナが 500 / `INTERNAL_FUNCTION_INVOCATION_FAILED` | §9.5。非 root × 特権ポート / `CMD` の `$PATH` 依存。→ [references/containers.md](references/containers.md) |
+| ランタイムログが空で取れない | パスに projectId が要る: `GET /v1/projects/{projectId}/deployments/{deploymentId}/runtime-logs`。空のときは「起動前に死んだ」を先に疑う |
 | `vercel project ls` に何も出ない | scope 違い。`--team <slug>` を明示（§1） |
 | team が複数あって止まる | 意図した team を `--team <slug>` で指定 |
 
@@ -232,6 +267,7 @@ vercel deploy --prod --yes --archive=tgz
 ## 参照
 
 - REST API のエンドポイントと curl 例: [references/rest-api.md](references/rest-api.md)
+- **Docker コンテナ（backend-py）の落とし穴と切り分け**: [references/containers.md](references/containers.md)
 - 初期構築の全体像: `docs/deployment/README.md`
 - env / secret の命名規約: `.claude/rules/env-naming.md`
 - マイクロフロントエンド構成で複数 project を 1 ドメインに合成する場合: `vercel-microfrontends` skill
