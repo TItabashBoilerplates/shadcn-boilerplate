@@ -61,7 +61,11 @@ devenv shell -P staging -- <cmd>  # ENV=staging: Doppler stg（非機密も秘�
   Supabase 連携（Connect Account）** が `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` /
   `SUPABASE_SECRET_KEY` / `NEXT_PUBLIC_SUPABASE_*` / `POSTGRES_*` を自動注入し、Edge Functions へは
   Supabase platform が **default secrets** として自動提供する。
-- 自前で持つ必要がある値は prefix を落とす（`SB_ACCESS_TOKEN` / `VC_TOKEN` / `GH_TOKEN`）。
+- 自前で持つ値は**そのツールが実際に読む名前**で持つ（`SUPABASE_ACCESS_TOKEN` /
+  `SUPABASE_DB_PASSWORD` / `VERCEL_TOKEN` / `DOPPLER_TOKEN`）。sync を張っていない config
+  （`all` / `<app>/bootstrap`）なので予約 prefix の制約はかからない。
+  例外は `GH_TOKEN` だけで、`GITHUB_` は GitHub Actions が予約しており `dev`/`stg`/`prd` は
+  GitHub へ sync されるため（かつ `GH_TOKEN` は `gh` CLI の公式名）。
   `NEXT_PUBLIC_SUPABASE_URL` のように**先頭でなければ可**。
 - **このディレクトリの `.env.local` は対象外**（ファイル管理・sync されないため `SUPABASE_URL=` 等はそのままでよい）。
 

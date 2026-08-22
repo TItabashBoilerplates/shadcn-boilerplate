@@ -61,21 +61,27 @@ bootstrap config のトークンが `scripts/infra/tf.sh` 経由で注入され�
 
 ---
 
-## トークン（Doppler bootstrap config に入れる）
+## トークン（Doppler）
 
-`.tf` にも tfvars にもトークンを書かない。`scripts/infra/tf.sh` が読み替える。
+`.tf` にも tfvars にもトークンを書かない。`doppler run` が環境変数として注入する。
 
-| Doppler のキー名 | 読み替え先（provider が読む env） | 用途 |
-|---|---|---|
-| `SB_ACCESS_TOKEN` | `SUPABASE_ACCESS_TOKEN` | Supabase Management API |
-| `SB_DB_PASSWORD` | `TF_VAR_supabase_db_password` | project の DB パスワード |
-| `VC_TOKEN` | `VERCEL_API_TOKEN` | Vercel |
-| `GH_TOKEN` | `GITHUB_TOKEN` | GitHub |
-| `DOPPLER_MANAGEMENT_TOKEN` | `DOPPLER_TOKEN` | Doppler 自身 |
+| Doppler の config | キー名 | provider が読む env | 用途 |
+|---|---|---|---|
+| `all` / `all` | `SUPABASE_ACCESS_TOKEN` | 同じ（読み替え不要） | Supabase Management API |
+| `all` / `all` | `VERCEL_TOKEN` | **`VERCEL_API_TOKEN`** | Vercel |
+| `all` / `all` | `GH_TOKEN` | **`GITHUB_TOKEN`** | GitHub |
+| `all` / `all` | `DOPPLER_TOKEN` | 同じ（読み替え不要） | Doppler 自身 |
+| `<app>` / `bootstrap` | `SUPABASE_DB_PASSWORD` | **`TF_VAR_supabase_db_password`** | project の DB パスワード |
 
-> Doppler 側で `GITHUB_` / `SUPABASE_` / `VERCEL_` prefix を落としているのは、
-> 予約名前空間のキーを登録すると sync が予約値違反で config ごと壊れるため
-> （`.claude/rules/env-naming.md`）。読み替えは `tf.sh` のプロセス内 export なので同ルール §5 の対象外。
+**キー名は「そのツールが実際に読む名前」に揃えてある**ので、大半は読み替え不要でそのまま届く。
+`scripts/infra/tf.sh` の `bridge_env` は、**同じ資格情報を 2 つのツールが別名で読む 3 件だけ**を写す
+（`VERCEL_TOKEN`→`VERCEL_API_TOKEN` / `GH_TOKEN`→`GITHUB_TOKEN` / `SUPABASE_DB_PASSWORD`→`TF_VAR_*`）。
+プロセス内の export なので `.claude/rules/env-naming.md` §5 の対象外。
+
+> `GH_TOKEN` だけ短いのは、**`GITHUB_` が GitHub Actions の予約 prefix**で Doppler に置けないため
+> （`dev`/`stg`/`prd` は GitHub へ sync される）。かつ `GH_TOKEN` は `gh` CLI の公式名なので、
+> これは省略形ではなく正しい名前である。**`all` と `<app>/bootstrap` は sync を張っていないので、
+> `SUPABASE_*` / `VERCEL_*` をフルネームで持てる**（`.claude/rules/env-naming.md` §1 / §4）。
 
 ---
 
@@ -158,10 +164,10 @@ CI が必要とする値の供給は、**性質で保管先が分かれる**（`
 | 値 | 性質 | 供給元 | workflow での参照 |
 |---|---|---|---|
 | `SUPABASE_PROJECT_REF` | **非機密**（`https://<ref>.supabase.co` として公開される） | **Terraform → GitHub Environment variable** | `vars.SUPABASE_PROJECT_REF` |
-| `SB_ACCESS_TOKEN` | **シークレット** | **Doppler → GitHub sync**（`doppler` MCP で投入） | `secrets.SB_ACCESS_TOKEN` → `SUPABASE_ACCESS_TOKEN` に読み替え |
+| `SUPABASE_ACCESS_TOKEN` | **シークレット** | **Doppler → GitHub sync**（`doppler` MCP で投入） | `secrets.SUPABASE_ACCESS_TOKEN`（読み替え不要） |
 | `POSTGRES_URL` | シークレット | Doppler → GitHub sync | `secrets.POSTGRES_URL`（migrate.yml） |
 
-> ⚠️ **`SB_ACCESS_TOKEN` は Terraform では作らない。** Supabase の access token は
+> ⚠️ **`SUPABASE_ACCESS_TOKEN` は Terraform では作らない。** Supabase の access token は
 > organization 全体の Management API を叩ける強い資格情報であり、Terraform に持たせると
 > state に平文で載る。`doppler` MCP で各 config（dev / stg / prd）へ投入すること
 > （`tf-output` の `manual_followups` が未投入時のリマインダを出す）。
@@ -297,5 +303,5 @@ terraform import -var-file=apps/myapp.tfvars 'module.vercel.vercel_project.web' 
 | `supabase_branch` × GitHub 連携なし | provider は `git_branch` を必須にし、`branch_name` と `git_branch` の両方に同じ値を送る。連携を張っていない project での挙動（無害なラベル扱いか、エラーか）は未検証 |
 | branch ref の取り扱い | `supabase_env_refs` output は branch の `database.id` を branch project ref として扱っている（provider schema の description に基づく）。`supabase config push --project-ref` に渡す前に実値を確認する |
 | `supabase_branch` のインスタンスサイズ | Management API は `desired_instance_size` を受け付けるが **provider が公開していない** → branch は既定サイズになる |
-| **CI での `supabase link`** | `deploy:supabase` は `link → config push → buckets → functions` の順で走る。`config push` / `functions deploy` は `--project-ref` を取るので link 不要だが、**`seed buckets --linked` は link を要求する**。非対話の CI で `supabase link` が DB パスワードを要求するかは未検証で、とくに **persistent branch の DB パスワードは Supabase が生成する**ため `SB_DB_PASSWORD` では通らない可能性がある。`deploy-supabase.yml` の初回実行で確認すること（要求される場合は buckets だけ別扱いにする） |
+| **CI での `supabase link`** | `deploy:supabase` は `link → config push → buckets → functions` の順で走る。`config push` / `functions deploy` は `--project-ref` を取るので link 不要だが、**`seed buckets --linked` は link を要求する**。非対話の CI で `supabase link` が DB パスワードを要求するかは未検証で、とくに **persistent branch の DB パスワードは Supabase が生成する**ため `SUPABASE_DB_PASSWORD` では通らない可能性がある。`deploy-supabase.yml` の初回実行で確認すること（要求される場合は buckets だけ別扱いにする） |
 | **CI の access token の権限** | Supabase の access token は organization 全体の Management API を叩ける。CI 用に専用トークンを発行してローテーションを分離することを推奨（プロジェクト単位にスコープする仕組みは Supabase 側に無い） |

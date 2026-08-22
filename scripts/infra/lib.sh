@@ -30,14 +30,12 @@ optional_env() {
   printf '%s' "${!name:-}"
 }
 
-# ── Supabase CLI 認証の橋渡し ───────────────────────────────────────────────
-# Doppler には `SUPABASE_` prefix のキーを登録できない（.claude/rules/env-naming.md）ため、
-# bootstrap config では `SB_ACCESS_TOKEN` で保持する。一方 Supabase CLI は
-# `SUPABASE_ACCESS_TOKEN` しか読まないので、CLI を呼ぶ直前にプロセス環境へ写す。
-# （これはプロセス内の export であって Doppler への登録ではない = 同ルール §5 の対象外）
+# ── Supabase CLI 認証の確認 ─────────────────────────────────────────────────
+# Doppler のキー名は supabase provider / supabase CLI が実際に読む
+# `SUPABASE_ACCESS_TOKEN` に揃えてあるので**読み替えは不要**
+# （.claude/rules/env-naming.md §4）。ここでは未設定を早期に検出するだけ。
 supabase_cli_auth() {
-  require_env SB_ACCESS_TOKEN
-  export SUPABASE_ACCESS_TOKEN="$SB_ACCESS_TOKEN"
+  require_env SUPABASE_ACCESS_TOKEN
 }
 
 # ── outputs（非機密のみ。ref / URL 等を記録して env/*.env 記入の元データにする） ──

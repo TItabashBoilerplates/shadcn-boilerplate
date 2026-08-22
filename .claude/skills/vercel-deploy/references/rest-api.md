@@ -8,7 +8,7 @@ script で足りないことをやるときの原典として使う。
 
 ```bash
 curl -fsS "https://api.vercel.com/v9/projects?teamId=$VERCEL_TEAM_ID" \
-  -H "Authorization: Bearer $VC_TOKEN" | jq
+  -H "Authorization: Bearer $VERCEL_TOKEN" | jq
 ```
 
 ## エンドポイント一覧

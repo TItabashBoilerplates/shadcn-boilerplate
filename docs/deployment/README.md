@@ -102,16 +102,16 @@ CLI では代替できない前提づくり。
      - 旧 `anon` / `service_role` 名で入るのは **Marketplace 以前の旧 Integration**。混同しないこと。
        万一ズレた場合のみ **Vercel 側で別名の env var を追加**して合わせる（Doppler には戻さない）。
 3. **API トークン発行**（値はチャット / コミットに出さない）:
-   - `VC_TOKEN`（Vercel Full Access。web / backend 両 project の作成・env 設定・domain 取得に使う）
-   - `SB_ACCESS_TOKEN`（Supabase PAT）/ `SB_DB_PASSWORD`（単一 project の DB パスワード）
+   - `VERCEL_TOKEN`（Vercel Full Access。web / backend 両 project の作成・env 設定・domain 取得に使う）
+   - `SUPABASE_ACCESS_TOKEN`（Supabase PAT）/ `SUPABASE_DB_PASSWORD`（単一 project の DB パスワード）
    - `GH_TOKEN`（または `gh auth login` 済み）
    - これらを **Doppler の bootstrap 用 config** に投入（doppler MCP / dashboard）。
      `infra-bootstrap` が `doppler run` でこの config から環境変数として注入する。
 
-   > ⚠️ **キー名から `VERCEL_` / `SUPABASE_` / `GITHUB_` prefix を落としてあるのは意図的**。
-   > 予約 prefix を Doppler に登録すると sync が予約値違反で落ちるため（`.claude/rules/env-naming.md`）。
-   > Supabase CLI が要求する `SUPABASE_ACCESS_TOKEN` へは `scripts/infra/lib.sh` の
-   > `supabase_cli_auth()` がプロセス内で読み替える（Doppler には登録しない）。
+   > ⚠️ **キー名は各ツールが実際に読む名前に揃える**（`.claude/rules/env-naming.md` §4）。
+   > これらを置く config（`all` / `<app>/bootstrap`）は native sync を張っていないため、
+   > `SUPABASE_*` / `VERCEL_*` をフルネームで持てる。`GH_TOKEN` だけ短いのは `GITHUB_` が
+   > GitHub Actions の予約 prefix だから（かつ `gh` CLI の公式名）。
 
 > Doppler の書き込みは `.claude/rules/mcp-doppler.md` のフェーズ制に従う（現在 `初期構築(full-access)`）。
 
@@ -230,7 +230,7 @@ vercel-deploy frontend/apps/lp             # project 作成（GitHub 連携 + ro
 vercel-deploy frontend/apps/lp --no-deploy # project と env だけ。以降の配信は git push に任せる
 ```
 
-トークンは **Doppler の `VC_TOKEN`**（devenv shell 進入時にロード済み）。
+トークンは **Doppler の `VERCEL_TOKEN`**（devenv shell 進入時にロード済み）。
 GitHub repo を紐付けられるのは **project 作成時だけ**なので、「project は在るが repo 未接続」に
 なったら dashboard で接続するか別名で作り直す。手順と落とし穴は
 [`.claude/skills/vercel-deploy/`](../../.claude/skills/vercel-deploy/SKILL.md)。

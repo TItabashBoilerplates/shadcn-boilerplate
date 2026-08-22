@@ -60,10 +60,10 @@ resolve_supabase() {
     SB_URL="https://${ref}.supabase.co"
     local keys
     keys="$(curl -fsS "${SUPABASE_API}/v1/projects/${ref}/api-keys?reveal=true" \
-              -H "Authorization: Bearer ${SB_ACCESS_TOKEN}" 2>/dev/null)" || true
+              -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" 2>/dev/null)" || true
     SB_PUB="$(printf '%s' "$keys" | jq -r 'map(select(.type=="publishable"))[0].api_key // (map(select(.name=="anon"))[0].api_key) // empty' 2>/dev/null)"
     # 直結(non-pooling) 接続。DDL/migration に適し、安定したホスト形式。
-    SB_DBURL="postgresql://postgres:${SB_DB_PASSWORD}@db.${ref}.supabase.co:5432/postgres"
+    SB_DBURL="postgresql://postgres:${SUPABASE_DB_PASSWORD}@db.${ref}.supabase.co:5432/postgres"
   else
     local gitb out; gitb="$(git_branch_for "$env")"
     out="$(supabase branches get "$gitb" -o env 2>/dev/null)" || { warn "branches get '$gitb' 失敗"; return 1; }
@@ -86,9 +86,9 @@ resolve_backend_domain() {
 main() {
   require_tool curl; require_tool jq; require_tool supabase; require_tool doppler
   load_config; load_outputs
-  supabase_cli_auth                 # SB_ACCESS_TOKEN → supabase CLI 用の env に橋渡し
-  require_env SB_DB_PASSWORD        # production の non-pooling 接続文字列の組み立てに使う
-  require_env VC_TOKEN              # backend(Vercel) の公開ドメイン取得 / web への endpoint set
+  supabase_cli_auth                 # SUPABASE_ACCESS_TOKEN → supabase CLI 用の env に橋渡し
+  require_env SUPABASE_DB_PASSWORD        # production の non-pooling 接続文字列の組み立てに使う
+  require_env VERCEL_TOKEN              # backend(Vercel) の公開ドメイン取得 / web への endpoint set
   : "${DOPPLER_PROJECT:?}"; : "${APP_NAME:?}"; : "${VERCEL_BACKEND_PROJECT:?}"
 
   local env slug backend

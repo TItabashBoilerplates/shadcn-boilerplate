@@ -199,15 +199,28 @@ Both `en.json` and `ja.json` are required.
 
 ### 7. Secrets & Environment Variable Naming
 
-**NEVER register keys with a `GITHUB_`, `SUPABASE_`, or `VERCEL_` prefix in Doppler** (nor in
-GitHub Actions / Vercel / Supabase secrets). Each platform reserves that namespace, so Doppler's
-native sync fails with a reserved-value error and **the whole config stops syncing**.
+**Name every Doppler key after the env var the consuming tool actually reads.** Do not invent
+abbreviations (`SB_*`, `VC_*`). Bridging is only for cases where two tools read the *same*
+credential under *different* official names, and it lives in `scripts/infra/tf.sh`.
+
+**NEVER use a prefix reserved by a sync target in a config that has that sync.** Doppler pushes a
+config's keys as a whole, so **one bad key makes the entire config stop syncing**.
 
 | Prefix | Reserved by | What happens |
 |---|---|---|
 | `GITHUB_` | GitHub Actions secrets | "Must not start with the `GITHUB_` prefix" |
 | `SUPABASE_` | Supabase Edge Function secrets | "Env name cannot start with SUPABASE_" |
 | `VERCEL_` | Vercel System Environment Variables | Collides with system-injected `VERCEL_*` |
+
+Which configs are constrained:
+
+| Doppler config | Sync attached | Forbidden prefix |
+|---|---|---|
+| `all/all` (shared access tokens) | none | none — use full names |
+| `<app>/bootstrap` (provisioning values) | none | none — use full names |
+| `<app>/{dev,stg,prd}` | GitHub Actions | **`GITHUB_` only** |
+
+> Adding a sync later breaks on pre-existing keys — re-check names before attaching one.
 
 **Supabase env vars are NOT managed in Doppler.** They are delivered by the platforms:
 
@@ -221,8 +234,10 @@ native sync fails with a reserved-value error and **the whole config stops synci
 So "the app needs a Supabase value" is **never** a reason to create a Doppler key. Duplicating
 those keys in Doppler is prohibited (breaks sync *and* causes drift).
 
-**If you must store such a value yourself**, drop the prefix: `SB_ACCESS_TOKEN`, `SB_DB_PASSWORD`,
-`VC_TOKEN`, `VC_TEAM_ID`, `GH_TOKEN`. Names like `NEXT_PUBLIC_SUPABASE_URL` are fine — only the
+**Values we do hold ourselves** live in the sync-free configs under their real names:
+`SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `VERCEL_TOKEN`, `DOPPLER_TOKEN`, `EXPO_TOKEN`.
+`GH_TOKEN` stays abbreviated only because `GITHUB_` is reserved everywhere — and it is the `gh`
+CLI's own official name anyway. Names like `NEXT_PUBLIC_SUPABASE_URL` are fine — only the
 **leading** prefix is restricted.
 
 Full policy: `.claude/rules/env-naming.md`

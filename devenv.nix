@@ -1227,10 +1227,11 @@ in
 
     # ---------- 外部 PaaS プロビジョニング（一度きりの初期構築）----------
     # scripts/infra/* を `doppler run` で包み、bootstrap config のトークン
-    # （VC_TOKEN / SB_ACCESS_TOKEN / SB_DB_PASSWORD / GH_TOKEN 等）を環境変数として
+    # （VERCEL_TOKEN / SUPABASE_ACCESS_TOKEN / SUPABASE_DB_PASSWORD / GH_TOKEN 等）を環境変数として
     # 注入する。値は露出しない。
-    # ※ キー名に VERCEL_/SUPABASE_/GITHUB_ prefix を使わないのは Doppler の予約 prefix 制約
-    #   （.claude/rules/env-naming.md）。CLI が要求する名前へは scripts/infra/lib.sh が読み替える。
+    # ※ キー名は各ツールが実際に読む名前に揃えてある（.claude/rules/env-naming.md §4）。
+    #   GH_TOKEN だけ短いのは GITHUB_ が GitHub Actions の予約 prefix だから（かつ gh CLI の公式名）。
+    #   provider が別名を読む 2 件は scripts/infra/tf.sh が橋渡しする。
     #
     # ⚠️ これは「コマンド一発で全自動」ではない。各 PaaS の GitHub 連携 OAuth・repo 接続・
     #    Doppler→PaaS の secret 連携は dashboard 専用（docs/deployment/README.md の Phase 0/2）。
@@ -1247,7 +1248,7 @@ in
     # ---------- IaC（terraform/）----------
     # 宣言的プロビジョニング。scripts/infra/tf.sh が
     #   ① 実行バイナリ解決（既定 terraform / TF_BIN で切替）
-    #   ② トークン読み替え（SB_ACCESS_TOKEN→SUPABASE_ACCESS_TOKEN 等）
+    #   ② トークン名の橋渡し（VERCEL_TOKEN→VERCEL_API_TOKEN 等。同名の値はそのまま届く）
     #   ③ アプリごとの workspace 選択 + apps/<app>.tfvars 指定
     # を行う。トークンは `doppler run` が bootstrap config から注入する（値は露出しない）。
     #
@@ -1319,7 +1320,7 @@ in
     #   vercel-deploy                          # frontend/apps/web を本番デプロイ
     #   vercel-deploy frontend/apps/lp         # 任意のアプリ
     #   vercel-deploy frontend/apps/lp --no-deploy   # project + env だけ（配信は git push）
-    # token は VC_TOKEN → VERCEL_TOKEN → `vercel login` 済みの CLI 認証情報、の順で解決する。
+    # token は VERCEL_TOKEN → `vercel login` 済みの CLI 認証情報、の順で解決する。
     # 手順の詳細・つまずきどころは .claude/skills/vercel-deploy/SKILL.md。
     "vercel-deploy" = {
       exec = ''exec bash "$DEVENV_ROOT/scripts/infra/vercel_deploy.sh" "$@"'';
@@ -1476,17 +1477,25 @@ in
         fi
         _file="$1"; shift
         [ -f "$_file" ] || { echo "file not found: $_file" >&2; exit 1; }
-        # 予約 prefix が 1 つでも混ざると upload 後の sync が config ごと壊れるので事前に弾く
-        # （.claude/rules/env-naming.md）。キー名のみ表示し、値は出さない。
-        if _bad="$(grep -oE '^[[:space:]]*(GITHUB|SUPABASE|VERCEL)_[A-Za-z0-9_]*' "$_file" | tr -d ' ' | sort -u)" \
+        # GITHUB_ prefix は GitHub Actions が予約しており、dev/stg/prd は GitHub へ sync される。
+        # 1 つ混ざるとその config の sync 全体が予約値違反で落ちるので事前に弾く
+        # （.claude/rules/env-naming.md §1）。キー名のみ表示し、値は出さない。
+        if _bad="$(grep -oE '^[[:space:]]*GITHUB_[A-Za-z0-9_]*' "$_file" | tr -d ' ' | sort -u)" \
            && [ -n "$_bad" ]; then
-          echo "✗ 予約 prefix（GITHUB_/SUPABASE_/VERCEL_）のキーが含まれています:" >&2
+          echo "✗ GITHUB_ prefix のキーが含まれています:" >&2
           printf '    %s\n' $_bad >&2
-          echo "  各 PF の予約名前空間で、sync が予約値違反になり config 全体が届かなくなります。" >&2
-          echo "  → Supabase の値は Vercel Marketplace 連携 / default secrets が供給するので不要です。" >&2
-          echo "  → 自前で持つ必要がある場合は SB_* / VC_* / GH_* に改名してください。" >&2
+          echo "  GitHub Actions の予約名前空間で、sync が予約値違反になり config 全体が届かなくなります。" >&2
+          echo "  → PAT を自前で持つ場合は GH_TOKEN（gh CLI の公式名）に改名してください。" >&2
           echo "  詳細: .claude/rules/env-naming.md" >&2
           exit 1
+        fi
+        # SUPABASE_/VERCEL_ は Supabase/Vercel への sync を張っていない限り登録してよい
+        # （本リポジトリは張らない）。ただし Supabase の接続情報は PF が注入するので不要（§2）。
+        if _warn="$(grep -oE '^[[:space:]]*(SUPABASE|VERCEL)_[A-Za-z0-9_]*' "$_file" | tr -d ' ' | sort -u)" \
+           && [ -n "$_warn" ]; then
+          echo "⚠ Supabase/Vercel へ native sync を張る config では使えないキーが含まれています:" >&2
+          printf '    %s\n' $_warn >&2
+          echo "  sync 無しの config（all / bootstrap）なら問題ありません。" >&2
         fi
         exec doppler secrets upload "$_file" "$@"
       '';
@@ -1509,13 +1518,17 @@ in
         # 予約 prefix は各 PF の名前空間。登録するとネイティブ連携の sync が予約値違反で
         # 落ち、その config 全体が届かなくなる（.claude/rules/env-naming.md）。
         case "$_key" in
-          GITHUB_*|SUPABASE_*|VERCEL_*)
-            echo "✗ '$_key' は予約 prefix（GITHUB_/SUPABASE_/VERCEL_）のため Doppler に登録できません。" >&2
-            echo "  各 PF の予約名前空間で、sync が予約値違反になり config 全体が届かなくなります。" >&2
-            echo "  → Supabase の値は Vercel Marketplace 連携 / Edge Functions の default secrets が供給します。" >&2
-            echo "  → 自前で持つ必要がある場合は SB_* / VC_* / GH_* に改名してください。" >&2
+          GITHUB_*)
+            echo "✗ '$_key' は GitHub Actions の予約 prefix のため Doppler に登録できません。" >&2
+            echo "  dev/stg/prd は GitHub へ sync されるため、config 全体が届かなくなります。" >&2
+            echo "  → PAT を自前で持つ場合は GH_TOKEN（gh CLI の公式名）に改名してください。" >&2
             echo "  詳細: .claude/rules/env-naming.md" >&2
             exit 1 ;;
+          SUPABASE_*|VERCEL_*)
+            # Supabase/Vercel への native sync を張っていない config なら登録してよい。
+            echo "⚠ '$_key' は Supabase/Vercel へ sync する config では使えません（本リポジトリは sync 無し）。" >&2
+            echo "  なお Supabase の接続情報は PF が自動注入するので Doppler に置く必要はありません。" >&2
+            echo "  詳細: .claude/rules/env-naming.md" >&2 ;;
         esac
         if [ "$#" -ge 1 ]; then _cfgs="$*"; else _cfgs="dev stg prd"; fi
         printf 'value for %s (入力は非表示, Enter で確定): ' "$_key" >&2

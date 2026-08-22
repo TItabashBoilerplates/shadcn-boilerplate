@@ -24,10 +24,10 @@
 # 前提として Vercel GitHub App が対象 repo に install 済みであること。
 #
 # ── 資格情報は Doppler が唯一のソース ──────────────────────────────────────
-# Vercel の API トークンは **Doppler の bootstrap config の `VC_TOKEN`**。devenv shell 進入時に
+# Vercel の API トークンは **Doppler の bootstrap config の `VERCEL_TOKEN`**。devenv shell 進入時に
 # loadDopplerByEnv が env へ載せるので、この script は何もせず拾える。
-# （Doppler に `VERCEL_` prefix は登録できないため名前が `VC_TOKEN` になっている
-#   = .claude/rules/env-naming.md。CLI へは プロセス内の export で橋渡しする）
+# （キー名は vercel CLI が読む名前そのもの = .claude/rules/env-naming.md §4。
+#   Terraform provider だけ VERCEL_API_TOKEN を読むので scripts/infra/tf.sh が橋渡しする）
 # Doppler が無い環境向けに VERCEL_TOKEN → `vercel login` 済み CLI の auth.json も見るが、
 # それは最後の手段。**トークンを新規発行しない・値を出力しない**。
 #

@@ -1,22 +1,45 @@
-# 環境変数・シークレット命名ポリシー（予約 prefix の登録禁止）
+# 環境変数・シークレット命名ポリシー
 
-**CRITICAL / NON-NEGOTIABLE**: **Doppler に登録するキー名に `GITHUB_` / `SUPABASE_` / `VERCEL_` の
-prefix を使ってはならない。**
+**原則**: **Doppler のキー名は「その値を使うツールが実際に読む名前」に揃える。**
+省略形（`SB_*` / `VC_*`）を機械的に付けない。読み替えが要るのは「同じ資格情報を 2 つのツールが
+別名で読む」ときだけで、その橋渡しはスクリプト側（`scripts/infra/tf.sh`）に閉じ込める。
 
-Doppler は各 PaaS へ**ネイティブ連携（sync）で fan-out** する設計（`.claude/skills/doppler/references/cicd.md`）。
-これら 3 つの prefix は**各プラットフォームが自分の名前空間として予約**しているため、sync 時に
-**予約値違反でエラー**になり、**その config の sync 全体が失敗**する（1 キーの命名ミスで全シークレットが
-届かなくなる）。
+**CRITICAL / NON-NEGOTIABLE**: ただし **native sync（Doppler → GitHub / Vercel / Supabase）が
+付いている config では、その sync 先が予約している prefix を使ってはならない。**
+
+Doppler の sync は **config 単位で全キーを push する**ため、**1 キーの命名ミスでその config の
+sync 全体が予約値違反で失敗する**（一部の secret だけ届かない、という形でしか現れない）。
+したがって禁止は **config ごと**に決まり、Doppler 全体に一律でかかるものではない。
+
+> ⚠️ **後から sync を付けると、既存キーが原因で壊れる。** sync を追加する前に、その config の
+> キー名を §1 の表で必ず点検すること。
 
 ---
 
-## 1. 禁止 prefix（Doppler 登録）
+## 1. sync 先が予約している prefix
 
-| prefix | 予約している PF | sync/登録時に起きること | 出典 |
+**その config に該当の sync が付いている場合のみ**適用される。
+
+| prefix | 予約している PF | sync 時に起きること | 出典 |
 |---|---|---|---|
 | `GITHUB_` | GitHub Actions secrets | secret 名として拒否される。公式:「**Must not start with the `GITHUB_` prefix.**」 | [GitHub: Secrets reference](https://docs.github.com/en/actions/reference/secrets-reference) |
 | `SUPABASE_` | Supabase Edge Function secrets | 登録が拒否される。CLI:「**Env name cannot start with SUPABASE_**」／ Dashboard・API:「**Secret name must not start with the SUPABASE\_ prefix**」 | [Supabase: Environment Variables](https://supabase.com/docs/guides/functions/secrets) / [supabase/cli#1834](https://github.com/supabase/cli/issues/1834) / [supabase#36390](https://github.com/supabase/supabase/issues/36390) |
 | `VERCEL_` | Vercel System Environment Variables | `VERCEL_*` は Vercel が**自動注入する system 名前空間**（`VERCEL_ENV` / `VERCEL_URL` / `VERCEL_PROJECT_ID` …）。ユーザー定義は衝突し、`NOW_` 系との conflict エラーにもなる | [Vercel: System environment variables](https://vercel.com/docs/environment-variables/system-environment-variables) / [Vercel: Error List](https://vercel.com/docs/errors/error-list) |
+
+### 本リポジトリの config と、そこにかかる制約
+
+| Doppler の config | 付いている sync | 禁止 prefix |
+|---|---|---|
+| **`all` / `all`**（org 共通のアクセストークン置き場） | **無し** | **無し**（フルネームで持つ） |
+| **`<app>` / `bootstrap`**（プロビジョニング用の値） | **無し** | **無し**（フルネームで持つ） |
+| `<app>` / `dev` `stg` `prd` | **GitHub Actions**（`doppler_secrets_sync_github_actions`） | **`GITHUB_` のみ** |
+| （将来 Vercel sync を付ける場合） | Vercel | ＋ `VERCEL_` と Vercel 予約名 |
+| （将来 Supabase sync を付ける場合） | Supabase | ＋ `SUPABASE_` |
+
+> **`GITHUB_` だけは実質どこでも避ける。** GitHub Actions の secrets / variables が全面的に
+> 予約しており、`dev` / `stg` / `prd` は必ず GitHub へ sync するため。
+> 逆に **`SUPABASE_` / `VERCEL_` は、Supabase / Vercel への sync を張っていない config では
+> 使ってよい**（本リポジトリは両方とも sync を使わず、Terraform が直接 env を書く）。
 
 ### 併せて守る命名制約（同じ理由で sync が壊れる）
 
@@ -103,7 +126,7 @@ sync 障害は無言で起き、「一部の secret だけ届かない」とい�
 
 | 値の性質 | 保管先 | 例 |
 |---|---|---|
-| **シークレット** | **Doppler**（`doppler` MCP で投入。`.claude/rules/mcp-doppler.md`） | `SB_ACCESS_TOKEN` / `POSTGRES_URL` / 外部 API キー |
+| **シークレット** | **Doppler**（`doppler` MCP で投入。`.claude/rules/mcp-doppler.md`） | `SUPABASE_ACCESS_TOKEN` / `POSTGRES_URL` / 外部 API キー |
 | **非機密の識別子（CI のデプロイ先指定）** | **GitHub Actions variable**（Terraform が書く） | `SUPABASE_PROJECT_REF` |
 | PF が自動注入するもの | 何もしない（§2） | `SUPABASE_URL` / `VERCEL_ENV` / `GITHUB_TOKEN` |
 
@@ -126,20 +149,28 @@ sync 障害は無言で起き、「一部の secret だけ届かない」とい�
 
 ---
 
-## 4. どうしても必要なときの代替命名
+## 4. キー名の決め方（省略しない）
 
-予約 prefix の値を**自分で持ちたい**場合（プロビジョニング用トークン等）は、**prefix を削って別名にする**。
-アプリ側の参照名も同時に合わせること（`.claude/rules/clean-code.md` により旧名エイリアスは残さない）。
+**そのキーを読むツールが実際に読む名前をそのまま使う。** 省略形を作るのは §1 の制約に当たる
+ときだけで、その場合も「なぜ省略したか」を書く。旧名エイリアスは残さない
+（`.claude/rules/clean-code.md`）。
 
-| ❌ Doppler に登録禁止 | ✅ 代替キー名 |
-|---|---|
-| `SUPABASE_ACCESS_TOKEN` | `SB_ACCESS_TOKEN` |
-| `SUPABASE_DB_PASSWORD` | `SB_DB_PASSWORD` |
-| `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` | 原則不要（§2）。frontend は `NEXT_PUBLIC_SUPABASE_*` / `EXPO_PUBLIC_SUPABASE_*`、DB 接続は `POSTGRES_URL` / `DATABASE_URL` |
-| `VERCEL_TOKEN` / `VERCEL_TEAM_ID` | `VC_TOKEN` / `VC_TEAM_ID` |
-| `GITHUB_TOKEN`（PAT を自前で持つ場合） | `GH_TOKEN` |
+### 本リポジトリの実際のキー名
 
-> `NEXT_PUBLIC_SUPABASE_URL` のように **`SUPABASE_` が先頭でなければ問題ない**。禁止されているのは
+| config | キー | 読む主体 | 備考 |
+|---|---|---|---|
+| `all/all` | `SUPABASE_ACCESS_TOKEN` | supabase provider / supabase CLI | **読み替え不要** |
+| `all/all` | `VERCEL_TOKEN` | vercel CLI | Terraform provider だけ `VERCEL_API_TOKEN` を読む → `tf.sh` が橋渡し |
+| `all/all` | `GH_TOKEN` | gh CLI（**これが公式名**） | `GITHUB_` は §1 により使えない。Terraform provider は `GITHUB_TOKEN` → `tf.sh` が橋渡し |
+| `all/all` | `DOPPLER_TOKEN` | doppler provider | **読み替え不要** |
+| `all/all` | `EXPO_TOKEN` / `FAL_KEY` / `APPLE_*` / `PLAY_SERVICE_ACCOUNT_JSON` | 各 CLI | **読み替え不要** |
+| `<app>/bootstrap` | `SUPABASE_DB_PASSWORD` | supabase CLI（`link -p`） | Terraform へは `TF_VAR_supabase_db_password` → `tf.sh` が橋渡し |
+| `<app>/{dev,stg,prd}` | `POSTGRES_URL` / `NEXT_PUBLIC_*` / `EXPO_PUBLIC_*` / 外部 API キー | アプリ / CI | GitHub へ sync される（`GITHUB_` 禁止） |
+
+**橋渡しは `scripts/infra/tf.sh` の `bridge_env` に 3 本だけ**。増やす前に「本当に 2 つのツールが
+別名で読むのか」を一次情報で確認する（同名で済むなら橋渡しは書かない）。
+
+> `NEXT_PUBLIC_SUPABASE_URL` のように **prefix が先頭でなければ制約に当たらない**。効くのは
 > **キー名の先頭一致**であって、名前に "SUPABASE" を含むこと自体ではない。
 
 ---
@@ -148,7 +179,8 @@ sync 障害は無言で起き、「一部の secret だけ届かない」とい�
 
 | 対象 | 本ルールの適用 |
 |---|---|
-| **Doppler の secrets（全 config: `dev` / `dev_personal` / `stg` / `prd` / bootstrap 用）** | **適用**（登録禁止） |
+| **Doppler の `<app>/{dev,stg,prd,dev_personal}`**（GitHub へ sync される） | **適用**（`GITHUB_` 禁止） |
+| **Doppler の `all/all` / `<app>/bootstrap`**（sync 無し） | **対象外**（フルネームで持つ。§4）。ただし sync を後から付けるなら §1 で点検 |
 | GitHub Actions の repository/environment secrets | **適用**（GitHub が `GITHUB_` を拒否） |
 | Vercel project の Environment Variables（手動 set / `vercel_env_set`） | **適用**（`VERCEL_` は system 予約） |
 | Supabase Edge Functions の secrets | **適用**（`SUPABASE_` は登録不可） |
@@ -161,11 +193,12 @@ sync 障害は無言で起き、「一部の secret だけ届かない」とい�
 ## 6. 禁止パターン
 
 ```bash
-# ❌ NG: Doppler に予約 prefix のキーを作る（sync が予約値違反で落ちる）
-#    （doppler MCP 経由でも Bash 経由でも等しく禁止）
-SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY / SUPABASE_SECRET_KEY
-VERCEL_TOKEN / VERCEL_ENV
+# ❌ NG: sync が付いている config（dev/stg/prd）に GITHUB_ prefix のキーを作る
+#    （doppler MCP 経由でも Bash 経由でも等しく禁止。その config の sync 全体が落ちる）
 GITHUB_TOKEN / GITHUB_REF
+
+# ❌ NG: 意味もなく省略形にする（読むツールの名前と一致しなくなり、橋渡しコードが増える）
+SB_ACCESS_TOKEN / VC_TOKEN / SB_DB_PASSWORD
 
 # ❌ NG: Marketplace が注入する値を Doppler にも入れて二重管理する
 # ❌ NG: Supabase の値が要るからと Edge Functions の secrets に SUPABASE_* を set する
@@ -173,7 +206,9 @@ GITHUB_TOKEN / GITHUB_REF
 
 # ✅ OK: 非予約 prefix
 OPENAI_API_KEY / NEXT_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_URL
-POSTGRES_URL / DATABASE_URL / SB_ACCESS_TOKEN / VC_TOKEN / GH_TOKEN
+POSTGRES_URL / DATABASE_URL / GH_TOKEN
+# ✅ OK: sync の無い config（all / bootstrap）ならフルネームで持てる
+SUPABASE_ACCESS_TOKEN / SUPABASE_DB_PASSWORD / VERCEL_TOKEN / DOPPLER_TOKEN
 ```
 
 ---
@@ -183,7 +218,9 @@ POSTGRES_URL / DATABASE_URL / SB_ACCESS_TOKEN / VC_TOKEN / GH_TOKEN
 Doppler に新しいキーを作る前に、**必ず**以下を順に確認する:
 
 1. **そもそも Doppler に要るか？** Supabase の値なら §2 のとおり**不要**（PF が注入する）。
-2. **先頭が `GITHUB_` / `SUPABASE_` / `VERCEL_` でないか？** → 該当したら §4 で改名。
+2. **その config に native sync が付いているか？** 付いているなら §1 の表で禁止 prefix を確認する
+   （`dev`/`stg`/`prd` は GitHub sync 対象 → `GITHUB_` 禁止）。sync が無い `all` / `bootstrap` なら
+   **フルネームで持つ**（§4）。
 3. **数字始まりでないか／英数字と `_` のみか？**
 4. **Vercel 予約名（`AWS_*` / `NOW_REGION` / `TZ` / `LAMBDA_*`）でないか？**
 5. 書き込みは **`doppler` MCP** 経由・**フェーズ制**に従う（`.claude/rules/mcp-doppler.md`）。**値はチャット/ログ/コミットに出さない**。
@@ -192,9 +229,12 @@ Doppler に新しいキーを作る前に、**必ず**以下を順に確認す�
 > 検知して**登録前に拒否**する。ただし `doppler` MCP や Doppler dashboard にはこのガードが無いため、
 > エージェントは本ルールを自分で守ること。
 >
-> **CLI が予約名を要求する場合の橋渡し**: Supabase CLI は `SUPABASE_ACCESS_TOKEN` しか読まないので、
-> Doppler には `SB_ACCESS_TOKEN` で保持し、`scripts/infra/lib.sh` の `supabase_cli_auth()` が
-> CLI 呼び出し直前にプロセス環境へ写す（§5 のとおり export は本ルールの対象外）。
+> **橋渡しが要るケース**: 同じ資格情報を 2 つのツールが別名で読むときだけ
+> （`VERCEL_TOKEN`→`VERCEL_API_TOKEN`、`GH_TOKEN`→`GITHUB_TOKEN`、
+> `SUPABASE_DB_PASSWORD`→`TF_VAR_supabase_db_password`）。`scripts/infra/tf.sh` の
+> `bridge_env` がプロセス内で写す（§5 のとおり export は本ルールの対象外）。
+> **同名で届く値に橋渡しを書かない**（自己代入の no-op が残ると、キーが存在しなくても
+> 気づけなくなる）。
 
 ---
 
@@ -202,8 +242,10 @@ Doppler に新しいキーを作る前に、**必ず**以下を順に確認す�
 
 このポリシーは**交渉の余地なし**。
 
-- Doppler（および GitHub / Vercel / Supabase の secrets）に **`GITHUB_` / `SUPABASE_` / `VERCEL_`
-  prefix のキーを登録する実装・提案はレビューで却下**する。
+- **native sync が付いている config**（`<app>/{dev,stg,prd}` = GitHub sync）に、その sync 先が
+  予約する prefix のキーを登録する実装・提案は**レビューで却下**する。
+- 逆に、**sync の無い config（`all` / `<app>/bootstrap`）で意味もなく省略形にする実装も却下**する。
+  キー名は読む側のツールが実際に読む名前に揃える（§4）。
 - **Supabase の環境変数を Doppler に入れる提案も却下**する（Vercel Marketplace 連携と Edge Functions の
   default secrets が正規の供給経路）。
 - 判断に迷う場合は勝手に決めず**ユーザーに確認**する。
