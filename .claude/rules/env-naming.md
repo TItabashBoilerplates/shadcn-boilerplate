@@ -89,6 +89,40 @@ Doppler は各 PaaS へ**ネイティブ連携（sync）で fan-out** する設�
 | **Vercel system 値** | `VERCEL_ENV` / `VERCEL_URL` / `VERCEL_PROJECT_ID` | **置かない**（Vercel が自動注入） |
 | **GitHub Actions の組み込み値** | `GITHUB_TOKEN` / `GITHUB_REF` / `GITHUB_OUTPUT` | **置かない**（Actions ランタイムが提供） |
 | ローカル非機密既定値 | ローカル Supabase URL / port | **置かない**（`env/<svc>/.env.local`。`env/README.md`） |
+| **CI がデプロイ先を特定するための非機密識別子** | `SUPABASE_PROJECT_REF` | **置かない**（予約 prefix で登録不可。**Terraform が GitHub Environment variable へ直接書く**。§3.1） |
+
+### 3.1 「Doppler 原則」の射程 — 非機密の識別子は Doppler を通さない
+
+**CRITICAL**: `SUPABASE_PROJECT_REF` を「環境変数だから」という理由で Doppler へ移してはならない。
+移すと §1 の予約 prefix に該当し、**その config の sync 全体が予約値違反で落ちる**。しかも
+sync 障害は無言で起き、「一部の secret だけ届かない」という形でしか現れない。
+
+本リポジトリの「シークレット・リモート値は Doppler 一本」という原則が対比しているのは
+**Doppler vs `.env` ファイル**であって、Doppler vs PaaS ネイティブ設定ではない。§2 が
+「Supabase の環境変数は Doppler で管理しない」と定めているのと同じ考え方が適用される。
+
+| 値の性質 | 保管先 | 例 |
+|---|---|---|
+| **シークレット** | **Doppler**（`doppler` MCP で投入。`.claude/rules/mcp-doppler.md`） | `SB_ACCESS_TOKEN` / `POSTGRES_URL` / 外部 API キー |
+| **非機密の識別子（CI のデプロイ先指定）** | **GitHub Actions variable**（Terraform が書く） | `SUPABASE_PROJECT_REF` |
+| PF が自動注入するもの | 何もしない（§2） | `SUPABASE_URL` / `VERCEL_ENV` / `GITHUB_TOKEN` |
+
+根拠:
+
+- **project ref は秘密情報ではない。** `https://<ref>.supabase.co` の形で
+  `NEXT_PUBLIC_SUPABASE_URL` としてブラウザまで届く公開値である。secret にすると
+  ログでマスクされ、デプロイ先の取り違えに気づけなくなる副作用だけが残る。
+- **GitHub Actions 側の予約は `GITHUB_` のみ**。公式:「Must not start with the `GITHUB_`
+  prefix.」「Can only contain alphanumeric characters (`[a-z]`, `[A-Z]`, `[0-9]`) or
+  underscores (`_`).」（[Variables](https://docs.github.com/en/actions/reference/workflows-and-actions/variables)）
+  → `SUPABASE_PROJECT_REF` は合法。本ルール §5 の適用範囲表も、GitHub Actions の
+  secrets/variables を独立した保管先として認めたうえで `GITHUB_` だけを禁じている。
+- **Doppler を経由すると integration が必須前提に格上げされる。** `doppler_github_integration_id`
+  は現状 optional（既定 `""`）で、dashboard でしか作れない。ref の供給をそこに依存させると
+  「terraform apply は成功したのに CI が動かない」経路が増える。
+
+書き込みは `terraform/modules/github/main.tf` の `github_actions_environment_variable`。
+読み出しは `.github/workflows/deploy-supabase.yml`。**この 2 か所以外に増やさないこと。**
 
 ---
 

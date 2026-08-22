@@ -81,3 +81,35 @@ resource "github_repository_environment_deployment_policy" "this" {
   environment    = github_repository_environment.this[each.key].environment
   branch_pattern = each.value.git_branch
 }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# デプロイ先の特定情報（Actions variable）
+#
+# `.github/workflows/deploy-supabase.yml` が `vars.SUPABASE_PROJECT_REF` を読んで
+# `supabase config push --project-ref` / `functions deploy --project-ref` の対象を決める。
+# これが無いと「terraform apply でインフラは出来たが、push しても Supabase に届かない」
+# という状態になる（= 継続デプロイの輪から Supabase だけが外れる）。
+#
+# ⚠️ **secret ではなく variable**。project ref は `https://<ref>.supabase.co` の形で
+#    NEXT_PUBLIC_SUPABASE_URL としてブラウザまで届く公開値なので、マスクする必要が無い。
+#    むしろ variable にしてログに出るようにしたほうが、デプロイ先の取り違えに気づける。
+#
+# ⚠️ **この値を Doppler 経由で配ってはならない。** `SUPABASE_` prefix は Doppler に登録できず、
+#    登録するとその config の sync 全体が予約値違反で落ちる（.claude/rules/env-naming.md §1）。
+#    GitHub Actions 側の予約は `GITHUB_` のみ（GitHub 公式: "Must not start with the
+#    `GITHUB_` prefix."）なので、Terraform から直接書き込むのが正しい経路になる。
+#    判断の記録は .claude/rules/env-naming.md §3 の判断表を参照。
+# ─────────────────────────────────────────────────────────────────────────────
+
+resource "github_actions_environment_variable" "supabase_project_ref" {
+  for_each = var.environments
+
+  repository  = data.github_repository.this.name
+  environment = github_repository_environment.this[each.key].environment
+
+  variable_name = "SUPABASE_PROJECT_REF"
+  # 環境名のキーが supabase_env_refs に無ければ plan 時点でエラーにする
+  # （lookup() で握りつぶすと「ref が空のまま CI が走る」事故になる。
+  #  .claude/rules/error-handling.md）。
+  value = var.supabase_env_refs[each.key]
+}

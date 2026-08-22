@@ -51,5 +51,13 @@ output "manual_followups" {
     length(var.production_reviewers) == 0
     ? "production_reviewers が空（本番 migration の承認ゲート無し）"
     : "",
+
+    # deploy-supabase.yml は `supabase config push` / `functions deploy` のために
+    # Supabase の access token を必要とする。これは **secret** なので Terraform では扱わない
+    # （state に平文で載るため。.claude/rules/mcp-doppler.md に従い doppler MCP で投入する）。
+    # ref（非機密）は Terraform が GitHub Environment variable に書くのと対照的。
+    module.doppler.github_sync_enabled
+    ? "Doppler の各 config（dev / stg / prd）に SB_ACCESS_TOKEN を投入すること（doppler MCP 経由）。無いと deploy-supabase.yml が Supabase へ届かない"
+    : "",
   ])
 }

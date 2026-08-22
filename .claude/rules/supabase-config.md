@@ -191,7 +191,7 @@ secret    = "env(SUPABASE_AUTH_EXTERNAL_GITHUB_SECRET)"
 | `config.toml` の**編集** | このルール（Config-as-Code） | 本ファイル |
 | **DB スキーマ / RLS / migration** | Drizzle + `devenv tasks run app:migrate-dev`（本番は承認必須） | `.claude/rules/database.md` |
 | ローカル反映 | `stop && supabase-start`（再起動で config 反映） | `.claude/CLAUDE.md` |
-| 本番デプロイ | `infra-deploy <app>` / `devenv tasks run -P <env> deploy:supabase`（要 `SUPABASE_PROJECT_REF`） | `terraform/README.md` |
+| 本番デプロイ | push で自動（`.github/workflows/deploy-supabase.yml`）。手動なら `infra-deploy <app>` / `devenv tasks run -P <env> deploy:supabase`（要 `DEPLOY_SUPABASE_PROJECT_REF`） | `terraform/README.md` |
 
 > `psql` / `curl` / `supabase` CLI を Bash で直接叩いてインフラを調査・操作するのは `mcp-supabase.md` どおり禁止。`config.toml` の編集は通常のファイル編集として行う。
 

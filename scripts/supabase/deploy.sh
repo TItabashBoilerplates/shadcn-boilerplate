@@ -2,12 +2,18 @@
 # Supabase のリモート反映オーケストレーター。
 #   link → config push → buckets → functions の順（順序依存あり）。
 #
-# 前提: SUPABASE_PROJECT_REF が環境変数で渡っていること。
+# 前提: DEPLOY_SUPABASE_PROJECT_REF が環境変数で渡っていること。
 #   `SUPABASE_` prefix は Doppler に登録できない（.claude/rules/env-naming.md）ので、
-#   ref の供給元は **Terraform の output**:
+#   ref の供給元は **Terraform** の 2 経路だけ:
+#
+#     ローカル: terraform output（infra-deploy が渡す）
+#     CI      : Terraform が書いた GitHub Environment variable（deploy-supabase.yml が渡す）
+#
+#   輸送変数名が SUPABASE_PROJECT_REF **ではない**理由は scripts/supabase/lib.sh の
+#   sb_require_project_ref のコメントを参照（env ファイルによる上書き対策）。
 #
 #     export ENV=staging
-#     export SUPABASE_PROJECT_REF="$(tf-output <app> -json supabase_env_refs | jq -r .staging)"
+#     export DEPLOY_SUPABASE_PROJECT_REF="$(tf-output <app> -json supabase_env_refs | jq -r .staging)"
 #     devenv tasks run -P staging deploy:supabase
 set -euo pipefail
 
