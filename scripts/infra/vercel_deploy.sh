@@ -1,11 +1,20 @@
 #!/usr/bin/env bash
-# frontend/apps/<name> を Vercel project 化（GitHub 連携 + rootDirectory）してデプロイする。
+# アプリ 1 つを Vercel project 化（GitHub 連携 + rootDirectory）してデプロイする。
+# **frontend（framework ビルド）と backend-py（Services のコンテナ）の両方**を扱う。
 #
 #   vercel-deploy                             # frontend/apps/web を本番デプロイ
-#   vercel-deploy frontend/apps/lp            # 任意アプリ
+#   vercel-deploy frontend/apps/lp            # 任意のフロントアプリ
+#   vercel-deploy backend-py                  # uv workspace をコンテナで本番デプロイ
+#   vercel-deploy backend-py --dry-run        # 実行計画だけ出す
 #   vercel-deploy frontend/apps/lp --no-deploy      # project 作成 + env だけ（配信は git push に任せる）
 #   vercel-deploy frontend/apps/lp --preview        # preview デプロイ
-#   vercel-deploy frontend/apps/lp --dry-run        # 実行計画だけ出す
+#
+# ── 2 つのモード（<app>/vercel.json の中身で自動判別）──────────────────────
+#   framework モード : vercel.json に services が無い。install/build がリポジトリルートへ
+#                      戻れている必要がある（rootDirectory 配下に lockfile が無いため）。
+#   container モード : vercel.json の services に runtime:"container" がある。install/build
+#                      コマンドは使われず、Vercel が Dockerfile からイメージを焼く。
+#                      ローカル確認は build-frontend ではなく test-backend-py。
 #
 # `scripts/infra/vercel.sh`（bootstrap の一部・web + backend を固定で作る）とは役割が違う。
 # こちらは **アプリ 1 つを後から足す / 手で本番へ出す**ための ad-hoc 経路で、config.env が
@@ -48,7 +57,9 @@ PROJECT_NAME=""
 GIT_REPO=""
 FRAMEWORK=""
 TEAM_ARG=""
-URL_ENV_KEY="NEXT_PUBLIC_APP_URL"
+# 未指定を表す空文字。container モードでは "none"、それ以外は NEXT_PUBLIC_APP_URL に解決する
+URL_ENV_KEY=""
+IS_CONTAINER=0
 EXTRA_ENVS=()
 DO_DEPLOY=1
 DEPLOY_TARGET="production"
@@ -64,9 +75,11 @@ Options:
   --project NAME       Vercel project 名（既定: [APP_NAME-]<app ディレクトリ名>）
   --repo owner/repo    GitHub repo（既定: git remote origin から導出）
   --framework NAME     Vercel の framework preset（既定: package.json から判定。none で無指定）
+                       container モードでは常に none
   --team SLUG|ID       Vercel team（既定: VERCEL_TEAM_ID、無ければ自動解決）
   --env KEY=VALUE      非機密の env を production+preview に投入（複数可）
-  --url-env-key KEY    本番 URL を入れる env のキー（既定: NEXT_PUBLIC_APP_URL / none で無効）
+  --url-env-key KEY    本番 URL を入れる env のキー
+                       （既定: framework モード = NEXT_PUBLIC_APP_URL / container モード = none）
   --preview            preview デプロイ（既定は production）
   --no-deploy          project と env だけ用意し、デプロイしない
   --skip-build-check   デプロイ前のローカルビルド確認を省く
@@ -129,8 +142,22 @@ detect_repo() {
   esac
 }
 
+# vercel.json に runtime:"container" の service があれば container モード。
+# 判定は「ディレクトリ名が backend-py かどうか」ではなく **設定の実体**で行う
+# （派生プロジェクトがディレクトリ名を変えても壊れないようにするため）。
+detect_mode() {
+  local f="$PROJECT_ROOT/$APP_DIR/vercel.json"
+  [ -f "$f" ] || return 0
+  if jq -e '[.services // {} | .[] | select(.runtime == "container")] | length > 0' \
+      "$f" >/dev/null 2>&1; then
+    IS_CONTAINER=1
+  fi
+}
+
 detect_framework() {
   [ -n "$FRAMEWORK" ] && return 0
+  # container モードでは Vercel は framework を使わない（Dockerfile が全部やる）
+  if [ "$IS_CONTAINER" -eq 1 ]; then FRAMEWORK="none"; return 0; fi
   local pkg="$PROJECT_ROOT/$APP_DIR/package.json"
   if [ -f "$pkg" ] && jq -e '.dependencies.next // .devDependencies.next' "$pkg" >/dev/null 2>&1; then
     FRAMEWORK="nextjs"
@@ -139,8 +166,20 @@ detect_framework() {
   fi
 }
 
+# 本番 URL を入れる env のキー。backend の project に NEXT_PUBLIC_* を入れても意味が無い
+# （フロントのバンドルに載る値であり、backend はそれを読まない）ので container では none。
+resolve_url_env_key() {
+  [ -n "$URL_ENV_KEY" ] && return 0
+  if [ "$IS_CONTAINER" -eq 1 ]; then URL_ENV_KEY="none"; else URL_ENV_KEY="NEXT_PUBLIC_APP_URL"; fi
+}
+
 detect_project_name() {
   [ -n "$PROJECT_NAME" ] && return 0
+  # bootstrap（scripts/infra/vercel.sh）が同じアプリに付けた名前があればそれを使う。
+  # 揃えないと同じ root を持つ project が 2 つできる。
+  if [ -n "${VERCEL_BACKEND_PROJECT:-}" ] && [ "$APP_DIR" = "${VERCEL_BACKEND_ROOT_DIR:-}" ]; then
+    PROJECT_NAME="$VERCEL_BACKEND_PROJECT"; return 0
+  fi
   local base; base="$(basename "$APP_DIR")"
   # config.env の APP_NAME があれば prefix にする（myapp-web / myapp-lp）。
   if [ -n "${APP_NAME:-}" ] && [ "$base" != "$APP_NAME" ]; then
@@ -150,11 +189,60 @@ detect_project_name() {
   fi
 }
 
+# container モードの前提を、Vercel へ 1 件も送る前に検査する。
+# ここは **公開 JSON schema に無い制約**なので、`vercel.json` が schema 的に妥当でも通らない:
+#   - entrypoint の basename は blessed 名 4 つのみ
+#     （vercel/vercel の fs-detectors/src/services/resolve-v2.ts:
+#      CONTAINER_ENTRYPOINT_CANDIDATES。接尾辞つきは never matched）
+#   - ビルドコンテキストは常に dirname(Dockerfile)
+#     （vercel/vercel の packages/container/src/index.ts: contextDir = path.dirname(...)）
+#     → uv workspace は全 member の pyproject が要るので Dockerfile は workspace ルート必須
+#   - service は既定で非公開。top-level rewrite が無いと 404
+# 詳細: docs/_research/2026-08-22-vercel-services-container-build-context.md
+require_container_vercel_json() {
+  local f="$PROJECT_ROOT/$APP_DIR/vercel.json" name root entry dockerfile context
+  local blessed="Dockerfile.vercel Containerfile.vercel Dockerfile Containerfile"
+
+  while IFS=$'\t' read -r name root entry; do
+    [ -n "$name" ] || continue
+    [ -n "$entry" ] || die "services.${name} に entrypoint がありません（Dockerfile のパス）"
+    dockerfile="$PROJECT_ROOT/$APP_DIR/${root:-.}/$entry"
+    # ./ を潰して表示・比較を安定させる
+    dockerfile="$(cd "$(dirname "$dockerfile")" 2>/dev/null && pwd)/$(basename "$entry")" \
+      || die "services.${name}.entrypoint のディレクトリが見つかりません: ${root:-.}/$entry"
+    case " $blessed " in
+      *" $(basename "$entry") "*) : ;;
+      *) die "services.${name}.entrypoint '${entry}' のファイル名は Vercel が受け付けません（使えるのは: ${blessed}）" ;;
+    esac
+    [ -f "$dockerfile" ] || die "services.${name}.entrypoint が指す ${dockerfile#"$PROJECT_ROOT"/} がありません"
+    context="$(cd "$(dirname "$dockerfile")" && pwd)"
+    if [ -f "$PROJECT_ROOT/$APP_DIR/uv.lock" ] && [ ! -f "$context/uv.lock" ]; then
+      die "$(cat <<EOF
+services.${name} のビルドコンテキストは ${context#"$PROJECT_ROOT"/} になりますが、そこに uv.lock がありません。
+Vercel はビルドコンテキストを **Dockerfile が置かれているディレクトリ**に固定します（root では変えられません）。
+uv workspace のビルドには全 member の pyproject.toml が要るので、Dockerfile を
+${APP_DIR}/ 直下へ移し、entrypoint をその blessed 名にしてください。
+EOF
+)"
+    fi
+    [ -f "$context/.dockerignore" ] \
+      || warn "${context#"$PROJECT_ROOT"/} に .dockerignore がありません（docker は <コンテキスト>/.dockerignore しか読みません）"
+    jq -e --arg n "$name" '[.rewrites // [] | .[] | select(.destination.service == $n)] | length > 0' \
+      "$f" >/dev/null 2>&1 \
+      || die "services.${name} を指す top-level rewrite がありません。service は既定で非公開なので、無いとデプロイは成功しても 404 になります。"
+    ok "service '${name}': ${dockerfile#"$PROJECT_ROOT"/}（context=${context#"$PROJECT_ROOT"/}）"
+  done < <(jq -r '.services // {} | to_entries[]
+                  | select(.value.runtime == "container")
+                  | [.key, (.value.root // "."), (.value.entrypoint // "")] | @tsv' "$f")
+}
+
 # モノレポでは vercel.json の buildCommand / installCommand が
 # **リポジトリルートまで戻れていないと必ずビルドが落ちる**（rootDirectory 配下には
 # lockfile も turbo.json も無い）。作る前に落とすのではなく、ここで落とす。
+# container モードは install/build コマンドを使わないので、この検査は行わない。
 require_app_vercel_json() {
   local f="$PROJECT_ROOT/$APP_DIR/vercel.json"
+  if [ "$IS_CONTAINER" -eq 1 ]; then require_container_vercel_json; return 0; fi
   [ -f "$f" ] || die "$(cat <<EOF
 $APP_DIR/vercel.json がありません。モノレポでは必須です（rootDirectory 配下には
 bun.lock も turbo.json も無いので、install / build をルートへ戻す必要がある）。
@@ -279,12 +367,15 @@ main() {
 
   [ -d "$PROJECT_ROOT/$APP_DIR" ] || die "アプリディレクトリがありません: $APP_DIR"
   detect_repo
+  detect_mode
   detect_framework
+  resolve_url_env_key
   detect_project_name
   require_app_vercel_json
 
   printf '\n'
   log "app       : $APP_DIR"
+  log "mode      : $([ "$IS_CONTAINER" -eq 1 ] && echo 'container（Dockerfile）' || echo 'framework')"
   log "project   : $PROJECT_NAME"
   log "repo      : $GIT_REPO"
   log "framework : $FRAMEWORK"
@@ -301,11 +392,18 @@ main() {
 
   # デプロイ枠とビルド時間を無駄にしないよう、先にローカルで通しておく。
   if [ "$DO_DEPLOY" -eq 1 ] && [ "$BUILD_CHECK" -eq 1 ]; then
-    have build-frontend \
-      || die "'build-frontend' が PATH にありません。devenv shell 内（または 'devenv shell -- vercel-deploy ...'）で実行するか --skip-build-check を付けてください。"
-    log "ローカルビルド確認（build-frontend）..."
-    build-frontend || die "ローカルビルドが失敗しました。直してから再実行してください。"
-    ok "ローカルビルド OK"
+    local check
+    # container モードで build-frontend を回しても、焼かれるイメージは 1 バイトも検証できない。
+    # 代わりに backend のテスト（コンテナ設定の静的検査を含む）を通す。
+    [ "$IS_CONTAINER" -eq 1 ] && check="test-backend-py" || check="build-frontend"
+    have "$check" \
+      || die "'$check' が PATH にありません。devenv shell 内（または 'devenv shell -- vercel-deploy ...'）で実行するか --skip-build-check を付けてください。"
+    log "ローカル確認（$check）..."
+    "$check" || die "ローカル確認（$check）が失敗しました。直してから再実行してください。"
+    ok "ローカル確認 OK"
+    if [ "$IS_CONTAINER" -eq 1 ]; then
+      warn "イメージ自体は未検証です。Vercel と同条件で焼くなら: docker build -f <Dockerfile> <その Dockerfile のあるディレクトリ>"
+    fi
   fi
 
   ensure_project

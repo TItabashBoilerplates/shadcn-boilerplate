@@ -6,10 +6,13 @@ Vercel（Web + FastAPI backend）/ Supabase（DB・Edge Functions・config）を
 
 > **backend も Vercel（Services のコンテナサービス）**: backend-py は uv workspace
 > （apps/api, apps/mcp, packages/core）。**Dockerfile は workspace ルートの
-> `backend-py/Dockerfile.vercel` に 1 つだけ**置き、`backend-py/vercel.json` の `services` から
-> entrypoint として参照する。web(Next.js) とは **別の Vercel project**（Root Directory = `backend-py`）。
-> Dockerfile の名前と置き場所は自由に選べない（`Dockerfile.vercel` / `Containerfile.vercel` のみ・
-> ビルドコンテキストは Dockerfile のあるディレクトリ）。理由と実測は
+> `backend-py/` 直下に blessed 名で置き**、`backend-py/vercel.json` の `services` から
+> entrypoint として参照する。web(Next.js) とは **別の Vercel project**（Root Directory = `backend-py`）で、
+> デプロイは `vercel-deploy backend-py`。
+> entrypoint に使える名前は `Dockerfile.vercel` / `Containerfile.vercel` / `Dockerfile` /
+> `Containerfile` の 4 つだけで（接尾辞つきは不可）、**ビルドコンテキストは Dockerfile の
+> あるディレクトリに固定**（`root` では変えられない）。結果として
+> **1 ディレクトリにつき最大 4 コンテナサービス**まで置ける。実装ソースでの裏取りは
 > [`docs/_research/2026-08-22-vercel-services-container-build-context.md`](../_research/2026-08-22-vercel-services-container-build-context.md)、
 > 公式は [Vercel Container Images](https://vercel.com/docs/functions/container-images)。
 
@@ -291,7 +294,7 @@ gh run watch   # 承認待ち → GitHub 上で approve すると適用が進む
 | 事象 | 対応 |
 |---|---|
 | Vercel preview env が CI でハング | CLI bug #15763。本構成は **REST API** で投入済み（`vercel.sh`）。手動時も API を使う。 |
-| backend project が Dockerfile を検出しない / runtime が違う | ① `vercel.json` の `services.<app>` に **`"runtime": "container"`** があるか（無いと Vercel が runtime 自動検出し entrypoint を module:app と誤解する）。② Root Directory が `backend-py`、`services.api.root` が `"."`、`entrypoint` が **`Dockerfile.vercel`**（workspace ルート直下）か。**`apps/api/Dockerfile.vercel` のようにサブディレクトリへ置くとビルドコンテキストがそのディレクトリになり `uv sync --frozen` が `uv.lock` を見つけられずに落ちる**。アプリ名入りの派生名（`Dockerfile.api.vercel`）も拒否される。③ container Services（Permissions Required 機能）がアカウントで有効か。→ ①②は `backend-py/apps/api/tests/test_vercel_container_config.py` が検査する。詳細は `docs/_research/2026-08-22-vercel-services-container-build-context.md` |
+| backend project が Dockerfile を検出しない / runtime が違う | ① `services.<app>` に **`"runtime": "container"`** があるか（無いと runtime 自動検出で entrypoint を module:app と誤解する）。② entrypoint の basename が **`Dockerfile.vercel` / `Containerfile.vercel` / `Dockerfile` / `Containerfile`** のいずれかか（接尾辞つきは拒否）。③ その Dockerfile が **`backend-py/` 直下**にあるか（ビルドコンテキストは Dockerfile のあるディレクトリに固定。サブディレクトリに置くと `uv.lock` が見えず落ちる）。④ service を指す **top-level rewrite** があるか（無いと成功のまま 404）。⑤ container Services（Permissions Required 機能）がアカウントで有効か。→ ①〜④は `test-backend-py` と `vercel-deploy backend-py` が事前に検査する。詳細は `docs/_research/2026-08-22-vercel-services-container-build-context.md` |
 | backend が起動直後に落ちる / 502 | サーバが `$PORT`（既定 80）で listen しているか確認。`api.main` は `PORT` 環境変数を読む。Doppler→Vercel(backend) で `SUPABASE_URL` / `POSTGRES_URL` 等が届いているかも確認。 |
 | `wire` が backend の preview URL を取れない | team/personal の slug 取得に失敗している可能性。`VERCEL_TEAM_ID` を確認（個人アカウントは空）。best-effort のため warn のみで継続する。 |
 | persistent branch 作成 API が失敗 | project の GitHub Integration(Branching) が dashboard で有効か確認（Phase 0）。CLI の git 紐付けフラグは `supabase branches create --help` で確認、確実なのは Management API の `git_branch`。 |

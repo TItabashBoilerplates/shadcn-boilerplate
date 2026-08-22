@@ -130,6 +130,9 @@ install / build をリポジトリルートへ戻さないとビルドが落ち�
 
 `frontend/apps/web/vercel.json` が既存の実例。`vercel-deploy` は無ければこの雛形を出して止まる。
 
+> **container モードは対象外。** `runtime: "container"` の service は install / build コマンドを
+> 使わない（Dockerfile が全部やる）ので、この検査は走らない。代わりに §4.5 の検査が走る。
+
 **link とデプロイをリポジトリルートで行うのも同じ理由**（`cd ../..` がリポジトリルートに
 届く必要があるので、アップロードの起点もルートでなければならない）。
 
@@ -137,14 +140,26 @@ install / build をリポジトリルートへ戻さないとビルドが落ち�
 
 ## 4.5 backend-py をコンテナで出す場合（`services` + `runtime: "container"`）
 
-Next.js アプリと違い、backend は **`vercel.json` の `services` から Dockerfile を建てる**。
-ここは**公式ドキュメントに書かれていない制約が 3 つ**あり、外すと**ローカルでは何も起きないまま
-本番のビルドだけが落ちる**:
+```bash
+vercel-deploy backend-py              # これで通る（--dry-run で計画だけ確認できる）
+```
 
-1. **Dockerfile の名前は `Dockerfile.vercel` / `Containerfile.vercel` のみ**（派生名は拒否）。
-2. **ビルドコンテキストは `services.<name>.root` ではなく Dockerfile が置かれているディレクトリ**。
-   uv workspace なので Dockerfile は **workspace ルート（`backend-py/`）に置くしかない**。
-3. **コンテキストを上書きするフィールドは公式スキーマに存在しない**（`additionalProperties: false`）。
+`vercel-deploy` は `<app>/vercel.json` を見て **framework モード / container モード**を
+自動判別する。container モードでは検査もローカル確認も env の既定も切り替わる（§4.6）。
+
+Next.js アプリと違い、backend は **`services` から Dockerfile を建てる**。ここは
+**公式ドキュメントに書かれていない制約が 3 つ**あり、外すと**ローカルでは何も起きないまま
+本番のビルドだけが落ちる**（いずれも Vercel の実装ソースで確定）:
+
+1. **entrypoint の basename は 4 つだけ** — `Dockerfile.vercel` / `Containerfile.vercel` /
+   `Dockerfile` / `Containerfile`（`fs-detectors/src/services/resolve-v2.ts` の
+   `CONTAINER_ENTRYPOINT_CANDIDATES`）。接尾辞つきは "never matched"。
+   **公式ドキュメントに載っているのは先頭 2 つだけ。**
+2. **ビルドコンテキストは常に `dirname(Dockerfile)`**（`packages/container/src/index.ts` の
+   `contextDir = path.dirname(dockerfilePath)`）。`root` でも Root Directory でも変えられない。
+   uv 公式は workspace のビルドに全 member の `pyproject.toml` を要求するので、
+   **Dockerfile は workspace ルートに置くしかない**。
+3. **service は既定で非公開。** top-level `rewrites` が無いとデプロイは成功したまま 404。
 
 ```jsonc
 // backend-py/vercel.json（Root Directory = backend-py / Dockerfile = backend-py/Dockerfile.vercel）
@@ -155,6 +170,23 @@ Next.js アプリと違い、backend は **`vercel.json` の `services` から D
   "rewrites": [{ "source": "/(.*)", "destination": { "service": "api" } }]
 }
 ```
+
+**モノレポで複数アプリを出せる**: blessed 名が 4 つあるので 1 ディレクトリにつき最大 4 サービス。
+`Dockerfile.vercel` → 1 つ目、`Containerfile.vercel` → 2 つ目、以下同様。名前からアプリが
+読み取れないので**対応表を Dockerfile 冒頭と README に必ず書く**。5 つ目が要るときは
+別ディレクトリか別 project になるので**ユーザーに確認する**。
+
+## 4.6 container モードで変わること
+
+| 観点 | framework | container |
+|---|---|---|
+| `vercel.json` の検査 | `installCommand` がルートへ戻っているか | blessed 名 / Dockerfile の実在 / コンテキストに `uv.lock` / rewrite の有無 |
+| ローカル確認 | `build-frontend` | `test-backend-py` |
+| 本番 URL の env | `NEXT_PUBLIC_APP_URL` | `none`（backend は `NEXT_PUBLIC_*` を読まない） |
+| project 名 | `[APP_NAME-]<dir>` | `VERCEL_BACKEND_PROJECT` があればそれ |
+
+イメージ自体はローカル確認では焼かれない。Vercel と同条件で焼くなら
+`docker build -f backend-py/Dockerfile.vercel backend-py`。
 
 **詳細・症状別の原因表・出典は [references/services-container.md](references/services-container.md)。
 コンテナを触るなら必ずそちらを読む。**
@@ -237,6 +269,10 @@ vercel deploy --prod --yes --archive=tgz
 | 疎通確認が 401 | Deployment Protection が有効。dashboard の Settings > Deployment Protection |
 | `vercel project ls` に何も出ない | scope 違い。`--team <slug>` を明示（§1） |
 | team が複数あって止まる | 意図した team を `--team <slug>` で指定 |
+| ビルドが `uv.lock: not found` で落ちる | container: Dockerfile がコンテキスト外を参照。workspace ルートへ移す（§4.5-2） |
+| `entrypoint` が拒否される | container: basename が blessed 名でない（§4.5-1） |
+| container のデプロイは成功するのに 404 | service を指す top-level rewrite が無い（§4.5-3） |
+| container のデプロイは成功するのに 502 | `$PORT`（既定 80）で listen していない / `127.0.0.1` にバインドしている |
 
 ---
 

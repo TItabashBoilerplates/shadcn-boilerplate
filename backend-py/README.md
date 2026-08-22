@@ -256,18 +256,23 @@ entrypoint として参照し、`rewrites` でパスを振り分ける。
 
 > **重要（この 3 点を外すと、ローカルでは何も起きないまま本番のビルドだけが落ちる）**
 >
-> 1. **Dockerfile の名前は `Dockerfile.vercel` か `Containerfile.vercel` しか受け付けない。**
->    `Dockerfile.api.vercel` のようなアプリ名入りの派生名は entrypoint に書いても拒否される。
+> 1. **entrypoint の basename は 4 つしか受け付けない。** Vercel の実装
+>    (`fs-detectors/src/services/resolve-v2.ts` の `CONTAINER_ENTRYPOINT_CANDIDATES`) が
+>    `Dockerfile.vercel` / `Containerfile.vercel` / `Dockerfile` / `Containerfile` だけを
+>    マッチさせ、`Dockerfile.api.vercel` のような接尾辞つきは "never matched"。
+>    **公式ドキュメントに載っているのは先頭 2 つだけ**なので、そこから使う。
 > 2. **Docker のビルドコンテキストは `services.<name>.root` ではなく「Dockerfile が置かれている
->    ディレクトリ」。** uv workspace は `uv.lock` とルート `pyproject.toml` と全 member の
->    pyproject が同一コンテキストに無いと解決できないので、Dockerfile は
->    **workspace ルートに置くしかない**（`apps/api/` に置くと `uv sync --frozen` が落ちる）。
+>    ディレクトリ」で固定。** `packages/container/src/index.ts` の
+>    `contextDir = path.dirname(dockerfilePath)` で、`root` でも Root Directory でも
+>    `.vercelignore` でも変えられない。一方 uv 公式は workspace のビルドに
+>    **全 member の `pyproject.toml`** を要求する（無いと `uv.lock` の鮮度を検証できない）。
+>    したがって Dockerfile は **workspace ルートに置くしかない**。
 > 3. Vercel project の **Root Directory は `backend-py`**（`scripts/infra/vercel.sh` が設定する）。
 >
-> ビルドコンテキストを上書きする設定は公式スキーマに存在しない（`services.<name>` は
-> `additionalProperties: false`）。実測と出典は
+> 実測と出典は
 > [`docs/_research/2026-08-22-vercel-services-container-build-context.md`](../docs/_research/2026-08-22-vercel-services-container-build-context.md)。
-> これらは `apps/api/tests/test_vercel_container_config.py` が CI で検査している（消さないこと）。
+> これらは `apps/api/tests/test_vercel_container_config.py` が CI で検査し、
+> `vercel-deploy backend-py` が **Vercel へ 1 件も送る前に**同じ検査で落とす（どちらも消さないこと）。
 
 コンテナ（apps/api）のポイント:
 
@@ -281,20 +286,53 @@ entrypoint として参照し、`rewrites` でパスを振り分ける。
 | ヘルスチェック | `GET /healthcheck` |
 | runtime env | **Supabase 系（`SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `POSTGRES_*`）は Vercel Marketplace の Supabase 連携が自動注入**。外部 API キーのみ Doppler→Vercel ネイティブ連携で届く。Doppler に `SUPABASE_` prefix のキーを作らないこと（`.claude/rules/env-naming.md`）。詳細は `docs/deployment/README.md` |
 
-#### 2 つ目のアプリ（apps/mcp）をコンテナで出したくなったら
+#### 2 つ目以降のアプリをコンテナで出す
 
-**同じ vercel.json に container service をもう 1 つ足すことはできない。** 2 つ目のアプリも
-`backend-py/Dockerfile.vercel` という同じ名前・同じ位置を要求するためである（上記 1 + 2 の帰結）。
-選択肢は次の 3 つで、いずれも代償があるので**その時点で判断する**（勝手に決めない）:
+blessed 名が 4 つあるので、**1 つの workspace から最大 4 コンテナサービス**を出せる。
+名前からアプリが読み取れないので、対応表をここで固定する（Dockerfile 冒頭にも同じ表がある）:
 
-| 案 | 内容 | 代償 |
+| ファイル（すべて `backend-py/` 直下） | サービス | 状態 |
 |---|---|---|
-| A. 1 コンテナに同居 | `api` の FastAPI に MCP のルータをマウントし、アプリ内でパス分岐 | スケール単位・依存・障害範囲が共有になる |
-| B. 別の Vercel project | `apps/mcp` 用に Root Directory を分けた project を作る | ドメイン・env・デプロイが二重管理になる |
-| C. workspace を分割 | `apps/mcp` を独立した uv プロジェクトにする | 単一 `uv.lock` の利点（`.claude/rules/python-monorepo.md`）を失う |
+| `Dockerfile.vercel` | `api`（apps/api / FastAPI） | 使用中 |
+| `Containerfile.vercel` | 2 つ目のアプリ | 空き |
+| `Dockerfile` | 3 つ目のアプリ | 空き |
+| `Containerfile` | 4 つ目のアプリ | 空き |
+
+**アプリごとに別イメージなので `uv sync --package <app>` の絞り込みが効く**
+（片方の重い依存 — ffmpeg 等 — がもう片方のイメージに入らない）。
+
+手順:
+
+1. `backend-py/Containerfile.vercel` を作る。`Dockerfile.vercel` をコピーして
+   **`--package <app>` と `CMD` だけ差し替える**のが早い（残りは共通でよい）。
+   対象アプリは `$PORT` で HTTP listen すること（Vercel 既定 80）。
+2. `backend-py/vercel.json` に service と rewrite を足す。**rewrite は必須**
+   （service は既定で非公開なので、無いとデプロイは成功しても 404）。
+
+   ```jsonc
+   {
+     "services": {
+       "api":  { "runtime": "container", "root": ".", "entrypoint": "Dockerfile.vercel" },
+       "mcp":  { "runtime": "container", "root": ".", "entrypoint": "Containerfile.vercel" }
+     },
+     "rewrites": [
+       { "source": "/mcp/(.*)", "destination": { "service": "mcp" } },
+       { "source": "/(.*)",     "destination": { "service": "api" } }
+     ]
+   }
+   ```
+
+3. `test-backend-py` を通す（対応表・rewrite の有無・コンテキストを検査する）。
+4. `vercel-deploy backend-py` でデプロイ。provisioning（Root Directory）は変更不要。
+
+5 つ目が必要になったら blessed 名を使い切っているので、別ディレクトリ（別 workspace）か
+別 Vercel project になる。その判断は**勝手に決めずユーザーに確認する**。
+
+> `apps/mcp` は現状 `mcp-server` の空スケルトン（サーバ実装が無い）なので、サービスとしては
+> 配線していない。MCP サーバは Edge Functions に置く選択肢もある（`.claude/skills/edge-functions-mcp/`）。
 
 システムライブラリ（LiveKit / PyAV 等の音声・映像系 = devenv の `libopus` / `libvpx`）を導入した
-場合は `Dockerfile.vercel` の final stage に runtime 共有ライブラリを追記する（ファイル内コメント参照）。
+場合は該当 Dockerfile の final stage に runtime 共有ライブラリを追記する（ファイル内コメント参照）。
 
 ### devenv dockerTools (Other platforms / ローカル OCI — apps/api)
 

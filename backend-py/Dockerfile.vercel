@@ -3,24 +3,42 @@
 # Vercel Services のコンテナサービス（uv workspace の apps/api = FastAPI サーバ）。
 #
 # ── 置き場所とファイル名は自由に選べない（ここを外すと無言で壊れる）────────────────
-# Vercel が受け付ける Dockerfile 名は **`Dockerfile.vercel` / `Containerfile.vercel` だけ**で、
-# `Dockerfile.api.vercel` のようなアプリ名入りの派生名は entrypoint に指定しても拒否される。
-# さらに **Docker のビルドコンテキストは「この Dockerfile が置かれているディレクトリ」**であって
-# `services.<name>.root` ではない（公式ドキュメントに明記が無く、実デプロイのビルドログで確認した
-# 事実。詳細と出典は docs/_research/2026-08-22-vercel-services-container-build-context.md）。
+# Vercel の実装（`vercel/vercel`）で 2 つの制約が確定している:
 #
-# uv workspace は `uv.lock` / ルート `pyproject.toml` / 全 member の pyproject が同一コンテキストに
-# 無いと解決できないので、**この Dockerfile は workspace ルート（backend-py/）に置く**必要がある。
-# 結果として backend-py/vercel.json はこう書く（root と Dockerfile の位置を一致させる = 公式例と同じ形）:
+#   packages/fs-detectors/src/services/resolve-v2.ts
+#     const CONTAINER_ENTRYPOINT_CANDIDATES = [
+#       'Dockerfile.vercel', 'Containerfile.vercel', 'Dockerfile', 'Containerfile',
+#     ];
+#     → entrypoint の basename はこの 4 つだけ。`Dockerfile.api.vercel` のような
+#       接尾辞つきの名前は "never matched"（コメントに明記）。
+#
+#   packages/container/src/index.ts
+#     const contextDir = path.dirname(dockerfilePath);
+#     → **ビルドコンテキストは常に Dockerfile のあるディレクトリ**。`services.<name>.root`
+#       でも Root Directory でも `.vercelignore` でも変えられない（上書き手段が無い）。
+#
+# 一方 uv 公式は workspace のビルドについて「`uv.lock` が最新かどうかは **全 member の
+# pyproject.toml が無いと検証できない**」と明記している（https://docs.astral.sh/uv/guides/integration/docker/）。
+# つまりコンテキスト = workspace ルートが必須。両者を満たす置き方は 1 つしかない:
+# **この Dockerfile を workspace ルート（backend-py/）に、blessed 名で置く。**
 #
 #   "services": { "api": { "runtime": "container", "root": ".", "entrypoint": "Dockerfile.vercel" } }
 #
 # Vercel project の Root Directory は `backend-py`。したがってコンテキスト = backend-py/ となり、
 # 以下の COPY / bind mount のパスはすべて backend-py/ 基準で書いてある。
 #
-# ⚠️ この構成では **1 つの uv workspace につきコンテナサービスは 1 つ**しか置けない
-#    （2 つ目のアプリも同じ `Dockerfile.vercel` という名前を workspace ルートで要求するため）。
-#    apps/mcp をコンテナで出す必要が生じたときの選択肢は backend-py/README.md に整理してある。
+# ── モノレポで 2 つ目以降のアプリを出すときの名前の割り当て ─────────────────────
+# blessed 名が 4 つあるので、**1 ディレクトリにつき最大 4 つのコンテナサービス**を置ける。
+# 名前からアプリが読み取れないため、対応表をここと README と vercel.json のテストで固定する:
+#
+#   backend-py/Dockerfile.vercel      → service "api"   (apps/api / FastAPI)   ← このファイル
+#   backend-py/Containerfile.vercel   → 2 つ目のアプリ（未使用）
+#   backend-py/Dockerfile             → 3 つ目のアプリ（未使用）
+#   backend-py/Containerfile          → 4 つ目のアプリ（未使用）
+#
+# 追加手順は backend-py/README.md「2 つ目のアプリをコンテナで出す」を参照。
+# アプリごとに別イメージなので `uv sync --package <app>` の絞り込みが効き、
+# 片方の重い依存（ffmpeg 等）がもう片方のイメージに入らない。
 #
 # ── ランタイムの前提 ────────────────────────────────────────────────────────
 #   - サーバは `$PORT`（Vercel 既定 80）で listen する必要がある。api.main が $PORT を読む。
@@ -77,9 +95,13 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # 2) ソースを入れて api service（+ workspace dep の core）だけ non-editable でインストール。
 #    --package api で api とその依存のみに絞る。--no-editable で site-packages にコピーされるため
 #    final stage は .venv だけで完結する（他アプリ apps/mcp は含めない = アプリ単位の分離）。
+#    ここは全 member が揃っているので **--locked**（uv 公式: 1 回目は --frozen、
+#    「The next sync, after all the workspace members have been copied, can still use --locked
+#    and will validate that the lockfile is correct for all workspace members.」）。
+#    lockfile が古いまま本番へ出るのをビルド時に落とせる。
 COPY . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --no-editable --package api
+    uv sync --locked --no-dev --no-editable --package api
 
 # ---------- final: slim ランタイム。venv だけコピー ----------
 FROM python:${PYTHON_VERSION}-slim AS final

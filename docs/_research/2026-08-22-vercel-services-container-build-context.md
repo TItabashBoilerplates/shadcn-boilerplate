@@ -1,80 +1,94 @@
-# Vercel Services のコンテナサービス — Dockerfile の名前とビルドコンテキスト（実測）
+# Vercel Services のコンテナ — entrypoint 名とビルドコンテキスト（実装ソースで確定）
 
 - 調査日: 2026-08-22
 - 対象: `backend-py`（uv workspace）を Vercel Services の `runtime: "container"` で出す構成
-- 結論: **Dockerfile は uv workspace ルート（`backend-py/`）に `Dockerfile.vercel` という名前で置くしかない。**
+- 結論: **Dockerfile は uv workspace ルート（`backend-py/`）に、blessed 名で置くしかない。
+  blessed 名は 4 つあるので、1 ディレクトリにつき最大 4 つのコンテナサービスを置ける。**
   `2026-07-07-vercel-container-services.md` が「正しい」と結論づけた
-  `entrypoint: "apps/api/Dockerfile.vercel"` は**実デプロイで動かない**（同ファイルの冒頭に訂正を追記済み）。
+  `entrypoint: "apps/api/Dockerfile.vercel"` は動かない（同ファイルに訂正を追記済み）。
 
 ---
 
-## 1. なぜ調べ直したか
+## 1. 公式ドキュメントだけでは判断できない 2 点
 
-2026-07-07 の調査は「公式ドキュメントの記述と矛盾しないこと」までしか確認できておらず、
-本人も次の 2 点を未確認事項として残していた:
+Vercel のドキュメントは entrypoint を
+「Set the `entrypoint` key to the path of your dockerfile, **relative to the service's `root`**」
+としか書いておらず、**ビルドコンテキストの位置も、ファイル名の制約も書いていない**。
+公式例はすべて `root: "backend/"` + `entrypoint: "Dockerfile.vercel"`（root と Dockerfile が
+同じ場所）なので、ドキュメントからは差を区別できない。
 
-> 公式ドキュメントは「ビルドコンテキストが厳密に `root` ディレクトリである」とまでは断言していない。
-> Dockerfile 内の `COPY` パスは backend-py ルート基準で書く前提で用意し、
-> **初回デプロイのビルドログで context を確認すること。**
+実装（`vercel/vercel`）で両方とも確定した。
 
-実際にデプロイしたところ、この未確認事項がそのまま不具合になった。
+### 1.1 entrypoint の basename は 4 つだけ
 
----
-
-## 2. 実測でわかったこと
-
-### 2.1 ビルドコンテキストは `services.<name>.root` ではなく「Dockerfile のあるディレクトリ」
-
-`root: "."` / `entrypoint: "apps/api/Dockerfile.vercel"` で `apps/api/` に Dockerfile を置いた状態で
-デプロイすると、Dockerfile 冒頭の
-
-```docker
---mount=type=bind,source=uv.lock,target=uv.lock
+```ts
+// packages/fs-detectors/src/services/resolve-v2.ts
+const CONTAINER_ENTRYPOINT_CANDIDATES = [
+  'Dockerfile.vercel',
+  'Containerfile.vercel',
+  'Dockerfile',
+  'Containerfile',
+];
 ```
 
-が解決できずにビルドが落ちた。`uv.lock` は `backend-py/uv.lock` にあるので、
-**コンテキストが `backend-py/` ではなく `backend-py/apps/api/` だった**ことになる。
+同ファイルのコメント:
 
-公式ドキュメントは entrypoint について
-「Set the `entrypoint` key to the path of your dockerfile, **relative to the service's `root`**」
-とだけ書いており（[Container Images](https://vercel.com/docs/functions/container-images)）、
-**ビルドコンテキストがどこかは一切書いていない**。公式例はいずれも
-`root: "backend/"` + `entrypoint: "Dockerfile.vercel"`、すなわち **root と Dockerfile の位置が
-一致している**ので、ドキュメントだけからはこの差を区別できない。
+> Both the supplied-entrypoint check and the `runtime: "container"` auto-detection use this
+> single set, so **a suffixed name like `Dockerfile.prod` is never matched**.
 
-### 2.2 Dockerfile の名前は `Dockerfile.vercel` / `Containerfile.vercel` だけ
+> Matches only the basenames `Dockerfile`, `Containerfile`, `Dockerfile.vercel`, and
+> `Containerfile.vercel` — a suffixed name such as `Dockerfile.prod` is not a container entrypoint.
 
-「アプリごとに Dockerfile を分けたい」ので workspace ルートに `Dockerfile.api.vercel` を置いて
-entrypoint から指したところ、**Vercel 側が entrypoint のファイル名を拒否**した。
+つまり `Dockerfile.api.vercel` のようにアプリ名を挟む案は成立しない。
+**公式ドキュメントに載っているのは先頭 2 つだけ**なので、まずその 2 つから使う。
 
-公式も許容名を 2 つしか挙げていない:
+### 1.2 ビルドコンテキストは常に `dirname(Dockerfile)`
 
-> Get started by creating a `Dockerfile.vercel` (or `Containerfile.vercel`) file placed at the
-> root of your project.
-> — [Container Images](https://vercel.com/docs/functions/container-images)
+```ts
+// packages/container/src/index.ts
+const dockerfilePath = path.join(workPath, dockerfileRel);
+const contextDir = path.dirname(dockerfilePath);
+```
 
-### 2.3 ビルドコンテキストを上書きする設定は存在しない
+**上書きする手段が無い。** `services.<name>.root` でも、project の Root Directory でも、
+`.vercelignore` でも、`builds` でも変えられない。
 
-`services.<name>` に許される全フィールドは公式 JSON Schema（`https://openapi.vercel.sh/vercel.json`）に
-`additionalProperties: false` で列挙されている:
+> 同ファイルで build args だけは通る:
+> `// Forward the project's build env to the image build as --build-arg s`
+> `const buildArgs = buildArgsFromEnv(meta?.buildEnv);`
+> ただしこれは **project の build env** であってサービス単位ではないので、
+> 「1 つの Dockerfile を build arg で切り替えて複数サービスにする」用途には使えない。
 
-`root` / `framework` / `runtime` / `entrypoint` / `installCommand` / `buildCommand` / `devCommand` /
-`ignoreCommand` / `outputDirectory` / `bindings` / `functions` / `headers` / `redirects` / `rewrites` /
-`routes` / `cleanUrls` / `trailingSlash`
+### 1.3 uv 側の要求とぶつかる
 
-**`context` / `dockerfile` に相当するフィールドは無い**。したがって「Dockerfile はサブディレクトリに
-置いたまま、コンテキストだけ workspace ルートにする」ことは仕様上できない。
+uv 公式（[Using uv in Docker](https://docs.astral.sh/uv/guides/integration/docker/)）:
 
-> 補足: 同スキーマの `entrypoint` の説明文は "Entry file for the service, **relative to the workspace
-> directory**" となっており、docs 本文の "relative to the service's `root`" と食い違う。
-> 本リポジトリは `root: "."` なので両者の解釈は一致し、この曖昧さの影響を受けない。
+> uv cannot assert that the `uv.lock` file is up-to-date **without each of the workspace member
+> `pyproject.toml` files**.
+
+したがって uv workspace のビルドは **workspace ルートをコンテキストにする必要がある**。
+1.2 と合わせると、**Dockerfile を workspace ルートに置く以外の解が無い**。
+
+（uv 公式の 2 段構えもそのまま採用している: 1 回目は `--frozen --no-install-workspace`、
+member を COPY した後の 2 回目は **`--locked`** で lockfile を検証する。
+「The next sync, after all the workspace members have been copied, can still use `--locked`
+and will validate that the lockfile is correct for all workspace members.」）
 
 ---
 
-## 3. したがって取れる構成は 1 つだけ
+## 2. 採った形
+
+```
+backend-py/                        ← Vercel project の Root Directory
+├── vercel.json
+├── Dockerfile.vercel              → service "api"   (apps/api / FastAPI)
+├── .dockerignore                  ← Dockerfile と同じ場所でないと読まれない
+├── uv.lock / pyproject.toml
+├── apps/{api,mcp}/
+└── packages/core/
+```
 
 ```jsonc
-// backend-py/vercel.json（Vercel project の Root Directory = backend-py）
 {
   "services": {
     "api": { "runtime": "container", "root": ".", "entrypoint": "Dockerfile.vercel" }
@@ -83,61 +97,94 @@ entrypoint から指したところ、**Vercel 側が entrypoint のファイル
 }
 ```
 
-- Dockerfile は `backend-py/Dockerfile.vercel`。
-- コンテキスト = `backend-py/` = uv workspace ルート → `uv.lock` / ルート `pyproject.toml` /
-  `apps/*/pyproject.toml` / `packages/core` がすべて見える。
-- **root と Dockerfile の位置が一致するので、公式例と同じ形になり 2.1 の曖昧さを踏まない**
-  （コンテキストが root であっても Dockerfile のディレクトリであっても、答えが同じになる）。
+`root` と Dockerfile の位置を一致させてあるので、
+docs の "relative to the service's `root`" とスキーマの "relative to the workspace directory" の
+**記述揺れの影響も受けない**。
+
+### 2 つ目以降のアプリ: blessed 名の割り当て表
+
+blessed 名は 4 つなので **1 ディレクトリにつき最大 4 サービス**。
+名前からアプリが読み取れないため、対応表を Dockerfile 冒頭 / README / テストで固定する。
+
+| ファイル | サービス | 状態 |
+|---|---|---|
+| `backend-py/Dockerfile.vercel` | `api`（apps/api / FastAPI） | 使用中 |
+| `backend-py/Containerfile.vercel` | 2 つ目のアプリ | 未使用 |
+| `backend-py/Dockerfile` | 3 つ目のアプリ | 未使用 |
+| `backend-py/Containerfile` | 4 つ目のアプリ | 未使用 |
+
+**アプリごとに別イメージなので `uv sync --package <app>` の絞り込みが効く**
+（片方の重い依存が、もう片方のイメージに入らない）。
+
+5 つ目が必要になったら、別ディレクトリ（別の uv workspace）か別 project にする。
+
+### 採らなかった案: 1 イメージ + サービスごとの `command`
+
+実装上は通る余地があるが、**公式ドキュメントにも公開 JSON schema にも `command` は無い**。
+加えて全アプリの依存が 1 イメージに同居するので、コンテナを分ける目的（イメージサイズと
+障害範囲の分離）を潰す。採用しない。
 
 ### 副次的に直った不具合: `.dockerignore` が効いていなかった
 
 docker は **`<ビルドコンテキスト>/.dockerignore` しか読まない**。
-`.dockerignore` は `backend-py/` に置いてあったのに、コンテキストは `backend-py/apps/api/` だったので
-**まるごと無視されていた**（ローカルの `.venv` や `__pycache__` を除外できていなかった）。
-Dockerfile をルートへ移したことで、コンテキストと `.dockerignore` の位置が一致した。
+`.dockerignore` は `backend-py/` にあったのにコンテキストは `backend-py/apps/api/` だったので、
+**まるごと無視されていた**（ローカルの `.venv` / `__pycache__` を除外できていなかった）。
 
 ---
 
-## 4. 引き換えに失った選択肢（設計上の制約として受け入れる）
+## 3. 実測（ローカル docker で A/B）
 
-**1 つの uv workspace につきコンテナサービスは 1 つしか置けない。**
-2 つ目のアプリ（`apps/mcp`）も同じ `backend-py/Dockerfile.vercel` という名前・位置を要求するため、
-`vercel.json` に 2 つ目の container service を足すことはできない。
+Vercel と同じ条件（`-f <Dockerfile>` + コンテキスト）で再現した。
 
-`apps/mcp` を出す必要が生じたときの選択肢（どれもトレードオフがあるので、その時点で判断する）:
-
-| 案 | 内容 | 代償 |
-|---|---|---|
-| A. 1 コンテナに同居 | `api` の FastAPI に MCP のルータをマウントし、`rewrites` ではなくアプリ内でパス分岐 | スケール単位・依存・障害範囲が共有になる |
-| B. 別の Vercel project | `apps/mcp` 用に Root Directory を分けた project を作る | ドメイン・env・デプロイが二重管理になる |
-| C. workspace を分割 | `apps/mcp` を独立した uv プロジェクトにし、`packages/core` を配布物として持たせる | 単一 `uv.lock` の利点（`.claude/rules/python-monorepo.md`）を失う |
-
-現時点で `apps/mcp` はコンテナ化していないため、**この判断は保留**。
+| コンテキスト | 結果 |
+|---|---|
+| `backend-py/apps/api`（旧） | `failed to compute cache key: "/uv.lock": not found` = **本番と同じ失敗** |
+| `backend-py`（新） | bind mount 段（`uv.lock` + 全 member の pyproject）を通過 |
 
 ---
 
-## 5. 再発防止
+## 4. 再発防止
 
-`backend-py/apps/api/tests/test_vercel_container_config.py` を追加した。
+### 4.1 静的検査
+
+`backend-py/apps/api/tests/test_vercel_container_config.py`。
 この種の設定崩れは**ローカルでは一切顕在化しない**（`uv sync` も `pytest` も `ci-check` も
-devenv の backend 起動も通る）ので、静的検査でしか止められない。検査内容:
+devenv の backend 起動も通る）ので、静的検査でしか止められない。
 
 | 検査 | 防いでいる事故 |
 |---|---|
 | `runtime: "container"` があるか | Vercel が runtime を自動検出し entrypoint を `module:app` と誤解する |
-| entrypoint のファイル名が `Dockerfile.vercel` / `Containerfile.vercel` か | 派生名が拒否される（2.2） |
+| entrypoint の basename が blessed 名 4 つのいずれか | 接尾辞つきが拒否される（1.1） |
 | entrypoint が実在するか | パス typo |
-| Dockerfile のディレクトリ = uv workspace ルートで、`uv.lock` / `pyproject.toml` があるか | コンテキスト取り違え（2.1） |
-| Dockerfile 内の COPY / bind mount がコンテキスト内に収まるか | `failed to compute cache key: not found` |
-| コンテキストに `.dockerignore` があるか | `.dockerignore` が無言で効かなくなる（§3） |
+| Dockerfile のディレクトリ = uv workspace ルートで `uv.lock` / `pyproject.toml` があるか | コンテキスト取り違え（1.2 / 1.3） |
+| service ごとに entrypoint が重複していないか | 2 つの service が同じイメージを指す |
+| 1 ディレクトリのサービス数 ≤ 4 | blessed 名を使い切っている |
+| すべての service に top-level rewrite があるか | **service は既定で非公開**。無いとデプロイ成功のまま 404 |
+| COPY / bind mount がコンテキスト内か | `failed to compute cache key` |
+| コンテキストに `.dockerignore` があるか | `.dockerignore` が無言で効かなくなる |
+
+### 4.2 デプロイ経路
+
+`vercel-deploy` が `<app>/vercel.json` を見て **framework モード / container モード**を
+自動判別するようにした（`vercel-deploy backend-py`）。container モードでは:
+
+- 上表と同じ前提を **Vercel へ 1 件も送る前に**検査して落とす
+- ローカル確認は `build-frontend` ではなく `test-backend-py`
+  （container ビルドでは frontend のビルド結果は 1 バイトも使われないため）
+- 本番 URL を入れる env の既定を `none` にする
+  （backend project に `NEXT_PUBLIC_APP_URL` を入れても読まれない）
+- bootstrap（`scripts/infra/vercel.sh`）が付けた project 名（`VERCEL_BACKEND_PROJECT`）を再利用し、
+  同じ root を持つ project が 2 つできるのを防ぐ
 
 ---
 
 ## 出典
 
-- [Vercel: Container Images](https://vercel.com/docs/functions/container-images) — 許容ファイル名、`entrypoint` の意味、PORT（既定 80）、SIGTERM + 30s
-- [Vercel: Services](https://vercel.com/docs/services) — `services` の考え方、`runtime: "container"`、rewrites による公開
-- [Vercel: Service configuration reference](https://vercel.com/docs/services/config-reference) — 全フィールド（ビルドコンテキストへの言及は無い）
-- `https://openapi.vercel.sh/vercel.json` — `services` の JSON Schema（`additionalProperties: false`）
-- [Vercel KB: Running Docker on Vercel](https://vercel.com/kb/guide/docker)
-- 実測: 本リポジトリの backend project のビルドログ（2026-08-22）
+- `vercel/vercel` `packages/fs-detectors/src/services/resolve-v2.ts` — `CONTAINER_ENTRYPOINT_CANDIDATES`
+- `vercel/vercel` `packages/container/src/index.ts` — `contextDir = path.dirname(dockerfilePath)` / `buildArgsFromEnv`
+- [Vercel: Container Images](https://vercel.com/docs/functions/container-images) — `Dockerfile.vercel` / `Containerfile.vercel`・PORT 既定 80・SIGTERM + 30s・scale down・Secure Compute 非対応
+- [Vercel: Services](https://vercel.com/docs/services) — service は既定で非公開・rewrites で公開・`runtime: "container"`・トップレベルキーの制約
+- [Vercel: Service configuration reference](https://vercel.com/docs/services/config-reference)
+- `https://openapi.vercel.sh/vercel.json` — `services` の JSON Schema（`additionalProperties: false`。`context` も `command` も無い）
+- [uv: Using uv in Docker](https://docs.astral.sh/uv/guides/integration/docker/) — workspace は全 member の pyproject が要る / `--frozen` → `--locked` の 2 段構え
+- 実測: 本リポジトリのローカル docker A/B（2026-08-22）

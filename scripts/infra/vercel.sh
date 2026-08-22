@@ -7,8 +7,10 @@
 #     → backend-py/vercel.json の `services.api` が backend-py/Dockerfile.vercel を entrypoint に
 #       指し、Vercel が container としてビルドする（https://vercel.com/docs/functions/container-images）。
 #     ⚠️ rootDirectory=backend-py は必須。Vercel は Dockerfile が置かれているディレクトリを
-#        ビルドコンテキストにするため、Dockerfile は uv workspace ルート（backend-py/）に
-#        `Dockerfile.vercel` という名前で置く以外に選択肢が無い（派生名は拒否される）。
+#        ビルドコンテキストに固定するため（contextDir = dirname(Dockerfile)、上書き不可）、
+#        uv workspace の Dockerfile は backend-py/ 直下に置く以外に選択肢が無い。
+#        entrypoint の basename は Dockerfile.vercel / Containerfile.vercel / Dockerfile /
+#        Containerfile の 4 つのみ（接尾辞つきは拒否）。= 1 ディレクトリ最大 4 サービス。
 #        実測と出典: docs/_research/2026-08-22-vercel-services-container-build-context.md
 #
 # CLI には既知の対話プロンプトバグ(#15763: preview env)や rootDirectory 設定フラグ欠如が
