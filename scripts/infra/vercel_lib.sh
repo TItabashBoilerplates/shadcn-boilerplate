@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Vercel REST API の共通ヘルパ（vercel.sh / wire.sh が source する）。
 # lib.sh を先に source しておくこと（log/ok/warn/git_branch_for を使う）。
-# 認証は VC_TOKEN（Bearer）。team スコープは VERCEL_TEAM_ID（任意・config.env のファイル値）。
-# ※ Doppler には `VERCEL_` prefix を登録できないため token は VC_TOKEN で保持する
-#    （.claude/rules/env-naming.md）。
+# 認証は VERCEL_TOKEN（Bearer）。team スコープは VERCEL_TEAM_ID（任意・config.env のファイル値）。
+# ※ Doppler のキー名は vercel CLI が読む VERCEL_TOKEN に揃えてある
+#    （.claude/rules/env-naming.md §4。Terraform provider だけ VERCEL_API_TOKEN を読むので
+#     scripts/infra/tf.sh がそこだけ橋渡しする）。
 set -euo pipefail
 
 VERCEL_API="https://api.vercel.com"
@@ -21,10 +22,10 @@ vapi() {
   local url="${VERCEL_API}${path}${tq}"
   if [ -n "$body" ]; then
     curl -fsS -X "$method" "$url" \
-      -H "Authorization: Bearer ${VC_TOKEN}" \
+      -H "Authorization: Bearer ${VERCEL_TOKEN}" \
       -H "Content-Type: application/json" -d "$body"
   else
-    curl -fsS -X "$method" "$url" -H "Authorization: Bearer ${VC_TOKEN}"
+    curl -fsS -X "$method" "$url" -H "Authorization: Bearer ${VERCEL_TOKEN}"
   fi
 }
 
@@ -51,17 +52,13 @@ vercel_env_set() {
 }
 
 # ── ad-hoc デプロイ（vercel_deploy.sh）用ヘルパ ─────────────────────────────
-# VC_TOKEN を解決する。優先順:
-#   1. VC_TOKEN                       （Doppler bootstrap config / 手動 export）
-#   2. VERCEL_TOKEN                   （CI の慣例名。プロセス env なので env-naming.md §5 の対象外）
-#   3. Vercel CLI のログイン済みトークン（auth.json）
-# 3 を許すのは「`vercel login` 済みの開発者が追加の token 発行なしに実行できる」ため。
+# VERCEL_TOKEN を解決する。優先順:
+#   1. VERCEL_TOKEN                   （Doppler の `all` project / 手動 export）
+#   2. Vercel CLI のログイン済みトークン（auth.json）
+# 2 を許すのは「`vercel login` 済みの開発者が追加の token 発行なしに実行できる」ため。
 # **値は絶対に表示しない**（見つけた場所だけを出す）。
 vercel_token_autoload() {
-  if [ -n "${VC_TOKEN:-}" ]; then ok "Vercel token: VC_TOKEN"; return 0; fi
-  if [ -n "${VERCEL_TOKEN:-}" ]; then
-    VC_TOKEN="$VERCEL_TOKEN"; export VC_TOKEN; ok "Vercel token: VERCEL_TOKEN"; return 0
-  fi
+  if [ -n "${VERCEL_TOKEN:-}" ]; then ok "Vercel token: VERCEL_TOKEN"; return 0; fi
   local f
   for f in \
     "$HOME/Library/Application Support/com.vercel.cli/auth.json" \
@@ -69,12 +66,12 @@ vercel_token_autoload() {
     "$HOME/.config/com.vercel.cli/auth.json"
   do
     [ -f "$f" ] || continue
-    VC_TOKEN="$(jq -r '.token // empty' "$f" 2>/dev/null || true)"
-    if [ -n "$VC_TOKEN" ]; then
-      export VC_TOKEN; ok "Vercel token: Vercel CLI のログイン情報を流用"; return 0
+    VERCEL_TOKEN="$(jq -r '.token // empty' "$f" 2>/dev/null || true)"
+    if [ -n "$VERCEL_TOKEN" ]; then
+      export VERCEL_TOKEN; ok "Vercel token: Vercel CLI のログイン情報を流用"; return 0
     fi
   done
-  die "Vercel token が見つかりません。'vercel login' するか VC_TOKEN を export してください。"
+  die "Vercel token が見つかりません。'vercel login' するか VERCEL_TOKEN を export してください。"
 }
 
 # team を解決して VERCEL_TEAM_ID / VERCEL_TEAM_SLUG を export する。

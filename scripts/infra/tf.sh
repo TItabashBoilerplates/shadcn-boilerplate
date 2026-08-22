@@ -7,7 +7,7 @@
 #
 # 役割:
 #   1. 実行バイナリの解決（既定は terraform。TF_BIN で上書き可）
-#   2. **トークンの読み替え**（Doppler の非予約キー名 → provider が読む環境変数）
+#   2. **トークン名の橋渡し**（同じ資格情報を別名で読む provider のためだけ）
 #   3. アプリごとの workspace 選択 + tfvars の指定
 #
 # トークンは devenv script が `doppler run` で bootstrap config から注入する。
@@ -27,10 +27,21 @@ TF_DIR="$PROJECT_ROOT/terraform"
 TF_BIN="${TF_BIN:-terraform}"
 have "$TF_BIN" || die "'$TF_BIN' が見つかりません。devenv shell 内で実行してください（TF_BIN で切替可）。"
 
-# ── 2. トークンの読み替え ────────────────────────────────────────────────────
-# Doppler には `GITHUB_` / `SUPABASE_` / `VERCEL_` prefix のキーを登録できないため
-# （.claude/rules/env-naming.md）、bootstrap config では prefix を落とした名前で保持し、
-# provider が読む名前へこのプロセス内でのみ写す（= Doppler への登録ではないので同ルール §5 の対象外）。
+# ── 2. トークン名の橋渡し ────────────────────────────────────────────────────
+# Doppler のキー名は「その資格情報を使うツールが実際に読む名前」に揃えてある
+# （.claude/rules/env-naming.md §4）。したがって大半の値は読み替え不要でそのまま届く:
+#
+#   SUPABASE_ACCESS_TOKEN → supabase provider / supabase CLI がこの名前で読む
+#   DOPPLER_TOKEN         → doppler provider がこの名前で読む
+#
+# 読み替えが要るのは「同じ資格情報を 2 つのツールが別名で読む」ケースだけ:
+#
+#   VERCEL_TOKEN          → vercel CLI の名前。Terraform provider は VERCEL_API_TOKEN
+#   GH_TOKEN              → gh CLI の公式名。Terraform provider は GITHUB_TOKEN
+#                           （GITHUB_ prefix は GitHub Actions が全面的に予約しており
+#                            Doppler 側に置けないので、正本は GH_TOKEN のまま）
+#
+# いずれもこのプロセス内の export であって Doppler への登録ではない（同ルール §5 の対象外）。
 bridge_env() {
   # bridge_env FROM TO — FROM が空なら何もしない（未設定は各 provider 側でエラーにする）
   local from="$1" to="$2"
@@ -39,12 +50,10 @@ bridge_env() {
   export "$to=$val"
 }
 
-bridge_env SB_ACCESS_TOKEN          SUPABASE_ACCESS_TOKEN
-bridge_env VC_TOKEN                 VERCEL_API_TOKEN
-bridge_env GH_TOKEN                 GITHUB_TOKEN
-bridge_env DOPPLER_MANAGEMENT_TOKEN DOPPLER_TOKEN
-# DB パスワードは tfvars に書かず変数として渡す。
-bridge_env SB_DB_PASSWORD           TF_VAR_supabase_db_password
+bridge_env VERCEL_TOKEN         VERCEL_API_TOKEN
+bridge_env GH_TOKEN             GITHUB_TOKEN
+# DB パスワードは tfvars に書かず変数として渡す（supabase CLI 側は SUPABASE_DB_PASSWORD を直接読む）。
+bridge_env SUPABASE_DB_PASSWORD TF_VAR_supabase_db_password
 
 # ── 3. 引数 ─────────────────────────────────────────────────────────────────
 usage() {

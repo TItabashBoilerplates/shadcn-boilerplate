@@ -26,11 +26,11 @@ sb_api() {
   local method="$1" path="$2" body="${3:-}"
   if [ -n "$body" ]; then
     curl -fsS -X "$method" "${SUPABASE_API}${path}" \
-      -H "Authorization: Bearer ${SB_ACCESS_TOKEN}" \
+      -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
       -H "Content-Type: application/json" -d "$body"
   else
     curl -fsS -X "$method" "${SUPABASE_API}${path}" \
-      -H "Authorization: Bearer ${SB_ACCESS_TOKEN}"
+      -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}"
   fi
 }
 
@@ -45,11 +45,11 @@ ensure_project() {
   if [ -n "$ref" ]; then
     ok "Supabase project '$name' は存在（ref=$ref）"
   else
-    require_env SB_DB_PASSWORD
+    require_env SUPABASE_DB_PASSWORD
     log "Supabase project '$name'（=production, 単一）を作成..."
     ref="$(supabase projects create "$name" \
             --org-id "$SUPABASE_ORG_ID" \
-            --db-password "$SB_DB_PASSWORD" \
+            --db-password "$SUPABASE_DB_PASSWORD" \
             --region "$SUPABASE_REGION" \
             --size "$SUPABASE_SIZE" \
             --yes -o json 2>/dev/null | jq -r '.id')"

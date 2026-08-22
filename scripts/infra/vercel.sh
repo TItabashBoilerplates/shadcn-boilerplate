@@ -14,7 +14,7 @@
 #        実測と出典: docs/_research/2026-08-22-vercel-services-container-build-context.md
 #
 # CLI には既知の対話プロンプトバグ(#15763: preview env)や rootDirectory 設定フラグ欠如が
-# あるため、**REST API(https://api.vercel.com) を直叩き**する（VC_TOKEN で Bearer 認証）。
+# あるため、**REST API(https://api.vercel.com) を直叩き**する（VERCEL_TOKEN で Bearer 認証）。
 #
 # ⚠️ 前提: Vercel GitHub App が対象 repo に install 済み（dashboard, 一度きり）でないと
 #    gitRepository 紐付けは失敗する（runbook Phase 0）。
@@ -80,7 +80,7 @@ main() {
   require_tool curl
   require_tool jq
   load_config
-  require_env VC_TOKEN
+  require_env VERCEL_TOKEN
   : "${APP_NAME:?}"; : "${GH_REPO:?}"; : "${VERCEL_ROOT_DIR:?}"
   : "${VERCEL_BACKEND_PROJECT:?}"; : "${VERCEL_BACKEND_ROOT_DIR:?}"
 

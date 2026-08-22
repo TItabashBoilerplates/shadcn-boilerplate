@@ -36,6 +36,11 @@ module "github" {
   visibility           = var.github_repository_visibility
   environments         = local.environments
   production_reviewers = var.production_reviewers
+
+  # Supabase の ref を各 GitHub Environment の Actions variable として配る。
+  # deploy-supabase.yml がこれを読んでデプロイ先を決めるので、これが継続デプロイの橋になる。
+  # Doppler 経由にできない理由（SUPABASE_ prefix は登録不可）は modules/github/main.tf 参照。
+  supabase_env_refs = module.supabase.env_refs
 }
 
 # Supabase のサービス設定（Auth / API / Storage / メールテンプレート）と

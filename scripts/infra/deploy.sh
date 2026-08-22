@@ -70,7 +70,9 @@ for env in "${TARGET_ENVS[@]}"; do
   fi
   printf '\n'
   log "── $env (ref=$ref) ──"
-  ENV="$env" SUPABASE_PROJECT_REF="$ref" bash scripts/supabase/deploy.sh
+  # ref は輸送変数で渡す。enterShell が読む env/<svc>/.env.$ENV が SUPABASE_PROJECT_REF を
+  # 定義していると外から渡した値が上書きされるため（scripts/supabase/lib.sh の解説を参照）。
+  ENV="$env" DEPLOY_SUPABASE_PROJECT_REF="$ref" bash scripts/supabase/deploy.sh
 done
 
 printf '\n'

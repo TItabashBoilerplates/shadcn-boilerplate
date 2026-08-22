@@ -27,21 +27,24 @@ vercel-deploy frontend/apps/lp --preview     # preview デプロイ
 
 | 何を | どこから来るか |
 |---|---|
-| **Vercel の API トークン** | **Doppler の bootstrap config の `VC_TOKEN`**。`devenv shell` 進入時に `loadDopplerByEnv` が env へ載せるので、`vercel-deploy` は何もせず拾える |
+| **Vercel の API トークン** | **Doppler の bootstrap config の `VERCEL_TOKEN`**。`devenv shell` 進入時に `loadDopplerByEnv` が env へ載せるので、`vercel-deploy` は何もせず拾える |
 | Vercel project の **runtime secret**（外部 API キー等） | **Doppler → Vercel のネイティブ連携（sync）** が Vercel の Environment Variables へ fan-out する。**`--env` で入れない** |
 | **Supabase の接続情報** | **Vercel Marketplace の Supabase 連携**が自動注入する。Doppler にも Vercel にも手で入れない |
 | 本番 URL 等の**生成値** | `vercel-deploy` が実測して投入する（`NEXT_PUBLIC_APP_URL`） |
 
-### キー名が `VERCEL_TOKEN` ではなく `VC_TOKEN` である理由
+### キー名が `VERCEL_TOKEN` である理由
 
-**Doppler に `VERCEL_` / `SUPABASE_` / `GITHUB_` prefix のキーは登録できない**（各 PF の予約
-名前空間で、sync が予約値違反になり **その config 全体が届かなくなる**）。そのため Doppler 上は
-`VC_TOKEN` で保持し、CLI が別名を要求する箇所だけプロセス内で読み替える。
-詳細は `.claude/rules/env-naming.md`。
+**Doppler のキー名は「そのツールが実際に読む名前」に揃える**（`.claude/rules/env-naming.md` §4）。
+`VERCEL_TOKEN` は vercel CLI が読む名前そのものなので、この script は読み替えなしで拾える。
+
+このトークンを置く `all` project は native sync を張っていないため、`VERCEL_` prefix の制約
+（sync 先が予約している prefix は使えない、という §1 の制約）はかからない。
+**Terraform provider だけが `VERCEL_API_TOKEN` を読む**ので、そこだけ `scripts/infra/tf.sh` の
+`bridge_env` がプロセス内で写す。
 
 ### token 解決の優先順（script の実装）
 
-1. `VC_TOKEN`（**通常はこれ。Doppler 由来**）
+1. `VERCEL_TOKEN`（**通常はこれ。Doppler 由来**）
 2. `VERCEL_TOKEN`（CI の慣例名。プロセス env なので許容）
 3. `vercel login` 済み CLI の `auth.json`（**Doppler が使えないときの最後の手段**）
 
@@ -85,7 +88,7 @@ find . -name .vercel -type d -not -path "*/node_modules/*"   # 既存リンク�
 
 ## 2. script が行うこと（＝手でやる場合の正しい順序）
 
-1. **token 解決** — `VC_TOKEN` → `VERCEL_TOKEN` → `vercel login` 済み CLI の `auth.json`。
+1. **token 解決** — `VERCEL_TOKEN` → `VERCEL_TOKEN` → `vercel login` 済み CLI の `auth.json`。
    値はログに出さない。新しいトークンを勝手に発行しない。
 2. **scope 解決** — `VERCEL_TEAM_ID` があればそれ、無ければ `GET /v2/teams`。
    **team が複数あるときは自動で選ばず止まる**（誤った team に作ると名前が予約されて厄介）。
@@ -198,7 +201,7 @@ canonical / sitemap / OG 画像 / メールのリンクに焼き込まれるた�
 
 ```bash
 # 実測（script が内部でやっていること）
-curl -fsS -H "Authorization: Bearer $VC_TOKEN" \
+curl -fsS -H "Authorization: Bearer $VERCEL_TOKEN" \
   "https://api.vercel.com/v9/projects/<project>/domains?target=production&limit=1&teamId=$VERCEL_TEAM_ID" \
   | jq -r '.domains[0].name'
 ```

@@ -24,11 +24,13 @@ description: Doppler（シークレットマネージャ）の利用ガイダン
      Supabase 連携（Connect Account）** が `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` /
      `SUPABASE_SECRET_KEY` / `NEXT_PUBLIC_SUPABASE_*` / `POSTGRES_*` を自動注入。Edge Functions へは
      platform が **default secrets** として自動提供。ローカルは `env/*/.env.local`（ファイル＝対象外）。
-   - 自前で持つ必要がある場合は prefix を落とす: `SB_ACCESS_TOKEN` / `SB_DB_PASSWORD` / `VC_TOKEN` /
-     `VC_TEAM_ID` / `GH_TOKEN`。`NEXT_PUBLIC_SUPABASE_URL` のように**先頭でなければ可**。
-   - **`doppler-set` / `doppler-import` は予約 prefix を検知して拒否する**（登録前に落ちる）。
-     Supabase CLI が要求する `SUPABASE_ACCESS_TOKEN` へは `scripts/infra/lib.sh` の
-     `supabase_cli_auth()` が `SB_ACCESS_TOKEN` からプロセス内で読み替える。
+   - 自前で持つ値は**そのツールが実際に読む名前**で持つ: `SUPABASE_ACCESS_TOKEN` /
+     `SUPABASE_DB_PASSWORD` / `VERCEL_TOKEN` / `DOPPLER_TOKEN` / `EXPO_TOKEN`。
+     これらを置く `all` / `<app>/bootstrap` は sync を張っていないので予約 prefix の制約外。
+     `GH_TOKEN` だけ短いのは `GITHUB_` が GitHub Actions の予約 prefix だから（かつ `gh` CLI の公式名）。
+     `NEXT_PUBLIC_SUPABASE_URL` のように**先頭でなければ可**。
+   - **`doppler-set` / `doppler-import` は `GITHUB_` prefix を検知して拒否する**（登録前に落ちる）。
+     `SUPABASE_` / `VERCEL_` は警告のみ（sync を張った config では使えないため）。
 3. **トークン・シークレットをコミットしない**。`.mcp.json` / `doppler.yaml` / `devenv.nix` の
    いずれにも `DOPPLER_TOKEN` や生のシークレットを書かない。
 4. **本番（prd）への write はフェーズ制**（`.claude/rules/mcp-doppler.md`）。初期構築は full-access、

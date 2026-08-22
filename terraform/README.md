@@ -61,21 +61,27 @@ bootstrap config のトークンが `scripts/infra/tf.sh` 経由で注入され�
 
 ---
 
-## トークン（Doppler bootstrap config に入れる）
+## トークン（Doppler）
 
-`.tf` にも tfvars にもトークンを書かない。`scripts/infra/tf.sh` が読み替える。
+`.tf` にも tfvars にもトークンを書かない。`doppler run` が環境変数として注入する。
 
-| Doppler のキー名 | 読み替え先（provider が読む env） | 用途 |
-|---|---|---|
-| `SB_ACCESS_TOKEN` | `SUPABASE_ACCESS_TOKEN` | Supabase Management API |
-| `SB_DB_PASSWORD` | `TF_VAR_supabase_db_password` | project の DB パスワード |
-| `VC_TOKEN` | `VERCEL_API_TOKEN` | Vercel |
-| `GH_TOKEN` | `GITHUB_TOKEN` | GitHub |
-| `DOPPLER_MANAGEMENT_TOKEN` | `DOPPLER_TOKEN` | Doppler 自身 |
+| Doppler の config | キー名 | provider が読む env | 用途 |
+|---|---|---|---|
+| `all` / `all` | `SUPABASE_ACCESS_TOKEN` | 同じ（読み替え不要） | Supabase Management API |
+| `all` / `all` | `VERCEL_TOKEN` | **`VERCEL_API_TOKEN`** | Vercel |
+| `all` / `all` | `GH_TOKEN` | **`GITHUB_TOKEN`** | GitHub |
+| `all` / `all` | `DOPPLER_TOKEN` | 同じ（読み替え不要） | Doppler 自身 |
+| `<app>` / `bootstrap` | `SUPABASE_DB_PASSWORD` | **`TF_VAR_supabase_db_password`** | project の DB パスワード |
 
-> Doppler 側で `GITHUB_` / `SUPABASE_` / `VERCEL_` prefix を落としているのは、
-> 予約名前空間のキーを登録すると sync が予約値違反で config ごと壊れるため
-> （`.claude/rules/env-naming.md`）。読み替えは `tf.sh` のプロセス内 export なので同ルール §5 の対象外。
+**キー名は「そのツールが実際に読む名前」に揃えてある**ので、大半は読み替え不要でそのまま届く。
+`scripts/infra/tf.sh` の `bridge_env` は、**同じ資格情報を 2 つのツールが別名で読む 3 件だけ**を写す
+（`VERCEL_TOKEN`→`VERCEL_API_TOKEN` / `GH_TOKEN`→`GITHUB_TOKEN` / `SUPABASE_DB_PASSWORD`→`TF_VAR_*`）。
+プロセス内の export なので `.claude/rules/env-naming.md` §5 の対象外。
+
+> `GH_TOKEN` だけ短いのは、**`GITHUB_` が GitHub Actions の予約 prefix**で Doppler に置けないため
+> （`dev`/`stg`/`prd` は GitHub へ sync される）。かつ `GH_TOKEN` は `gh` CLI の公式名なので、
+> これは省略形ではなく正しい名前である。**`all` と `<app>/bootstrap` は sync を張っていないので、
+> `SUPABASE_*` / `VERCEL_*` をフルネームで持てる**（`.claude/rules/env-naming.md` §1 / §4）。
 
 ---
 
@@ -112,21 +118,64 @@ AWS を使わない構成なので **HCP Terraform の無料枠**（5 users ま�
 > **意図的に使っていない**。使うと config.toml と二重書き込みになって drift するため
 > （`.claude/rules/clean-code.md` の重複コード禁止）。
 
-### Terraform の output が ref の供給元
+### Terraform が ref の供給元（ローカルと CI の 2 経路）
 
 `config push` / `seed buckets` / `functions deploy` は対象 project の ref を必要とする。
 persistent branch の ref は Terraform が branch を作るまで存在せず、しかも
-**`SUPABASE_` prefix は Doppler に登録できない**（`.claude/rules/env-naming.md`）ので、
-ref は Doppler からは供給されない。**`tf-output` が正規の供給元**:
+**`SUPABASE_` prefix は Doppler に登録できない**（`.claude/rules/env-naming.md` §3.1）ので、
+ref は Doppler からは供給されない。**Terraform が唯一の供給元**で、経路は 2 つある。
+
+| 経路 | 供給の仕方 | 使うのは |
+|---|---|---|
+| **ローカル** | `terraform output supabase_env_refs` | `infra-deploy <app>`（新規展開） |
+| **CI** | Terraform が各 GitHub Environment に **Actions variable `SUPABASE_PROJECT_REF`** を書く | `.github/workflows/deploy-supabase.yml`（継続デプロイ） |
 
 ```bash
+# ローカルから単発で流す場合
 export ENV=staging
-export SUPABASE_PROJECT_REF="$(tf-output myapp -json supabase_env_refs | jq -r .staging)"
+export DEPLOY_SUPABASE_PROJECT_REF="$(tf-output myapp -json supabase_env_refs | jq -r .staging)"
 devenv tasks run -P staging deploy:supabase   # link → config push → buckets → functions
 ```
 
-`scripts/supabase/lib.sh` の `sb_require_project_ref` が未設定を検出して、上記の取得方法を
-出しつつ止める（env ファイルに ref をハードコードさせないため）。
+> ⚠️ **輸送用の変数名が `SUPABASE_PROJECT_REF` ではないのは意図的。**
+> devenv の enterShell は `set -a; . env/<svc>/.env.$ENV` を行うため、その env ファイルが
+> 定義する変数は外から渡した同名の値を上書きする。`env/backend/.env.local` は実際に
+> `SUPABASE_PROJECT_REF=`（空）を定義していた（本対応で削除済み）ので、同じ定義が
+> `.env.<ENV>` に復活した瞬間に **ref が空のまま deploy が走る**。
+> `DEPLOY_SUPABASE_PROJECT_REF` は devenv も env ファイルも
+> 定義しない名前なので確実に伝わり、`scripts/supabase/lib.sh` の `sb_require_project_ref` が
+> `SUPABASE_PROJECT_REF` へ反映する（`migrate.yml` の `MIGRATE_POSTGRES_URL` と同じ対策）。
+
+`sb_require_project_ref` は未設定を検出してローカル / CI 双方の取得方法を出しつつ止める
+（env ファイルに ref をハードコードさせないため）。
+
+### 継続デプロイ: 展開は一度きり、以降は push で回る
+
+`infra-deploy` は**アプリごとに一度**動かすもので、2 回目以降は git push だけで完結する。
+
+| 対象 | 契機 | 担当 |
+|---|---|---|
+| Vercel（web / backend） | push | **Vercel の git 連携**（`vercel_project.git_repository` が接続済み。追加作業なし） |
+| Drizzle マイグレーション | push（`drizzle/**`） | `.github/workflows/migrate.yml` |
+| Supabase config / functions / buckets | push（`supabase/**`） | `.github/workflows/deploy-supabase.yml` |
+
+CI が必要とする値の供給は、**性質で保管先が分かれる**（`.claude/rules/env-naming.md` §3.1）:
+
+| 値 | 性質 | 供給元 | workflow での参照 |
+|---|---|---|---|
+| `SUPABASE_PROJECT_REF` | **非機密**（`https://<ref>.supabase.co` として公開される） | **Terraform → GitHub Environment variable** | `vars.SUPABASE_PROJECT_REF` |
+| `SUPABASE_ACCESS_TOKEN` | **シークレット** | **Doppler → GitHub sync**（`doppler` MCP で投入） | `secrets.SUPABASE_ACCESS_TOKEN`（読み替え不要） |
+| `POSTGRES_URL` | シークレット | Doppler → GitHub sync | `secrets.POSTGRES_URL`（migrate.yml） |
+
+> ⚠️ **`SUPABASE_ACCESS_TOKEN` は Terraform では作らない。** Supabase の access token は
+> organization 全体の Management API を叩ける強い資格情報であり、Terraform に持たせると
+> state に平文で載る。`doppler` MCP で各 config（dev / stg / prd）へ投入すること
+> （`tf-output` の `manual_followups` が未投入時のリマインダを出す）。
+> CI 用には**専用の access token を発行**して、失効・ローテーションを分離できるようにするとよい。
+
+> ⚠️ **デプロイ順序は制御できない。** main への push で Vercel のビルド・`migrate.yml`・
+> `deploy-supabase.yml` が並行して走る（Vercel の git 連携は Actions から待たせられない）。
+> **マイグレーションは加算的（expand → contract）にして順序非依存にすること。**
 
 ### この boilerplate は `supabase/config.toml` を持たない
 
@@ -153,9 +202,9 @@ Branching に GitHub 連携は不要（2026-05-04 に「Git なしの Branching�
 
 | GitHub 連携がやること | この構成での代替 |
 |---|---|
-| `config.toml` 同期（auth / api / storage・メールテンプレート） | **`supabase config push --project-ref <ref>`**（CLI。ref は `tf-output` から） |
-| Edge Functions のデプロイ | `devenv tasks run deploy:functions` |
-| Storage buckets のデプロイ | `supabase seed buckets --linked`（元々連携外） |
+| `config.toml` 同期（auth / api / storage・メールテンプレート） | **`supabase config push --project-ref <ref>`**（`deploy-supabase.yml` が push ごとに実行。ref は Terraform が書いた Actions variable） |
+| Edge Functions のデプロイ | `devenv tasks run deploy:functions`（同じく `deploy-supabase.yml`） |
+| Storage buckets のデプロイ | `supabase seed buckets --linked`（同上。元々連携外） |
 | migration の自動実行 | 元々使っていない（Drizzle + `migrate.yml`） |
 
 つまり **config.toml は SSOT のまま**で、GitHub 連携という「配送経路」だけを CLI に置き換える。
@@ -254,3 +303,5 @@ terraform import -var-file=apps/myapp.tfvars 'module.vercel.vercel_project.web' 
 | `supabase_branch` × GitHub 連携なし | provider は `git_branch` を必須にし、`branch_name` と `git_branch` の両方に同じ値を送る。連携を張っていない project での挙動（無害なラベル扱いか、エラーか）は未検証 |
 | branch ref の取り扱い | `supabase_env_refs` output は branch の `database.id` を branch project ref として扱っている（provider schema の description に基づく）。`supabase config push --project-ref` に渡す前に実値を確認する |
 | `supabase_branch` のインスタンスサイズ | Management API は `desired_instance_size` を受け付けるが **provider が公開していない** → branch は既定サイズになる |
+| **CI での `supabase link`** | `deploy:supabase` は `link → config push → buckets → functions` の順で走る。`config push` / `functions deploy` は `--project-ref` を取るので link 不要だが、**`seed buckets --linked` は link を要求する**。非対話の CI で `supabase link` が DB パスワードを要求するかは未検証で、とくに **persistent branch の DB パスワードは Supabase が生成する**ため `SUPABASE_DB_PASSWORD` では通らない可能性がある。`deploy-supabase.yml` の初回実行で確認すること（要求される場合は buckets だけ別扱いにする） |
+| **CI の access token の権限** | Supabase の access token は organization 全体の Management API を叩ける。CI 用に専用トークンを発行してローテーションを分離することを推奨（プロジェクト単位にスコープする仕組みは Supabase 側に無い） |
