@@ -2,9 +2,10 @@
 
 > ⚠️ **訂正（2026-08-22）**: 本レポートの結論
 > 「`entrypoint: "apps/api/Dockerfile.vercel"` は正しい」は**誤り**だった。
-> 実デプロイの結果、**ビルドコンテキストは `services.<name>.root` ではなく Dockerfile が
-> 置かれているディレクトリ**であり、また **Dockerfile 名は `Dockerfile.vercel` /
-> `Containerfile.vercel` しか受け付けない**ことが判明した。正しい構成と根拠は
+> Vercel の実装ソースで確認したところ、**ビルドコンテキストは `services.<name>.root` ではなく
+> `dirname(Dockerfile)` に固定**（上書き不可）で、さらに **entrypoint の basename は
+> `Dockerfile.vercel` / `Containerfile.vercel` / `Dockerfile` / `Containerfile` の 4 つのみ**
+> （接尾辞つきは never matched）だった。正しい構成と根拠は
 > [2026-08-22-vercel-services-container-build-context.md](./2026-08-22-vercel-services-container-build-context.md)
 > を参照すること。本レポートは「公式ドキュメントだけでは判断しきれない箇所がどこだったか」の
 > 記録として残す（本文中の §「注意」で、まさにその点を未確認事項として挙げている）。

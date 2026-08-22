@@ -20,11 +20,12 @@ backend-py/
 ├── .python-version                 # 3.13
 ├── pyrightconfig.json
 ├── vercel.json                     # Vercel services: アプリ→Dockerfile の対応 + rewrites
+├── Dockerfile.vercel               # api コンテナ（★ workspace ルート直下。§9 参照）
+├── .dockerignore                   # docker は <コンテキスト>/.dockerignore しか読まない
 ├── README.md / AGENTS.md
 ├── apps/
 │   ├── api/                        # FastAPI サーバ
 │   │   ├── pyproject.toml          # name="api", [project.scripts] api = "api.main:main"
-│   │   ├── Dockerfile.vercel       # api コンテナ（ビルドコンテキストは workspace ルート）
 │   │   ├── README.md
 │   │   ├── src/api/
 │   │   │   ├── app.py              # FastAPI()
@@ -408,30 +409,59 @@ class ResourceNotFoundError(Exception):   # API 固有
 
 ---
 
-## 9. デプロイ（Vercel / アプリごとに 1 コンテナ）
+## 9. デプロイ（Vercel Services のコンテナ）
 
-**モノレポ = アプリ 1 つにつき Dockerfile 1 つ**。各アプリの Dockerfile を `apps/<app>/Dockerfile.vercel`
-に置き、`backend-py/vercel.json` の `services` から entrypoint として参照する。Vercel は service ごとに
-別コンテナをビルドし、`rewrites` でパスを振り分ける（[Vercel Container Images](https://vercel.com/docs/functions/container-images)）。
+**Dockerfile は `apps/<app>/` ではなく workspace ルート直下に置く。** これは好みではなく、
+Vercel と uv の要求が噛み合った結果として選択肢が 1 つしかない:
+
+- Vercel はビルドコンテキストを **`dirname(Dockerfile)` に固定**する
+  （`vercel/vercel` の `packages/container/src/index.ts`: `const contextDir = path.dirname(dockerfilePath)`）。
+  `services.<name>.root` でも Root Directory でも `.vercelignore` でも変えられない。
+- uv は workspace のビルドに **全 member の `pyproject.toml`** を要求する
+  （[uv 公式](https://docs.astral.sh/uv/guides/integration/docker/):
+  「uv cannot assert that the `uv.lock` file is up-to-date without each of the workspace member
+  `pyproject.toml` files.」）。
+
+→ コンテキスト = workspace ルート必須 → Dockerfile は workspace ルート直下。
+`apps/api/Dockerfile.vercel` は `uv.lock: not found` でビルドが落ちる。
+
+**entrypoint の basename は 4 つだけ**（`vercel/vercel` の
+`packages/fs-detectors/src/services/resolve-v2.ts` の `CONTAINER_ENTRYPOINT_CANDIDATES`）。
+`Dockerfile.api.vercel` のような接尾辞つきは "never matched"。**公式ドキュメントに載っているのは
+先頭 2 つだけ**なので、そこから順に使う。結果として **1 ディレクトリにつき最大 4 コンテナサービス**。
+
+| ファイル（workspace ルート直下） | サービス |
+|---|---|
+| `Dockerfile.vercel` | 1 つ目（本リポジトリでは `api`） |
+| `Containerfile.vercel` | 2 つ目 |
+| `Dockerfile` | 3 つ目 |
+| `Containerfile` | 4 つ目 |
 
 ```jsonc
 // backend-py/vercel.json （runtime:"container" で Docker ビルドを明示。無いと runtime 自動検出になる）
 {
   "services": {
-    "api": { "runtime": "container", "root": ".", "entrypoint": "apps/api/Dockerfile.vercel" }
-    // アプリ追加時: "mcp": { "runtime": "container", "root": ".", "entrypoint": "apps/mcp/Dockerfile.vercel" }
+    "api": { "runtime": "container", "root": ".", "entrypoint": "Dockerfile.vercel" }
+    // アプリ追加時: "mcp": { "runtime": "container", "root": ".", "entrypoint": "Containerfile.vercel" }
   },
-  "rewrites": [{ "source": "/(.*)", "destination": { "service": "api" } }]
+  "rewrites": [
+    // service は既定で非公開。rewrite が無いとデプロイは成功したまま 404 になる
+    { "source": "/(.*)", "destination": { "service": "api" } }
+  ]
 }
 ```
 
 各 Dockerfile は uv 公式の multi-stage（cache mount / `--no-editable` / bytecode プリコンパイル）で
 `--package <app>` に絞ってインストールし、`$PORT`（Vercel 既定 80）で HTTP listen する。
+**アプリごとに別イメージなので、片方の重い依存がもう片方のイメージに入らない。**
+2 段階 sync は 1 回目 `--frozen --no-install-workspace` / 2 回目 `--locked`（uv 公式）。
 
-**Vercel の backend project は Root Directory を `backend-py/`**（モノレポルート）に設定し、各 service の
-**ビルドコンテキストも workspace ルート**（`root: "."`）にする。`backend-py/apps/api/` を Root にすると
-コンテキストが member 単体に狭まり workspace 解決が効かない（`uv.lock` / 他 member の `pyproject.toml` /
-`packages/core` を参照できなくなる）。詳細は `backend-py/README.md` / `docs/deployment/README.md`。
+**Vercel の backend project は Root Directory を `backend-py/`** に設定する。
+デプロイは `vercel-deploy backend-py`（container モードを自動判別し、上記の前提を
+Vercel へ送る前に検査する）。名前と配置は `apps/api/tests/test_vercel_container_config.py` が
+CI で固定している。詳細は `backend-py/README.md` /
+`.claude/skills/vercel-deploy/references/services-container.md` /
+`docs/_research/2026-08-22-vercel-services-container-build-context.md`。
 
 ---
 

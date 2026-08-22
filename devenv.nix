@@ -1879,7 +1879,7 @@ in
   # OCI コンテナイメージ（`devenv container build backend` で生成 = Nix/nix2container で
   # イメージを直接ビルド。**Dockerfile は生成しない**）。
   # Vercel の本番デプロイには使わない: Vercel は git-push でサービスを **自前ビルド**する方式で
-  # （`backend-py/vercel.json` の service = `apps/api/Dockerfile.vercel` をビルド）、ビルド済み
+  # （`backend-py/vercel.json` の service = `backend-py/Dockerfile.vercel` をビルド）、ビルド済み
   # イメージを参照する vercel.json フィールドが無いため、Nix イメージを流し込む経路が無い。
   # このイメージはローカルでの OCI 検証や他レジストリ（GHCR / fly.io 等）配布用に残している。
   # backendExec を let-binding で共有することで profile に依存せず参照できる。
