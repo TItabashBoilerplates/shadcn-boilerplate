@@ -86,7 +86,8 @@ push_container_port() {
   local dockerfile="$PROJECT_ROOT/backend-py/apps/api/Dockerfile.vercel"
   [ -f "$dockerfile" ] || { warn "Dockerfile.vercel が無い（PORT の投入を skip）"; return 0; }
   local port
-  port="$(grep -oE '\bPORT=[0-9]+' "$dockerfile" | tail -1 | cut -d= -f2)"
+  # コメント行は除外する（説明文にも PORT=8080 と書いてあるため）
+  port="$(grep -v '^[[:space:]]*#' "$dockerfile" | grep -oE '\bPORT=[0-9]+' | tail -1 | cut -d= -f2)"
   [ -n "$port" ] || die "Dockerfile.vercel から PORT を読めない（ENV ... PORT=<n> を確認）"
   # 非機密なので plain（dashboard で読める＝取り違えに気づける）
   vercel_env_put "$project" "PORT" "$port" "plain"
