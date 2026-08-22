@@ -411,6 +411,9 @@ main() {
   local domain; domain="$(vercel_production_domain "$PROJECT_NAME")"
   ok "本番ドメイン: ${domain}"
   push_envs "$domain"
+  # container は Vercel 既定の 80 へ流される。Dockerfile の PORT と揃えないと
+  # デプロイは成功するのに 502 になる（非 root なので 80 は bind できない）。
+  [ "$IS_CONTAINER" -eq 1 ] && push_container_port "$PROJECT_NAME" "$PROJECT_ROOT/$APP_DIR"
 
   record_output "VERCEL_PROJECT_${PROJECT_NAME//-/_}" "$PROJECT_NAME"
   record_output "VERCEL_URL_${PROJECT_NAME//-/_}" "https://${domain}"

@@ -178,3 +178,40 @@ vercel_backend_url() {
   fi
   [ -n "$domain" ] && printf 'https://%s' "$domain"
 }
+
+# ── コンテナの listen ポートを Vercel project の env に入れる ────────────────
+#
+# ⚠️ これを省くと **デプロイは成功するのにリクエストが 500 / 502 になる**。
+#    Vercel はコンテナの既定ポートを 80 とし、project 設定の `PORT` でのみ上書きできる
+#    （https://vercel.com/docs/functions/container-images "Port resolution"）。
+#    一方この Dockerfile は **非 root で動くため 80 を bind できない**ので 8080 を使う。
+#    両者がズレると Vercel は 80 へ流し、コンテナは 8080 で待ち続ける。
+#
+# 値は Dockerfile の `ENV ... PORT=<n>` から読む（2 か所に数字を書かない = drift しない）。
+# Dockerfile の場所は `<app>/vercel.json` の services から引く（パスをここに書かない）。
+
+# container_entrypoint_path APP_ABS_DIR → 最初の container service の Dockerfile 絶対パス
+container_entrypoint_path() {
+  local app_dir="$1" f="$1/vercel.json" rel
+  [ -f "$f" ] || return 1
+  rel="$(jq -r '.services // {} | to_entries
+                | map(select(.value.runtime == "container"))
+                | (.[0] // empty)
+                | ((.value.root // ".") + "/" + (.value.entrypoint // ""))' "$f" 2>/dev/null)"
+  [ -n "$rel" ] && [ "$rel" != "null" ] || return 1
+  printf '%s/%s' "$app_dir" "$rel"
+}
+
+# push_container_port PROJECT APP_ABS_DIR
+push_container_port() {
+  local project="$1" app_dir="$2" dockerfile port
+  dockerfile="$(container_entrypoint_path "$app_dir")" \
+    || { warn "container service が無い（PORT の投入を skip）"; return 0; }
+  [ -f "$dockerfile" ] || { warn "${dockerfile} が無い（PORT の投入を skip）"; return 0; }
+  # コメント行は除外する（説明文にも PORT=8080 と書いてあるため）
+  port="$(grep -v '^[[:space:]]*#' "$dockerfile" | grep -oE '\bPORT=[0-9]+' | tail -1 | cut -d= -f2)"
+  [ -n "$port" ] || die "${dockerfile} から PORT を読めない（ENV ... PORT=<n> を確認）"
+  # 非機密なので plain（dashboard で読める＝取り違えに気づける）
+  vercel_env_put "$project" "PORT" "$port" "plain"
+  ok "PORT=${port} を投入（コンテナの listen ポートと一致）"
+}

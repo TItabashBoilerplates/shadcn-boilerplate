@@ -278,13 +278,29 @@ entrypoint として参照し、`rewrites` でパスを振り分ける。
 
 | 項目 | 内容 |
 |------|------|
-| ポート | サーバは `$PORT`（Vercel 既定 80）で listen。`api.main` が `$PORT` を読む（ローカルは 4040 fallback） |
+| ポート | サーバは `$PORT` で listen（`api.main` が読む。ローカルは 4040 fallback）。**本番は 8080 固定**: Vercel の既定は 80 だがコンテナは非 root で動くため特権ポートを bind できない。**Vercel project の env `PORT` も 8080**（`scripts/infra/vercel.sh` が Dockerfile から読んで自動投入） |
 | ビルド | uv 公式 multi-stage（cache mount / `--no-editable` / bytecode プリコンパイル）。Python 3.13 |
 | 分離 | `uv sync --package api` で api + `core` だけを入れる（`apps/mcp` は含めない） |
-| 起動 | `CMD ["api"]`（`[project.scripts] api = "api.main:main"`） |
+| 起動 | `CMD ["/app/.venv/bin/api"]`（`[project.scripts] api = "api.main:main"`）。**絶対パス必須** — Vercel の起動 wrapper でイメージの `ENV PATH` が失われ、`CMD ["api"]` は `exec: "api": executable file not found in $PATH` で無言に死ぬ |
 | shutdown | scale-in 時は SIGTERM + 30s grace。uvicorn が graceful shutdown |
 | ヘルスチェック | `GET /healthcheck` |
 | runtime env | **Supabase 系（`SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `POSTGRES_*`）は Vercel Marketplace の Supabase 連携が自動注入**。外部 API キーのみ Doppler→Vercel ネイティブ連携で届く。Doppler に `SUPABASE_` prefix のキーを作らないこと（`.claude/rules/env-naming.md`）。詳細は `docs/deployment/README.md` |
+
+> ⚠️ **ポートと CMD の 2 点は、間違えてもビルド・型・lint・テスト・ローカルの `docker run` が
+> すべて通り、Vercel 上でだけ 500（`INTERNAL_FUNCTION_INVOCATION_FAILED`）になる**（しかも
+> アプリのログが 1 行も出ない）。`apps/api/tests/test_vercel_container_contract.py` が CI で
+> 検査しているので**消さないこと**。Dockerfile を触ったら、push の前に **Vercel 相当の条件**で
+> 起動を確認する（**コンテキストは Dockerfile のあるディレクトリ = `backend-py/`**）:
+>
+> ```bash
+> cd backend-py && docker build -f Dockerfile.vercel -t api-vercel .
+> docker run --rm -p 8080:8080 \
+>   -e PATH=/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin \
+>   --sysctl net.ipv4.ip_unprivileged_port_start=1024 api-vercel
+> curl -fsS localhost:8080/healthcheck   # → {"message":"OK"}
+> ```
+>
+> 切り分け手順とランタイムログの取り方は `.claude/skills/vercel-deploy/references/containers.md`。
 
 #### 2 つ目以降のアプリをコンテナで出す
 
@@ -303,9 +319,11 @@ blessed 名が 4 つあるので、**1 つの workspace から最大 4 コンテ
 
 手順:
 
-1. `backend-py/Containerfile.vercel` を作る。`Dockerfile.vercel` をコピーして
-   **`--package <app>` と `CMD` だけ差し替える**のが早い（残りは共通でよい）。
-   対象アプリは `$PORT` で HTTP listen すること（Vercel 既定 80）。
+1. `backend-py/Containerfile.vercel` を作る。**`Dockerfile.vercel` をそのまま雛形にする**
+   （`--package <app>` と `CMD` を差し替えるだけ）。守る不変条件は 3 つ:
+   - `0.0.0.0:$PORT` で listen する（`127.0.0.1` は受けられない）
+   - 非 root で動かすなら `ENV PORT` は **1024 以上**（api と同じ 8080 でよい）
+   - `CMD` は **絶対パス + exec 形式**（`["/app/.venv/bin/<script>"]`）
 2. `backend-py/vercel.json` に service と rewrite を足す。**rewrite は必須**
    （service は既定で非公開なので、無いとデプロイは成功しても 404）。
 
@@ -322,8 +340,13 @@ blessed 名が 4 つあるので、**1 つの workspace から最大 4 コンテ
    }
    ```
 
-3. `test-backend-py` を通す（対応表・rewrite の有無・コンテキストを検査する）。
+3. `test-backend-py` を通す。`test_vercel_container_config.py`（名前・配置・rewrite）と
+   `test_vercel_container_contract.py`（ポート・CMD）が新しい Dockerfile も自動で検査する。
 4. `vercel-deploy backend-py` でデプロイ。provisioning（Root Directory）は変更不要。
+
+**ポートを api と別の値にしない。** Vercel project の env `PORT` は 1 つしか無く、
+`scripts/infra/vercel.sh` / `vercel-deploy` は entrypoint の Dockerfile から読んだ値を投入する
+（全 service 共通前提）。揃えないと片方が「デプロイ成功なのに 502」になる。
 
 5 つ目が必要になったら blessed 名を使い切っているので、別ディレクトリ（別 workspace）か
 別 Vercel project になる。その判断は**勝手に決めずユーザーに確認する**。

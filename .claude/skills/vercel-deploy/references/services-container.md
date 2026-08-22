@@ -4,6 +4,9 @@
 > 「ビルドで `uv.lock` が見つからない」「entrypoint が拒否される」「service が 404」
 > のときはここを読む。
 
+**このファイルはビルド（配置・名前・コンテキスト）の正本。**
+「ビルドは通ったのに起動しない / 500 になる」は [containers.md](containers.md) を読む。
+
 Next.js（`frontend/apps/web`）の話ではない。**`vercel.json` の `services` に
 `runtime: "container"` を書いて Dockerfile からコンテナを建てる**構成のガイド。
 
@@ -135,8 +138,9 @@ Container Images の Services 例は `runtime` を省いているが、**明示�
 
 | 項目 | 要件 |
 |---|---|
-| **listen ポート** | `$PORT`（既定 **80**）。`uvicorn` 既定の `127.0.0.1:8000` のままだと 502。`0.0.0.0` にバインドする |
-| **PORT の変更** | project settings の環境変数 `PORT` で上書きできる |
+| **listen ポート** | `$PORT` で `0.0.0.0` にバインドする（`uvicorn` 既定の `127.0.0.1:8000` のままだと 502） |
+| **ポート番号** | Vercel の既定は **80** だが、**非 root コンテナは 80 を bind できない**。本リポジトリは `ENV PORT=8080` に固定し、**Vercel project の env `PORT` も同じ値**にする（`vercel-deploy` / `infra-bootstrap vercel` が Dockerfile から読んで自動投入する）。揃わないと「デプロイ成功なのに 502」 |
+| **CMD** | **絶対パス + exec 形式**（`["/app/.venv/bin/api"]`）。`$PATH` に依存すると Vercel 上でだけ exec に失敗し、ログを 1 行も残さず 500 になる |
 | **shutdown** | scale-in 時に `SIGTERM` + **30 秒**の grace。uvicorn は SIGTERM で graceful shutdown |
 | **scale down** | 無トラフィック 5 分（production）/ 30 秒（preview）で 0 に落ちる |
 | **ログ** | stdout / stderr が runtime logs に出る。**リクエストに紐づかず、その時点の全 inflight リクエストにブロードキャストされる** |
@@ -171,7 +175,8 @@ docker build -f backend-py/Dockerfile.vercel backend-py    # コンテキスト 
 | entrypoint が拒否される | basename が blessed 名でない（1.1） |
 | Dockerfile が使われず Python runtime として解釈される | `runtime: "container"` が無い（§3） |
 | デプロイは成功するのに 404 | **rewrite が無い**。service は既定で非公開 |
-| デプロイは成功するのに 502 / タイムアウト | `$PORT` で listen していない・`127.0.0.1` にバインドしている（§4） |
+| デプロイは成功するのに 502 / タイムアウト | `$PORT` で listen していない・`127.0.0.1` にバインドしている・**Vercel project の env `PORT` と Dockerfile の値がズレている**（§4） |
+| デプロイは成功するのに 500 / `INTERNAL_FUNCTION_INVOCATION_FAILED`（ログが空） | **起動前に死んでいる**。特権ポート bind か CMD の `$PATH` 依存（§4）。切り分けは [containers.md](containers.md) |
 | ローカルの `.venv` がイメージに入る / ビルドが遅い | `.dockerignore` がコンテキスト外にある（§0 の図） |
 | 2 つ目の service を足したらビルドが片方しか走らない | 2 つの service が同じ entrypoint を指している |
 | `services` が効かない | Root Directory 直下に `vercel.json` があるか。`services` 使用時は `buildCommand` 等の build/runtime 系キーを**トップレベルに置けない**（service 内へ移す） |

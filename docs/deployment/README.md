@@ -283,6 +283,9 @@ gh run watch   # 承認待ち → GitHub 上で approve すると適用が進む
 - [ ] Supabase MCP（read-only）で **1 project + persistent branch(staging/develop)** を確認。`.outputs` に ref。
 - [ ] `gh api repos/<owner>/<repo>/environments/production` に required reviewers。
 - [ ] `develop` にダミー commit → Vercel Preview（web + backend）が green。backend の `/healthcheck` が 200。
+      **「READY」で終わらせない**（コンテナは起動に失敗しても deployment は READY になる）。
+      `curl -sS -o /dev/null -w '%{http_code}\n' https://<backend-domain>/healthcheck` で実際に叩く。
+- [ ] backend project の env に `PORT`（= Dockerfile の値。既定 8080）が入っている。
 - [ ] `drizzle/schema` 変更を `main` に push → `migrate.yml` が production で**承認待ち**。
 - [ ] 各 PaaS に Doppler 由来 env が反映（Supabase は `supabase secrets list`）。
 - [ ] 既存 CI（`ci.yml`）が非回帰で green。
@@ -295,7 +298,9 @@ gh run watch   # 承認待ち → GitHub 上で approve すると適用が進む
 |---|---|
 | Vercel preview env が CI でハング | CLI bug #15763。本構成は **REST API** で投入済み（`vercel.sh`）。手動時も API を使う。 |
 | backend project が Dockerfile を検出しない / runtime が違う | ① `services.<app>` に **`"runtime": "container"`** があるか（無いと runtime 自動検出で entrypoint を module:app と誤解する）。② entrypoint の basename が **`Dockerfile.vercel` / `Containerfile.vercel` / `Dockerfile` / `Containerfile`** のいずれかか（接尾辞つきは拒否）。③ その Dockerfile が **`backend-py/` 直下**にあるか（ビルドコンテキストは Dockerfile のあるディレクトリに固定。サブディレクトリに置くと `uv.lock` が見えず落ちる）。④ service を指す **top-level rewrite** があるか（無いと成功のまま 404）。⑤ container Services（Permissions Required 機能）がアカウントで有効か。→ ①〜④は `test-backend-py` と `vercel-deploy backend-py` が事前に検査する。詳細は `docs/_research/2026-08-22-vercel-services-container-build-context.md` |
-| backend が起動直後に落ちる / 502 | サーバが `$PORT`（既定 80）で listen しているか確認。`api.main` は `PORT` 環境変数を読む。Doppler→Vercel(backend) で `SUPABASE_URL` / `POSTGRES_URL` 等が届いているかも確認。 |
+| backend が 500 / `INTERNAL_FUNCTION_INVOCATION_FAILED`（デプロイは READY） | **コンテナが起動する前に死んでいる**。①非 root コンテナが特権ポート（Vercel 既定の 80）を bind できない ②`CMD` が `$PATH` 解決に依存して exec に失敗、の 2 つが定番。**どちらもローカルの `docker run` では再現しない**。本リポジトリは `PORT=8080` + `CMD ["/app/.venv/bin/api"]` で回避済みで、`test_vercel_container_contract.py` が CI で検査する。再現手順と切り分けは `.claude/skills/vercel-deploy/references/containers.md`。 |
+| backend が 502 / タイムアウト | サーバが `0.0.0.0:$PORT` で listen しているか、**Vercel project の env `PORT` がコンテナの値（8080）と一致**しているかを確認（`infra-bootstrap vercel` / `vercel-deploy backend-py` が自動投入する）。Doppler→Vercel(backend) で外部 API キーが、Marketplace 連携で `SUPABASE_URL` / `POSTGRES_URL` が届いているかも確認。 |
+| ランタイムログが空で原因が分からない | パスに projectId が要る: `GET /v1/projects/{projectId}/deployments/{deploymentId}/runtime-logs`。**空 = 正常ではない**（起動前に死んだサイン）。dashboard の Project > Logs が最短。 |
 | `wire` が backend の preview URL を取れない | team/personal の slug 取得に失敗している可能性。`VERCEL_TEAM_ID` を確認（個人アカウントは空）。best-effort のため warn のみで継続する。 |
 | persistent branch 作成 API が失敗 | project の GitHub Integration(Branching) が dashboard で有効か確認（Phase 0）。CLI の git 紐付けフラグは `supabase branches create --help` で確認、確実なのは Management API の `git_branch`。 |
 | branch の DB 接続が分からない | `supabase --experimental branches get <branch> -o env` の `POSTGRES_URL_NON_POOLING` を使う（Phase 2-3）。 |

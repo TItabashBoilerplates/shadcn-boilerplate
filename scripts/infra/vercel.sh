@@ -76,6 +76,7 @@ push_static_env() {
   done < "$file"
 }
 
+
 main() {
   require_tool curl
   require_tool jq
@@ -91,6 +92,7 @@ main() {
   # backend（FastAPI / Dockerfile.vercel コンテナ）。framework は付けない。
   ensure_project "$VERCEL_BACKEND_PROJECT" "$VERCEL_BACKEND_ROOT_DIR" "" \
     "VERCEL_BACKEND_PROJECT_ID" "VERCEL_BACKEND_PROJECT_NAME"
+  push_container_port "$VERCEL_BACKEND_PROJECT" "$PROJECT_ROOT/$VERCEL_BACKEND_ROOT_DIR"
 
   local env
   for env in $INFRA_ENVS; do
