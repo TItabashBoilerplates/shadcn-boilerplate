@@ -39,6 +39,7 @@ Every implementation MUST follow this strict sequence:
 | Operation | Command |
 |-----------|---------|
 | **Frontend Tests** | `test-frontend` (Vitest) |
+| **Drizzle Tests** | `test-drizzle` (bun test) |
 | **Backend Tests** | `test-backend-py` (pytest) |
 | **All Unit Tests** | `unit-test` |
 | **DB Tests (pgTAP)** | `test-db` |

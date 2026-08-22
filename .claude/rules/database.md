@@ -284,8 +284,29 @@ using: sql`true`
     devenv の enterShell は `set -a; . env/<svc>/.env.$ENV` を行うため、env ファイルが定義する
     変数は外から渡した同名の値を**上書きする**（実測: ENV 未指定だと 127.0.0.1:54322 に化ける）。
     devenv が触らない名前で輸送し、task が最後に `POSTGRES_URL` へ反映する。
-  - 適用前に **Verify remote credentials resolved** ステップが解決とローカル値混入を検査して
-    落とす。task 側にも同じガードがあるためローカル実行でも守られる（値は出さず host:port のみ表示）。
+  - 適用前に **Verify remote credentials resolved** ステップが接続先を検査して落とす。
+    task 側も同じ検査（`nr check-endpoint`）を通るのでローカル実行でも守られる
+    （値は出さず host:port のみ表示）。
+
+### 接続先は **pooler の session mode** を使う（CI では必須）
+
+| 経路 | Host:Port | IP | migration |
+|---|---|---|---|
+| 直結 | `db.<ref>.supabase.co:5432` | **IPv6**（IPv4 add-on 購入時のみ IPv4） | IPv6 が使える環境なら可 |
+| Shared pooler / **session** | `<region>.pooler.supabase.com:**5432**` | **IPv4**（全プラン） | **これを使う** |
+| Shared pooler / transaction | `<region>.pooler.supabase.com:6543` | IPv4 | **不可**（prepared statement 非対応） |
+| Dedicated pooler | `db.<ref>.supabase.co:6543` | IPv6 / IPv4 add-on | **不可**（transaction のみ） |
+
+- **GitHub-hosted runner は IPv4 のみ**（Supabase 公式が IPv4 only のサービスとして名指し）。
+  直結を渡すと migration 実行中に `ENETUNREACH` になるが、**開発者のマシンからは繋がるので
+  ローカルでは再現しない**。だから接続先そのものを静的に検査する。
+- 判定は `drizzle/scripts/migration-endpoint.ts` に集約（単体テストで固定。**消さない**）。
+  workflow と `db:migrate-deploy` の両方がこれを通る。
+- Doppler の `POSTGRES_URL` は `infra-deploy`（terraform）/ `infra-bootstrap wire` が
+  **Management API の pooler 設定から host を引いて** session mode で組み立てる
+  （pooler host は ref から導出できず、`supabase branches get -o env` にも含まれない）。
+- IPv4 add-on を購入済みで直結を使いたい場合のみ `MIGRATE_ALLOW_DIRECT_DB=1` で許可する。
+- 出典: [Connect to your database](https://supabase.com/docs/guides/database/connecting-to-postgres)
 
 ## Enforcement
 

@@ -161,7 +161,7 @@ infra-bootstrap supabase github # 一部だけ再実行も可
 
 | 生成値（Doppler に格納するキー） | 由来 | 受け取る側 |
 |---|---|---|
-| `POSTGRES_URL` | 直結 DB 接続（production=`db.<ref>.supabase.co`、branch=`POSTGRES_URL_NON_POOLING`） | Drizzle migration（GitHub Actions） |
+| `POSTGRES_URL` | **Supavisor の session pooler**（`postgres.<ref>@<region>.pooler.supabase.com:5432`）。host は Management API の pooler 設定から取得する | Drizzle migration（GitHub Actions） |
 | `EXPO_PUBLIC_SUPABASE_URL` / `..._PUBLISHABLE_KEY` | project本体=`api-keys`＋`https://<ref>.supabase.co` / branch=`branches get -o env` | mobile(EAS) |
 | `NEXT_PUBLIC_BACKEND_PY_URL` / `EXPO_PUBLIC_BACKEND_PY_URL` | backend(Vercel) project の公開ドメイン（本番=project domain、preview=`<project>-git-<branch>-<slug>.vercel.app`） | web / mobile |
 
@@ -176,6 +176,15 @@ infra-bootstrap supabase github # 一部だけ再実行も可
     **Vercel 側で別名を追加**して合わせる（Doppler には戻さない）。
 - **Vercel(web) の backend endpoint** … Marketplace の管轄外なので `wire` が `NEXT_PUBLIC_BACKEND_PY_URL` を直接 set。
 - **migration(GitHub Actions)** … Doppler→GitHub ネイティブ sync で GitHub Environment secrets に届いた `POSTGRES_URL` を job env で受け取る（Actions 内で doppler CLI は使わない）。
+  - ⚠️ **接続先は pooler の session mode（`*.pooler.supabase.com:5432`）でなければならない。**
+    GitHub-hosted runner は **IPv4 のみ**で、Supabase の直結エンドポイント（`db.<ref>.supabase.co`）は
+    **IPv6**（IPv4 add-on を購入した project のみ IPv4）。直結を渡すと migration の実行中に
+    `ENETUNREACH` で落ちるが、**開発者のマシンからは繋がるのでローカルでは再現しない**。
+    transaction mode（`:6543`）も prepared statement 非対応なので migration には使えない。
+    → 検査は `drizzle/scripts/migration-endpoint.ts`（`nr check-endpoint`、単体テストで固定）が
+    workflow と `db:migrate-deploy` の両方で行う。IPv4 add-on 購入済みで直結を使いたい場合のみ
+    `MIGRATE_ALLOW_DIRECT_DB=1` で許可できる。
+    出典: [Connect to your database](https://supabase.com/docs/guides/database/connecting-to-postgres)
 - **mobile(EAS)** … Doppler に置いた `EXPO_PUBLIC_*` を EAS 側で取り込む（EAS の env 機構は別途・要設定）。
 - **edge functions の `SUPABASE_URL`/`ANON`/`SERVICE_ROLE`/`SUPABASE_DB_URL`** … Supabase ランタイムが**自動注入**（配線不要）。
 > **外部 API キー（OpenAI 等）は対象外**＝ユーザーが Doppler に直接投入し、各所へ native sync。
@@ -303,7 +312,11 @@ gh run watch   # 承認待ち → GitHub 上で approve すると適用が進む
 | ランタイムログが空で原因が分からない | パスに projectId が要る: `GET /v1/projects/{projectId}/deployments/{deploymentId}/runtime-logs`。**空 = 正常ではない**（起動前に死んだサイン）。dashboard の Project > Logs が最短。 |
 | `wire` が backend の preview URL を取れない | team/personal の slug 取得に失敗している可能性。`VERCEL_TEAM_ID` を確認（個人アカウントは空）。best-effort のため warn のみで継続する。 |
 | persistent branch 作成 API が失敗 | project の GitHub Integration(Branching) が dashboard で有効か確認（Phase 0）。CLI の git 紐付けフラグは `supabase branches create --help` で確認、確実なのは Management API の `git_branch`。 |
-| branch の DB 接続が分からない | `supabase --experimental branches get <branch> -o env` の `POSTGRES_URL_NON_POOLING` を使う（Phase 2-3）。 |
+| branch の DB 接続が分からない | Dashboard の *Connect > Session pooler*（`*.pooler.supabase.com:5432`）を使う。`supabase --experimental branches get <branch> -o env` は **pooler の host を返さない**（直結 = IPv6 のみ。supabase/cli#4012）ので、CI 用の値としてそのまま使わない。 |
+| migration が `ENETUNREACH` / `connect ETIMEDOUT` で落ちる | 接続先が直結（IPv6）になっている。GitHub の runner は IPv4 のみ。Doppler の `POSTGRES_URL` を session pooler（`*.pooler.supabase.com:5432`）に差し替える（`infra-deploy` / `infra-bootstrap wire` が自動で入れる）。 |
+| migration が TLS / SSL 関連で落ちる | project の *Enforce SSL* が有効な場合は接続文字列に `?sslmode=require` を付ける（postgres-js は URL の `sslmode` を解釈する。既定は非 TLS）。 |
+| migration が prepared statement 関連のエラーで落ちる | 接続先が transaction pooler（`:6543`）。同じホストの **5432**（session mode）に変える。 |
+| `POSTGRES_URL` secret が空のまま | pooler 設定を取得できず、誤った値を書き込まないよう **意図的にスキップ**している（terraform の `check` が警告を出す）。branch 起動直後なら数分後に再 apply。復旧しなければ Dashboard の *Connect > Session pooler* の文字列を Doppler の該当 config に手入力する。 |
 | persistent branch のコスト | long-lived は常時 compute 課金（Spend Cap 対象外）。develop を PR 時のみ preview にすればコスト減。 |
 | Doppler フラグ綴り差 | `doppler ... create --help`(v3.75 で確認済み) と一致しているか確認。 |
 | 本番ローンチ後 | `.claude/rules/mcp-doppler.md` の手順で Doppler を `本番(protected)` フェーズへ切替（prd 書込を service token スコープで封鎖）。 |

@@ -25,9 +25,21 @@ variable "manage_generated_secrets" {
 }
 
 variable "postgres_urls" {
-  description = "環境名 → 直結 DB 接続文字列。"
+  description = <<-EOT
+    環境名 → Drizzle migration 用の接続文字列（Supavisor session pooler / IPv4）。
+    解決できなかった環境はキーが無い状態で渡ってくるので、その環境には書き込まない。
+  EOT
   type        = map(string)
   sensitive   = true
+}
+
+variable "postgres_url_envs" {
+  description = <<-EOT
+    POSTGRES_URL を配る対象の環境名（session pooler の接続先を解決できた環境）。
+    postgres_urls は sensitive で for_each に使えないため、判断はこの非機密リストで行う。
+  EOT
+  type        = list(string)
+  default     = []
 }
 
 variable "supabase_urls" {

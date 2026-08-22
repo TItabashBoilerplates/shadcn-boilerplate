@@ -179,6 +179,28 @@ gh run watch   # production は承認待ち → approve 後に適用
   **Doppler → GitHub ネイティブ sync → GitHub Environment secrets → job env** で届く
   （Actions 内で doppler CLI は使わない）。適用前に接続先の検証ステップが走る。
 
+### 接続先は Supavisor の session pooler（`*.pooler.supabase.com:5432`）
+
+CI から流す migration は **pooler の session mode** を使う。理由は 2 つとも「動かしてみるまで
+分からない」形で効いてくる:
+
+- **直結（`db.<ref>.supabase.co`）は IPv6**（IPv4 add-on 購入時のみ IPv4）。GitHub-hosted runner は
+  **IPv4 のみ**なので `ENETUNREACH` になる。開発者のマシンからは繋がるため再現しない。
+- **transaction mode（`:6543`）は prepared statement 非対応**。drizzle-kit / postgres-js は既定で
+  prepared statement を使うので、接続はできるのに migration だけ落ちる。
+
+`bun run check-endpoint`（= `drizzle/scripts/migration-endpoint.ts`）が workflow と
+`db:migrate-deploy` の両方で接続先を検査する。判定は `bun test` で固定してあるので消さないこと。
+IPv4 add-on を購入済みで直結を使いたい場合のみ `MIGRATE_ALLOW_DIRECT_DB=1`。
+
+```bash
+# 接続先だけ確認したいとき（値は表示されず host:port だけ出る）
+MIGRATE_POSTGRES_URL="$(doppler secrets get POSTGRES_URL --config prd --plain)" \
+  bun run check-endpoint
+```
+
+出典: [Connect to your database](https://supabase.com/docs/guides/database/connecting-to-postgres)
+
 > ローカルから直接叩くのは **緊急時のみ**（承認ゲートと監査ログを迂回する）。接続先は
 > **`MIGRATE_POSTGRES_URL` で渡す**こと:
 > ```bash

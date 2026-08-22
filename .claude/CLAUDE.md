@@ -316,8 +316,9 @@ format-frontend / format-drizzle / format-backend-py / format-functions
 type-check-frontend / type-check-mobile / type-check-backend-py / check-functions
 
 # Tests
-unit-test                     # 全 unit test (frontend + backend-py) ※ `test` は bash 組み込みと衝突するため `unit-test`
+unit-test                     # 全 unit test (frontend + drizzle + backend-py) ※ `test` は bash 組み込みと衝突するため `unit-test`
 test-frontend                 # Vitest
+test-drizzle                  # bun test（migration 接続先ガード等）
 test-backend-py               # pytest
 test-db                       # pgTAP DB tests
 e2e / e2e-web / e2e-mobile    # Maestro E2E

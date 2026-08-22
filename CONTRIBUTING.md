@@ -103,8 +103,9 @@ ci-check    # CI と同じフルゲート (= devenv test、execIfModified キャ
 ## テスト
 
 ```bash
-test              # 全 unit test (test-frontend + test-backend-py)
+unit-test         # 全 unit test (test-frontend + test-drizzle + test-backend-py)
 test-frontend     # Vitest
+test-drizzle      # bun test (drizzle)
 test-backend-py   # pytest
 test-db           # pgTAP DB tests
 e2e / e2e-web / e2e-mobile   # Maestro E2E

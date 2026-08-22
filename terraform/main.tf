@@ -92,6 +92,7 @@ module "doppler" {
   # Vercel の外にいる消費者（Expo mobile / Drizzle migration）向けの生成値だけを配る。
   # Vercel 上の web / backend へは module.vercel が直接 env を書くので Doppler を経由しない。
   postgres_urls             = module.supabase.postgres_urls
+  postgres_url_envs         = module.supabase.postgres_url_envs
   supabase_urls             = module.supabase.api_urls
   supabase_publishable_keys = module.supabase.publishable_keys
   backend_urls              = var.backend_urls

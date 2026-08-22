@@ -144,7 +144,7 @@ type-check-backend-py        # MyPy (strict mode、apps + packages 全体)
 
 # Testing
 test-backend-py              # pytest（workspace 全体: apps/api/tests + packages/core/tests）
-unit-test                    # 全 unit test (frontend + backend-py)
+unit-test                    # 全 unit test (frontend + drizzle + backend-py)
 
 # 詳細な pytest オプション (devenv shell 内で uv 経由)
 cd "$DEVENV_ROOT/backend-py"

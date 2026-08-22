@@ -777,34 +777,23 @@ in
     # POSTGRES_URL へ反映する。この名前は enterShell も env ファイルも触らないため、
     # ENV の解決結果に関わらず確実に伝わる（実測で確認済み）。
     #
-    # ガード: リモート適用の意図が明示されている（MIGRATE_POSTGRES_URL あり、または ENV≠local）
-    # のに接続先がローカル値なら中止する。「リモートに流したつもりが実はローカル」を静かに通さない。
+    # ガード: 接続先が「その実行環境で本当に使えるもの」かを適用前に検査する。
+    # 判定は drizzle/scripts/migration-endpoint.ts に集約（単体テストで固定）:
+    #   - リモート適用の意図（MIGRATE_POSTGRES_URL あり / ENV≠local）なのにローカル接続先 → 中止
+    #   - transaction pooler(:6543) → 中止（prepared statement 非対応で migration が落ちる）
+    #   - 直結(IPv6) × IPv4 のみの実行環境（GitHub Actions）→ 中止
     # 値（パスワードを含む）は表示せず host:port だけ出す。
     "db:migrate-deploy".exec = ''
       set -euo pipefail
       cd "$DEVENV_ROOT/drizzle"
 
-      _remote_intent=0
       if [ -n "''${MIGRATE_POSTGRES_URL:-}" ]; then
         export POSTGRES_URL="$MIGRATE_POSTGRES_URL"
-        _remote_intent=1
       fi
-      [ "''${ENV:-local}" != "local" ] && _remote_intent=1
 
-      if [ -z "''${POSTGRES_URL:-}" ]; then
-        echo "✗ 接続先が未設定です（POSTGRES_URL / MIGRATE_POSTGRES_URL のいずれも空）。" >&2
-        exit 1
-      fi
-      if [ "$_remote_intent" = "1" ]; then
-        case "$POSTGRES_URL" in
-          *127.0.0.1*|*localhost*)
-            echo "✗ リモート適用の指定（ENV=''${ENV:-local}）なのに接続先がローカル値です。" >&2
-            echo "  リモートに適用されないため中止します。接続先は MIGRATE_POSTGRES_URL で渡してください。" >&2
-            echo "  例: MIGRATE_POSTGRES_URL=\"\$SECRET_URL\" ENV=production devenv tasks run db:migrate-deploy" >&2
-            exit 1 ;;
-        esac
-      fi
-      echo "🚀 Deploying migrations... (ENV=''${ENV:-local}, target=$(printf '%s' "$POSTGRES_URL" | sed -E 's|^[^@]*@||; s|[/?].*$||'))"
+      nr check-endpoint
+
+      echo "🚀 Deploying migrations... (ENV=''${ENV:-local})"
       nr migrate:pre
       nr migrate
       nr migrate:post
@@ -1700,6 +1689,8 @@ in
 
     # ---------- Tests ----------
     "test-frontend"   = { exec = ''cd "$DEVENV_ROOT/frontend" && nr test''; description = "Vitest (frontend)"; };
+    # drizzle 側は Bun 標準の test runner（依存を増やさない）。接続先ガードの判定ロジックを固定する。
+    "test-drizzle"    = { exec = ''cd "$DEVENV_ROOT/drizzle" && nr test''; description = "bun test (drizzle)"; };
     # pytest は member (api/core) とその依存を import するので `--all-packages` 必須
     # (type-check:backend-py のコメント参照)。ruff は import 解決不要なので素の uv run でよい。
     "test-backend-py" = { exec = ''cd "$DEVENV_ROOT/backend-py" && uv run --all-packages pytest''; description = "pytest (backend-py workspace)"; };
@@ -1713,11 +1704,12 @@ in
         set -e
         echo "🧪 Running all unit tests..."
         test-frontend
+        test-drizzle
         test-backend-py
         echo "✅ All unit tests passed."
         echo "💡 Run 'test-db' for pgTAP DB tests, 'e2e' for Maestro E2E."
       '';
-      description = "Run all unit tests (frontend + backend-py)";
+      description = "Run all unit tests (frontend + drizzle + backend-py)";
     };
     "e2e"      = { exec = ''cd "$DEVENV_ROOT/.maestro" && maestro test .''; description = "Maestro E2E (all)"; };
     "e2e-web"  = { exec = ''cd "$DEVENV_ROOT/.maestro" && maestro test web/''; description = "Maestro E2E (web)"; };

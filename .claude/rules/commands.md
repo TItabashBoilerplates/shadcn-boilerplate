@@ -31,7 +31,7 @@ scripts は devenv shell（direnv 自動アクティベート含む）下で PAT
 | **Type check (all)** | `type-check` |
 | **Type check (per project)** | `type-check-frontend`, `type-check-mobile`, `type-check-backend-py`, `check-functions` |
 | **Build** | `build-frontend`, `build-storybook`, `build-mobile-ios`, `build-mobile-android` |
-| **Tests (unit)** | `unit-test` (all), `test-frontend` (Vitest), `test-backend-py` (pytest) ※ `test` は bash 組み込みと衝突するため `unit-test` |
+| **Tests (unit)** | `unit-test` (all), `test-frontend` (Vitest), `test-drizzle` (bun test), `test-backend-py` (pytest) ※ `test` は bash 組み込みと衝突するため `unit-test` |
 | **Tests (DB / E2E)** | `test-db` (pgTAP), `e2e`, `e2e-web`, `e2e-mobile` |
 | **CI Check (full gate)** | `ci-check` (= `devenv tasks run ci:check`、execIfModified キャッシュで incremental)。ローカルも CI もこれ |
 | **git-hooks を全ファイルに実行** | `devenv test` ※ **verify 用途では使わない**（下記「⚠️ `devenv test` を verify に使ってはならない」参照） |

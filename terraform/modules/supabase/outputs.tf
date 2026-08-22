@@ -21,17 +21,21 @@ output "publishable_keys" {
 
 output "postgres_urls" {
   description = <<-EOT
-    環境名 → 直結（non-pooling）の接続文字列。Drizzle migration（GitHub Actions）が使う。
-    production は db.<ref>.supabase.co を組み立て、branch は provider が返す接続情報を使う。
+    環境名 → Drizzle migration（GitHub Actions）用の接続文字列。
+    **Supavisor の session mode（*.pooler.supabase.com:5432 / IPv4）**。
+    GitHub-hosted runner は IPv4 のみなので直結（IPv6）は使えず、transaction mode（6543）は
+    prepared statement 非対応で migration に使えない。詳細は main.tf のコメントを参照。
+    解決できなかった環境はキーごと落ちる（誤った接続先を書き込まないため）。
   EOT
-  value = merge(
-    {
-      production = "postgresql://postgres:${var.database_password}@db.${supabase_project.this.id}.supabase.co:5432/postgres"
-    },
-    {
-      for k, b in supabase_branch.this :
-      k => "postgresql://${b.database.user}:${b.database.password}@${b.database.host}:${b.database.port}/postgres"
-    },
-  )
-  sensitive = true
+  value       = local.postgres_urls
+  sensitive   = true
+}
+
+output "postgres_url_envs" {
+  description = <<-EOT
+    session pooler の接続先を解決できた環境名のリスト。
+    postgres_urls は sensitive なので for_each に使えない（Terraform の制約）。
+    「どの環境に配るか」の判断はこちらの非機密リストで行う。
+  EOT
+  value       = sort(keys(local.pooler_parts_resolved))
 }

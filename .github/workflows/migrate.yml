@@ -104,9 +104,17 @@ jobs:
       - name: Install devenv.sh
         shell: bash
         run: nix profile add nixpkgs#devenv
-      # 接続先が GitHub Secrets（Doppler sync 済み）から解決できたことを、適用前に検証する。
-      # devenv shell を経由する間に env ファイル等で上書きされていないかもここで検出する
-      # （.claude/rules/error-handling.md: 握りつぶさない）。
+      # 接続先が GitHub Secrets（Doppler sync 済み）から解決でき、**この runner から実際に使える
+      # 経路**であることを、適用前に検証する（.claude/rules/error-handling.md: 握りつぶさない）。
+      #
+      # ⚠️ GitHub-hosted runner は **IPv4 のみ**。Supabase の直結エンドポイント
+      #    (`db.<ref>.supabase.co`) は IPv6（IPv4 add-on 購入時のみ IPv4）なので、直結を渡すと
+      #    ここではなく migration の実行中に `ENETUNREACH` で落ちる（ローカルでは再現しない）。
+      #    → 既定は **Supavisor の session pooler**（`*.pooler.supabase.com:5432`、全プランで IPv4）。
+      #    transaction pooler(:6543) は prepared statement 非対応なので migration には使えない。
+      #
+      # 判定は drizzle/scripts/migration-endpoint.ts に集約（単体テストで固定）。db:migrate-deploy
+      # task も同じ検査を通るが、原因が分かるよう専用 step として先に出す。
       # ⚠️ POSTGRES_URL は DB パスワードを含むので **絶対に出力しない**。host:port だけ表示する。
       - name: Verify remote credentials resolved
         run: |
@@ -114,13 +122,8 @@ jobs:
             echo "::error::MIGRATE_POSTGRES_URL が空です。GitHub Environment '${ENV}' に POSTGRES_URL secret が同期されているか確認してください（Doppler > Integrations > GitHub で該当 config → 該当 Environment の sync を作成）。"
             exit 1
           fi
-          case "$MIGRATE_POSTGRES_URL" in
-            *127.0.0.1*|*localhost*)
-              echo "::error::接続先がローカル値です。GitHub Environment '${ENV}' に同期されている POSTGRES_URL の値を確認してください。"
-              exit 1 ;;
-          esac
-          # 認証情報を落として host:port のみ表示
-          echo "✓ ENV=${ENV} / target=$(printf '%s' "$MIGRATE_POSTGRES_URL" | sed -E 's|^[^@]*@||; s|[/?].*$||')"
+          echo "ENV=${ENV}"
+          cd drizzle && nr check-endpoint
       # raw drizzle-kit ではなく devenv task を使う（.claude/rules/commands.md 準拠）。
       # ENV は job env で渡し済みなので -P は profile を明示するための冗長指定。
       - name: Run Drizzle migrations

@@ -16,7 +16,7 @@ resource "doppler_project" "this" {
 # 生成値の配線（= scripts/infra/wire.sh の置き換え）
 #
 # Doppler に置くのは **Vercel の外にいる消費者**が必要とする値だけ:
-#   - Drizzle migration (GitHub Actions) → POSTGRES_URL
+#   - Drizzle migration (GitHub Actions) → POSTGRES_URL（session pooler / IPv4）
 #   - Expo mobile (EAS)                  → EXPO_PUBLIC_*
 # Vercel 上の web / backend へは module.vercel が直接 env を書くので Doppler を経由しない
 # （二重管理の禁止）。外部 API キー（OpenAI 等）はここでは扱わない = doppler MCP で投入する。
@@ -30,10 +30,18 @@ locals {
 
   wired_backend_envs = [for k in local.env_names : k if lookup(var.backend_urls, k, "") != ""]
 
+  # POSTGRES_URL は「session pooler の接続先を解決できた環境」だけに配る。
+  # 解決できなかった環境へ直結などの誤った値を入れると CI が分かりにくい形で壊れるため、
+  # module.supabase 側がキーごと落としてくる（そちらの check ブロックが警告を出す）。
+  wired_postgres_envs = [for k in local.env_names : k if contains(var.postgres_url_envs, k)]
+
   secret_specs = var.manage_generated_secrets ? merge(
     {
+      for pair in setproduct(local.wired_postgres_envs, ["POSTGRES_URL"]) :
+      "${pair[0]}/${pair[1]}" => { environment = pair[0], name = pair[1] }
+    },
+    {
       for pair in setproduct(local.env_names, [
-        "POSTGRES_URL",
         "EXPO_PUBLIC_SUPABASE_URL",
         "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
       ]) :

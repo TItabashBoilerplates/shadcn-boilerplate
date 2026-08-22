@@ -353,7 +353,7 @@ This project uses **Vitest** for unit testing. すべて devenv の **scripts** 
 
 ```bash
 test-frontend              # Run Vitest (一回のみ)
-test                       # 全 unit test (frontend + backend-py)
+unit-test                  # 全 unit test (frontend + drizzle + backend-py)
 
 # Watch / coverage が必要な場合は devenv shell 内で nr 経由
 nr test:watch              # Watch mode

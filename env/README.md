@@ -8,7 +8,7 @@
 | 種類 | 例 | 置き場所 |
 |---|---|---|
 | **シークレット**（全環境） | 外部 API キー / トークン / DB パスワード / service_role 等 | **Doppler のみ**（ファイルフォールバック廃止） |
-| **生成される非機密**（リモート） | migration 用 `POSTGRES_URL` / mobile 用 `EXPO_PUBLIC_*` / backend(Vercel) endpoint | **Doppler**（`scripts/infra/wire.sh` が投入 → ネイティブ連携で配布） |
+| **生成される非機密**（リモート） | migration 用 `POSTGRES_URL`（**session pooler / IPv4**）/ mobile 用 `EXPO_PUBLIC_*` / backend(Vercel) endpoint | **Doppler**（`scripts/infra/wire.sh` が投入 → ネイティブ連携で配布） |
 | **Vercel 上の Supabase env** | `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `NEXT_PUBLIC_SUPABASE_*` / `POSTGRES_*` | **Vercel Marketplace の Supabase 連携が自動注入**（Doppler にもファイルにも置かない） |
 | **ローカルの非機密既定値** | local Supabase URL / publishable key / `localhost:54322` の `POSTGRES_URL` / port | **このディレクトリの `.env.local`** |
 
