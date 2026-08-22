@@ -72,6 +72,27 @@ push_static_env() {
   done < "$file"
 }
 
+# backend コンテナが listen するポートを Vercel project の env に入れる。
+#
+# ⚠️ これを省くと **デプロイは成功するのにリクエストが 500 になる**。
+#    Vercel はコンテナの既定ポートを 80 とし、project 設定の `PORT` でのみ上書きできる
+#    （https://vercel.com/docs/functions/container-images "Port resolution"）。
+#    一方 Dockerfile.vercel は **非 root ユーザーで動くため 80 を bind できない**ので
+#    8080 を使う。両者がズレると Vercel は 80 へ流し、コンテナは 8080 で待ち続ける。
+#
+# 値は Dockerfile の `ENV ... PORT=<n>` から読む（2 か所に数字を書かない = drift しない）。
+push_container_port() {
+  local project="$1"
+  local dockerfile="$PROJECT_ROOT/backend-py/apps/api/Dockerfile.vercel"
+  [ -f "$dockerfile" ] || { warn "Dockerfile.vercel が無い（PORT の投入を skip）"; return 0; }
+  local port
+  port="$(grep -oE '\bPORT=[0-9]+' "$dockerfile" | tail -1 | cut -d= -f2)"
+  [ -n "$port" ] || die "Dockerfile.vercel から PORT を読めない（ENV ... PORT=<n> を確認）"
+  # 非機密なので plain（dashboard で読める＝取り違えに気づける）
+  vercel_env_put "$project" "PORT" "$port" "plain"
+  ok "backend の PORT=${port} を投入（コンテナの listen ポートと一致）"
+}
+
 main() {
   require_tool curl
   require_tool jq
@@ -87,6 +108,7 @@ main() {
   # backend（FastAPI / Dockerfile.vercel コンテナ）。framework は付けない。
   ensure_project "$VERCEL_BACKEND_PROJECT" "$VERCEL_BACKEND_ROOT_DIR" "" \
     "VERCEL_BACKEND_PROJECT_ID" "VERCEL_BACKEND_PROJECT_NAME"
+  push_container_port "$VERCEL_BACKEND_PROJECT"
 
   local env
   for env in $INFRA_ENVS; do

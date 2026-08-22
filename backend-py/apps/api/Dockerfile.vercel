@@ -11,8 +11,44 @@
 #     `backend-py` にし、`vercel.json` の `services.api.entrypoint = "apps/api/Dockerfile.vercel"` で
 #     この Dockerfile を指す。コンテキストが workspace ルートなので `uv.lock` / `packages/core` /
 #     他 member の pyproject を解決できる（この Dockerfile 内のパスはすべてコンテキスト基準）。
-#   - サーバは `$PORT`（Vercel 既定 80）で listen する必要がある。api.main が $PORT を読む。
+#   - サーバは `$PORT` で listen する必要がある。api.main が $PORT を読む。
+#     **本リポジトリは 8080（非特権ポート）で固定する**。Vercel の既定は 80 だが、この
+#     コンテナは非 root で動くため 80 を bind できない（下の「⚠️ 無言で壊れる 2 点」）。
 #   - scale-in 時は SIGTERM + 30s grace。uvicorn が SIGTERM で graceful shutdown する。
+#
+# ── ⚠️ Vercel 上でだけ無言で壊れる 2 点（どちらもローカルでは絶対に再現しない）────────
+# ビルドは成功し、型もリントもテストも通り、`docker run` もローカルでは動くのに、
+# **Vercel 上でだけ 500（INTERNAL_FUNCTION_INVOCATION_FAILED）になり、アプリのログが
+# 1 行も出ない**。この 2 点は必ず守ること（`apps/api/tests/test_vercel_container_contract.py`
+# が CI で検査している）。
+#
+#   ① 非 root（USER appuser）で特権ポート（< 1024）は bind できない
+#        ERROR: [Errno 13] error while attempting to bind on address ('0.0.0.0', 80):
+#        permission denied
+#      → `ENV PORT=8080`。**Vercel project の環境変数 `PORT` も 8080 に揃える**
+#        （揃えないと Vercel は 80 へ流し、コンテナは 8080 で待つ）。
+#        provisioning は scripts/infra/vercel.sh が自動で入れる。
+#      ※ ローカルの Docker は既定で特権ポートを許可するため、手元では再現しない。
+#
+#   ② CMD が $PATH 解決に依存していると exec に失敗する
+#        exec: "api": executable file not found in $PATH
+#      Vercel はコンテナ起動時に自前の wrapper を挟むため、**イメージの `ENV PATH`
+#      （ここでは /app/.venv/bin を足したもの）が起動プロセスに反映されないことがある**
+#      （公式には文書化されていない挙動。実測で確認）。exec に失敗したプロセスはログを
+#      1 行も出さずに死ぬので、ランタイムログを見ても原因が分からない。
+#      → `CMD` は**必ず絶対パス**で書く（`["/app/.venv/bin/api"]`）。
+#
+# Vercel 相当の条件はローカルで作れる。この Dockerfile を変えたら必ず通すこと:
+#
+#   docker build -f apps/api/Dockerfile.vercel -t api-vercel .    # context = backend-py
+#   docker run --rm -p 8080:8080 \
+#     -e PATH=/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin \
+#     --sysctl net.ipv4.ip_unprivileged_port_start=1024 \
+#     api-vercel
+#   curl -fsS localhost:8080/healthcheck   # → {"message":"OK"}
+#
+# 詳細・切り分け手順（ランタイムログの取り方を含む）:
+#   .claude/skills/vercel-deploy/references/containers.md
 #
 # 別アプリを足すときは `apps/<app>/Dockerfile.vercel` を作り、`vercel.json` に service + rewrite を
 # 追加する（詳細は docs/deployment/README.md / backend-py/README.md）。
@@ -81,18 +117,21 @@ FROM python:${PYTHON_VERSION}-slim AS final
 # LiveKit / PyAV 等の音声・映像系（devenv の libopus / libvpx）を導入した際は、
 # ここに runtime 共有ライブラリ（例: libopus0 / libvpx*）を追記すること。
 
+# PATH は `docker exec` などで人が使うための利便。**起動の解決には使わない**（②）。
+# PORT=8080: 非 root で bind できる非特権ポート（①）。Vercel project の env と揃える。
 ENV PATH="/app/.venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PORT=80
+    PORT=8080
 
 COPY --from=builder /app/.venv /app/.venv
 
-# 非 root 実行
+# 非 root 実行（uid 10001）。この USER のせいで特権ポートを bind できない → PORT=8080（①）
 RUN useradd --create-home --uid 10001 appuser
 USER appuser
 
-EXPOSE 80
+EXPOSE 8080
 
 # [project.scripts] api = "api.main:main"。main() が $PORT を読んで uvicorn を起動する。
-CMD ["api"]
+# **絶対パスで書く**（②。`CMD ["api"]` は Vercel 上で exec に失敗する）。
+CMD ["/app/.venv/bin/api"]
