@@ -79,6 +79,37 @@ export const corsHeaders = { ... }
 3. **型定義が重複していないか？** → _shared/types.ts に共通化
 4. **Drizzle スキーマを使用するか？** → _shared/drizzle/ から import
 
+## Environment Variables (MANDATORY)
+
+**Supabase 内でのやりとりは `SUPABASE_` プレフィックスをそのまま読む。** Edge Functions には
+以下が **default secrets** として自動で入るので、`supabase secrets set` も `.env` も要らない
+（正本は `.claude/rules/env-naming.md` §0.1 / §2.5）。
+
+| 名前 | 中身 |
+|---|---|
+| `SUPABASE_URL` | API ゲートウェイ URL |
+| `SUPABASE_DB_URL` | Postgres 接続文字列（Drizzle / postgres.js） |
+| `SUPABASE_PUBLISHABLE_KEYS` | publishable キーの **JSON 辞書**（`JSON.parse(...)['default']`） |
+| `SUPABASE_SECRET_KEYS` | secret キーの **JSON 辞書**（RLS をバイパス。ブラウザへ出さない） |
+| `SUPABASE_JWKS` | ユーザー JWT 検証用の JWK Set |
+| `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` | **レガシー**（文字列。2026 年末まで） |
+
+```typescript
+// ✅ Good: PF が配る名前をそのまま読む（新体系は複数形の JSON 辞書）
+const url = Deno.env.get("SUPABASE_URL")!
+const secretKey = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS")!)["default"]
+
+// ❌ Bad: 単数形（Edge Functions の default secrets に存在せず undefined になる）
+const secretKey = Deno.env.get("SUPABASE_SECRET_KEY")!
+
+// ❌ Bad: 自分の別名に写す（PF が配る名前と一致しなくなる）
+const url = Deno.env.get("MY_SUPABASE_URL")!
+```
+
+**自前のシークレットは `SUPABASE_` 以外の名前にする**（`ONE_SIGNAL_API_KEY` / `STRIPE_SECRET_KEY`）。
+`SUPABASE_` で始まる名前は **PF が登録を拒否する**（"Env name cannot start with SUPABASE\_"）。
+配線は `config.toml` の `env()`（`.claude/rules/supabase-config.md`）、**Doppler には入れない**。
+
 ## Import Management
 
 **MANDATORY**: Use `npm:` prefix for npm packages, **EXCEPT for postgres.js**.

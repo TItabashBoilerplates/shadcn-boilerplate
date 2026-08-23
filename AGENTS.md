@@ -199,6 +199,49 @@ Both `en.json` and `ja.json` are required.
 
 ### 7. Secrets & Environment Variable Naming
 
+**Two rules are absolute. Read them before touching any env var or secret.**
+
+> **① Inside Supabase, use the `SUPABASE_` prefix as given — read it, never create it.**
+> Supabase connection values are **supplied by the platform** under their official `SUPABASE_*`
+> names (Edge Functions get them as default secrets; Vercel gets them from the Marketplace
+> integration). Your job is to **read those names verbatim**. Never alias them (`SB_URL`,
+> `MY_SUPABASE_URL`), never copy them into `.env` or Doppler, and never register a
+> `SUPABASE_`-prefixed key yourself via `supabase secrets set` or Vercel env. Your own Edge
+> Function secrets must **not** start with `SUPABASE_` (use `ONE_SIGNAL_API_KEY`,
+> `STRIPE_SECRET_KEY`). The one exception is the infra credentials the platform does *not* hand
+> out — `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD` — which live under their real names in the
+> sync-free Doppler configs (`all/all`, `<app>/bootstrap`).
+>
+> **② Doppler holds secrets that must be shared across environments — nothing else.**
+> API keys, tokens and connection strings shared across dev / stg / prd, developers and CI belong
+> in Doppler. Platform-injected values (`SUPABASE_*`, `VERCEL_*`, `GITHUB_TOKEN`), non-secret
+> identifiers (`SUPABASE_PROJECT_REF` → a GitHub Actions *variable*) and local-only non-secret
+> defaults (`env/<svc>/.env.local`) do **not**. Equally forbidden: keeping a shared secret anywhere
+> *other* than Doppler — inline in `.env`, hardcoded in source, or typed into a dashboard.
+
+**"Read" is correct, "create" is banned** — the distinction that gets confused:
+
+| Action | Verdict |
+|---|---|
+| `Deno.env.get("SUPABASE_URL")` in an Edge Function / server | ✅ the intended usage |
+| Aliasing a platform value to your own name | ❌ silently resolves to `undefined` in the other surface |
+| Registering a platform-supplied `SUPABASE_*` connection value in Doppler | ❌ duplicate source of truth; breaks the whole config's sync |
+| `SUPABASE_ACCESS_TOKEN` / `SUPABASE_DB_PASSWORD` in a sync-free config (`all/all`, `<app>/bootstrap`) | ✅ nobody hands these out — Doppler is their home, under the real name |
+| `supabase secrets set SUPABASE_...` | ❌ rejected by the platform ("Env name cannot start with SUPABASE_") |
+| `NEXT_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_URL` | ✅ only a **leading** `SUPABASE_` is restricted |
+
+**Edge Function default secrets** (no setup needed — just read them):
+`SUPABASE_URL`, `SUPABASE_DB_URL`, `SUPABASE_PUBLISHABLE_KEYS`, `SUPABASE_SECRET_KEYS`,
+`SUPABASE_JWKS`, plus legacy `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY`.
+
+> ⚠️ **Plural vs singular.** Edge Functions receive the **plural** `*_KEYS` variables, which hold a
+> **JSON dictionary** — `JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS')!)['default']`. The singular
+> `SUPABASE_SECRET_KEY` / `SUPABASE_PUBLISHABLE_KEY` are **not** Edge Function default secrets
+> (reading them yields `undefined`); the singular names are what **Vercel** gets injected. The
+> surface decides the name — check it before writing the code.
+> ([Environment Variables](https://supabase.com/docs/guides/functions/secrets) /
+> [Migrating to publishable and secret API keys](https://supabase.com/docs/guides/getting-started/migrating-to-new-api-keys))
+
 **Name every Doppler key after the env var the consuming tool actually reads.** Do not invent
 abbreviations (`SB_*`, `VC_*`). Bridging is only for cases where two tools read the *same*
 credential under *different* official names, and it lives in `scripts/infra/tf.sh`.
@@ -240,7 +283,8 @@ those keys in Doppler is prohibited (breaks sync *and* causes drift).
 CLI's own official name anyway. Names like `NEXT_PUBLIC_SUPABASE_URL` are fine — only the
 **leading** prefix is restricted.
 
-Full policy: `.claude/rules/env-naming.md`
+Full policy: `.claude/rules/env-naming.md` (start at §0 — the two absolute rules and the
+"where does this value live?" decision table).
 
 ### 8. Storage Policy
 

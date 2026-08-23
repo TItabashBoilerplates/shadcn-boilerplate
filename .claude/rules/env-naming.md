@@ -1,5 +1,16 @@
 # 環境変数・シークレット命名ポリシー
 
+**CRITICAL / NON-NEGOTIABLE（厳命）**: 本ルールには**必ず守る 2 つの厳命**がある。詳細は §0。
+
+1. **Supabase 内でのやりとりは `SUPABASE_` プレフィックスを適切に活用する** —
+   Supabase / Vercel Marketplace 連携が**自動供給する `SUPABASE_*` を、その名前のまま読む**。
+   別名に写さない・複製しない・`SUPABASE_` 始まりのキーを新規に作らない
+   （唯一の例外は、**PF が配ってくれないインフラ操作用の資格情報**
+   `SUPABASE_ACCESS_TOKEN` / `SUPABASE_DB_PASSWORD` を **sync の無い Doppler config** に置く場合。§0.1）。
+2. **Doppler は「各環境で共有する必要があるシークレット」を管理する場所** —
+   環境（dev / stg / prd）・人・CI をまたいで共有する **API キー / トークン / 接続文字列**が対象。
+   **PF が自動供給する値と、ローカル専用の非機密 config は Doppler に置かない**。
+
 **原則**: **Doppler のキー名は「その値を使うツールが実際に読む名前」に揃える。**
 省略形（`SB_*` / `VC_*`）を機械的に付けない。読み替えが要るのは「同じ資格情報を 2 つのツールが
 別名で読む」ときだけで、その橋渡しはスクリプト側（`scripts/infra/tf.sh`）に閉じ込める。
@@ -13,6 +24,64 @@ sync 全体が予約値違反で失敗する**（一部の secret だけ届か�
 
 > ⚠️ **後から sync を付けると、既存キーが原因で壊れる。** sync を追加する前に、その config の
 > キー名を §1 の表で必ず点検すること。
+
+---
+
+## 0. 2 つの厳命（新しい環境変数・シークレットを触る前に必ずここを読む）
+
+### 0.1 厳命 ① — Supabase 内でのやりとりは `SUPABASE_` を「読む」
+
+Supabase が絡む実行環境では、接続情報は**プラットフォームが `SUPABASE_*` という正式名で
+自動供給する**（Edge Functions は default secrets、Vercel は Marketplace 連携が注入する。§2）。
+したがって**エージェントがやることは「その名前のまま読む」だけ**であり、名前を作り替えたり
+値をどこかへ複製したりしてはならない。
+
+**「読む」は正しい使い方、「作る」は禁止** — ここを混同しない。
+
+| 行為 | 可否 |
+|---|---|
+| Edge Functions / サーバで `Deno.env.get("SUPABASE_URL")` のように **`SUPABASE_*` を読む** | ✅ **これが本来の使い方**（PF が供給する正式名。§2.5 の表が正本） |
+| `SUPABASE_*` を**自分の別名に写して**参照する（`SB_URL` / `MY_SUPABASE_URL` / `PROJECT_URL` …） | ❌ 禁止（PF が配る名前と一致しなくなり、Vercel / Edge Functions の両方で無言に undefined になる） |
+| **PF が供給する接続情報**（`SUPABASE_URL` / キー類 / `SUPABASE_DB_URL`）を **Doppler に登録**する | ❌ 禁止（§2。二重管理になり、sync を張った瞬間に config ごと落ちる） |
+| **PF が供給しないインフラ操作用の資格情報**（`SUPABASE_ACCESS_TOKEN` / `SUPABASE_DB_PASSWORD`）を **sync の無い config（`all` / `bootstrap`）に置く** | ✅ 可（誰も配ってくれない値なので Doppler が正しい置き場所。フルネームで持つ。§4） |
+| `SUPABASE_*` を **Supabase の secrets に登録**する（`supabase secrets set` / Dashboard / MCP） | ❌ **PF が拒否する**（"Env name cannot start with SUPABASE\_"） |
+| `SUPABASE_*` を **Vercel の env に手で set** する | ❌ 禁止（Marketplace 連携が入れる。手で入れると drift する） |
+| Edge Functions で**自前の**シークレットを使う（`ONE_SIGNAL_API_KEY` / `STRIPE_SECRET_KEY` …） | ✅ **`SUPABASE_` 以外**の名前で登録する（登録先は §0.3） |
+| `NEXT_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_URL` のように**先頭が `SUPABASE_` でない**名前 | ✅ 制約に当たらない（効くのは**先頭一致**だけ。§4） |
+
+> **要するに**: 「Supabase の値が必要だ」と思ったら、**新しいキーを作る場面ではない**。
+> `SUPABASE_*` を読むコードを書くだけで終わる。読んでも入っていない場合は、キーを作るのではなく
+> **供給経路（Marketplace 連携 / default secrets / ローカルの `env/*.env.local`）を直す**。
+
+### 0.2 厳命 ② — Doppler は「各環境で共有するシークレット」を置く場所
+
+**Doppler の用途は、環境（dev / stg / prd）・開発者・CI をまたいで共有する必要がある
+シークレット（API キー・トークン・接続文字列）の一元管理**である。これに当てはまらないものを
+Doppler に入れてはならない（入れた瞬間に、二重管理・sync 障害・不要な秘匿化のいずれかが起きる）。
+
+| Doppler に**置く** | Doppler に**置かない** |
+|---|---|
+| 外部サービスの API キー・トークン（`OPENAI_API_KEY` / `STRIPE_SECRET_KEY` / `RESEND_API_KEY` / `FAL_KEY` / `EXPO_TOKEN` / `APPLE_*` …） | **PF が自動供給する値**（`SUPABASE_*` / `VERCEL_*` / `GITHUB_TOKEN`。§2） |
+| インフラ操作用の資格情報（`SUPABASE_ACCESS_TOKEN` / `SUPABASE_DB_PASSWORD` / `VERCEL_TOKEN` / `DOPPLER_TOKEN` / `GH_TOKEN`） | **非機密の識別子**（`SUPABASE_PROJECT_REF` → GitHub Actions variable。§3.1） |
+| 環境ごとに値が変わり、共有が要る接続情報（`POSTGRES_URL` / `NEXT_PUBLIC_BACKEND_PY_URL` / `EXPO_PUBLIC_*`） | **ローカル専用の非機密既定値**（`env/<svc>/.env.local`） |
+| | **ソースに書いてよい定数**（ページサイズ・機能フラグの既定値など） |
+
+**秘密でないものを Doppler に入れない**のも同じくらい重要である。ログでマスクされ、
+デプロイ先の取り違えのような事故に気づけなくなるだけで、得るものが無い（§3.1）。
+
+書き込みは必ず **`doppler` MCP**・**フェーズ制**に従い、**値はチャット / ログ / コミットに出さない**
+（`.claude/rules/mcp-doppler.md`）。
+
+### 0.3 値の置き場所 決定表（新しい値が出てきたら必ずここを引く）
+
+| その値は？ | 置き場所 | 名前 |
+|---|---|---|
+| Supabase の URL / API キー / DB URL | **どこにも置かない**（PF が供給。§2） | `SUPABASE_*` を**読むだけ** |
+| Supabase の project ref（非機密の識別子） | **GitHub Actions variable**（Terraform が書く） | `SUPABASE_PROJECT_REF`（§3.1） |
+| 外部サービスのシークレットで、**アプリ / CI が全環境で使う** | **Doppler `<app>/{dev,stg,prd}`**（GitHub へ sync） | ツールが読む正式名（`GITHUB_` 禁止） |
+| 外部サービスのシークレットで、**インフラ操作に使う** | **Doppler `all/all` / `<app>/bootstrap`**（sync 無し） | フルネーム（`SUPABASE_ACCESS_TOKEN` 等 OK） |
+| **Edge Functions だけ**が使う自前シークレット | **Supabase の secrets**（`config.toml` の `env()` 経由。`.claude/rules/supabase-config.md`） | **`SUPABASE_` 以外**（`ONE_SIGNAL_API_KEY` 等） |
+| ローカル開発の非機密既定値 | `env/<svc>/.env.local` | 制約なし（`env/README.md`） |
 
 ---
 
@@ -99,6 +168,34 @@ sync 全体が予約値違反で失敗する**（一部の secret だけ届か�
   **本リポジトリはこの名前を参照していないため影響しない**。
 - 上記いずれかで実際に名前がズレた場合の対処は **Vercel 側で別名の env var を追加**すること。
   **Doppler には戻さない**（`SUPABASE_` prefix は登録できないため）。
+
+### 2.5 Supabase 内でのやりとりで使う名前（Edge Functions の default secrets）
+
+**Edge Functions では、以下が PF から自動で入る。`supabase secrets set` も `.env` も要らない。**
+この名前をそのまま読むこと（§0.1）。
+
+| 名前 | 中身 | 備考 |
+|---|---|---|
+| `SUPABASE_URL` | プロジェクトの API ゲートウェイ URL | |
+| `SUPABASE_DB_URL` | Postgres 接続文字列 | Drizzle / postgres.js の接続に使う（`shared/db/url.ts`） |
+| `SUPABASE_PUBLISHABLE_KEYS` | publishable キーの **JSON 辞書**（`{"default": "sb_publishable_..."}`） | **複数形・JSON**。`JSON.parse(...)['default']` で取り出す |
+| `SUPABASE_SECRET_KEYS` | secret キーの **JSON 辞書**（`{"default": "sb_secret_..."}`） | **複数形・JSON**。RLS をバイパスするのでブラウザへ出さない |
+| `SUPABASE_JWKS` | ユーザー JWT 検証用の JSON Web Key Set | |
+| `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY` | **レガシー**キー（文字列） | 2026 年末まで動作。新規実装の第一候補にしない |
+
+出典: [Supabase: Environment Variables（Default secrets）](https://supabase.com/docs/guides/functions/secrets) /
+[Migrating to publishable and secret API keys](https://supabase.com/docs/guides/getting-started/migrating-to-new-api-keys)
+
+> ⚠️ **複数形（`*_KEYS`）と単数形（`*_KEY`）を混同しない。** Edge Functions に入るのは
+> **複数形の JSON 辞書**で、`SUPABASE_SECRET_KEY` / `SUPABASE_PUBLISHABLE_KEY`（単数）は
+> **default secrets に存在しない**。単数形で `Deno.env.get()` しても `undefined` になり、
+> レガシーキーへフォールバックする実装ではそれに気づけない。
+> 一方、**Vercel の env に注入されるのは単数形**（§2 の表）である。**面ごとに名前が違う**ので、
+> 実装する前にその面の正式名を確認すること。
+
+**Edge Functions で自前のシークレットを使う場合**は、`SUPABASE_` **以外**の名前にする
+（`ONE_SIGNAL_API_KEY` / `STRIPE_SECRET_KEY` …）。`SUPABASE_` で始まる名前は PF が登録を拒否する。
+値の配線は `config.toml` の `env()`（`.claude/rules/supabase-config.md`）。
 
 ---
 
@@ -204,6 +301,23 @@ SB_ACCESS_TOKEN / VC_TOKEN / SB_DB_PASSWORD
 # ❌ NG: Supabase の値が要るからと Edge Functions の secrets に SUPABASE_* を set する
 # ❌ NG: 数字始まり（`1PASSWORD_TOKEN`）／ハイフン・スペース入りのキー名
 
+# ❌ NG（厳命 ① 違反）: PF が配る SUPABASE_* を自分の別名へ写して参照する
+SB_URL / MY_SUPABASE_URL / PROJECT_URL / NEXT_PUBLIC_SB_URL
+#   → Edge Functions は `Deno.env.get("SUPABASE_URL")`、Vercel は注入名をそのまま読む
+
+# ❌ NG（厳命 ① 違反）: Edge Functions の自前シークレットに SUPABASE_ を付ける
+SUPABASE_ONESIGNAL_KEY / SUPABASE_STRIPE_KEY   # → ONE_SIGNAL_API_KEY / STRIPE_SECRET_KEY
+
+# ❌ NG（厳命 ① 違反）: 単数形と複数形を取り違える
+Deno.env.get("SUPABASE_SECRET_KEY")       # Edge Functions の default secrets に存在しない
+# ✅ Edge Functions は複数形の JSON 辞書
+JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS")!)["default"]
+
+# ❌ NG（厳命 ② 違反）: 秘密でない値・ローカル専用の値を Doppler に入れる
+SUPABASE_PROJECT_REF        # → GitHub Actions variable（§3.1）
+LOCAL_SUPABASE_PORT         # → env/<svc>/.env.local
+DEFAULT_PAGE_SIZE           # → ソースコードの定数
+
 # ✅ OK: 非予約 prefix
 OPENAI_API_KEY / NEXT_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_URL
 POSTGRES_URL / DATABASE_URL / GH_TOKEN
@@ -217,6 +331,8 @@ SUPABASE_ACCESS_TOKEN / SUPABASE_DB_PASSWORD / VERCEL_TOKEN / DOPPLER_TOKEN
 
 Doppler に新しいキーを作る前に、**必ず**以下を順に確認する:
 
+0. **§0.3 の決定表を引いたか？** そもそも Doppler が置き場所でない値（PF が供給する `SUPABASE_*` /
+   非機密の識別子 / ローカル専用の既定値）を Doppler へ入れようとしていないか。
 1. **そもそも Doppler に要るか？** Supabase の値なら §2 のとおり**不要**（PF が注入する）。
 2. **その config に native sync が付いているか？** 付いているなら §1 の表で禁止 prefix を確認する
    （`dev`/`stg`/`prd` は GitHub sync 対象 → `GITHUB_` 禁止）。sync が無い `all` / `bootstrap` なら
@@ -242,6 +358,13 @@ Doppler に新しいキーを作る前に、**必ず**以下を順に確認す�
 
 このポリシーは**交渉の余地なし**。
 
+- **厳命 ①（§0.1）違反は却下**する: PF が供給する `SUPABASE_*` を別名へ写す、`SUPABASE_` で始まる
+  キーを新規に作る（Doppler / Supabase secrets / Vercel env のいずれでも）、Edge Functions の
+  自前シークレットに `SUPABASE_` を付ける、単数形と複数形（`SUPABASE_SECRET_KEY(S)`）を
+  取り違える — いずれも実装・提案の時点で却下。
+- **厳命 ②（§0.2）違反は却下**する: PF が自動供給する値・非機密の識別子・ローカル専用の
+  非機密既定値を Doppler に入れる提案は却下。逆に、**環境をまたいで共有すべきシークレットを
+  Doppler 以外（`.env` 直書き・コード内リテラル・Dashboard 手入力）に置く提案も却下**する。
 - **native sync が付いている config**（`<app>/{dev,stg,prd}` = GitHub sync）に、その sync 先が
   予約する prefix のキーを登録する実装・提案は**レビューで却下**する。
 - 逆に、**sync の無い config（`all` / `<app>/bootstrap`）で意味もなく省略形にする実装も却下**する。

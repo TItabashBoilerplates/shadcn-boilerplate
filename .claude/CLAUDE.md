@@ -48,7 +48,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 │   ├── mcp-supabase.md       # Supabase インフラ操作は MCP（supabase / supabase-prod）必須
 │   ├── supabase-config.md    # Supabase 設定は config.toml に集約（DB のみ Drizzle 例外）・[remotes.*] 必須・メールテンプレートは [auth.email.template.*]
 │   ├── mcp-doppler.md        # Doppler シークレットの読み書きは doppler MCP 必須（書込はフェーズ制: 初期構築=full / 本番=prd 承認制・値の露出禁止）
-│   ├── env-naming.md         # キー名は読む側のツール名に揃える（省略形を作らない）・sync が付く config のみ予約 prefix 禁止・Supabase env は Vercel Marketplace 連携が注入
+│   ├── env-naming.md         # ★厳命: Supabase 内は SUPABASE_* を「読む」だけ（作る/写すは禁止）・Doppler は各環境で共有するシークレット専用。キー名は読む側のツール名に揃える・sync が付く config のみ予約 prefix 禁止
 │   ├── auth.md               # 認証方式（Mobile はメール+パスワード必須・OTP のみ禁止 / メール再設定・パスワード忘れ・パスワード変更の導線必須）
 │   ├── store-review.md       # ストア審査の不変条件（第三者AIへの事前同意 / privacy manifest / target API 36 / 掲載情報と実装の一致）
 │   └── python-monorepo.md    # backend-py の uv workspace 構造（apps/+packages/、src-layout、単一uv.lock）必須
@@ -209,6 +209,8 @@ Full-stack application boilerplate with multi-platform frontend and backend serv
 **MANDATORY**（派生プロジェクトで `config.toml` を作る時点から適用。boilerplate 本体には config.toml を置かない）: `supabase/config.toml` を**新規生成・更新するときは、リモート環境ごとに `[remotes.<name>]` を必ず書く**。公式仕様上「**宣言が無い / `project_id` が違うと、その環境への設定適用ステップは丸ごとスキップされる**」（[Branching: Configuration](https://supabase.com/docs/guides/deployment/branching/configuration)）。**スキップはエラーも警告も出さない**ため、「メールテンプレートだけ反映されない」という形でしか気づけない — これが本リポジトリで繰り返し起きている不具合の根因である。`project_id` には **`supabase --experimental branches list` の BRANCH PROJECT ID**（親 project の ref ではない）を、**ブロックごとに異なる値**で入れる。persistent branch を**先に作ってから**書くこと。メールテンプレート等の共通設定は **root に 1 回**書けばよく（`[remotes.X]` が存在すれば root がベースとして適用される）、remotes 側へのコピーは不要。詳細は `.claude/rules/supabase-config.md` §1.5 と `.claude/skills/supabase-config/references/multi-environment.md`。
 
 **MANDATORY**: Doppler 上のシークレット（projects / configs / secrets）を**調査・作成・更新**する場合は、必ず **`doppler` MCP**（read-write）を使用する。Bash で `doppler secrets set` / `doppler secrets delete` を直接叩くのは禁止。書き込み許可は**フェーズ制**（`.claude/rules/mcp-doppler.md` 冒頭の `PHASE:` を書き込み前に必ず確認）: **初期構築（full-access）= 全 config 可** / **本番（protected）= `prd` 書き込みは明示承認制**。フェーズ不明時は本番（protected）として扱う。**シークレットの値をチャット / ログ / コミットに出さない**（キー名のみで会話）。詳細は `.claude/rules/mcp-doppler.md`。
+
+**MANDATORY（厳命 / 交渉の余地なし）**: **① Supabase 内でのやりとりは `SUPABASE_` プレフィックスを適切に活用する** — Supabase の接続情報は**プラットフォームが `SUPABASE_*` という正式名で自動供給する**（Edge Functions は default secrets、Vercel は Marketplace 連携が注入）。したがってエージェントがやることは**その名前のまま読むことだけ**であり、**別名へ写す（`SB_URL` / `MY_SUPABASE_URL`）・`SUPABASE_` 始まりのキーを新規に作る（`supabase secrets set` / Vercel env / Doppler のいずれも）・`.env` や Doppler へ複製する**のはすべて禁止（Supabase の secrets store は `SUPABASE_` 始まりの登録を PF が拒否し、Doppler は sync が config ごと落ちる）。**唯一の例外は PF が配ってくれないインフラ操作用の資格情報**（`SUPABASE_ACCESS_TOKEN` / `SUPABASE_DB_PASSWORD`）で、これは **sync の無い Doppler config（`all` / `<app>/bootstrap`）にフルネームで置く**。**Edge Functions の自前シークレットは `SUPABASE_` 以外の名前**にする（`ONE_SIGNAL_API_KEY` 等）。**Edge Functions の default secrets は `SUPABASE_URL` / `SUPABASE_DB_URL` / `SUPABASE_PUBLISHABLE_KEYS` / `SUPABASE_SECRET_KEYS`（後者 2 つは複数形の JSON 辞書。`JSON.parse(...)['default']` で取り出す）/ `SUPABASE_JWKS` + レガシーの `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY`** で、**Vercel に注入されるのは単数形**（`SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY`）— **面ごとに名前が違うので実装前に必ず確認する**（単数形を Edge Functions で読むと無言で `undefined` になる）。**② Doppler は「各環境（dev / stg / prd）・人・CI をまたいで共有する必要があるシークレット（API キー / トークン / 接続文字列）」を管理する場所** であり、**PF が自動供給する値（`SUPABASE_*` / `VERCEL_*` / `GITHUB_TOKEN`）・非機密の識別子（`SUPABASE_PROJECT_REF` → GitHub Actions variable）・ローカル専用の非機密既定値（`env/<svc>/.env.local`）は Doppler に置かない**。逆に、**共有が要るシークレットを `.env` 直書き・コード内リテラル・Dashboard 手入力で持つのも禁止**。詳細は `.claude/rules/env-naming.md` §0。
 
 **MANDATORY**: **Doppler のキー名は「その値を使うツールが実際に読む名前」に揃える**（`SB_*` / `VC_*` のような省略形を機械的に作らない。読み替えが要るのは同じ資格情報を 2 つのツールが別名で読むときだけで、その橋渡しは `scripts/infra/tf.sh` に閉じ込める）。**ただし native sync が付いている config では、その sync 先が予約する prefix を使ってはならない**。sync は config 単位で全キーを push するため、1 キーの命名ミスで**その config の sync 全体が予約値違反で失敗する**（GitHub:「Must not start with the `GITHUB_` prefix」／ Supabase:「Env name cannot start with SUPABASE_」／ Vercel: `VERCEL_*` は system 環境変数）。本リポジトリでは `<app>/{dev,stg,prd}` が GitHub Actions へ sync されるので **`GITHUB_` が禁止**、sync を張っていない `all` / `<app>/bootstrap` は **`SUPABASE_ACCESS_TOKEN` / `SUPABASE_DB_PASSWORD` / `VERCEL_TOKEN` / `DOPPLER_TOKEN` のようにフルネームで持つ**。**とくに Supabase の環境変数は Doppler で管理しない** — **Vercel（web / backend）へは Vercel Marketplace の Supabase 連携（Connect Account）が `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` / `NEXT_PUBLIC_SUPABASE_*` / `POSTGRES_*` を自動注入**し、**Edge Functions へは Supabase platform が default secrets として自動提供**する。つまり「Supabase の値が要る」は Doppler にキーを作る理由にならない（二重管理も禁止）。ローカルの `env/<svc>/.env.local` はファイル管理なので本制約の対象外。詳細は `.claude/rules/env-naming.md` を参照。
 
@@ -381,10 +383,11 @@ env/
 └── migration/.env.local       # Database migration 非機密 config
 ```
 
-> シークレット・リモート値は Doppler 一本（ファイルに置かない）。新規キーは `doppler-set <KEY>`。
+> **各環境で共有するシークレット**（外部 API キー / トークン / 接続文字列）は Doppler 一本（ファイルに置かない）。新規キーは `doppler-set <KEY>`。
 > ⚠️ **`GITHUB_` / `SUPABASE_` / `VERCEL_` prefix は Doppler に登録禁止**（sync が予約値違反で落ちる）。
-> Supabase の env は **Vercel Marketplace の Supabase 連携**（Vercel）と **default secrets**（Edge Functions）
-> が自動供給する。詳細は `.claude/rules/env-naming.md`。
+> **Supabase 内でのやりとりは `SUPABASE_*` をそのまま読む**（別名を作らない）。値は
+> **Vercel Marketplace の Supabase 連携**（Vercel）と **default secrets**（Edge Functions）が自動供給する。
+> **非機密の識別子・ローカル専用の既定値は Doppler に入れない**。詳細は `.claude/rules/env-naming.md` §0。
 
 > シークレットは **Doppler 管理**（`$ENV` 駆動・ファイルフォールバック廃止）。`env/<svc>/.env.<ENV>`
 > は非機密 config のみ。詳細は `env/README.md` / `.claude/skills/doppler/SKILL.md`。

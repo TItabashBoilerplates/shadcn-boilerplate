@@ -35,10 +35,18 @@ PHASE: 初期構築（full-access）
 
 ## フェーズに依存しない常時ルール（全フェーズ共通）
 
-- **予約 prefix のキーを作らない**: `GITHUB_` / `SUPABASE_` / `VERCEL_` 始まりのキーは**全 config で
-  登録禁止**（各 PF の予約名前空間 → ネイティブ連携の sync が予約値違反で落ち、その config 全体が
-  届かなくなる）。**Supabase の env は Doppler で管理しない**（Vercel Marketplace の Supabase 連携と
-  Edge Functions の default secrets が供給する）。詳細・代替命名は **`.claude/rules/env-naming.md`**。
+- **Doppler は「各環境で共有するシークレット」だけを置く**: 環境（dev / stg / prd）・人・CI を
+  またいで共有する **API キー / トークン / 接続文字列**が対象。**PF が自動供給する値
+  （`SUPABASE_*` の接続情報 / `VERCEL_*` / `GITHUB_TOKEN`）・非機密の識別子（`SUPABASE_PROJECT_REF`）・
+  ローカル専用の非機密既定値は入れない**（`.claude/rules/env-naming.md` §0.2）。
+- **sync 先が予約する prefix のキーを、その sync が付いている config に作らない**:
+  **`<app>/{dev,stg,prd}` は GitHub Actions へ sync されるので `GITHUB_` 始まりが禁止**
+  （1 キーの違反でその config の sync 全体が落ち、一部の secret だけ届かない形で壊れる）。
+  sync の無い `all` / `<app>/bootstrap` は**フルネームで持つ**（`SUPABASE_ACCESS_TOKEN` /
+  `SUPABASE_DB_PASSWORD` / `VERCEL_TOKEN` / `DOPPLER_TOKEN`）。**省略形を機械的に作らない**。
+- **Supabase 内でのやりとりは `SUPABASE_` をそのまま読む**: 接続情報は Vercel Marketplace の
+  Supabase 連携（Vercel）と default secrets（Edge Functions）が供給するので、**Doppler に登録しない**
+  （二重管理）。判断は **`.claude/rules/env-naming.md` §0.3 の決定表**を引くこと。
 - **`doppler` MCP 経由のみ**で読み書きする（Bash の `doppler secrets set/delete` 直叩き禁止）。
 - **シークレットの値をチャット / ログ / コミット / PR に出さない**。会話は**キー名のみ**で行う
   （例: 「`STRIPE_API_KEY` を dev に追加します」。値は表示しない）。値はファイルや `.env*` にも書かない。
@@ -77,9 +85,13 @@ doppler secrets set STRIPE_API_KEY=sk_live_xxx --config prd
 # ❌ NG: 値をチャットやコミットに出す（全フェーズ）
 echo "新しい値は sk_live_xxx です"
 
-# ❌ NG: 予約 prefix のキーを Doppler に作る（MCP 経由でも同じく禁止。sync が壊れる）
-#    SUPABASE_URL / SUPABASE_SECRET_KEY / VERCEL_TOKEN / GITHUB_TOKEN ...
-#    → env-naming.md の代替命名（SB_* / VC_* / GH_*）を使う。Supabase の値はそもそも登録不要
+# ❌ NG: GitHub へ sync される config（dev/stg/prd）に GITHUB_ 始まりのキーを作る
+#    （MCP 経由でも同じく禁止。その config の sync 全体が落ちる）→ gh CLI の公式名 GH_TOKEN を使う
+
+# ❌ NG: PF が供給する Supabase の接続情報を Doppler に登録する（二重管理）
+#    SUPABASE_URL / SUPABASE_SECRET_KEYS / SUPABASE_DB_URL ... → そもそも登録不要（読むだけ）
+# ✅ OK: PF が配らないインフラ資格情報は sync の無い config にフルネームで
+#    all/all: SUPABASE_ACCESS_TOKEN / VERCEL_TOKEN / DOPPLER_TOKEN / EXPO_TOKEN
 
 # ✅ OK: doppler MCP の update ツールでキー名指定（フェーズの許可レベルに従う）
 # ✅ OK: 移行の一括投入は doppler-import（例外、下記）
@@ -107,5 +119,7 @@ echo "新しい値は sk_live_xxx です"
 ## 強制事項
 
 このポリシーは**交渉の余地なし**。Bash で `doppler secrets set/delete` を直接叩く実装・提案、
-**シークレット値の露出**、**予約 prefix（`GITHUB_` / `SUPABASE_` / `VERCEL_`）のキー登録**、
-および**フェーズ宣言を無視した `prd` 書き込み（本番フェーズ）**は**レビューで却下**する。
+**シークレット値の露出**、**sync 先が予約する prefix のキー登録（`<app>/{dev,stg,prd}` への
+`GITHUB_` 始まり）**、**PF が供給する Supabase 接続情報の Doppler 登録**、**共有シークレット以外
+（非機密の識別子 / ローカル専用の既定値）の Doppler 登録**、および**フェーズ宣言を無視した
+`prd` 書き込み（本番フェーズ）**は**レビューで却下**する。
