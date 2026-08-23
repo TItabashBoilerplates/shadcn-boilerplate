@@ -316,6 +316,40 @@ bash には `test` / `time` / `kill` / `printf` / `read` / `true` / `false` / `l
 | 新しい install 出力ディレクトリが `/nix/store` 外にできる（例: 新しい monorepo を `tools/` 配下に追加し独自 `node_modules` ができる） | `actions/cache@v4` の `path:` リストに追加。漏らすと CI で「cache hit したのに必要なツールが見つからない」事故が起きる |
 | 新しいパッケージマネージャを導入（pnpm / yarn 等） | install 出力先を確認のうえ `actions/cache` の path に追加 |
 
+## Supabase を CI で起こす（公式手順との対応）
+
+Supabase 公式は GitHub Actions 向けに **2 つ**のワークフローを示している
+（[Automated testing using GitHub Actions](https://supabase.com/docs/guides/deployment/ci/testing)）:
+
+| 目的 | 公式の形 | 本リポジトリ |
+|---|---|---|
+| pgTAP | `supabase db start` → `supabase test db` | `ci.yml` の **`db-tests`** ジョブ |
+| Edge Functions | `supabase start` → `deno test --allow-all` | **`test-functions`** script（`unit-test` に含まれる。Supabase の起動は不要） |
+| Web の UI/E2E | （公式に例は無い） | `ci.yml` の **`e2e-web`**（runner が `supabase-start` + Next.js を面倒見る） |
+
+**`supabase start` と `supabase db start` を取り違えないこと。**
+pgTAP に要るのは Postgres だけで、フルスタックを起こすと CI が数分無駄になる。
+
+### CLI の入手は **devenv 経由**（`supabase/setup-cli` は使わない）
+
+公式ドキュメントは `supabase/setup-cli` を案内しているが、**本リポジトリでは採らない**:
+
+- supabase CLI は **devenv（Nix）が pin して提供**するのが唯一の経路
+  （`.claude/rules/commands.md`）。`deploy-supabase.yml` も同じ
+- setup-cli を足すと CLI の出所が 2 つになり、**CI とローカルで別バージョン**を使うことになる
+- ⚠️ なお公式ドキュメントの `setup-cli@v1` は**古い**。action の README は `@v3`。
+  参照する側がバージョンを間違えやすいので、この点でも 2 経路は持たない
+
+### CI とローカルで**起動するサービスを変えない**
+
+`supabase start -x <container>` で Studio などを除外すれば CI は速くなるが、
+**「ローカルでは通るのに CI で落ちる」を作る**ので採らない。
+
+> 詳細と実測は `docs/_research/2026-08-23-supabase-github-actions.md`。
+> **`supabase test db` は TAP のプランが無いファイルが 1 つでもあると
+> スイート全体が FAIL する**（テストが 0 件でも）ことも実測済み。
+
+
 ## 参考テンプレート（最小骨格）
 
 ```yaml

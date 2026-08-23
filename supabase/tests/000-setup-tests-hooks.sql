@@ -1,31 +1,52 @@
 -- ============================================================================
 -- 000-setup-tests-hooks.sql
 --
--- pgTAP + supabase-test-helpers の共通セットアップ。
--- `supabase test db` はアルファベット順でファイルを評価するため、
--- このファイル名（000- プレフィックス）で必ず最初に実行される。
+-- pgTAP の共通セットアップ。`supabase test db` はアルファベット順でファイルを
+-- 評価するため、このファイル名（000- プレフィックス）で必ず最初に実行される。
+--
+-- ⚠️ **このファイルも TAP を出力しなければならない。**
+--   `pg_prove` は各ファイルに TAP のプランを要求する。拡張を作るだけで
+--   `plan()` を出さないと "No plan found in TAP output" のパースエラーになり、
+--   **テストが 0 件でもスイート全体が FAIL する**（実際にそうなっていた）。
+--   したがってここでも 1 件だけアサーションを出す。
+--
+-- ⚠️ **各ファイルは自動でトランザクションに包まれ、ロールバックされる。**
+--   つまりここで作ったオブジェクトは後続のファイルには残らない。
+--   共有したいものは各テストファイルの冒頭で自前に用意すること。
 --
 -- 詳細は .claude/skills/pgtap/SKILL.md を参照。
 -- ============================================================================
 
--- pgTAP 拡張を有効化（extensions スキーマに配置して public を汚さない）
+-- pgTAP 拡張（extensions スキーマに置いて public を汚さない）。
+-- ロールバックされる可能性があるのでトランザクションの外で実行する。
 create extension if not exists pgtap with schema extensions;
 
+begin;
+
+select plan(1);
+
+select has_extension(
+  'extensions',
+  'pgtap',
+  'pgtap 拡張が extensions スキーマにロードされている'
+);
+
+select * from finish();
+
+rollback;
+
 -- ----------------------------------------------------------------------------
--- supabase-test-helpers を tests スキーマにロード
+-- supabase-test-helpers について
 --
--- 提供される関数:
---   tests.create_supabase_user(identifier, email?, phone?, metadata?)
---   tests.authenticate_as(identifier)
---   tests.authenticate_as_service_role()
---   tests.clear_authentication()
---   tests.get_supabase_uid(identifier)
+-- 行レベルの RLS 検証（「alice は bob の行を見られない」等）には
+-- https://github.com/usebasejump/supabase-test-helpers が要る:
+--   tests.create_supabase_user / tests.authenticate_as /
+--   tests.authenticate_as_service_role / tests.get_supabase_uid
 --
--- インストール方法は helpers のバージョンにより異なる:
---   - https://github.com/usebasejump/supabase-test-helpers の最新 SQL を
---     このファイルに取り込む、あるいは別ファイル（例: 000-helpers.sql）に分離する
---   - 初回セットアップ時に database.dev / dbdev 経由でインストールする場合もある
+-- **このリポジトリにはまだ取り込んでいない。** 取り込むまでは、RLS の
+-- 「設定が正しいか」（有効化・ポリシーの過不足・対象ロール・対象コマンド）を
+-- users_rls.sql のようにスキーマレベルで検証する。
 --
--- このファイルは helpers がまだ手元にない状態で残しているため、
--- 実テストを書き始める前に helpers のロード手順を追加すること。
+-- ⚠️ 手で `set local request.jwt.claims` を組み立てるのは禁止
+--    （ロール切替まで面倒を見てくれないので、通ったつもりの穴が空く）。
 -- ----------------------------------------------------------------------------

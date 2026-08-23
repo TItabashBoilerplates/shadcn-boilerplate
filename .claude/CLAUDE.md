@@ -316,11 +316,12 @@ format-frontend / format-drizzle / format-backend-py / format-functions
 type-check-frontend / type-check-mobile / type-check-backend-py / check-functions
 
 # Tests
-unit-test                     # 全 unit test (frontend + drizzle + backend-py) ※ `test` は bash 組み込みと衝突するため `unit-test`
+unit-test                     # 全 unit test (frontend + drizzle + backend-py + edge functions) ※ `test` は bash 組み込みと衝突するため `unit-test`
 test-frontend                 # Vitest
 test-drizzle                  # bun test（migration 接続先ガード等）
 test-backend-py               # pytest
-test-db                       # pgTAP DB tests
+test-functions                # Edge Functions (Deno)
+test-db                       # pgTAP DB tests（Supabase 公式の CI 手順と同じ）
 e2e / e2e-web / e2e-mobile    # Maestro UI/E2E（--env local|staging|production で切替）
 e2e-ui                        # UI テストのみ（バックエンドに書き込まない）
 e2e-storyboard                # 直前の実行のスクショを 1 枚の HTML にまとめ直す

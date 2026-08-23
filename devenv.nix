@@ -1694,7 +1694,13 @@ in
     # pytest は member (api/core) とその依存を import するので `--all-packages` 必須
     # (type-check:backend-py のコメント参照)。ruff は import 解決不要なので素の uv run でよい。
     "test-backend-py" = { exec = ''cd "$DEVENV_ROOT/backend-py" && uv run --all-packages pytest''; description = "pytest (backend-py workspace)"; };
+    # pgTAP。Supabase 公式の CI 手順（supabase db start → supabase test db）と同じもの。
+    # Refs: https://supabase.com/docs/guides/deployment/ci/testing
     "test-db"         = { exec = ''supabase test db --local''; description = "pgTAP DB tests"; };
+    # Edge Functions の Deno テスト。公式の functions-tests ワークフローが
+    # `deno test --allow-all` を回すのと同じ位置づけ。
+    # Refs: https://supabase.com/docs/guides/deployment/ci/testing
+    "test-functions"  = { exec = ''cd "$DEVENV_ROOT/supabase/functions" && exec deno test --allow-all "$@"''; description = "Edge Functions unit tests (Deno)"; };
     # NOTE: `test` という名前は bash 組み込みコマンド（`[` と等価）と衝突し、
     # PATH 上の同名スクリプトより builtin が優先される。CI で `run: test` を呼ぶと
     # 引数なしの builtin `test` が exit 1 を返してジョブが落ちるため、`unit-test`
@@ -1706,10 +1712,13 @@ in
         test-frontend
         test-drizzle
         test-backend-py
+        # Edge Functions は Supabase の起動が要らない純粋な Deno テストなので
+        # ここに含める（pgTAP は DB が要るので test-db に分けてある）。
+        test-functions
         echo "✅ All unit tests passed."
-        echo "💡 Run 'test-db' for pgTAP DB tests, 'e2e' for Maestro E2E."
+        echo "💡 Run 'test-db' for pgTAP DB tests, 'e2e' for Maestro UI/E2E."
       '';
-      description = "Run all unit tests (frontend + drizzle + backend-py)";
+      description = "Run all unit tests (frontend + drizzle + backend-py + edge functions)";
     };
     # ---------- Maestro UI / E2E ----------
     # 環境の切り替えは runner が Maestro 公式の 2 つの仕組みで行う:

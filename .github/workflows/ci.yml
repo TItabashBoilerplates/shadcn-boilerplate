@@ -177,6 +177,57 @@ jobs:
       - name: Run unit tests
         run: unit-test
 
+  db-tests:
+    name: DB Tests (pgTAP / supabase test db)
+    runs-on: ubuntu-latest
+    # Supabase 公式の CI 手順に対応するジョブ。
+    #   https://supabase.com/docs/guides/deployment/ci/testing
+    #     - uses: supabase/setup-cli@v3
+    #     - run: supabase db start
+    #     - run: supabase test db
+    #
+    # ■ 公式との違いは 1 点だけ: CLI の入手方法
+    #   公式は `supabase/setup-cli` で CLI を入れるが、このリポジトリは
+    #   **devenv（Nix）が supabase CLI を pin して提供する**のを唯一の経路に
+    #   している（.claude/rules/commands.md）。setup-cli を足すと CLI の出所が
+    #   2 つになり、**CI とローカルで別バージョンを使う**ことになるため採らない。
+    #   deploy-supabase.yml も同じ理由で devenv 経由に揃えてある。
+    #
+    # ■ `supabase start` ではなく `supabase db start`
+    #   pgTAP に要るのは Postgres だけ。公式の database-tests ワークフローも
+    #   `supabase db start` を使う。フルスタックを起こすと数分無駄になる。
+    steps:
+      - uses: actions/checkout@v5
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            keep-outputs = true
+            keep-env-derivations = true
+      - uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('devenv.nix', 'devenv.lock', 'devenv.yaml') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+          gc-max-store-size-linux: 5G
+          purge: true
+          purge-prefixes: nix-${{ runner.os }}-
+          purge-created: 0
+          purge-primary-key: never
+      - uses: cachix/cachix-action@v16
+        with:
+          name: devenv
+      - name: Install devenv.sh
+        shell: bash
+        run: nix profile add nixpkgs#devenv
+      # Postgres だけ起こす（pgTAP は API / Studio / Storage を要らない）
+      - name: Start Postgres (supabase db start)
+        run: supabase db start
+      # 公式手順どおり pg_prove をコンテナで回す
+      - name: Run pgTAP tests (supabase test db)
+        run: test-db
+      - name: Stop local services
+        if: always()
+        run: supabase stop --no-backup || true
+
   e2e-web:
     name: E2E (Web / Maestro headless Chromium)
     runs-on: ubuntu-latest
