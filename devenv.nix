@@ -1711,12 +1711,24 @@ in
       '';
       description = "Run all unit tests (frontend + drizzle + backend-py)";
     };
-    "e2e"      = { exec = ''cd "$DEVENV_ROOT/.maestro" && maestro test .''; description = "Maestro E2E (all)"; };
-    "e2e-web"  = { exec = ''cd "$DEVENV_ROOT/.maestro" && maestro test web/''; description = "Maestro E2E (web)"; };
-    "e2e-mobile" = { exec = ''cd "$DEVENV_ROOT/.maestro" && maestro test mobile/''; description = "Maestro E2E (mobile)"; };
-    # CCR / web-sandbox only: Maestro has no runnable target here (web=0 devices,
-    # mobile=no emulator), so drive the web app via Playwright + prebaked Chromium.
-    "e2e-web-ccr" = { exec = ''exec bash "$DEVENV_ROOT/e2e/run-ccr.sh"''; description = "Web E2E for CCR sandbox (Playwright + Chromium)"; };
+    # ---------- Maestro UI / E2E ----------
+    # 環境の切り替えは runner が Maestro 公式の 2 つの仕組みで行う:
+    #   --config     … どのフローを走らせるか（local = 全部 / remote = mailbox・admin を除外）
+    #   -e KEY=VALUE … どの URL・どの資格情報を使うか
+    # 使い方は `e2e --help`、設計の根拠は docs/_research/2026-08-23-maestro-e2e.md。
+    #
+    #   e2e                                   # ローカル・全部
+    #   e2e-web --suite ui                    # Web の UI テストだけ
+    #   e2e --env production --suite smoke    # 本番に対するスモーク（書き込まない）
+    #
+    # 実行中のスクリーンショットは e2e-results/maestro/shots/ に通し番号つきで積まれ、
+    # 終了時に storyboard.html（1 枚で全部見られる HTML）が生成される。
+    "e2e"        = { exec = ''exec bash "$DEVENV_ROOT/scripts/e2e/maestro.sh" "$@"''; description = "Maestro UI/E2E (all platforms)"; };
+    "e2e-web"    = { exec = ''exec bash "$DEVENV_ROOT/scripts/e2e/maestro.sh" --platform web "$@"''; description = "Maestro UI/E2E (web, headless Chromium)"; };
+    "e2e-mobile" = { exec = ''exec bash "$DEVENV_ROOT/scripts/e2e/maestro.sh" --platform android "$@"''; description = "Maestro UI/E2E (mobile; needs an emulator/simulator)"; };
+    "e2e-ui"     = { exec = ''exec bash "$DEVENV_ROOT/scripts/e2e/maestro.sh" --suite ui "$@"''; description = "Maestro UI tests only (no backend writes)"; };
+    # 走らせずに、直前の結果からスクショの通し番号付きコピーと storyboard を作り直す
+    "e2e-storyboard" = { exec = ''exec node "$DEVENV_ROOT/scripts/e2e/shots.mjs" "$@"''; description = "Rebuild e2e-results/maestro/storyboard.html from the last run"; };
 
     # ---------- Drizzle ----------
     "drizzle-push"     = { exec = ''cd "$DEVENV_ROOT/drizzle" && nr push''; description = "Drizzle: push schema (no migration file)"; };

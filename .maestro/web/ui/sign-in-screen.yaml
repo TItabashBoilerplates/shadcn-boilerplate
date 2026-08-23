@@ -1,0 +1,66 @@
+# UI: ログイン画面に「必須の導線」が全部あり、失敗系が行き止まりにならないこと
+#
+# `.claude/rules/auth.md` と `.claude/rules/store-review.md` が要求する不変条件を
+# **実際の画面**で守る。ユニットテスト（`required-flows.test.ts`）はソースの静的
+# 検査なので、「配線が外れて画面に出ていない」ことまでは分からない。
+#
+# バックエンドには**書き込まない**（誤った資格情報でのログイン試行のみ）ので、
+# リモート環境に対しても安全に走る。
+
+url: ${WEB_BASE_URL}
+name: "Web UI - Sign-in screen"
+tags:
+  - web
+  - ui
+  - auth
+  - smoke
+
+env:
+  WEB_BASE_URL: ${WEB_BASE_URL || "http://localhost:3000"}
+  LOCALE: ${LOCALE || "en"}
+
+---
+- launchApp:
+    clearState: true
+- openLink: ${WEB_BASE_URL}/${LOCALE}/login
+
+# --- 必須要素 ---------------------------------------------------------------
+- assertVisible: "Sign in"
+- assertVisible: "Email address"
+- assertVisible: "Password"
+# 「パスワードをお忘れですか？」が**ログイン画面に**あること。
+# 忘れた人はログインできない = 設定画面に置いても到達できない。
+- assertVisible: ".*Forgot your password.*"
+# サインアップ導線
+- assertVisible: ".*Don't have an account.*"
+- takeScreenshot: web-ui-signin-01-sign-in-initial
+
+# --- パスワード表示切替（12 文字以上の要件があるので実質必須の救済策）--------
+- tapOn:
+    id: "password"
+- inputText: "not-the-real-password"
+# アイコンだけのボタンなのでテキストでは指せない。実装側で id を振ってある。
+- tapOn:
+    id: "password-visibility-toggle"
+- takeScreenshot: web-ui-signin-02-password-visible
+- tapOn:
+    id: "password-visibility-toggle"
+
+# --- 失敗系: 誤った資格情報でも行き止まりにならないこと ----------------------
+- tapOn:
+    id: "email"
+- inputText: "no-such-user-e2e@test.local"
+- tapOn:
+    id: "sign-in-submit"
+- extendedWaitUntil:
+    visible: ".*Incorrect email address or password.*"
+    timeout: 20000
+- takeScreenshot: web-ui-signin-03-invalid-credentials
+
+# --- 再設定へ抜けられること --------------------------------------------------
+- tapOn: ".*Forgot your password.*"
+- assertVisible: "Reset your password"
+- assertVisible: "Back to sign in"
+- takeScreenshot: web-ui-signin-04-forgot-password
+- tapOn: "Back to sign in"
+- assertVisible: "Sign in"

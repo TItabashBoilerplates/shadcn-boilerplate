@@ -1,0 +1,27 @@
+# メールアドレス + パスワードでログインするサブフロー（Mobile）。
+#
+# 呼び出し側が渡す env: EMAIL / PASSWORD
+# 親から引き継がれる env: APP_ID / MOBILE_SCHEME
+
+appId: ${APP_ID}
+---
+- openLink: ${MOBILE_SCHEME}://sign-in
+- assertVisible: "Sign in"
+
+# `id:` は AuthField の `testID`（Android の resource-id / iOS の
+# accessibilityIdentifier）に一致する。ラベルのテキストをタップすると
+# ラベルの Text 要素に当たって入力欄にフォーカスが入らないので使わない。
+- tapOn:
+    id: "email"
+- inputText: ${EMAIL}
+- tapOn:
+    id: "password"
+- inputText: ${PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: "sign-in-submit"
+
+# ログインに成功するとホーム（タブ）へ戻る
+- extendedWaitUntil:
+    notVisible: ".*Forgot your password.*"
+    timeout: 30000

@@ -63,7 +63,7 @@ export function ChangeEmailForm({
         <AuthMessage tone="success">{t(`success.${state.messageKey}`)}</AuthMessage>
       )}
 
-      <Button type="submit" disabled={pending}>
+      <Button id="change-email-submit" type="submit" disabled={pending}>
         {pending ? t('sending') : t('changeEmail')}
       </Button>
     </form>

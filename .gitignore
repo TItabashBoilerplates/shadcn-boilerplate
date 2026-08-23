@@ -156,8 +156,6 @@ devenv.local.yaml
 /.android/
 
 # CCR web-sandbox E2E artifacts
-e2e-results/ccr/
-e2e/node_modules/
 
 # Storybook static build output (`build-storybook`)
 storybook-static/

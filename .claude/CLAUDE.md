@@ -321,7 +321,9 @@ test-frontend                 # Vitest
 test-drizzle                  # bun test（migration 接続先ガード等）
 test-backend-py               # pytest
 test-db                       # pgTAP DB tests
-e2e / e2e-web / e2e-mobile    # Maestro E2E
+e2e / e2e-web / e2e-mobile    # Maestro UI/E2E（--env local|staging|production で切替）
+e2e-ui                        # UI テストのみ（バックエンドに書き込まない）
+e2e-storyboard                # 直前の実行のスクショを 1 枚の HTML にまとめ直す
 
 # Database
 # ローカルは AI 自動実行可、本番 / staging (`db:migrate-deploy`) はユーザー承認必須。詳細は .claude/rules/database.md

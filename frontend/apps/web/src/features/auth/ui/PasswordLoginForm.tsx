@@ -100,7 +100,7 @@ export function PasswordLoginForm({
         </AuthMessage>
       )}
 
-      <Button type="submit" disabled={pending} className="w-full">
+      <Button id="sign-in-submit" type="submit" disabled={pending} className="w-full">
         {pending ? t('signingIn') : t('signIn')}
       </Button>
 

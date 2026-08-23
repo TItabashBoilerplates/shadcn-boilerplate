@@ -48,6 +48,7 @@ export function ChangeEmailForm({
       </Text>
 
       <AuthField
+        testID="newEmail"
         label={t('auth.newEmailLabel')}
         value={email}
         onChangeText={setEmail}
@@ -73,7 +74,7 @@ export function ChangeEmailForm({
         />
       ) : null}
 
-      <Button onPress={handleSubmit} isDisabled={pending}>
+      <Button testID="change-email-submit" onPress={handleSubmit} isDisabled={pending}>
         <ButtonText>{pending ? t('auth.sending') : t('auth.changeEmail')}</ButtonText>
       </Button>
     </VStack>

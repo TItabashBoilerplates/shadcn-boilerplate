@@ -91,7 +91,12 @@ export function UpdatePasswordForm({
         <AuthMessage tone="success">{t(`success.${state.messageKey}`)}</AuthMessage>
       )}
 
-      <Button type="submit" disabled={pending || state.status === 'success'} className="w-full">
+      <Button
+        id="update-password-submit"
+        type="submit"
+        disabled={pending || state.status === 'success'}
+        className="w-full"
+      >
         {pending ? t('saving') : t('updatePassword')}
       </Button>
     </form>

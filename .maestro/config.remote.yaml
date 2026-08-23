@@ -1,0 +1,52 @@
+# Maestro ワークスペース設定 — **リモート（staging / production）用**
+#
+# `maestro test --config .maestro/config.remote.yaml .maestro` の形で使う
+# （公式の `--config` による差し替え。
+#  https://docs.maestro.dev/maestro-flows/workspace-management/project-configuration）
+#
+# ■ ローカル用と何が違うか
+#
+#   リモートには **Mailpit も service_role も無い**（本番に service_role を
+#   持ち出すこと自体が事故）。したがって次の 2 種類を除外する:
+#
+#   | タグ | 何を要求するか | 除外理由 |
+#   |---|---|---|
+#   | `mailbox` | Mailpit（`supabase start` が立てるメールサーバ） | リモートには無い。実在の受信箱は E2E から読めない |
+#   | `admin`   | service_role（使い捨てユーザーの作成・削除・アカウント削除） | 本番のデータを壊す／鍵を持ち出せない |
+#
+#   残るのは **UI テスト（何も書き込まない）** と、**渡された資格情報で
+#   ログインするだけの E2E**。後者は `E2E_EMAIL` / `E2E_PASSWORD` を使う。
+#   本番ではここに**ストア審査用のデモアカウント**を入れることを想定していて、
+#   走らせておくと「審査に出す直前に資格情報が失効していた」を先に検知できる
+#   （App Store 2.1(a)。`.claude/rules/auth.md`）。
+
+# フロー探索は **runner が渡すディレクトリ**に任せる（`flows:` は書かない）。
+#
+# ここに `flows: ["web/ui/*.yaml", ...]` と書くと、runner が
+# `maestro test --config <this> .maestro/web/ui` のように**プラットフォーム別の
+# ディレクトリ**を渡したときに、グロブがそのディレクトリ基準で解決されて
+# 「Flow inclusion pattern(s) did not match any Flow files」になる（実測）。
+#
+# 既定の `*` は「渡されたフォルダ直下の YAML」なので、
+# `web/ui` `web/e2e` `mobile/ui` `mobile/e2e` をそのまま渡せば過不足なく拾える。
+# **`subflows/` は渡されないので自動的に対象外**（runFlow から呼ばれる部品であって、
+# 単体で走らせると親から受け取る前提の値が無くて必ず落ちる）。
+
+excludeTags:
+  - skip
+  - wip
+  - store-screenshots
+  # ↓ リモートで走らせてはいけないもの
+  - mailbox
+  - admin
+
+executionOrder:
+  continueOnFailure: false
+
+testOutputDir: ../e2e-results/maestro
+
+platform:
+  ios:
+    disableAnimations: true
+  android:
+    disableAnimations: true

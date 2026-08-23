@@ -1,83 +1,56 @@
 /**
- * Maestro Test User Cleanup Script
+ * `ensure-test-user.js` が**作った**ユーザーだけを消す。
  *
- * Deletes a test user via Supabase Auth Admin API.
- * This script uses the same REST endpoints that supabase-js uses internally.
+ * `USER_ID` が空のときは何もしない。これは手抜きではなく仕様で、リモート
+ * （staging / production）では既存アカウントをそのまま使うため `output.userId` が
+ * 空になる。ここで消しにいくと**本物のアカウントを消す**ことになる。
  *
- * Required environment variables:
- *   - SUPABASE_URL: Supabase project URL (e.g., http://localhost:54321)
- *   - SUPABASE_SERVICE_ROLE_KEY: Service role key for admin operations
- *   - USER_ID: UUID of the user to delete
+ * `onFlowComplete` はテストの成否に関わらず走る。**片付けに失敗したらここで
+ * throw して落とす**（`.claude/rules/error-handling.md`: 握りつぶし禁止）。
+ * 黙って続けると使い捨てユーザーが無限に溜まり、しかも誰も気づけない。
  *
- * Optional environment variables:
- *   - SOFT_DELETE: If "true", soft-delete the user (default: false)
+ * 環境変数: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY / USER_ID
  *
  * @see https://supabase.com/docs/reference/javascript/auth-admin-deleteuser
  */
 
-// Maestro injects the following as globals via `runScript` env: SUPABASE_URL,
-// SUPABASE_SERVICE_ROLE_KEY, USER_ID, SOFT_DELETE. Use `typeof` guards so the
-// script also works when invoked outside Maestro for debugging.
 const supabaseUrl =
-	(typeof SUPABASE_URL !== "undefined" && SUPABASE_URL) ||
-	"http://localhost:54321";
-const SERVICE_ROLE_KEY =
-	(typeof SUPABASE_SERVICE_ROLE_KEY !== "undefined" &&
-		SUPABASE_SERVICE_ROLE_KEY) ||
-	"";
-const userId = (typeof USER_ID !== "undefined" && USER_ID) || "";
-const softDelete = typeof SOFT_DELETE !== "undefined" && SOFT_DELETE === "true";
+	typeof SUPABASE_URL !== "undefined" && SUPABASE_URL
+		? SUPABASE_URL
+		: "http://localhost:54321";
+const serviceRoleKey =
+	typeof SUPABASE_SERVICE_ROLE_KEY !== "undefined" && SUPABASE_SERVICE_ROLE_KEY
+		? SUPABASE_SERVICE_ROLE_KEY
+		: "";
+const userId = typeof USER_ID !== "undefined" && USER_ID ? USER_ID : "";
 
-if (!SERVICE_ROLE_KEY) {
-	throw new Error("SUPABASE_SERVICE_ROLE_KEY is required");
-}
-
-if (!userId) {
-	console.log("No USER_ID provided, skipping cleanup");
-	output.cleaned = false;
+if (!userId || !serviceRoleKey) {
+	// 既存アカウントモード（リモート）か、そもそも作っていない。
+	output.cleaned = "skipped";
 } else {
-	/**
-	 * Delete user via Supabase Auth Admin API
-	 * Equivalent to: supabase.auth.admin.deleteUser()
-	 *
-	 * REST endpoint: DELETE /auth/v1/admin/users/{user_id}
-	 */
-	function deleteTestUser() {
-		// Build URL with soft delete option if needed
-		const url = `${supabaseUrl}/auth/v1/admin/users/${userId}`;
-
-		const response = http.request(url, {
+	const response = http.request(
+		`${supabaseUrl}/auth/v1/admin/users/${userId}`,
+		{
 			method: "DELETE",
 			headers: {
-				Authorization: `Bearer ${SERVICE_ROLE_KEY}`,
-				apikey: SERVICE_ROLE_KEY,
+				Authorization: `Bearer ${serviceRoleKey}`,
+				apikey: serviceRoleKey,
 				"Content-Type": "application/json",
 			},
-			body: softDelete
-				? JSON.stringify({ should_soft_delete: true })
-				: undefined,
-		});
+		},
+	);
 
-		if (response.code !== 200 && response.code !== 204) {
-			console.log("Delete user response:", response.body);
-			throw new Error(
-				`Failed to delete user: ${response.code} - ${response.body}`,
-			);
-		}
-
-		console.log("Test user deleted:", userId);
-		return true;
-	}
-
-	try {
-		deleteTestUser();
-		output.cleaned = true;
+	// `ok` は 2xx。DELETE は 200 / 204 のどちらもありうる。
+	// （`response.code` は存在しない。`status` を見ること）
+	if (response.ok) {
+		output.cleaned = "deleted";
 		output.deletedUserId = userId;
-		console.log("Cleanup complete");
-	} catch (error) {
-		console.log("Cleanup failed:", error.message);
-		output.cleaned = false;
-		output.error = error.message;
-		// Don't throw - cleanup failures shouldn't fail the test
+	} else {
+		output.cleaned = "failed";
+		output.cleanupError = `HTTP ${response.status} ${response.body}`;
+		// 握りつぶさない。メッセージは Maestro の debug output（maestro.log）に残る。
+		throw new Error(
+			`cleanup-test-user: failed to delete ${userId}: ${output.cleanupError}`,
+		);
 	}
 }

@@ -1,0 +1,80 @@
+# E2E: メールアドレス再設定（旧・新の両方で確認するまで変わらないこと）
+#
+# `double_confirm_changes = true`（既定）では**両方の確認が完了するまで
+# メールアドレスは変わらない**。これは乗っ取り経路を塞ぐための設定なので、
+# 「確認が 2 通来て面倒」を理由に外されていないことを E2E で守る。
+# あわせて、その旨が UI に書かれていること（書いていないと「変わらない」という
+# 問い合わせになる）も確認する。
+
+url: ${WEB_BASE_URL}
+name: "Web E2E - Email change"
+jsEngine: graaljs
+tags:
+  - web
+  - e2e
+  - auth
+  - mailbox
+  - admin
+
+env:
+  WEB_BASE_URL: ${WEB_BASE_URL || "http://localhost:3000"}
+  LOCALE: ${LOCALE || "en"}
+  SUPABASE_URL: ${SUPABASE_URL || "http://localhost:54321"}
+  SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY || ""}
+  MAIL_API_URL: ${MAIL_API_URL || "http://localhost:54324"}
+  TEST_PASSWORD: ${TEST_PASSWORD || "E2ePassw0rd!x"}
+
+onFlowStart:
+  - runScript:
+      file: ../../scripts/ensure-test-user.js
+      env:
+        SUPABASE_URL: ${SUPABASE_URL}
+        SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+        TEST_PASSWORD: ${TEST_PASSWORD}
+
+onFlowComplete:
+  - runScript:
+      file: ../../scripts/cleanup-test-user.js
+      env:
+        SUPABASE_URL: ${SUPABASE_URL}
+        SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+        USER_ID: ${output.userId}
+
+---
+- launchApp:
+    clearState: true
+
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${output.testEmail}
+      PASSWORD: ${output.testPassword}
+
+- openLink: ${WEB_BASE_URL}/${LOCALE}/account
+- extendedWaitUntil:
+    visible: "Account settings"
+    timeout: 30000
+- takeScreenshot: web-e2e-emailchange-01-account-settings
+
+# 変更を申請
+- tapOn:
+    id: "newEmail"
+- inputText: "changed_${output.userId}@test.local"
+- tapOn:
+    id: "change-email-submit"
+
+# 旧・新の両方を確認する必要がある旨が UI に出ていること
+- extendedWaitUntil:
+    visible: ".*Check both your current and your new address.*"
+    timeout: 30000
+
+# 実際に確認メールが飛んでいること（新アドレス宛）
+- runScript:
+    file: ../../scripts/get-auth-email.js
+    env:
+      MAIL_API_URL: ${MAIL_API_URL}
+      TO_EMAIL: "changed_${output.userId}@test.local"
+      SUBJECT_MATCH: "Confirm"
+      MAX_RETRIES: "30"
+
+- takeScreenshot: web-e2e-emailchange-02-change-requested

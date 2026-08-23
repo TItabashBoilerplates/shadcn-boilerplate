@@ -176,3 +176,69 @@ jobs:
           cd "$DEVENV_ROOT/drizzle"  && bun install --frozen-lockfile
       - name: Run unit tests
         run: unit-test
+
+  e2e-web:
+    name: E2E (Web / Maestro headless Chromium)
+    runs-on: ubuntu-latest
+    # UI テストと E2E は Supabase(Docker) と Next.js の起動が要るので、
+    # lint / unit test より重い。壊れているものを土台に回しても意味が無いので
+    # ci-check が緑になってから走らせる。
+    needs: [ci-check]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            keep-outputs = true
+            keep-env-derivations = true
+      - uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('devenv.nix', 'devenv.lock', 'devenv.yaml') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+          gc-max-store-size-linux: 5G
+          purge: true
+          purge-prefixes: nix-${{ runner.os }}-
+          purge-created: 0
+          purge-primary-key: never
+      - uses: cachix/cachix-action@v16
+        with:
+          name: devenv
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            frontend/node_modules
+            frontend/apps/*/node_modules
+            frontend/packages/*/node_modules
+            frontend/tooling/*/node_modules
+            drizzle/node_modules
+          key: v2-${{ runner.os }}-node-modules-${{ hashFiles('frontend/bun.lock', 'drizzle/bun.lock') }}
+      - name: Install devenv.sh
+        shell: bash
+        run: nix profile add nixpkgs#devenv
+      # ci-check job と同じ理由（execIfModified による install の skip）。
+      - name: Sync JS dependencies (install into a lockfile-matched tree)
+        run: |
+          cd "$DEVENV_ROOT/frontend" && bun install --frozen-lockfile
+          cd "$DEVENV_ROOT/drizzle"  && bun install --frozen-lockfile
+      # `e2e-web` が Supabase の起動も Next.js の起動も面倒を見る
+      # （scripts/e2e/maestro.sh の ensure_local_stack）。
+      # Chromium は Maestro が Selenium 経由で自動取得する。
+      - name: Run Maestro web suite (local profile)
+        run: e2e-web
+      # 落ちたときに**画面を見て**原因を判断できるようにする。
+      # storyboard.html は data URI 埋め込みの自己完結 HTML なので、
+      # ダウンロードしてブラウザで開けばそれだけで全フローのスクショが見られる。
+      - name: Upload E2E artifacts (screenshots + storyboard + report)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-web-e2e
+          path: |
+            e2e-results/maestro/shots/
+            e2e-results/maestro/storyboard.html
+            e2e-results/maestro/report.xml
+          retention-days: 14
+      - name: Stop local services
+        if: always()
+        run: stop || true

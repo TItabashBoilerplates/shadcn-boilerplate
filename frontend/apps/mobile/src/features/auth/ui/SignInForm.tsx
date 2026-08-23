@@ -48,6 +48,7 @@ export function SignInForm({
   return (
     <VStack className="gap-4">
       <AuthField
+        testID="email"
         label={t('auth.emailLabel')}
         value={email}
         onChangeText={setEmail}
@@ -59,6 +60,7 @@ export function SignInForm({
       />
 
       <AuthField
+        testID="password"
         label={t('auth.passwordLabel')}
         value={password}
         onChangeText={setPassword}
@@ -88,7 +90,7 @@ export function SignInForm({
         </VStack>
       ) : null}
 
-      <Button onPress={handleSubmit} isDisabled={pending}>
+      <Button testID="sign-in-submit" onPress={handleSubmit} isDisabled={pending}>
         <ButtonText>{pending ? t('auth.signingIn') : t('auth.signIn')}</ButtonText>
       </Button>
 

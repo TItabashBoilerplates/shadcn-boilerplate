@@ -73,7 +73,7 @@ export function ChangePasswordForm({
         <AuthMessage tone="success">{t(`success.${state.messageKey}`)}</AuthMessage>
       )}
 
-      <Button type="submit" disabled={pending}>
+      <Button id="change-password-submit" type="submit" disabled={pending}>
         {pending ? t('saving') : t('updatePassword')}
       </Button>
     </form>

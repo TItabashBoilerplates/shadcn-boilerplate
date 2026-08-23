@@ -1,458 +1,284 @@
 ---
 name: maestro
-description: Maestro E2Eテストフレームワークガイダンス。フローファイル作成、OTP認証テスト、Mailpit連携、Web/Mobileテストについての質問に使用。E2Eテストの実装支援を提供。
+description: Maestro による UI テスト / E2E テストの正本。フローを追加・修正する、ローカルと本番（staging / production）で実行環境を切り替える、Web（Next.js）と Mobile（Expo）の両方を回す、Mailpit を使ったメール往復（パスワード再設定・メール変更・サインアップ確認）を書く、要素セレクタや testID を決める、実行中のスクリーンショットを順番に見る、CI で回す、といった場面で必ず起動する。「E2E」「UIテスト」「Maestro」「フローが落ちる」「本番でテストしたい」「スクショを見たい」「エミュレータ」「0 devices connected」「ChromeDriver のバージョンが違う」といった話題も対象。
 ---
 
-# Maestro E2E Testing スキル
+# Maestro UI / E2E テスト スキル
 
-このプロジェクトは **Maestro** を使用して Web (Next.js) と Mobile (Expo) の E2E テストを実行します。
+このリポジトリは **Maestro 2.4.0** で Web（Next.js）と Mobile（Expo / React Native）の
+UI テストと E2E テストを回す。**ワークスペースの正本は `.maestro/README.md`**、
+公式仕様の調査記録は **`docs/_research/2026-08-23-maestro-e2e.md`**。
+このスキルは「エージェントが作業するときに踏み外しやすい点」に絞る。
 
-本ドキュメントでは、Maestro を使った E2E テストの **推奨パターン** と **ベストプラクティス** を解説します。
+---
 
-## 構成
+## 0. 最初に押さえること（ここを間違えると必ず壊れる）
 
-| 項目 | 場所 |
-|------|------|
-| Maestro 設定 | `.maestro/config.yaml` |
-| 環境変数 | `.maestro/.env` |
-| OTP 抽出スクリプト | `.maestro/scripts/get-otp-from-mailpit.js` |
-| テストユーザー作成 | `.maestro/scripts/setup-test-user.js` |
-| テストユーザー削除 | `.maestro/scripts/cleanup-test-user.js` |
-| Web テスト | `.maestro/web/` |
-| Mobile テスト | `.maestro/mobile/` |
-| テスト結果 | `e2e-results/maestro/` |
+| # | 事実 | 間違えるとどうなるか |
+|---|---|---|
+| 1 | **Web のフローは `appId:` ではなく `url:`** を書く（[公式](https://docs.maestro.dev/get-started/supported-platform/web-browser)） | 非公式な書き方になり、将来のバージョンで動かなくなる |
+| 2 | **`http` レスポンスは `{ ok, status, body, headers }`。`code` は存在しない** | `response.code !== 200` は常に真 → **成功しても必ず throw**。実際にこのリポジトリの旧スクリプトは 4 本ともこれで、一度も通っていなかった |
+| 3 | **`config.yaml` に `env` キーは無い**（[reference](https://docs.maestro.dev/reference/workspace-configuration)） | 環境差分を config に書こうとして詰まる。正しくは `--config`（フローの選抜）＋ `-e`（値） |
+| 4 | **`--include-tags` は OR**（「いずれかを含む」） | `--include-tags web,ui` が「web または ui」になり、意図しないフローが走る |
+| 5 | **Web はフロー間でブラウザ状態を保持する** | 前のフローのログインが残り、「未ログインで見えるはずの画面」が静かに壊れる。冒頭で `launchApp: clearState: true` |
+| 6 | **GraalJS には `fetch` / `async` / `setTimeout` が無い** | `http.get` とビジーウェイトを使う |
+| 7 | **`console.log` はコンソールに出ない** | デバッグは `throw new Error(...)`（`maestro.log` に出る）か debug output を見る |
+| 8 | **`output.*` は文字列として扱われる** | `assertTrue: ${output.status == 200}` が false になる。比較するなら文字列で |
 
-## コマンド
+---
 
-すべて devenv の **scripts** (PATH 直結)。Makefile は **deprecated**（削除済み）。
+## 1. 実行
 
 ```bash
-# 全 E2E テスト実行
-e2e
-
-# Web テストのみ
-e2e-web
-
-# Mobile テストのみ
-e2e-mobile
+e2e                                    # ローカル・全部
+e2e-web --suite ui                     # Web の UI テストだけ
+e2e-mobile --suite smoke               # モバイル（エミュレータ / シミュレータ必須）
+e2e --env production --suite smoke     # 本番に対するスモーク
+e2e --dry-run                          # 実際のコマンドを見る（資格情報は伏せて出る）
+e2e-storyboard                         # 直前の結果から storyboard.html を作り直す
 ```
 
-## ディレクトリ構造
-
-```
-.maestro/
-├── config.yaml                    # Workspace 設定
-├── .env                           # 環境変数（SUPABASE_SERVICE_ROLE_KEY など）
-├── scripts/
-│   ├── get-otp-from-mailpit.js   # OTP 抽出ヘルパー
-│   ├── setup-test-user.js        # テストユーザー作成
-│   └── cleanup-test-user.js      # テストユーザー削除
-├── web/
-│   ├── auth/
-│   │   └── login-flow.yaml       # Web OTP 認証フロー
-│   └── smoke/
-│       └── home-page.yaml        # Web スモークテスト
-└── mobile/
-    ├── auth/
-    │   └── login-flow.yaml       # Mobile 認証（テンプレート）
-    └── smoke/
-        └── home-screen.yaml      # Mobile スモークテスト
-```
-
-## フローファイルの書き方
-
-### 基本構造
-
-```yaml
-# メタデータ
-appId: com.example.app
-name: "Flow Name"
-tags:
-  - auth
-  - e2e
-
-env:
-  MAILPIT_URL: "http://localhost:54324"
-  TEST_EMAIL: "test@example.com"
+**素の `maestro` を Bash で直接叩かない**（`.claude/rules/commands.md`）。
+runner (`scripts/e2e/maestro.sh`) が環境解決・コンテナ対応・レポート・スクショ収集を
+全部持っているので、直叩きすると無言で環境が食い違う。
 
 ---
-# テストステップ
-- launchApp
-- tapOn: "Element Text"
-- inputText: "input value"
-- assertVisible: "Expected Text"
+
+## 2. 環境の切り替え（ローカル ⇄ 本番）
+
+Maestro に「環境ファイル」は無い。公式にあるのは 2 つだけ。
+
+```
+--config <file>   →  どのフローを走らせるか
+-e KEY=VALUE      →  どの URL・どの資格情報を使うか
 ```
 
-### タグ規則
+| | `--env local` | `--env staging` / `--env production` |
+|---|---|---|
+| config | `.maestro/config.yaml` | `.maestro/config.remote.yaml` |
+| 追加で除外されるタグ | — | **`mailbox`**（Mailpit）/ **`admin`**（service_role） |
+| Web の URL | `NEXT_PUBLIC_APP_URL` 既定 `http://localhost:3000` | **`E2E_WEB_BASE_URL`（未設定ならエラー）** |
+| アカウント | service_role で毎回作って消す | **`E2E_EMAIL` / `E2E_PASSWORD`** を使い、消さない |
 
-| タグ | 用途 |
-|------|------|
-| `smoke` | 基本動作確認テスト |
-| `auth` | 認証関連テスト |
-| `e2e` | エンドツーエンドテスト |
-| `web` | Web アプリ専用 |
-| `mobile` | Mobile アプリ専用 |
-| `wip` | 作業中（除外される） |
-| `skip` | スキップ対象 |
+**本番向けに既定値を足さないこと。** 「本番を狙ったつもりが localhost を叩いて緑だった」を
+防ぐために、リモートでは URL 未設定を即エラーにしてある。
 
-## OTP 認証テスト
+**service_role を絶対にリモートへ渡さない。** runner はリモートプロファイルで
+`SUPABASE_SERVICE_ROLE_KEY` を空にする。これにより `ensure-test-user.js` が
+「渡された資格情報を使う」モードに落ちる。
 
-### Mailpit API
+### 新しいフローを足すときのタグ判断
 
-Supabase ローカル環境では Inbucket（Mailpit 互換）がメールサーバーとして動作。
-
-| エンドポイント | 用途 |
-|---------------|------|
-| `GET /api/v1/messages` | メッセージ一覧取得 |
-| `GET /api/v1/message/{id}` | メッセージ詳細取得 |
-| `DELETE /api/v1/message/{id}` | メッセージ削除 |
-
-### OTP 抽出スクリプトの使用
-
-```yaml
-# メールボックスをクリア（テスト開始前）
-- runScript:
-    file: ../../scripts/get-otp-from-mailpit.js
-    env:
-      MAILPIT_URL: ${MAILPIT_URL}
-
-# OTP 送信後、メール到着を待って OTP を取得
-- runScript:
-    file: ../../scripts/get-otp-from-mailpit.js
-    env:
-      MAILPIT_URL: ${MAILPIT_URL}
-      WAIT_FOR_EMAIL: "true"
-      MAX_RETRIES: "15"
-
-# 取得した OTP を入力
-- inputText: ${output.otpCode}
+```
+Mailpit からメールを読む？                → mailbox（リモートでは走らない）
+service_role で作る / 消す？               → admin
+メール本文のリンク / コードを実際に使う？   → needs-email-templates
+どちらも要らず、書き込みもしない？          → ui（本番でも走らせられる）
+書き込むが、資格情報を渡せば済む？          → e2e（リモートでも走る）
 ```
 
-### 環境変数
+**`needs-email-templates` は runner が `supabase/config.toml` の有無で自動的に
+出し入れする。** 既定の Supabase テンプレートは `{{ .ConfirmationURL }}` 形式で、
+`@supabase/ssr`（PKCE）が要求する `/auth/confirm?token_hash=...` にならないため、
+配線前に走らせると**アプリのバグではない理由で必ず赤くなる**。除外したときは
+理由と有効化条件を毎回警告に出す（黙って skip しない）。
 
-| 変数 | 説明 | デフォルト |
-|------|------|-----------|
-| `MAILPIT_URL` | Mailpit API URL | `http://localhost:54324` |
-| `WAIT_FOR_EMAIL` | メール到着を待機 | `false` |
-| `MAX_RETRIES` | 最大リトライ回数 | `10` |
+**判断を間違えると本番のデータを壊す。** `admin` の付け忘れがいちばん危険。
 
-### プラットフォーム別 URL
-
-| Platform | MAILPIT_URL |
-|----------|-------------|
-| Web | `http://localhost:54324` |
-| iOS Simulator | `http://localhost:54324` |
-| Android Emulator | `http://10.0.2.2:54324` |
-
-> **Note**: Android エミュレータは独自の仮想ネットワーク内で動作するため、ホストの `localhost` にアクセスするには `10.0.2.2` を使用。
-
-## テストデータ管理
-
-### 動的テストユーザー作成
-
-Supabase Auth Admin API を使用してテストごとにユニークなユーザーを作成・削除します。
-
-```yaml
-# onFlowStart/onFlowComplete hooks を使用
-appId: com.example.web
-jsEngine: graaljs  # ES2022 サポート
-
-onFlowStart:
-  - runScript:
-      file: ../../scripts/setup-test-user.js
-      env:
-        SUPABASE_URL: ${SUPABASE_URL}
-        SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
-
-onFlowComplete:
-  - runScript:
-      file: ../../scripts/cleanup-test-user.js
-      env:
-        SUPABASE_URL: ${SUPABASE_URL}
-        SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
-        USER_ID: ${output.userId}
-```
-
-### setup-test-user.js 出力
-
-| 変数 | 説明 |
-|------|------|
-| `output.testEmail` | 作成したユーザーのメールアドレス |
-| `output.testPassword` | パスワード |
-| `output.userId` | ユーザー UUID |
-| `output.accessToken` | アクセストークン |
-
-### 使用例
-
-```yaml
 ---
-# テストユーザーのメールアドレスを使用
-- tapOn:
-    id: "email"
-- inputText: ${output.testEmail}
 
-# 認証済みAPIリクエスト
-- runScript:
-    file: ../../scripts/api-request.js
-    env:
-      ACCESS_TOKEN: ${output.accessToken}
-```
+## 3. フローの書き方（このリポジトリの型）
 
-### 環境変数設定
-
-`.maestro/.env` に Supabase 接続情報を設定:
-
-```bash
-# .maestro/.env
-SUPABASE_URL=http://localhost:54321
-SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-MAILPIT_URL=http://localhost:54324
-```
-
-> **Note**: `SUPABASE_SERVICE_ROLE_KEY` は `env/backend/.env.local` から取得。
-
-### クリーンアップの仕組み
-
-- `onFlowComplete` はテスト成功・失敗に関わらず実行される
-- `cleanup-test-user.js` は `USER_ID` が未指定の場合スキップ
-- クリーンアップ失敗してもテスト自体は失敗しない
-
-## Web テストフロー例
-
-以下は OTP 認証フローの参考実装パターンです。
-
-### 認証フロー
+### Web
 
 ```yaml
-appId: com.example.web
-name: "Web OTP Login Flow"
+url: ${WEB_BASE_URL}
+name: "Web UI — Sign-in screen"
 tags:
-  - auth
   - web
-  - e2e
+  - ui
+  - smoke
 
 env:
-  MAILPIT_URL: "http://localhost:54324"
-  TEST_EMAIL: "testuser@example.com"
+  WEB_BASE_URL: ${WEB_BASE_URL || "http://localhost:3000"}
+  LOCALE: ${LOCALE || "en"}
 
 ---
-# ログインページへ移動
 - launchApp:
-    arguments:
-      url: "http://localhost:3000/en/login"
-
-# メール入力
+    clearState: true          # ← 必須。Web は状態を持ち越す
+- openLink: ${WEB_BASE_URL}/${LOCALE}/login
+- assertVisible: "Sign in"
 - tapOn:
-    id: "email"
-- inputText: ${TEST_EMAIL}
-
-# OTP 送信
-- tapOn: "Send One-Time Password"
-
-# 成功メッセージ確認
-- assertVisible: "Check Your Email"
-
-# OTP 取得
-- runScript:
-    file: ../../scripts/get-otp-from-mailpit.js
-    env:
-      MAILPIT_URL: ${MAILPIT_URL}
-      WAIT_FOR_EMAIL: "true"
-
-# Verify ページへ移動
-- openLink: "http://localhost:3000/en/verify?email=${TEST_EMAIL}"
-
-# OTP 入力
-- tapOn:
-    id: "token"
-- inputText: ${output.otpCode}
-
-# 検証
-- tapOn: "Verify Code"
-
-# ダッシュボード確認
-- assertVisible: "Dashboard"
+    id: "email"               # DOM の id にそのまま一致する（実測済み）
+- inputText: ${output.testEmail}
+- takeScreenshot: 01-sign-in-initial
 ```
 
-## Mobile テストフロー
-
-以下は Mobile 認証フローの参考実装パターンです。
-未実装の機能には `wip` タグを付けて除外できます。
+### Mobile
 
 ```yaml
 appId: ${APP_ID}
-name: "Mobile OTP Login Flow"
-tags:
-  - auth
-  - mobile
-  - wip  # 実装後に削除
+name: "Mobile UI — Sign-in screen"
+tags: [mobile, ui, smoke]
 
 env:
-  # Android エミュレータ用
-  MAILPIT_URL: "http://10.0.2.2:54324"
-  TEST_EMAIL: "testuser@example.com"
+  APP_ID: ${APP_ID}
+  MOBILE_SCHEME: ${MOBILE_SCHEME || "mobile"}
 
 ---
 - launchApp:
     clearState: true
     permissions:
       all: allow
-
-# TODO: 認証画面実装後にコメント解除
-# - tapOn:
-#     id: "email-input"
-# - inputText: ${TEST_EMAIL}
-# ...
-```
-
-## 要素の特定方法
-
-### 優先順位
-
-1. **id**: 最も安定（`id: "email"`）
-2. **accessibilityLabel**: アクセシビリティラベル
-3. **text**: 表示テキスト（`tapOn: "Send One-Time Password"`）
-4. **index**: 最後の手段
-
-### 例
-
-```yaml
-# ID で特定（推奨）
+- openLink: ${MOBILE_SCHEME}://sign-in
 - tapOn:
-    id: "submit-button"
-
-# テキストで特定
-- tapOn: "Sign In"
-
-# 複合条件
-- tapOn:
-    text: "Submit"
-    index: 0
+    id: "email"               # AuthField の testID
+- inputText: ${output.testEmail}
+- hideKeyboard                # キーボードが CTA を覆う前提で書く
+- tapOn: "Sign in"
 ```
 
-## スクリーンショット
+**URL・bundle id・資格情報を直書きしない。** 直書きした瞬間にローカル専用になる。
+
+### 待つときは `extendedWaitUntil`
+
+Next.js の Server Component + Suspense はストリーミングで後から差し込まれる。
+固定の待機を入れず、**表示されるまで待つ**。
 
 ```yaml
-# スクリーンショット取得
-- takeScreenshot: screenshot-name
-
-# 結果は e2e-results/maestro/ に保存
-```
-
-## Workspace 設定
-
-### config.yaml
-
-```yaml
-flows:
-  - "web/**/*.yaml"
-  - "mobile/**/*.yaml"
-
-includeTags:
-  - smoke
-  - auth
-  - e2e
-
-excludeTags:
-  - skip
-  - wip
-
-executionOrder:
-  continueOnFailure: false
-
-testOutputDir: ../e2e-results/maestro
-
-platform:
-  ios:
-    disableAnimations: true
-  android:
-    disableAnimations: true
-```
-
-## トラブルシューティング
-
-### OTP が取得できない
-
-1. Supabase・backend-py が起動しているか確認: `devenv up`
-2. Mailpit UI でメールを確認: `http://localhost:54324`
-3. `MAX_RETRIES` を増やす
-4. メールボックス名（@ より前）が正しいか確認
-
-### Android で接続できない
-
-`MAILPIT_URL` を `http://10.0.2.2:54324` に変更。
-
-### テストがタイムアウトする
-
-```yaml
-# 待機時間を延長
 - extendedWaitUntil:
-    visible: "Expected Element"
+    visible: "Dashboard"
     timeout: 30000
 ```
 
-### 要素が見つからない
+---
 
-```yaml
-# デバッグ用スクリーンショット
-- takeScreenshot: debug-state
+## 4. 要素の選び方
 
-# 画面階層を確認
-- runFlow:
-    file: debug-flow.yaml
+1. **`id`** — Web は DOM の `id`、Mobile は `testID`（RN が Android の `resource-id` /
+   iOS の `accessibilityIdentifier` に落とす）
+2. アクセシビリティラベル
+3. 表示テキスト（翻訳を変えると落ちるので、変わりにくい文言に限る）
+4. index — 最後の手段
+
+**Mobile でラベルのテキストをタップしない。** `tapOn: "Email address"` はラベルの
+`Text` 要素に当たり、入力欄にフォーカスが入らないことがある。
+`frontend/apps/mobile/src/features/auth/ui/AuthField.tsx` は `testID` を受けて
+`InputField` に渡すので、**新しい入力欄を足すときは `testID` も必ず付ける**。
+
+---
+
+## 5. スクリプト（`.maestro/scripts/`）
+
+| ファイル | 役割 |
+|---|---|
+| `ensure-test-user.js` | **環境に応じて**アカウントを用意する。service_role があれば作る／無ければ `E2E_EMAIL` を使う。出力は `output.testEmail` / `testPassword` / `userId` / `accessToken` |
+| `cleanup-test-user.js` | **作ったものだけ**消す（`USER_ID` が空なら何もしない）。消せなかったら throw する（黙って溜めない） |
+| `get-auth-email.js` | Mailpit から**コードと確認 URL の両方**を取る。読んだメールは消す |
+
+新しいスクリプトを書くときの型:
+
+```js
+// 環境変数は typeof で守る（未注入でも落ちないように）
+const url = typeof SUPABASE_URL !== "undefined" && SUPABASE_URL ? SUPABASE_URL : "http://localhost:54321";
+
+const res = http.get(url);
+// ✅ ok / status   ❌ code（存在しない）
+if (!res.ok) throw new Error(`failed: HTTP ${res.status} ${res.body}`);
+const data = json(res.body);
+output.something = data.field;
 ```
 
-## ベストプラクティス
+---
 
-### テスト前にデータをクリア
+## 6. スクリーンショットを順番に見る
 
-```yaml
-# メールボックスをクリア
-- runScript:
-    file: ../../scripts/get-otp-from-mailpit.js
-    env:
-      MAILPIT_URL: ${MAILPIT_URL}
-      # WAIT_FOR_EMAIL を指定しないとクリアのみ
+`takeScreenshot: 01-login-screen` のように**番号を頭に付ける**。
+Maestro はフローごとのバンドル（`<session>/<flow>/takeScreenshot/`）に置くので、
+そのままでは時系列で追えない。`scripts/e2e/shots.mjs` が
+
+- 実行中: 新しいスクショを **`e2e-results/maestro/shots/NNN-<flow>-<name>.png`** へ通し番号つきで複製
+- 終了時: `commands.json`（ステップ列と結果）と突き合わせて **`storyboard.html`** を生成
+
+**失敗時のスクショは Maestro が自動で撮る**ので、`shots/` に `NNN-FAILED-...` として混ざる。
+
+> ユーザーに見せるときは `shots/` の PNG を順番に渡すか、`storyboard.html` を
+> Artifact として公開する（1 枚で全フロー分が見られる）。
+
+---
+
+## 7. デバッグ
+
+```bash
+e2e-web --suite ui --headed        # ブラウザを見ながら（ローカル GUI 環境のみ）
+e2e --dry-run                      # 実際に叩くコマンドを確認
 ```
 
-### 明示的な待機
+失敗時の成果物は `e2e-results/maestro/<session>/<flow>/`:
 
-```yaml
-# 要素が表示されるまで待機
-- assertVisible: "Expected Text"
+| ファイル | 中身 |
+|---|---|
+| `commands.json` | 実行したステップが**順番に**。status / duration / error つき |
+| `logs/maestro.log` | そのフローのログ。**`runScript` の throw のメッセージはここに出る** |
+| `screenshots/` | **失敗したステップ**のスクショ |
+| `screen-hierarchy/` | 失敗時の画面ツリー（**セレクタが当たらない原因はここで分かる**） |
+| `manifest.json` | 成果物の索引（ディレクトリを走査せずこれを読む、が公式の言い分） |
 
-# 時間指定で待機（非推奨、最後の手段）
-- waitForAnimationToEnd
-```
+---
 
-### 環境変数の活用
+## 8. 症状別の原因表
 
-```yaml
-env:
-  BASE_URL: ${BASE_URL:-http://localhost:3000}
-  TEST_EMAIL: ${TEST_EMAIL:-test@example.com}
-```
+| 症状 | 原因と対処 |
+|---|---|
+| `0 devices connected`（Web） | `--platform web` が渡っていない。runner 経由なら自動で付く |
+| root コンテナで Chrome が即終了 | `--no-sandbox` が要る。runner が Selenium の chrome にシムを当てる（`prepare_web_driver`） |
+| `This version of ChromeDriver only supports Chrome version N` | PATH の `chromedriver` が Selenium の Chrome と不一致。runner が該当ディレクトリを PATH から外す |
+| `runScript` が何をしても失敗する | `response.code` を見ている。`response.ok` / `response.status` にする |
+| Android だけメール・API が取れない | エミュレータからホストは `10.0.2.2`。runner が `--platform android` で差し替える |
+| 前のフローのログインが残っている | `launchApp: clearState: true` を冒頭に |
+| 画面下のほうの要素が「見つからない」 | **Web の `assertVisible` / `tapOn` はビューポート内しか見ない**。縦に長い画面（設定画面など）は `scrollUntilVisible` を挟む |
+| ボタンを押したのに何も起きない | 同じ文言の**見出し**を押している（"Sign in" / "Delete account"）。`id` / `testID` で指す |
+| ログイン後の要素が見つからない | ストリーミング中。`extendedWaitUntil` で待つ |
+| リモートで落ちる | `mailbox` / `admin` タグの付け忘れ。`config.remote.yaml` で除外されるべきフロー |
+| 本番を指定したのに緑 | `E2E_WEB_BASE_URL` を確認。runner は未設定ならエラーにする |
+| Mobile で入力欄にフォーカスが入らない | ラベルのテキストをタップしている。`testID` を足して `id:` で |
 
-## チェックリスト
+---
 
-新しいテストフローを追加する前に確認:
+## 9. チェックリスト（フローを追加・変更したら）
 
-### 必須
+| # | 確認 |
+|---|---|
+| 1 | Web なら `url:`、Mobile なら `appId: ${APP_ID}` になっているか |
+| 2 | URL / bundle id / 資格情報を**直書きしていない**か（`${VAR \|\| "default"}`） |
+| 3 | 冒頭に `launchApp: clearState: true` があるか |
+| 4 | タグは正しいか（`ui` / `e2e` / **`mailbox`** / **`admin`** / `smoke`） |
+| 5 | 要素は `id` で選んでいるか。Mobile なら `testID` を実装側に足したか |
+| 6 | 待機は `extendedWaitUntil` か（固定 sleep を入れていないか） |
+| 7 | 節目ごとに `takeScreenshot: NN-...` があるか |
+| 8 | `subflows/` に置いたなら `config.yaml` の `flows:` に**入れていない**か |
+| 9 | `e2e --dry-run` で意図した config・タグ・URL になっているか |
+| 10 | **実際に走らせて緑になったか**（この種の不具合は静的検査では絶対に見つからない） |
 
-- [ ] 適切なタグを設定している（`smoke`, `auth`, `e2e`, `web`/`mobile`）
-- [ ] 要素特定に `id` を優先使用している
-- [ ] OTP テストでは `get-otp-from-mailpit.js` を使用している
-- [ ] Android テストでは `MAILPIT_URL` が `10.0.2.2` になっている
+---
 
-### 推奨
+## 10. 公式ドキュメント
 
-- [ ] テスト開始時にメールボックスをクリアしている
-- [ ] 各ステップで `assertVisible` を使用している
-- [ ] デバッグ用にスクリーンショットを取得している
-- [ ] 作業中のテストには `wip` タグを付けている
+- [Maestro Docs](https://docs.maestro.dev/) / [CLI commands and options](https://docs.maestro.dev/maestro-cli/maestro-cli-commands-and-options)
+- [Parameters and constants（`-e` / `${VAR || "default"}` / `MAESTRO_` 接頭辞）](https://docs.maestro.dev/maestro-flows/flow-control-and-logic/parameters-and-constants)
+- [Project configuration（`--config`）](https://docs.maestro.dev/maestro-flows/workspace-management/project-configuration) / [Workspace configuration reference](https://docs.maestro.dev/reference/workspace-configuration)
+- [Web Browsers（`url:` ヘッダ・Beta・状態保持）](https://docs.maestro.dev/get-started/supported-platform/web-browser)
+- [Make HTTP requests（`ok` / `status` / `body` / `headers`）](https://docs.maestro.dev/maestro-flows/javascript/make-http-requests)
+- [Test reports and artifacts（成果物のレイアウト）](https://docs.maestro.dev/maestro-flows/workspace-management/test-reports-and-artifacts)
+- [Maestro MCP Server](https://docs.maestro.dev/get-started/maestro-mcp) — `.mcp.json` に `maestro` として登録済み。
+  フローの作成・実行・デバッグをエージェントから直接行える公式の口
+  （`maestro chat` / MaestroGPT は**廃止**され、MCP が後継）
 
-## 参考リンク
+## 11. リポジトリ内の関連
 
-- [Maestro Documentation](https://maestro.mobile.dev/)
-- [Maestro CLI Reference](https://maestro.mobile.dev/reference/cli)
-- [Inbucket API](https://github.com/inbucket/inbucket/wiki/REST-API)
+- `.maestro/README.md` … ワークスペースの正本（構成・環境切り替え・タグ）
+- `docs/_research/2026-08-23-maestro-e2e.md` … 公式仕様の調査記録と実測
+- `scripts/e2e/maestro.sh` … 実行口（環境解決・コンテナ対応・レポート）
+- `scripts/e2e/shots.mjs` … スクショの通し番号化と storyboard 生成
+- `.claude/rules/auth.md` / `.claude/rules/store-review.md` … このスイートが守っている要件
+- `.claude/rules/tdd.md` … 作業終了時は All Green

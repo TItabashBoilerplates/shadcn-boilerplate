@@ -146,7 +146,7 @@ By adopting these environments, we can ensure efficient development and maintain
 | uv | Python パッケージ管理 |
 | Supabase CLI | データベース・認証 |
 | ni / nr / nlx | パッケージマネージャー抽象化 |
-| Maestro | E2E テスト |
+| Maestro | UI テスト / E2E テスト（`.maestro/README.md`。ローカル ⇄ 本番を `--env` で切替） |
 | Doppler CLI | シークレット管理 |
 | gh / jq | インフラブートストラップ |
 | Stripe CLI (`stripe`) | 決済（Webhook のローカル転送・イベント再現） |

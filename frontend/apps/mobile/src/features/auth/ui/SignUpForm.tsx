@@ -58,6 +58,7 @@ export function SignUpForm({
   return (
     <VStack className="gap-4">
       <AuthField
+        testID="email"
         label={t('auth.emailLabel')}
         value={email}
         onChangeText={setEmail}
@@ -70,6 +71,7 @@ export function SignUpForm({
 
       <VStack className="gap-2">
         <AuthField
+          testID="password"
           label={t('auth.passwordLabel')}
           value={password}
           onChangeText={setPassword}
@@ -83,6 +85,7 @@ export function SignUpForm({
       </VStack>
 
       <AuthField
+        testID="passwordConfirmation"
         label={t('auth.passwordConfirmationLabel')}
         value={confirmation}
         onChangeText={setConfirmation}
@@ -97,7 +100,7 @@ export function SignUpForm({
         <AuthMessage tone="error" message={t(`auth.errors.${result.messageKey}`)} />
       ) : null}
 
-      <Button onPress={handleSubmit} isDisabled={pending}>
+      <Button testID="sign-up-submit" onPress={handleSubmit} isDisabled={pending}>
         <ButtonText>{pending ? t('auth.signingUp') : t('auth.signUp')}</ButtonText>
       </Button>
 

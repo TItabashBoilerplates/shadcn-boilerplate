@@ -1,0 +1,52 @@
+# UI: ログイン画面に必須の導線が全部あること（Mobile）
+#
+# **審査担当者が最初に触る画面**。App Store 2.1(a) が求めるのは
+# 「メールアドレスとパスワードで入れること」なので、この画面から
+# それだけで入り切れる状態を守る（`.claude/rules/auth.md`）。
+#
+# バックエンドには書き込まないので、どの環境のビルドに対しても走らせられる。
+
+appId: ${APP_ID}
+name: "Mobile UI - Sign-in screen"
+tags:
+  - mobile
+  - ui
+  - auth
+  - smoke
+
+env:
+  APP_ID: ${APP_ID}
+  MOBILE_SCHEME: ${MOBILE_SCHEME || "mobile"}
+
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+
+- openLink: ${MOBILE_SCHEME}://sign-in
+
+- assertVisible: "Sign in"
+- assertVisible: "Email address"
+- assertVisible: "Password"
+# 忘れた人はログインできない = この画面に無いと詰む
+- assertVisible: ".*Forgot your password.*"
+- assertVisible: ".*Don't have an account.*"
+- takeScreenshot: mobile-ui-signin-01-sign-in-initial
+
+# パスワード表示切替（12 文字以上を見えないまま打たせない）
+- tapOn:
+    id: "password"
+- inputText: "not-the-real-password"
+- tapOn:
+    id: "password-visibility-toggle"
+- assertVisible: "Hide"
+
+# 再設定画面へ抜けられること
+- hideKeyboard
+- tapOn: ".*Forgot your password.*"
+- assertVisible: "Reset your password"
+- assertVisible: "Back to sign in"
+- tapOn: "Back to sign in"
+- assertVisible: "Sign in"
+- takeScreenshot: mobile-ui-signin-02-forgot-password

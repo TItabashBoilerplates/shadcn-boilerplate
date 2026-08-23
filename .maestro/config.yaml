@@ -1,30 +1,53 @@
-# Maestro Workspace Configuration
-# Reference: https://maestro.mobile.dev/
+# Maestro ワークスペース設定 — **ローカル（フルローカルのデバッグ）用の既定**
+#
+# 公式リファレンス:
+#   https://docs.maestro.dev/maestro-flows/workspace-management/project-configuration
+#   https://docs.maestro.dev/reference/workspace-configuration
+#
+# ■ これがローカル用である理由
+#   ローカルには Supabase（Docker）と Mailpit があり、service_role で使い捨て
+#   ユーザーを作れる。したがって `mailbox` / `admin` タグの付いたフロー
+#   （メールの往復・アカウント削除）まで**全部**走らせられる。
+#
+#   リモート（staging / production）にはそれが無いので `config.remote.yaml` を
+#   `--config` で差し替える。**環境の切り替えは「config の差し替え（どのフローを
+#   走らせるか）」と「-e（どの URL・資格情報を使うか）」の 2 段構え**で行う。
+#   config.yaml に env を書くキーは公式に存在しない。
+#
+#   実際の切り替えは `scripts/e2e/maestro.sh`（devenv script の `e2e*`）が行う。
 
-flows:
-  - "web/**/*.yaml"
-  - "mobile/**/*.yaml"
-  # ストア掲載用スクショの撮影フロー。tag `store-screenshots` を includeTags に
-  # **入れていない**ので、`e2e` / `e2e-mobile` では実行されない（撮影は
-  # `screenshots-mobile` script が --include-tags で明示的に呼ぶ）。
-  - "store/**/*.yaml"
-
-includeTags:
-  - smoke
-  - auth
-  - e2e
+# フロー探索は **runner が渡すディレクトリ**に任せる（`flows:` は書かない）。
+#
+# ここに `flows: ["web/ui/*.yaml", ...]` と書くと、runner が
+# `maestro test --config <this> .maestro/web/ui` のように**プラットフォーム別の
+# ディレクトリ**を渡したときに、グロブがそのディレクトリ基準で解決されて
+# 「Flow inclusion pattern(s) did not match any Flow files」になる（実測）。
+#
+# 既定の `*` は「渡されたフォルダ直下の YAML」なので、
+# `web/ui` `web/e2e` `mobile/ui` `mobile/e2e` をそのまま渡せば過不足なく拾える。
+# **`subflows/` は渡されないので自動的に対象外**（runFlow から呼ばれる部品であって、
+# 単体で走らせると親から受け取る前提の値が無くて必ず落ちる）。
 
 excludeTags:
   - skip
   - wip
+  - store-screenshots
 
 executionOrder:
+  # 1 本落ちたらそこで止める。E2E は前段の失敗が後段の失敗を量産するので、
+  # 最初の 1 件だけ読めば原因に辿り着ける状態にしておく。
   continueOnFailure: false
 
+# スクリーンショット・レポートの出力先（.gitignore 済み）。
+# ⚠️ このパスは **maestro を起動した CWD からの相対**として解決される。
+# `.maestro/` の中で直接叩いたときのための値であって、runner
+# (`scripts/e2e/maestro.sh`) はリポジトリルートから起動するので
+# `--test-output-dir` で絶対パスに上書きする（CLI フラグが config より優先）。
 testOutputDir: ../e2e-results/maestro
 
 platform:
   ios:
+    # Cloud 専用フラグ。ローカルのシミュレータには効かない（公式明記）。
     disableAnimations: true
   android:
     disableAnimations: true

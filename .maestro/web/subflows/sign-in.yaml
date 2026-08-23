@@ -1,0 +1,29 @@
+# メールアドレス + パスワードでログインするサブフロー。
+#
+# ログイン後の画面を検証するフロー（ダッシュボード / アカウント設定 /
+# メールアドレス変更 / パスワード変更）が 3 本以上あるため、ここに 1 か所だけ置く
+# （`.claude/rules/clean-code.md` の Rule of Three）。
+#
+# 呼び出し側が渡す env:
+#   EMAIL / PASSWORD … 資格情報
+#   WEB_BASE_URL / LOCALE … 親フローから引き継がれる
+
+url: ${WEB_BASE_URL}
+---
+- openLink: ${WEB_BASE_URL}/${LOCALE}/login
+- assertVisible: "Sign in"
+
+- tapOn:
+    id: "email"
+- inputText: ${EMAIL}
+- tapOn:
+    id: "password"
+- inputText: ${PASSWORD}
+- tapOn:
+    id: "sign-in-submit"
+
+# ダッシュボードは Server Component + Suspense のストリーミングなので、
+# 「表示されるまで待つ」形で到達を確認する（固定 wait は入れない）。
+- extendedWaitUntil:
+    visible: "Dashboard"
+    timeout: 30000

@@ -81,6 +81,10 @@ export function PasswordField({
           }}
         />
         <button
+          // アイコンだけのボタンなので、テキストで指す手段が無い（E2E の
+          // `tapOn: "Show password"` は当たらない — 実測で Element not found）。
+          // `id` を振っておくと Maestro の `tapOn: { id: ... }` で安定して指せる。
+          id={`${inputId}-visibility-toggle`}
           type="button"
           onClick={() => setVisible((previous) => !previous)}
           disabled={disabled}

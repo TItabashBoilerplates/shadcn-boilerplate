@@ -1,0 +1,92 @@
+# E2E: アプリ内でアカウントを削除できること
+#
+# アカウントを作れるアプリでは**アプリ内削除が必須**（App Store 5.1.1(v)。
+# 「サポートへ連絡してください」は不可）。ここが壊れると審査で落ちる。
+#
+# 後片付けは不要（テスト自身が消す）ので `onFlowComplete` を置いていない。
+# 使い捨てユーザーを作るので `admin` タグ = ローカル専用。**本番で走らせては
+# ならない**（本物のアカウントを消すことになる）。
+
+url: ${WEB_BASE_URL}
+name: "Web E2E - Account deletion"
+jsEngine: graaljs
+tags:
+  - web
+  - e2e
+  - auth
+  - admin
+
+env:
+  WEB_BASE_URL: ${WEB_BASE_URL || "http://localhost:3000"}
+  LOCALE: ${LOCALE || "en"}
+  SUPABASE_URL: ${SUPABASE_URL || "http://localhost:54321"}
+  SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY || ""}
+  TEST_PASSWORD: ${TEST_PASSWORD || "E2ePassw0rd!x"}
+
+onFlowStart:
+  - runScript:
+      file: ../../scripts/ensure-test-user.js
+      env:
+        SUPABASE_URL: ${SUPABASE_URL}
+        SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+        TEST_PASSWORD: ${TEST_PASSWORD}
+
+---
+- launchApp:
+    clearState: true
+
+- runFlow:
+    file: ../subflows/sign-in.yaml
+    env:
+      EMAIL: ${output.testEmail}
+      PASSWORD: ${output.testPassword}
+
+- openLink: ${WEB_BASE_URL}/${LOCALE}/account
+- extendedWaitUntil:
+    visible: "Account settings"
+    timeout: 30000
+
+# 削除は 2 段階（誤操作で消えないこと自体が要件）
+# 設定画面の一番下にあるので、先に見えるところまでスクロールする。
+- scrollUntilVisible:
+    element:
+      id: "delete-account-open"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "delete-account-open"
+- assertVisible: ".*This will permanently delete your account.*"
+- takeScreenshot: web-e2e-delete-01-delete-confirmation
+
+# 確認語を正確に打つまで実行できないこと
+- tapOn:
+    id: "confirmation"
+- inputText: "DELETE"
+# 確認欄を埋めると実行ボタンが下に現れる。ここもビューポート外になるので
+# もう一度スクロールしてから押す。
+- scrollUntilVisible:
+    element:
+      id: "delete-account-confirm"
+    direction: DOWN
+    timeout: 20000
+- tapOn:
+    id: "delete-account-confirm"
+
+# 消えた後は未ログイン状態に戻る
+- extendedWaitUntil:
+    visible: "Sign in"
+    timeout: 30000
+
+# 消えたアカウントではもうログインできないこと
+- tapOn:
+    id: "email"
+- inputText: ${output.testEmail}
+- tapOn:
+    id: "password"
+- inputText: ${output.testPassword}
+- tapOn:
+    id: "sign-in-submit"
+- extendedWaitUntil:
+    visible: ".*Incorrect email address or password.*"
+    timeout: 30000
+- takeScreenshot: web-e2e-delete-02-deleted-cannot-sign-in

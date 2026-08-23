@@ -43,7 +43,7 @@ Every implementation MUST follow this strict sequence:
 | **Backend Tests** | `test-backend-py` (pytest) |
 | **All Unit Tests** | `unit-test` |
 | **DB Tests (pgTAP)** | `test-db` |
-| **E2E (Maestro)** | `e2e` / `e2e-web` / `e2e-mobile` |
+| **UI / E2E (Maestro)** | `e2e` / `e2e-web` / `e2e-mobile` / `e2e-ui`（環境は `--env local\|staging\|production`） |
 
 ## Commit Strategy
 

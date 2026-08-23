@@ -87,7 +87,7 @@ export function SignUpForm({
         <AuthMessage tone="error">{t(`errors.${state.messageKey}`)}</AuthMessage>
       )}
 
-      <Button type="submit" disabled={pending} className="w-full">
+      <Button id="sign-up-submit" type="submit" disabled={pending} className="w-full">
         {pending ? t('signingUp') : t('signUp')}
       </Button>
 

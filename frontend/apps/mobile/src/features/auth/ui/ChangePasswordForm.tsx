@@ -51,6 +51,7 @@ export function ChangePasswordForm({
   return (
     <VStack className="gap-4">
       <AuthField
+        testID="currentPassword"
         label={t('auth.currentPasswordLabel')}
         value={currentPassword}
         onChangeText={setCurrentPassword}
@@ -63,6 +64,7 @@ export function ChangePasswordForm({
 
       <VStack className="gap-2">
         <AuthField
+          testID="password"
           label={t('auth.newPasswordLabel')}
           value={password}
           onChangeText={setPassword}
@@ -76,6 +78,7 @@ export function ChangePasswordForm({
       </VStack>
 
       <AuthField
+        testID="passwordConfirmation"
         label={t('auth.passwordConfirmationLabel')}
         value={confirmation}
         onChangeText={setConfirmation}
@@ -97,7 +100,7 @@ export function ChangePasswordForm({
         />
       ) : null}
 
-      <Button onPress={handleSubmit} isDisabled={pending}>
+      <Button testID="change-password-submit" onPress={handleSubmit} isDisabled={pending}>
         <ButtonText>{pending ? t('auth.saving') : t('auth.updatePassword')}</ButtonText>
       </Button>
     </VStack>

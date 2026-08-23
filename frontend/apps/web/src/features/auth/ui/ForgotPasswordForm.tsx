@@ -64,7 +64,7 @@ export function ForgotPasswordForm({
         <AuthMessage tone="error">{t(`errors.${state.messageKey}`)}</AuthMessage>
       )}
 
-      <Button type="submit" disabled={pending} className="w-full">
+      <Button id="send-reset-link-submit" type="submit" disabled={pending} className="w-full">
         {pending ? t('sending') : t('sendResetLink')}
       </Button>
 

@@ -47,7 +47,7 @@ ci-check               # CI gate (lint + format-check + type-check)
 
 # Tests
 test-db                # pgTAP DB tests
-e2e / e2e-web / e2e-mobile
+e2e / e2e-web / e2e-mobile / e2e-ui
 
 # Database (user approval required)
 devenv tasks run app:migrate-dev   # Generate + apply migration + types (recommended)

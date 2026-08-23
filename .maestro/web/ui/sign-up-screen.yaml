@@ -1,0 +1,52 @@
+# UI: サインアップ画面のパスワード要件チェックリストが実際に反応すること
+#
+# Supabase 側の要件（12 文字以上 + 大小英字 + 数字 + 記号）を満たさないと 422 で
+# 弾かれる。**何が足りないかを画面に出さないと、ユーザーは何度も推測して
+# 打ち直すことになる**ので、この表示は機能の一部として守る。
+#
+# 送信はしない = バックエンドに書き込まないので、リモートでも安全。
+
+url: ${WEB_BASE_URL}
+name: "Web UI - Sign-up screen"
+tags:
+  - web
+  - ui
+  - auth
+
+env:
+  WEB_BASE_URL: ${WEB_BASE_URL || "http://localhost:3000"}
+  LOCALE: ${LOCALE || "en"}
+
+---
+- launchApp:
+    clearState: true
+- openLink: ${WEB_BASE_URL}/${LOCALE}/signup
+
+- assertVisible: "Create your account"
+- assertVisible: "Email address"
+- assertVisible: "Password"
+- assertVisible: "Confirm new password"
+- assertVisible: ".*Already have an account.*"
+
+# 要件チェックリストが最初から見えていること（打ち終わってから知らせるのでは遅い）
+- assertVisible: ".*At least 12 characters.*"
+- assertVisible: "A lowercase letter"
+- assertVisible: "An uppercase letter"
+- assertVisible: "A number"
+- assertVisible: ".*A symbol.*"
+- takeScreenshot: web-ui-signup-01-sign-up-initial
+
+# 入力に応じて状態が変わること（= 値がフォームに届いている）
+- tapOn:
+    id: "password"
+- inputText: "E2ePassw0rd!x"
+- takeScreenshot: web-ui-signup-02-requirements-filled
+
+# ログインへ戻れること
+# ここの "Sign in" は**リンク**（送信ボタンは "Sign up"）。この画面では
+# 文言が一意なのでテキストで指してよい。
+- tapOn: "Sign in"
+- extendedWaitUntil:
+    visible: "Email address"
+    timeout: 20000
+- assertVisible: ".*Forgot your password.*"

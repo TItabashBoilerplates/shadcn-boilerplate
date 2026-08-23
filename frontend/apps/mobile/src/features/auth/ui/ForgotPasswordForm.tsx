@@ -77,6 +77,7 @@ export function ForgotPasswordForm({
     return (
       <VStack className="gap-4">
         <AuthField
+          testID="email"
           label={t('auth.emailLabel')}
           value={email}
           onChangeText={setEmail}
@@ -91,7 +92,7 @@ export function ForgotPasswordForm({
           <AuthMessage tone="error" message={t(`auth.errors.${result.messageKey}`)} />
         ) : null}
 
-        <Button onPress={handleRequest} isDisabled={pending}>
+        <Button testID="send-reset-code-submit" onPress={handleRequest} isDisabled={pending}>
           <ButtonText>{pending ? t('auth.sending') : t('auth.sendResetCode')}</ButtonText>
         </Button>
 
@@ -109,6 +110,7 @@ export function ForgotPasswordForm({
       <AuthMessage tone="success" message={t('auth.success.passwordResetCodeSent')} />
 
       <AuthField
+        testID="code"
         label={t('auth.codeLabel')}
         value={code}
         onChangeText={setCode}
@@ -121,6 +123,7 @@ export function ForgotPasswordForm({
 
       <VStack className="gap-2">
         <AuthField
+          testID="password"
           label={t('auth.newPasswordLabel')}
           value={password}
           onChangeText={setPassword}
@@ -134,6 +137,7 @@ export function ForgotPasswordForm({
       </VStack>
 
       <AuthField
+        testID="passwordConfirmation"
         label={t('auth.passwordConfirmationLabel')}
         value={confirmation}
         onChangeText={setConfirmation}
@@ -148,7 +152,7 @@ export function ForgotPasswordForm({
         <AuthMessage tone="error" message={t(`auth.errors.${result.messageKey}`)} />
       ) : null}
 
-      <Button onPress={handleReset} isDisabled={pending}>
+      <Button testID="update-password-submit" onPress={handleReset} isDisabled={pending}>
         <ButtonText>{pending ? t('auth.saving') : t('auth.updatePassword')}</ButtonText>
       </Button>
 

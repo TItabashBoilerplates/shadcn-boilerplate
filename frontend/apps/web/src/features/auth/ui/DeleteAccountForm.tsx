@@ -55,7 +55,12 @@ export function DeleteAccountForm({
     return (
       <div className={className ? `space-y-3 ${className}` : 'space-y-3'}>
         <p className="text-sm text-muted-foreground">{t('deleteAccountDescription')}</p>
-        <Button type="button" variant="destructive" onClick={() => setArmed(true)}>
+        <Button
+          id="delete-account-open"
+          type="button"
+          variant="destructive"
+          onClick={() => setArmed(true)}
+        >
           {t('deleteAccount')}
         </Button>
       </div>
@@ -90,7 +95,7 @@ export function DeleteAccountForm({
       )}
 
       <div className="flex gap-2">
-        <Button type="submit" variant="destructive" disabled={pending}>
+        <Button id="delete-account-confirm" type="submit" variant="destructive" disabled={pending}>
           {pending ? t('deletingAccount') : t('deleteAccountConfirm')}
         </Button>
         <Button type="button" variant="ghost" onClick={() => setArmed(false)} disabled={pending}>

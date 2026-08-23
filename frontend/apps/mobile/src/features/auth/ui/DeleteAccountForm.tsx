@@ -45,7 +45,7 @@ export function DeleteAccountForm({
         <Text className="text-sm text-muted-foreground">
           {t('account.deleteAccountDescription')}
         </Text>
-        <Button variant="destructive" onPress={() => setArmed(true)}>
+        <Button testID="delete-account-open" variant="destructive" onPress={() => setArmed(true)}>
           <ButtonText>{t('account.deleteAccount')}</ButtonText>
         </Button>
       </VStack>
@@ -57,6 +57,7 @@ export function DeleteAccountForm({
       <Text className="text-sm text-muted-foreground">{t('account.deleteAccountWarning')}</Text>
 
       <AuthField
+        testID="confirmation"
         label={t('account.deleteConfirmationLabel', { word: confirmationWord })}
         value={confirmation}
         onChangeText={setConfirmation}
@@ -76,7 +77,12 @@ export function DeleteAccountForm({
       ) : null}
 
       <HStack className="gap-2">
-        <Button variant="destructive" onPress={handleSubmit} isDisabled={pending}>
+        <Button
+          testID="delete-account-confirm"
+          variant="destructive"
+          onPress={handleSubmit}
+          isDisabled={pending}
+        >
           <ButtonText>
             {pending ? t('account.deletingAccount') : t('account.deleteAccountConfirm')}
           </ButtonText>

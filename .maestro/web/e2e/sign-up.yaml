@@ -1,0 +1,81 @@
+# E2E: サインアップの往復（登録 → 確認メール → 確定 → そのままログインできる）
+#
+# 本番は `enable_confirmations = true` なので、**メールを確認するまでログインできない**。
+# 「登録フォームが送信できた」だけを見るテストは、確認メールのテンプレートや
+# リンク形式が壊れていても緑のままになる。
+#
+# ローカル専用（Mailpit が要る）。ユーザーは自分で作るので service_role は
+# 使わないが、後始末に要るので `admin` タグも付けている。
+
+url: ${WEB_BASE_URL}
+name: "Web E2E - Sign up round trip"
+jsEngine: graaljs
+tags:
+  - web
+  - e2e
+  - auth
+  - mailbox
+  # 確認メールを**実際に受け取って**リンクを踏むので、
+  #   (1) `enable_confirmations = true`
+  #   (2) `[auth.email.template.confirmation]` の配線（token_hash 形式）
+  # の両方が要る。runner が supabase/config.toml の有無で自動的に出し入れする。
+  - needs-email-templates
+  - admin
+
+env:
+  WEB_BASE_URL: ${WEB_BASE_URL || "http://localhost:3000"}
+  LOCALE: ${LOCALE || "en"}
+  SUPABASE_URL: ${SUPABASE_URL || "http://localhost:54321"}
+  SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY || ""}
+  MAIL_API_URL: ${MAIL_API_URL || "http://localhost:54324"}
+  TEST_PASSWORD: ${TEST_PASSWORD || "E2ePassw0rd!x"}
+
+---
+- launchApp:
+    clearState: true
+
+# 使い捨てのアドレスを組み立てる（フローが 2 回走っても衝突しないように）
+- evalScript: ${output.signUpEmail = "signup_" + Date.now() + "@test.local"}
+
+- openLink: ${WEB_BASE_URL}/${LOCALE}/signup
+- assertVisible: "Create your account"
+- takeScreenshot: web-e2e-signup-01-sign-up-screen
+
+- tapOn:
+    id: "email"
+- inputText: ${output.signUpEmail}
+- tapOn:
+    id: "password"
+- inputText: ${TEST_PASSWORD}
+- tapOn:
+    id: "passwordConfirmation"
+- inputText: ${TEST_PASSWORD}
+- tapOn:
+    id: "sign-up-submit"
+
+# 「確認メールを送った」ことがユーザーに伝わること。
+# ⚠️ この画面の文言は `enable_confirmations` の値に関わらず出る（Server Action が
+# 常に `signUpConfirmationSent` を返す）。つまり**ここが緑でもメールが飛んだ証明には
+# ならない**ので、下でメールを実際に受け取るところまで踏む。
+- extendedWaitUntil:
+    visible: ".*Check your inbox.*"
+    timeout: 30000
+- takeScreenshot: web-e2e-signup-02-confirmation-sent
+
+# 確認メールが実際に飛び、そのリンクでセッションが張れること
+- runScript:
+    file: ../../scripts/get-auth-email.js
+    env:
+      MAIL_API_URL: ${MAIL_API_URL}
+      TO_EMAIL: ${output.signUpEmail}
+      SUBJECT_MATCH: "Confirm"
+      MAX_RETRIES: "30"
+
+- openLink: ${output.confirmUrl}
+
+# 確認後はログイン済みでダッシュボードに入れる
+- extendedWaitUntil:
+    visible: "Dashboard"
+    timeout: 30000
+- assertVisible: ${output.signUpEmail}
+- takeScreenshot: web-e2e-signup-03-confirmed-and-signed-in

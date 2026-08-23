@@ -1,0 +1,38 @@
+# UI: トップページが描画され、ログインへの導線があること
+#
+# ここは「バックエンドに何も書き込まない」UI テスト。したがって **local でも
+# staging でも production でも同じものを走らせられる**（`config.remote.yaml`
+# でも除外されない）。本番のスモークとしてそのまま使える。
+
+url: ${WEB_BASE_URL}
+name: "Web UI - Home"
+tags:
+  - web
+  - ui
+  - smoke
+
+env:
+  WEB_BASE_URL: ${WEB_BASE_URL || "http://localhost:3000"}
+  LOCALE: ${LOCALE || "en"}
+
+---
+# Web のブラウザ状態はフローをまたいで保持される（公式仕様）。
+# 前のフローのログイン状態を持ち込まないよう毎回クリアする。
+- launchApp:
+    clearState: true
+- openLink: ${WEB_BASE_URL}/${LOCALE}/
+
+- assertVisible: ".*Welcome to Next\\.js.*"
+- takeScreenshot: web-ui-home-01-home
+- assertVisible: "Sign In"
+
+# 言語切り替えの導線があること（i18n は必須要件。`.claude/rules/i18n.md`）
+- assertVisible: "English"
+- assertVisible: "日本語"
+
+# ログインへ辿り着けること
+- tapOn: "Sign In"
+- extendedWaitUntil:
+    visible: "Sign in"
+    timeout: 20000
+- takeScreenshot: web-ui-home-02-home-signin-reached

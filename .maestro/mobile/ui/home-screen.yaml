@@ -1,0 +1,25 @@
+# UI: アプリが起動してホームが描画されること（Mobile のスモーク）
+#
+# 「起動直後にクラッシュする」（EXPO_PUBLIC_* が焼き込まれていない等）は
+# ビルドが通っても起きる。最低限これだけは常に緑にしておく。
+
+appId: ${APP_ID}
+name: "Mobile UI - Home screen"
+tags:
+  - mobile
+  - ui
+  - smoke
+
+env:
+  APP_ID: ${APP_ID}
+
+---
+- launchApp:
+    clearState: true
+    permissions:
+      all: allow
+
+- extendedWaitUntil:
+    visible: "Welcome!"
+    timeout: 30000
+- takeScreenshot: mobile-ui-home-01-home

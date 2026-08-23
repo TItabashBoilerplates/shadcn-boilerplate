@@ -1,0 +1,42 @@
+# UI: 言語切り替えが実際に効くこと（en ⇄ ja）
+#
+# i18n は本リポジトリの必須要件（`.claude/rules/i18n.md`）。翻訳キーの過不足は
+# ユニットテストで見ているが、「切り替えたのに表示が変わらない」（ルーティングや
+# proxy の設定ミス）は画面を動かさないと分からない。
+
+url: ${WEB_BASE_URL}
+name: "Web UI - Locale switch"
+tags:
+  - web
+  - ui
+  - i18n
+
+env:
+  WEB_BASE_URL: ${WEB_BASE_URL || "http://localhost:3000"}
+
+---
+- launchApp:
+    clearState: true
+
+# 英語
+- openLink: ${WEB_BASE_URL}/en/
+- assertVisible: ".*Welcome to Next\\.js.*"
+- takeScreenshot: web-ui-locale-01-home-en
+
+# 画面から日本語へ切り替え
+- tapOn: "日本語"
+- extendedWaitUntil:
+    visible: ".*Next\\.jsへようこそ.*"
+    timeout: 20000
+- assertNotVisible: ".*Welcome to Next\\.js.*"
+
+# ログイン画面も翻訳されていること（未翻訳キーがそのまま出ていないか）
+- openLink: ${WEB_BASE_URL}/ja/login
+- assertVisible: "メールアドレス"
+- assertVisible: ".*パスワードをお忘れですか.*"
+- assertNotVisible: "Auth.emailLabel"
+- takeScreenshot: web-ui-locale-02-login-ja
+
+# 英語へ戻せること
+- openLink: ${WEB_BASE_URL}/en/login
+- assertVisible: "Email address"
