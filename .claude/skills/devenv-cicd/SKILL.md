@@ -330,6 +330,25 @@ Supabase 公式は GitHub Actions 向けに **2 つ**のワークフローを示
 **`supabase start` と `supabase db start` を取り違えないこと。**
 pgTAP に要るのは Postgres だけで、フルスタックを起こすと CI が数分無駄になる。
 
+### ⚠️ 公式手順に「Drizzle のマイグレーション適用」を足さないと必ず落ちる
+
+`supabase db start` が自動で流すのは **`supabase/migrations/`** だけ。
+このリポジトリはマイグレーションを **Drizzle に集約**していて `supabase/migrations/` を
+使っていないので、公式どおりに起こしただけの DB は **`public` スキーマが空**になり、
+RLS のテストが `relation "public.users" does not exist` で落ちる（**CI で実測**）。
+
+```yaml
+- run: supabase db start
+- run: devenv tasks run db:migrate-deploy   # ← これが要る（既存の適用のみ）
+- run: test-db
+```
+
+**`db:migrate-dev` を使わないこと**（`drizzle-kit generate` を含むので、
+CI が勝手にマイグレーションファイルを作り得る）。
+
+ローカルで先に migrate 済みだと**手元では通ってしまう**ので、
+この種の差は「CI で初めて出る」。DB を作り直してから確かめること。
+
 ### CLI の入手は **devenv 経由**（`supabase/setup-cli` は使わない）
 
 公式ドキュメントは `supabase/setup-cli` を案内しているが、**本リポジトリでは採らない**:

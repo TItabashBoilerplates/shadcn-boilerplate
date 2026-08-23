@@ -215,12 +215,39 @@ jobs:
       - uses: cachix/cachix-action@v16
         with:
           name: devenv
+      # Drizzle のマイグレーションを流すのに drizzle/node_modules が要る
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            frontend/node_modules
+            frontend/apps/*/node_modules
+            frontend/packages/*/node_modules
+            frontend/tooling/*/node_modules
+            drizzle/node_modules
+          key: v2-${{ runner.os }}-node-modules-${{ hashFiles('frontend/bun.lock', 'drizzle/bun.lock') }}
       - name: Install devenv.sh
         shell: bash
         run: nix profile add nixpkgs#devenv
+      # ci-check job と同じ理由（execIfModified による install の skip）。
+      - name: Sync JS dependencies (install into a lockfile-matched tree)
+        run: cd "$DEVENV_ROOT/drizzle" && bun install --frozen-lockfile
       # Postgres だけ起こす（pgTAP は API / Studio / Storage を要らない）
       - name: Start Postgres (supabase db start)
         run: supabase db start
+      # ⚠️ 公式手順に**この 1 ステップを足さないと必ず落ちる**。
+      #
+      # `supabase db start` が自動で流すのは `supabase/migrations/` だが、
+      # このリポジトリは**マイグレーションを Drizzle に集約**していて
+      # `supabase/migrations/` を使っていない（.claude/CLAUDE.md）。
+      # つまり公式どおりに起こしただけの DB は **public スキーマが空**で、
+      # RLS のテストは `relation "public.users" does not exist` で落ちる（実測）。
+      #
+      # `db:migrate-dev` ではなく `db:migrate-deploy`（**既存の適用のみ**）を使う。
+      # 前者は `drizzle-kit generate` を含むので、CI が勝手にマイグレーション
+      # ファイルを作り得る。
+      - name: Apply Drizzle migrations
+        run: devenv tasks run db:migrate-deploy
       # 公式手順どおり pg_prove をコンテナで回す
       - name: Run pgTAP tests (supabase test db)
         run: test-db

@@ -76,7 +76,50 @@ jobs:
 
 ---
 
-## 3. 走らせて分かったこと（実測）
+## 3. ⚠️ 公式手順をそのまま貼ると落ちる（Drizzle を使っているため）
+
+**`supabase db start` が自動で流すのは `supabase/migrations/` だけ。**
+このリポジトリは**マイグレーションを Drizzle に集約**していて `supabase/migrations/` を
+使っていない（`.claude/CLAUDE.md`）。したがって公式どおりに起こしただけの DB は
+**`public` スキーマが空**で、RLS のテストは次のように落ちる（GitHub Actions 実測）:
+
+```
+ERROR:  relation "public.users" does not exist
+# Failed test 1: "public.users が存在する"
+  Parse errors: Bad plan.  You planned 9 tests but ran 1.
+Result: FAIL
+```
+
+ローカルでは先に `app:migrate-dev` を流していたので通ってしまい、**CI で初めて出た**。
+
+対処: `supabase db start` の後に **Drizzle のマイグレーション適用**を 1 ステップ挟む。
+
+```yaml
+- name: Start Postgres (supabase db start)
+  run: supabase db start
+- name: Apply Drizzle migrations
+  run: devenv tasks run db:migrate-deploy   # ← 既存の適用のみ
+- name: Run pgTAP tests (supabase test db)
+  run: test-db
+```
+
+**`db:migrate-dev` ではなく `db:migrate-deploy` を使う。** 前者は `drizzle-kit generate` を
+含むので、CI が勝手にマイグレーションファイルを作り得る。
+
+同じ手順をローカルで再現して確認済み:
+
+| 手順 | 結果 |
+|---|---|
+| `supabase db start` → `test-db` | **exit 1**（CI と同じ失敗） |
+| `supabase db start` → `db:migrate-deploy` → `test-db` | **exit 0** / Files=2, Tests=10, PASS |
+
+> 一般化すると: **Supabase 公式の CI レシピは「`supabase/migrations/` が正本」を前提にしている。**
+> 別のマイグレーションツール（Drizzle / Prisma / Atlas 等）を使っているなら、
+> 起動と `supabase test db` の間に必ずその適用ステップが要る。
+
+---
+
+## 4. 走らせて分かったこと（実測）
 
 ### `supabase test db` は**最初から落ちていた**
 
