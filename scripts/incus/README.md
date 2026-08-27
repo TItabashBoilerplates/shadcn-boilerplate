@@ -9,7 +9,9 @@
 
 設計の背景・判断根拠は [`docs/designs/incus-devenv-isolation.md`](../../docs/designs/incus-devenv-isolation.md)。
 
-> ⚠️ **v1 は未実測**。初回は `doctor` → `up` の順で流し、`docs/designs/…` §8 のチェックを埋めること。
+> ⚠️ **Linux(native) で部分実測済み / macOS(orb) は未実測**。初回は `doctor` → `up` の順で流すこと。
+> 最有力の失敗点は cloud-init 内の Nix インストール（ネットワーク）。実測結果は
+> [`docs/designs/incus-devenv-isolation.md` §8](../../docs/designs/incus-devenv-isolation.md)。
 
 ## 前提（ホストに入れるのはこれだけ）
 

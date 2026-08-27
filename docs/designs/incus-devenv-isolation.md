@@ -1,7 +1,7 @@
 # 設計: Incus による devenv 開発環境の隔離
 
 - 日付: 2026-08-27
-- ステータス: **実装 v1 あり / PoC 未実測**（§8 の項目は実機で確認するまで確定としない）
+- ステータス: **実装 v1 / Linux(native) で部分実測済み**（§8。cloud-init のネットワーク依存部分と macOS/orb は未実測）
 - 調査の裏付け: [`docs/_research/2026-08-27-incus-devenv-isolation.md`](../_research/2026-08-27-incus-devenv-isolation.md)
 - 実装: [`scripts/incus/incus.sh`](../../scripts/incus/incus.sh) / [`scripts/incus/cloud-init.yaml`](../../scripts/incus/cloud-init.yaml)
 
@@ -181,23 +181,42 @@ frontend/node_modules   drizzle/node_modules   backend-py/.venv   .devenv   .dir
 
 ---
 
-## 8. PoC で実測すること（ここが済むまで「動く」と言わない）
+## 8. 実測結果（2026-08-27, Linux / native ドライバ）
 
-| # | 確認 | 落ちたときの対処 |
+Incus 6.0.0 / kernel 6.18 / Ubuntu 24.04（dir ストレージプール）で `incus.sh` を実際に流した。
+**この環境はコンテナからの外向き通信がプロキシ経由に限定されているため、cloud-init の
+apt / Nix 取得は検証できていない**（下表の「未実測」）。それ以外は実物で確認した。
+
+### 確認できたこと
+
+| # | 項目 | 結果 |
 |---|---|---|
-| 1 | ドライバの自動判定が通り `incus info` に到達する（orb なら machine 内の incusd） | `INCUS_DRIVER` で明示 |
-| 1b | **orb: OrbStack machine の中で incusd が動き、その中の Incus コンテナで Docker が動く（3 段の入れ子）** | 駄目なら colima ドライバへ退避 |
-| 2 | リポジトリが VM から見える（orb は `/mnt/mac/...` へのパス変換が正しいか） | ホーム配下へ移す |
-| 3 | cloud-init が完走し `/var/lib/devenv-container-provisioned` ができる | `cloud-init status --long` |
-| 4 | `shift=true` が通る（駄目なら `raw.idmap` で読み書きできる） | フォールバック経路の動作確認 |
-| 5 | 箱の中で `direnv allow` → `devenv shell` が通る | `trusted-users` にバイナリキャッシュが効いているか |
-| 6 | `supabase-start` が通る。`docker info` の Storage Driver が `vfs` でない | ZFS プールなら `zfs.delegate=true` |
-| 7 | `ci-check` / `unit-test` が All Green | — |
-| 8 | mac から `http://<ip>:3000` と `:6006` に届く | `--publish` へ退避 |
-| 9 | **mac でファイルを保存したとき HMR が反応するか**（§5.2） | ポーリング設定 → 駄目なら同期方式 |
-| 10 | `frontend/node_modules` が箱側のボリュームに乗っている（`df` で確認） | ボリューム構成の見直し |
+| 1 | `images:debian/13/cloud` の取得と起動 | ✅ |
+| 2 | `security.nesting=true` で **user namespace を作れる**（`unshare -Ur`）= Nix の build sandbox の前提 | ✅ |
+| 3 | コンテナ内で **systemd が PID 1 として動く**（`systemctl is-system-running` = running）= cloud-init の前提 | ✅ |
+| 4 | `cloud-init.yaml` が **cloud-init 本体のスキーマ検証を通る** | ✅ |
+| 5 | ローカルボリューム 5 本（node_modules × 2 / .venv / .devenv / .direnv）の作成と、作業ツリー内へのマウント | ✅ |
+| 6 | `exec` が解決した開発ユーザーとして `$APP_PATH` で動き、書き込める | ✅ |
+| 7 | `status` の IP / URL 表示 | ✅ |
 
----
+### 実測で見つかった不具合（修正済み）
+
+| # | 症状 | 修正 |
+|---|---|---|
+| A | **cloud イメージには uid 1000 の既定ユーザーが既にいる**（Debian は `debian`）。`dev` を uid 1000 で作る cloud-init は `UID 1000 is not unique` で必ず失敗する | uid 1000 の既存ユーザーを再利用し、いなければ作る形に変更。スクリプト側も `getent passwd 1000` で**ユーザー名とホームを実行時に解決**する（Ubuntu なら `ubuntu`）。ユーザー名に依存しないよう profile は `/etc/profile.d/` へ |
+| B | **`shift=true` が使えない環境がある** — `Required idmapping abilities not available` で失敗 | フォールバック経路が実際に必要であることを確認。想定どおり `raw.idmap` へ退避する |
+| C | **idmap 無しで mount すると全ファイルが `65534:65534`（overflow uid）に見え、読めるが書けない**。しかもコンテナは正常に起動するため、後から謎の EACCES として出る | `verify_workspace_access()` を追加。マウント直後に**所有 uid と実際の書き込みを検査**し、65534 なら原因を名指しして停止する（実測で検知できることを確認） |
+| D | **`raw.idmap` でホストの uid 0 を写すとコンテナ自体が起動しなくなる**（rootfs が `Permission denied`。root で実行した場合に踏む） | root 実行を検出して事前に停止。さらに restart に失敗したら **raw.idmap と device を戻してからエラーにする**（壊れたまま放置しない） |
+
+### 未実測（環境の制約で確認できていないもの）
+
+| # | 項目 | 備考 |
+|---|---|---|
+| 1 | cloud-init の apt / **Nix インストール / devenv 導入**の完走 | コンテナからの外向き通信がプロキシ限定のため。**macOS で最初に流すときの最有力の失敗点** |
+| 2 | 箱の中での `direnv allow` → `devenv shell` → `supabase-start` → `ci-check` | 同上 |
+| 3 | **orb ドライバ全般**（OrbStack machine 内の incusd、`/mnt/mac` へのパス変換、3 段の入れ子での Docker） | macOS が要る |
+| 4 | **ホスト側の編集で HMR が反応するか**（§5.2） | macOS が要る。共有ファイルシステムの inotify 問題 |
+| 5 | `docker info` の Storage Driver が `vfs` でないこと | 上記 1 が通ってから |
 
 ## 9. 次の段階（PoC が通ってから）
 

@@ -41,7 +41,13 @@ INCUS_INSTANCE="${INCUS_INSTANCE:-$(basename "$REPO_ROOT" | tr '[:upper:]' '[:lo
 INCUS_IMAGE="${INCUS_IMAGE:-images:debian/13/cloud}"
 INCUS_CPU="${INCUS_CPU:-8}"
 INCUS_MEMORY="${INCUS_MEMORY:-16GiB}"
-APP_PATH="/home/dev/app"
+
+# 開発ユーザーとホーム、作業ツリーのマウント先はインスタンス起動後に解決する。
+# cloud イメージの既定ユーザー名はイメージごとに違う（Debian: debian / Ubuntu: ubuntu）ため、
+# 名前を決め打ちにしない。uid は 1000 で固定（bind mount の idmap がこれを前提にする）。
+DEV_USER=""
+DEV_HOME=""
+APP_PATH=""
 
 # ドライバ。空なら自動判定。native | orb | colima
 INCUS_DRIVER="${INCUS_DRIVER:-}"
@@ -189,6 +195,20 @@ instance_exists()  { INCUS info "$INCUS_INSTANCE" >/dev/null 2>&1; }
 instance_running() { [ "$(INCUS list "$INCUS_INSTANCE" -f csv -c s 2>/dev/null || true)" = "RUNNING" ]; }
 instance_ip()      { INCUS list "$INCUS_INSTANCE" -f csv -c 4 2>/dev/null | head -1 | awk '{print $1}'; }
 
+# uid 1000 のユーザー名とホームをインスタンスから取得する。
+resolve_dev_user() {
+  [ -n "$DEV_USER" ] && return 0
+  local line
+  line="$(INCUS exec "$INCUS_INSTANCE" -- getent passwd 1000 2>/dev/null || true)"
+  [ -n "$line" ] || die "インスタンス内に uid 1000 のユーザーが見つかりません。cloud-init が完走しているか確認してください。"
+  DEV_USER="$(printf '%s' "$line" | cut -d: -f1)"
+  DEV_HOME="$(printf '%s' "$line" | cut -d: -f6)"
+  APP_PATH="$DEV_HOME/app"
+}
+
+# コンテナ内で開発ユーザーとしてコマンドを実行する。
+as_dev() { INCUS exec "$INCUS_INSTANCE" -- sudo -u "$DEV_USER" --login bash -lc "$1"; }
+
 # ── 作成 ─────────────────────────────────────────────────────────────────────
 create_instance() {
   log "インスタンスを作成します: $INCUS_INSTANCE ($INCUS_IMAGE)"
@@ -210,20 +230,60 @@ create_instance() {
 }
 
 # ── 作業ツリーの bind mount ─────────────────────────────────────────────────
+# 実測で分かっていること（docs/designs/incus-devenv-isolation.md §8）:
+#   - shift=true（idmapped mount）は使えないバックエンドがある
+#     → "Required idmapping abilities not available" で失敗する
+#   - idmap 無しで mount すると、コンテナ内では全ファイルが 65534:65534（overflow uid）に見え、
+#     読めても書けない。**気づかずに進むと devenv / bun が謎の EACCES で落ちる**
+#   - raw.idmap でホストの uid 0 を写そうとすると、コンテナの rootfs ごと権限を失って
+#     起動しなくなる（root で実行してはいけない）
 attach_workspace() {
-  INCUS config device get "$INCUS_INSTANCE" app source >/dev/null 2>&1 && return 0
+  if INCUS config device get "$INCUS_INSTANCE" app source >/dev/null 2>&1; then
+    verify_workspace_access
+    return 0
+  fi
 
   local src; src="$(server_repo_path)"
   log "ホストの作業ツリーを $APP_PATH へマウントします ($src)"
-  # shift=true は idmapped mount。未対応のバックエンドでは失敗するので raw.idmap に退避。
-  if ! INCUS config device add "$INCUS_INSTANCE" app disk \
-        source="$src" path="$APP_PATH" shift=true >/dev/null 2>&1; then
-    warn "shift=true が使えないため raw.idmap にフォールバックします（再起動が要ります）"
-    INCUS config device add "$INCUS_INSTANCE" app disk source="$src" path="$APP_PATH"
-    INCUS config set "$INCUS_INSTANCE" raw.idmap "both $(id -u) 1000"
-    INCUS restart "$INCUS_INSTANCE"
+
+  if INCUS config device add "$INCUS_INSTANCE" app disk \
+       source="$src" path="$APP_PATH" shift=true >/dev/null 2>&1; then
+    ok "マウント: $src → $APP_PATH (idmapped)"
+    verify_workspace_access
+    return 0
   fi
-  ok "マウント: $src → $APP_PATH"
+
+  warn "shift=true が使えません。raw.idmap にフォールバックします"
+  [ "$(id -u)" -ne 0 ] \
+    || die "root で実行しています。raw.idmap でホストの uid 0 を写すとコンテナが起動しなくなります。一般ユーザーで実行してください。"
+
+  INCUS config device add "$INCUS_INSTANCE" app disk source="$src" path="$APP_PATH" >/dev/null
+  INCUS config set "$INCUS_INSTANCE" raw.idmap "both $(id -u) 1000"
+  if ! INCUS restart "$INCUS_INSTANCE" >/dev/null 2>&1; then
+    warn "raw.idmap を適用した状態でインスタンスが起動しませんでした。設定を戻します"
+    INCUS config unset "$INCUS_INSTANCE" raw.idmap >/dev/null 2>&1 || true
+    INCUS config device remove "$INCUS_INSTANCE" app >/dev/null 2>&1 || true
+    INCUS start "$INCUS_INSTANCE" >/dev/null 2>&1 || true
+    die "作業ツリーをマウントできませんでした。'incus info --show-log $INCUS_INSTANCE' を確認してください。"
+  fi
+  ok "マウント: $src → $APP_PATH (raw.idmap)"
+  verify_workspace_access
+}
+
+# マウントが「見えるだけ」で終わっていないかを確認する。
+# overflow uid (65534) のまま進むと、後から原因の分かりにくい権限エラーになる。
+verify_workspace_access() {
+  local owner
+  owner="$(INCUS exec "$INCUS_INSTANCE" -- stat -c '%u' "$APP_PATH/devenv.nix" 2>/dev/null || true)"
+  [ -n "$owner" ] || die "マウント先に $APP_PATH/devenv.nix が見えません。共有元のパスが正しいか確認してください。"
+  if [ "$owner" = "65534" ]; then
+    die "作業ツリーが overflow uid (65534) で見えています。idmap が効いていません。
+   コンテナ内から書き込めないため、このままでは devenv も bun も動きません。
+   → shift=true が使えるバックエンドにするか、一般ユーザーで実行して raw.idmap を効かせてください。"
+  fi
+  as_dev "cd '$APP_PATH' && touch .incus-write-check && rm -f .incus-write-check" >/dev/null 2>&1 \
+    || die "作業ツリーへ $DEV_USER が書き込めません（所有 uid: $owner）。idmap の設定を見直してください。"
+  ok "作業ツリーの読み書きを確認しました（所有 uid: $owner）"
 }
 
 attach_local_volumes() {
@@ -243,15 +303,14 @@ attach_local_volumes() {
     INCUS exec "$INCUS_INSTANCE" -- mkdir -p "$APP_PATH/$rel" >/dev/null 2>&1 || true
     INCUS config device add "$INCUS_INSTANCE" "$dev_name" disk \
       pool="$pool" source="$vol_name" path="$APP_PATH/$rel" >/dev/null
-    INCUS exec "$INCUS_INSTANCE" -- chown dev:dev "$APP_PATH/$rel"
+    INCUS exec "$INCUS_INSTANCE" -- chown "$DEV_USER:$DEV_USER" "$APP_PATH/$rel"
     ok "コンテナ側ローカル FS: $rel"
   done
 }
 
 # ── direnv の信頼（初回の 'direnv allow' を代行） ────────────────────────────
 trust_direnv() {
-  INCUS exec "$INCUS_INSTANCE" -- sudo -u dev --login bash -lc \
-    "cd $APP_PATH && direnv allow" >/dev/null 2>&1 \
+  as_dev "cd '$APP_PATH' && direnv allow" >/dev/null 2>&1 \
     && ok "direnv allow 済み" \
     || warn "direnv allow に失敗しました。箱に入って手動で実行してください。"
 }
@@ -261,7 +320,7 @@ inject_doppler_token() {
   [ -n "${DOPPLER_TOKEN:-}" ] || return 0
   log "DOPPLER_TOKEN をコンテナへ引き渡します（値は表示しません）"
   printf 'export DOPPLER_TOKEN=%q\n' "$DOPPLER_TOKEN" \
-    | INCUS file push - "$INCUS_INSTANCE/home/dev/.bashrc.d/doppler.sh" --uid 1000 --gid 1000 --mode 600
+    | INCUS file push - "$INCUS_INSTANCE$DEV_HOME/.devenv-container-secrets" --uid 1000 --gid 1000 --mode 600
   ok "DOPPLER_TOKEN を設定しました"
 }
 
@@ -303,6 +362,7 @@ cmd_up() {
     INCUS start "$INCUS_INSTANCE"
   fi
 
+  resolve_dev_user
   attach_workspace
   attach_local_volumes
   inject_doppler_token
@@ -324,16 +384,18 @@ cmd_shell() {
   ensure_server
   instance_exists || die "インスタンス '$INCUS_INSTANCE' がありません。先に './scripts/incus/incus.sh up' を実行してください。"
   instance_running || INCUS start "$INCUS_INSTANCE"
+  resolve_dev_user
   case "$INCUS_DRIVER" in
-    orb) exec orb -m "$ORB_MACHINE" -u root incus exec "$INCUS_INSTANCE" -- sudo -u dev --login ;;
-    *)   exec incus exec "$INCUS_INSTANCE" -- sudo -u dev --login ;;
+    orb) exec orb -m "$ORB_MACHINE" -u root incus exec "$INCUS_INSTANCE" -- sudo -u "$DEV_USER" --login ;;
+    *)   exec incus exec "$INCUS_INSTANCE" -- sudo -u "$DEV_USER" --login ;;
   esac
 }
 
 cmd_exec() {
   ensure_server
   instance_running || die "インスタンス '$INCUS_INSTANCE' が起動していません。"
-  INCUS exec "$INCUS_INSTANCE" -- sudo -u dev --login bash -lc "cd $APP_PATH && $*"
+  resolve_dev_user
+  as_dev "cd '$APP_PATH' && $*"
 }
 
 cmd_status() {

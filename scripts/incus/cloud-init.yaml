@@ -7,14 +7,10 @@
 # 前提: インスタンスに security.nesting=true が設定されていること。
 #   - Nix: build sandbox が user namespace を作る
 #   - Docker: Supabase ローカルスタックが子 namespace を作る
-users:
-  - name: dev
-    uid: 1000
-    shell: /bin/bash
-    sudo: ALL=(ALL) NOPASSWD:ALL
-    groups: [docker, sudo]
-    lock_passwd: true
-
+#
+# ⚠️ uid 1000 のユーザーを**新規作成しない**。cloud イメージには既定ユーザーが uid 1000 で
+#    存在することが多く（Debian の `debian`、Ubuntu の `ubuntu`）、固定 uid での useradd は
+#    "UID 1000 is not unique" で失敗する。既存ユーザーがいればそれを使う。
 package_update: true
 packages:
   - ca-certificates
@@ -25,7 +21,6 @@ packages:
   - direnv
   - docker.io
   - docker-compose-v2
-  - openssh-server
   - locales
 
 write_files:
@@ -34,34 +29,53 @@ write_files:
     content: ""
     permissions: "0644"
 
-  - path: /home/dev/.bashrc.d/incus.sh
-    owner: "dev:dev"
+  # ユーザー名に依存しないよう profile.d に置く（ホームの位置もイメージによって違うため）。
+  - path: /etc/profile.d/devenv-container.sh
     permissions: "0644"
     content: |
       # Nix (multi-user) を PATH に載せる
       if [ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
         . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
       fi
-      export PATH="$HOME/.nix-profile/bin:$PATH"
+      [ -d "$HOME/.nix-profile/bin" ] && export PATH="$HOME/.nix-profile/bin:$PATH"
+      # incus.sh が置くシークレット（DOPPLER_TOKEN 等）
+      [ -f "$HOME/.devenv-container-secrets" ] && . "$HOME/.devenv-container-secrets"
       # direnv（リポジトリに cd した時点で devenv がアクティベートされる）
-      eval "$(direnv hook bash)"
+      if command -v direnv >/dev/null 2>&1; then
+        case "$-" in *i*) eval "$(direnv hook bash)" ;; esac
+      fi
       # ログインしたらリポジトリへ
       if [ -d "$HOME/app" ] && [ "$PWD" = "$HOME" ]; then cd "$HOME/app" || true; fi
 
 runcmd:
-  - [ systemctl, enable, --now, docker ]
-  # Nix を multi-user でインストール。trusted-users に dev を入れないと
-  # バイナリキャッシュが効かず devenv shell が毎回ビルドになる（README の Setup §2 と同じ理由）。
+  # 1. 開発ユーザーの決定（既存の uid 1000 を再利用。いなければ dev を作る）
   - |
+    set -e
+    DEV_USER="$(getent passwd 1000 | cut -d: -f1)"
+    if [ -z "$DEV_USER" ]; then
+      useradd -u 1000 -m -s /bin/bash dev
+      DEV_USER=dev
+    fi
+    getent group docker >/dev/null || groupadd docker
+    usermod -aG docker "$DEV_USER"
+    printf '%s ALL=(ALL) NOPASSWD:ALL\n' "$DEV_USER" > /etc/sudoers.d/90-devenv-container
+    chmod 440 /etc/sudoers.d/90-devenv-container
+    printf 'DEV_USER=%s\n' "$DEV_USER" > /etc/devenv-container.env
+  - [ systemctl, enable, --now, docker ]
+  # 2. Nix を multi-user でインストール。trusted-users に開発ユーザーを入れないと
+  #    バイナリキャッシュが効かず devenv shell が毎回ビルドになる（README Setup §2 と同じ理由）。
+  - |
+    set -e
+    . /etc/devenv-container.env
     curl -fsSL https://install.determinate.systems/nix | sh -s -- install linux \
       --no-confirm \
-      --extra-conf "trusted-users = root dev"
-  # devenv を dev ユーザーの nix profile に入れる
+      --extra-conf "trusted-users = root $DEV_USER"
+  # 3. devenv を開発ユーザーの nix profile に入れる
   - |
-    sudo -u dev bash -lc '
+    set -e
+    . /etc/devenv-container.env
+    sudo -u "$DEV_USER" bash -lc '
       . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
       nix profile install nixpkgs#devenv
     '
-  - [ bash, -lc, 'echo ". /home/dev/.bashrc.d/incus.sh" >> /home/dev/.bashrc' ]
-  - [ chown, -R, "dev:dev", /home/dev ]
   - [ bash, -lc, 'touch /var/lib/devenv-container-provisioned' ]
