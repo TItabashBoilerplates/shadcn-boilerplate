@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Incus 開発コンテナのライフサイクル管理。
 #
-#   ./scripts/incus/devbox.sh up        # 起動（無ければ作る）。ここまでで開発環境が立ち上がる
-#   ./scripts/incus/devbox.sh shell     # コンテナ内のシェルに入る（direnv 経由で devenv が有効）
-#   ./scripts/incus/devbox.sh status    # 状態 / IP / URL を表示
-#   ./scripts/incus/devbox.sh exec ...  # コンテナ内で任意コマンドを実行
-#   ./scripts/incus/devbox.sh stop      # 停止（中身は残る）
-#   ./scripts/incus/devbox.sh destroy   # 破棄（作業ツリーはホスト側にあるので失われない）
-#   ./scripts/incus/devbox.sh doctor    # 前提条件の診断だけ行う
+#   ./scripts/incus/incus.sh up        # 起動（無ければ作る）。ここまでで開発環境が立ち上がる
+#   ./scripts/incus/incus.sh shell     # コンテナ内のシェルに入る（direnv 経由で devenv が有効）
+#   ./scripts/incus/incus.sh status    # 状態 / IP / URL を表示
+#   ./scripts/incus/incus.sh exec ...  # コンテナ内で任意コマンドを実行
+#   ./scripts/incus/incus.sh stop      # 停止（中身は残る）
+#   ./scripts/incus/incus.sh destroy   # 破棄（作業ツリーはホスト側にあるので失われない）
+#   ./scripts/incus/incus.sh doctor    # 前提条件の診断だけ行う
 #
 # 設計上の前提（docs/designs/incus-devenv-isolation.md）:
 #   - **リポジトリはホストに clone されている**。このスクリプトはその clone の中から実行され、
@@ -33,12 +33,12 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # ── 設定（環境変数で上書き可） ───────────────────────────────────────────────
 # インスタンス名。既定はリポジトリのディレクトリ名。
-# 同じリポジトリを複数の箱で並列に動かしたいときは DEVBOX_NAME で分ける。
-DEVBOX_NAME="${DEVBOX_NAME:-$(basename "$REPO_ROOT" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9-' '-' | sed 's/-*$//')}"
-DEVBOX_IMAGE="${DEVBOX_IMAGE:-images:debian/13/cloud}"
-DEVBOX_CPU="${DEVBOX_CPU:-8}"
-DEVBOX_MEMORY="${DEVBOX_MEMORY:-16GiB}"
-DEVBOX_APP_PATH="/home/dev/app"
+# 同じリポジトリを複数の箱で並列に動かしたいときは INCUS_INSTANCE で分ける。
+INCUS_INSTANCE="${INCUS_INSTANCE:-$(basename "$REPO_ROOT" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9-' '-' | sed 's/-*$//')}"
+INCUS_IMAGE="${INCUS_IMAGE:-images:debian/13/cloud}"
+INCUS_CPU="${INCUS_CPU:-8}"
+INCUS_MEMORY="${INCUS_MEMORY:-16GiB}"
+APP_PATH="/home/dev/app"
 
 # colima の VM 設定（macOS で自動起動するとき用）
 COLIMA_PROFILE="${COLIMA_PROFILE:-incus}"
@@ -51,11 +51,11 @@ COLIMA_DISK="${COLIMA_DISK:-100}"
 #   1. 速度 — virtiofs 越しの node_modules / .venv は致命的に遅い
 #   2. 正しさ — プラットフォーム依存バイナリ（darwin 版と linux 版）が混ざるのを防ぐ
 # いずれも .gitignore 済みで再生成可能なパスに限定している。
-DEVBOX_LOCAL_PATHS_DEFAULT="frontend/node_modules drizzle/node_modules backend-py/.venv .devenv .direnv"
-DEVBOX_LOCAL_PATHS="${DEVBOX_LOCAL_PATHS:-$DEVBOX_LOCAL_PATHS_DEFAULT}"
+INCUS_LOCAL_PATHS_DEFAULT="frontend/node_modules drizzle/node_modules backend-py/.venv .devenv .direnv"
+INCUS_LOCAL_PATHS="${INCUS_LOCAL_PATHS:-$INCUS_LOCAL_PATHS_DEFAULT}"
 
 # devenv が公開するポート（status の表示と --publish の対象）
-DEVBOX_PORTS="3000 1420 8081 4040 6006 54321 54323 54324"
+PORTS="3000 1420 8081 4040 6006 54321 54323 54324"
 
 # ── 前提条件 ─────────────────────────────────────────────────────────────────
 is_macos() { [ "$(uname -s)" = "Darwin" ]; }
@@ -104,45 +104,45 @@ ensure_repo_visible_to_server() {
    （ここで止めないと、空のディレクトリがマウントされて原因の分かりにくい失敗になります）"
 }
 
-instance_exists() { incus info "$DEVBOX_NAME" >/dev/null 2>&1; }
-instance_running() { [ "$(incus list "$DEVBOX_NAME" -f csv -c s 2>/dev/null || true)" = "RUNNING" ]; }
+instance_exists() { incus info "$INCUS_INSTANCE" >/dev/null 2>&1; }
+instance_running() { [ "$(incus list "$INCUS_INSTANCE" -f csv -c s 2>/dev/null || true)" = "RUNNING" ]; }
 
 # ── 作成 ─────────────────────────────────────────────────────────────────────
 create_instance() {
-  log "インスタンスを作成します: $DEVBOX_NAME ($DEVBOX_IMAGE)"
+  log "インスタンスを作成します: $INCUS_INSTANCE ($INCUS_IMAGE)"
   # security.nesting は Nix の build sandbox と Docker の**両方**が要求する。
   # mknod / setxattr の intercept は Docker のイメージ展開で要ることがある。
-  incus launch "$DEVBOX_IMAGE" "$DEVBOX_NAME" \
+  incus launch "$INCUS_IMAGE" "$INCUS_INSTANCE" \
     -c security.nesting=true \
     -c security.syscalls.intercept.mknod=true \
     -c security.syscalls.intercept.setxattr=true \
-    -c limits.cpu="$DEVBOX_CPU" \
-    -c limits.memory="$DEVBOX_MEMORY" \
+    -c limits.cpu="$INCUS_CPU" \
+    -c limits.memory="$INCUS_MEMORY" \
     -c cloud-init.user-data="$(cat "$SCRIPT_DIR/cloud-init.yaml")" \
-    -c user.devbox-repo="$REPO_ROOT"
+    -c user.devenv-repo="$REPO_ROOT"
 
   log "cloud-init の完了を待ちます（初回は Nix と devenv の取得で数分かかります）"
-  incus exec "$DEVBOX_NAME" -- cloud-init status --wait >/dev/null 2>&1 || true
-  incus exec "$DEVBOX_NAME" -- test -f /var/lib/devbox-provisioned \
-    || die "プロビジョニングが完了していません。'incus exec $DEVBOX_NAME -- cloud-init status --long' で原因を確認してください。"
+  incus exec "$INCUS_INSTANCE" -- cloud-init status --wait >/dev/null 2>&1 || true
+  incus exec "$INCUS_INSTANCE" -- test -f /var/lib/devenv-container-provisioned \
+    || die "プロビジョニングが完了していません。'incus exec $INCUS_INSTANCE -- cloud-init status --long' で原因を確認してください。"
   ok "プロビジョニング完了"
 }
 
 # ── 作業ツリーの bind mount ─────────────────────────────────────────────────
 attach_workspace() {
-  if incus config device get "$DEVBOX_NAME" app source >/dev/null 2>&1; then
+  if incus config device get "$INCUS_INSTANCE" app source >/dev/null 2>&1; then
     return 0
   fi
-  log "ホストの作業ツリーを $DEVBOX_APP_PATH へマウントします"
+  log "ホストの作業ツリーを $APP_PATH へマウントします"
   # shift=true は idmapped mount。未対応のバックエンドでは失敗するので raw.idmap に退避する。
-  if ! incus config device add "$DEVBOX_NAME" app disk \
-        source="$REPO_ROOT" path="$DEVBOX_APP_PATH" shift=true >/dev/null 2>&1; then
+  if ! incus config device add "$INCUS_INSTANCE" app disk \
+        source="$REPO_ROOT" path="$APP_PATH" shift=true >/dev/null 2>&1; then
     warn "shift=true が使えないため raw.idmap にフォールバックします（コンテナの再起動が要ります）"
-    incus config device add "$DEVBOX_NAME" app disk source="$REPO_ROOT" path="$DEVBOX_APP_PATH"
-    incus config set "$DEVBOX_NAME" raw.idmap "both $(id -u) 1000"
-    incus restart "$DEVBOX_NAME"
+    incus config device add "$INCUS_INSTANCE" app disk source="$REPO_ROOT" path="$APP_PATH"
+    incus config set "$INCUS_INSTANCE" raw.idmap "both $(id -u) 1000"
+    incus restart "$INCUS_INSTANCE"
   fi
-  ok "マウント: $REPO_ROOT → $DEVBOX_APP_PATH"
+  ok "マウント: $REPO_ROOT → $APP_PATH"
 }
 
 # node_modules / .venv / .devenv 等をコンテナ側のローカル FS に逃がす。
@@ -150,12 +150,12 @@ attach_local_volumes() {
   local pool
   pool="$(incus profile device get default root pool 2>/dev/null || echo default)"
 
-  for rel in $DEVBOX_LOCAL_PATHS; do
+  for rel in $INCUS_LOCAL_PATHS; do
     local dev_name vol_name
     dev_name="local-$(printf '%s' "$rel" | tr -c 'a-zA-Z0-9' '-' | sed 's/-*$//')"
-    vol_name="${DEVBOX_NAME}-${dev_name}"
+    vol_name="${INCUS_INSTANCE}-${dev_name}"
 
-    if incus config device get "$DEVBOX_NAME" "$dev_name" source >/dev/null 2>&1; then
+    if incus config device get "$INCUS_INSTANCE" "$dev_name" source >/dev/null 2>&1; then
       continue
     fi
 
@@ -163,10 +163,10 @@ attach_local_volumes() {
       || incus storage volume create "$pool" "$vol_name" >/dev/null
 
     # マウントポイントを先に作る（bind mount 先が存在しないと失敗しうる）
-    incus exec "$DEVBOX_NAME" -- mkdir -p "$DEVBOX_APP_PATH/$rel" >/dev/null 2>&1 || true
-    incus config device add "$DEVBOX_NAME" "$dev_name" disk \
-      pool="$pool" source="$vol_name" path="$DEVBOX_APP_PATH/$rel" >/dev/null
-    incus exec "$DEVBOX_NAME" -- chown dev:dev "$DEVBOX_APP_PATH/$rel"
+    incus exec "$INCUS_INSTANCE" -- mkdir -p "$APP_PATH/$rel" >/dev/null 2>&1 || true
+    incus config device add "$INCUS_INSTANCE" "$dev_name" disk \
+      pool="$pool" source="$vol_name" path="$APP_PATH/$rel" >/dev/null
+    incus exec "$INCUS_INSTANCE" -- chown dev:dev "$APP_PATH/$rel"
     ok "コンテナ側ローカル FS: $rel"
   done
 }
@@ -177,7 +177,7 @@ inject_doppler_token() {
   [ -n "$token" ] || return 0
   log "DOPPLER_TOKEN をコンテナへ引き渡します（値は表示しません）"
   printf 'export DOPPLER_TOKEN=%q\n' "$token" \
-    | incus file push - "$DEVBOX_NAME/home/dev/.bashrc.d/doppler.sh" --uid 1000 --gid 1000 --mode 600
+    | incus file push - "$INCUS_INSTANCE/home/dev/.bashrc.d/doppler.sh" --uid 1000 --gid 1000 --mode 600
   ok "DOPPLER_TOKEN を設定しました"
 }
 
@@ -185,8 +185,8 @@ inject_doppler_token() {
 # direnv は .envrc を初回だけ手動で信頼する必要がある。ホスト側で allow 済みでも
 # コンテナ内の direnv には引き継がれないので、ここで済ませておく。
 trust_direnv() {
-  incus exec "$DEVBOX_NAME" -- sudo -u dev --login bash -lc \
-    "cd $DEVBOX_APP_PATH && direnv allow" >/dev/null 2>&1 \
+  incus exec "$INCUS_INSTANCE" -- sudo -u dev --login bash -lc \
+    "cd $APP_PATH && direnv allow" >/dev/null 2>&1 \
     && ok "direnv allow 済み" \
     || warn "direnv allow に失敗しました。箱に入って手動で実行してください。"
 }
@@ -194,17 +194,17 @@ trust_direnv() {
 # ── ポート公開（既定は行わない。並列運用時に localhost が衝突するため） ──────
 publish_ports() {
   local ip; ip="$(instance_ip)"
-  for port in $DEVBOX_PORTS; do
+  for port in $PORTS; do
     local dev_name="pub-$port"
-    incus config device get "$DEVBOX_NAME" "$dev_name" listen >/dev/null 2>&1 && continue
-    incus config device add "$DEVBOX_NAME" "$dev_name" proxy \
+    incus config device get "$INCUS_INSTANCE" "$dev_name" listen >/dev/null 2>&1 && continue
+    incus config device add "$INCUS_INSTANCE" "$dev_name" proxy \
       listen="tcp:127.0.0.1:$port" connect="tcp:127.0.0.1:$port" bind=host nat=true >/dev/null
-    ok "127.0.0.1:$port → $DEVBOX_NAME:$port"
+    ok "127.0.0.1:$port → $INCUS_INSTANCE:$port"
   done
 }
 
 instance_ip() {
-  incus list "$DEVBOX_NAME" -f csv -c 4 2>/dev/null | head -1 | awk '{print $1}'
+  incus list "$INCUS_INSTANCE" -f csv -c 4 2>/dev/null | head -1 | awk '{print $1}'
 }
 
 # ── サブコマンド ─────────────────────────────────────────────────────────────
@@ -224,8 +224,8 @@ cmd_up() {
   if ! instance_exists; then
     create_instance
   elif ! instance_running; then
-    log "インスタンスを起動します: $DEVBOX_NAME"
-    incus start "$DEVBOX_NAME"
+    log "インスタンスを起動します: $INCUS_INSTANCE"
+    incus start "$INCUS_INSTANCE"
   fi
 
   attach_workspace
@@ -238,7 +238,7 @@ cmd_up() {
   cat <<EOS
 
 次の一手:
-  ./scripts/incus/devbox.sh shell     # 箱に入る（cd するだけで direnv が devenv を有効化）
+  ./scripts/incus/incus.sh shell     # 箱に入る（cd するだけで direnv が devenv を有効化）
   # 箱の中で:
   #   direnv allow      … 初回のみ
   #   supabase-start    … Supabase (Docker)
@@ -248,26 +248,26 @@ EOS
 
 cmd_shell() {
   ensure_client
-  instance_exists || die "インスタンス '$DEVBOX_NAME' がありません。先に './scripts/incus/devbox.sh up' を実行してください。"
-  instance_running || incus start "$DEVBOX_NAME"
-  exec incus exec "$DEVBOX_NAME" -- sudo -u dev --login
+  instance_exists || die "インスタンス '$INCUS_INSTANCE' がありません。先に './scripts/incus/incus.sh up' を実行してください。"
+  instance_running || incus start "$INCUS_INSTANCE"
+  exec incus exec "$INCUS_INSTANCE" -- sudo -u dev --login
 }
 
 cmd_exec() {
   ensure_client
-  instance_running || die "インスタンス '$DEVBOX_NAME' が起動していません。"
-  exec incus exec "$DEVBOX_NAME" -- sudo -u dev --login bash -lc "cd $DEVBOX_APP_PATH && $*"
+  instance_running || die "インスタンス '$INCUS_INSTANCE' が起動していません。"
+  exec incus exec "$INCUS_INSTANCE" -- sudo -u dev --login bash -lc "cd $APP_PATH && $*"
 }
 
 cmd_status() {
   ensure_client
   if ! instance_exists; then
-    warn "インスタンス '$DEVBOX_NAME' はまだありません"
+    warn "インスタンス '$INCUS_INSTANCE' はまだありません"
     return 0
   fi
   local ip; ip="$(instance_ip)"
   printf '\n'
-  incus list "$DEVBOX_NAME"
+  incus list "$INCUS_INSTANCE"
   if [ -n "$ip" ]; then
     cat <<EOS
 アクセス先（コンテナ IP 経由。--publish していれば localhost でも届きます）:
@@ -286,28 +286,28 @@ EOS
 cmd_stop() {
   ensure_client
   instance_exists || return 0
-  incus stop "$DEVBOX_NAME"
-  ok "停止しました: $DEVBOX_NAME"
+  incus stop "$INCUS_INSTANCE"
+  ok "停止しました: $INCUS_INSTANCE"
 }
 
 cmd_destroy() {
   ensure_client
-  instance_exists || { warn "インスタンス '$DEVBOX_NAME' はありません"; return 0; }
+  instance_exists || { warn "インスタンス '$INCUS_INSTANCE' はありません"; return 0; }
   printf '本当に破棄しますか？ 作業ツリー (%s) はホスト側にあるので失われません [y/N]: ' "$REPO_ROOT"
   read -r answer
   case "$answer" in
     y|Y) ;;
     *) die "中止しました" ;;
   esac
-  incus delete --force "$DEVBOX_NAME"
-  ok "破棄しました: $DEVBOX_NAME"
+  incus delete --force "$INCUS_INSTANCE"
+  ok "破棄しました: $INCUS_INSTANCE"
 }
 
 cmd_doctor() {
   ensure_client; ok "incus クライアント: $(command -v incus)"
   ensure_server
   ensure_repo_visible_to_server
-  ok "前提条件はすべて満たしています（インスタンス名: $DEVBOX_NAME）"
+  ok "前提条件はすべて満たしています（インスタンス名: $INCUS_INSTANCE）"
 }
 
 usage() {

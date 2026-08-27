@@ -3,7 +3,7 @@
 - 日付: 2026-08-27
 - ステータス: **実装 v1 あり / PoC 未実測**（§8 の項目は実機で確認するまで確定としない）
 - 調査の裏付け: [`docs/_research/2026-08-27-incus-devenv-isolation.md`](../_research/2026-08-27-incus-devenv-isolation.md)
-- 実装: [`scripts/incus/devbox.sh`](../../scripts/incus/devbox.sh) / [`scripts/incus/cloud-init.yaml`](../../scripts/incus/cloud-init.yaml)
+- 実装: [`scripts/incus/incus.sh`](../../scripts/incus/incus.sh) / [`scripts/incus/cloud-init.yaml`](../../scripts/incus/cloud-init.yaml)
 
 ---
 
@@ -14,8 +14,8 @@
 ```bash
 git clone https://github.com/TItabashBoilerplates/shadcn-boilerplate
 cd shadcn-boilerplate
-./scripts/incus/devbox.sh up      # ← これだけで箱が立ち上がる
-./scripts/incus/devbox.sh shell   # ← 入れば devenv が有効
+./scripts/incus/incus.sh up      # ← これだけで箱が立ち上がる
+./scripts/incus/incus.sh shell   # ← 入れば devenv が有効
 ```
 
 - **ソースの正本はホスト側の clone**。編集はホストのエディタで普段どおり行う
@@ -34,7 +34,7 @@ cd shadcn-boilerplate
 
 > **ホスト側のエントリポイントを devenv script にしてはならない。** `devenv.nix` の scripts は
 > devenv shell の中でしか PATH に載らず、「ホストに Nix を入れない」という目的と矛盾する。
-> したがって `scripts/incus/devbox.sh` は**素の bash** で書き、`scripts/infra/lib.sh` も source しない
+> したがって `scripts/incus/incus.sh` は**素の bash** で書き、`scripts/infra/lib.sh` も source しない
 > （あちらは devenv shell 内で動く前提）。
 
 ---
@@ -44,7 +44,7 @@ cd shadcn-boilerplate
 ```
 ┌─ macOS ────────────────────────────────────────────────────────┐
 │  ~/dev/shadcn-boilerplate/     ← git clone（ソースの正本）        │
-│    └ scripts/incus/devbox.sh   ← これを叩く                      │
+│    └ scripts/incus/incus.sh   ← これを叩く                      │
 │  incus クライアント（brew）      Xcode / iOS ビルドはここに残る    │
 │                                                                │
 │  ┌─ Lima VM（colima start --runtime incus --network-address）─┐ │
@@ -69,16 +69,16 @@ Docker は子 namespace）。片方だけの都合ではないので、外せな
 
 | コマンド | 内容 |
 |---|---|
-| `devbox.sh up` | Colima →インスタンス作成 → cloud-init 待ち → 作業ツリーの mount → `direnv allow` まで。冪等 |
-| `devbox.sh up --publish` | 加えて `127.0.0.1:<port>` を proxy device で箱へ転送する（**並列運用時は衝突するので既定では行わない**） |
-| `devbox.sh shell` | 箱の `dev` ユーザーのログインシェル。`~/app` に cd 済みで direnv が発火する |
-| `devbox.sh exec <cmd>` | 箱の中でコマンドを 1 発実行（`devbox.sh exec ci-check` のように使う） |
-| `devbox.sh status` | 状態・IP・各サービスの URL |
-| `devbox.sh stop` / `destroy` | 停止 / 破棄（破棄しても作業ツリーは残る） |
-| `devbox.sh doctor` | 前提条件の診断のみ |
+| `incus.sh up` | Colima →インスタンス作成 → cloud-init 待ち → 作業ツリーの mount → `direnv allow` まで。冪等 |
+| `incus.sh up --publish` | 加えて `127.0.0.1:<port>` を proxy device で箱へ転送する（**並列運用時は衝突するので既定では行わない**） |
+| `incus.sh shell` | 箱の `dev` ユーザーのログインシェル。`~/app` に cd 済みで direnv が発火する |
+| `incus.sh exec <cmd>` | 箱の中でコマンドを 1 発実行（`incus.sh exec ci-check` のように使う） |
+| `incus.sh status` | 状態・IP・各サービスの URL |
+| `incus.sh stop` / `destroy` | 停止 / 破棄（破棄しても作業ツリーは残る） |
+| `incus.sh doctor` | 前提条件の診断のみ |
 
-環境変数で上書きできるもの: `DEVBOX_NAME`（同一リポジトリを複数の箱で回すとき）/ `DEVBOX_IMAGE` /
-`DEVBOX_CPU` / `DEVBOX_MEMORY` / `DEVBOX_LOCAL_PATHS` / `COLIMA_*`。
+環境変数で上書きできるもの: `INCUS_INSTANCE`（同一リポジトリを複数の箱で回すとき）/ `INCUS_IMAGE` /
+`INCUS_CPU` / `INCUS_MEMORY` / `INCUS_LOCAL_PATHS` / `COLIMA_*`。
 
 ---
 
@@ -87,7 +87,7 @@ Docker は子 namespace）。片方だけの都合ではないので、外せな
 | 層 | 持つもの | ファイル |
 |---|---|---|
 | ホスト | incus クライアント（+ macOS は colima）のみ | — |
-| インスタンス設定 | nesting / syscall intercept / CPU / メモリ / mount | `scripts/incus/devbox.sh` |
+| インスタンス設定 | nesting / syscall intercept / CPU / メモリ / mount | `scripts/incus/incus.sh` |
 | 箱の土台 | Docker・Nix・devenv・direnv・`dev` ユーザー | `scripts/incus/cloud-init.yaml` |
 | 開発ツール | Node / Python / Deno / Bun / uv / Supabase CLI / 各種 CLI | **`devenv.nix`（既存のまま）** |
 
@@ -128,16 +128,16 @@ frontend/node_modules   drizzle/node_modules   backend-py/.venv   .devenv   .dir
    イベントが飛ぶかはバージョン依存であり、飛ばないと決めつけない
 2. 飛ばなかった場合の対策は**ポーリング監視**。Vite / webpack / chokidar 系は
    `CHOKIDAR_USEPOLLING=1`、Metro は別途設定が要る。CPU を食い反応が数秒遅れるため、
-   **箱の中で有効化する env として `devenv.nix` 側に入れるか、devbox.sh が注入するかを決める**
+   **箱の中で有効化する env として `devenv.nix` 側に入れるか、incus.sh が注入するかを決める**
 3. それでも実用に耐えない場合の退避策は、作業ツリーの双方向同期（Mutagen 等）を
-   `devbox.sh` に内蔵すること。**依存が 1 つ増えるので、2 が駄目だと分かってから採る**
+   `incus.sh` に内蔵すること。**依存が 1 つ増えるので、2 が駄目だと分かってから採る**
 
 ---
 
 ## 6. ネットワーク
 
 Colima を `--network-address` で起動しているため、**インスタンスの IP に macOS から直接届く**。
-`devbox.sh status` がその IP と URL を出す。
+`incus.sh status` がその IP と URL を出す。
 
 ```
 web http://<ip>:3000   storybook http://<ip>:6006   backend http://<ip>:4040
@@ -169,7 +169,7 @@ metro http://<ip>:8081  supabase http://<ip>:54321  studio http://<ip>:54323
 |---|---|---|
 | 1 | `colima start --runtime incus --network-address` が通り、`incus info` に到達する | Colima のバージョン / VM タイプを確認 |
 | 2 | リポジトリのパスが VM から見える（`colima ssh -- test -e .../devenv.nix`） | ホーム配下へ移すか `colima start --mount` |
-| 3 | cloud-init が完走し `/var/lib/devbox-provisioned` ができる | `cloud-init status --long` |
+| 3 | cloud-init が完走し `/var/lib/devenv-container-provisioned` ができる | `cloud-init status --long` |
 | 4 | `shift=true` が通る（駄目なら `raw.idmap` で読み書きできる） | フォールバック経路の動作確認 |
 | 5 | 箱の中で `direnv allow` → `devenv shell` が通る | `trusted-users` にバイナリキャッシュが効いているか |
 | 6 | `supabase-start` が通る。`docker info` の Storage Driver が `vfs` でない | ZFS プールなら `zfs.delegate=true` |

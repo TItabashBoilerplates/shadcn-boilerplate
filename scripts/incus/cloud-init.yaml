@@ -1,5 +1,5 @@
 #cloud-config
-# Incus 開発コンテナのプロビジョニング（scripts/incus/devbox.sh が cloud-init.user-data として流し込む）。
+# Incus 開発コンテナのプロビジョニング（scripts/incus/incus.sh が cloud-init.user-data として流し込む）。
 #
 # ここで入れるのは「devenv が動く土台」だけ。Node / Python / Deno / Bun / uv / Supabase CLI 等の
 # 開発ツールは devenv.nix が面倒を見るので**ここには書かない**（二重管理を避ける）。
@@ -34,7 +34,7 @@ write_files:
     content: ""
     permissions: "0644"
 
-  - path: /home/dev/.bashrc.d/devbox.sh
+  - path: /home/dev/.bashrc.d/incus.sh
     owner: "dev:dev"
     permissions: "0644"
     content: |
@@ -62,6 +62,6 @@ runcmd:
       . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
       nix profile install nixpkgs#devenv
     '
-  - [ bash, -lc, 'echo ". /home/dev/.bashrc.d/devbox.sh" >> /home/dev/.bashrc' ]
+  - [ bash, -lc, 'echo ". /home/dev/.bashrc.d/incus.sh" >> /home/dev/.bashrc' ]
   - [ chown, -R, "dev:dev", /home/dev ]
-  - [ bash, -lc, 'touch /var/lib/devbox-provisioned' ]
+  - [ bash, -lc, 'touch /var/lib/devenv-container-provisioned' ]
