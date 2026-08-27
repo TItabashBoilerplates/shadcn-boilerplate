@@ -99,17 +99,48 @@ Docker のストレージドライバは、外側のストレージプールに�
 **ZFS プールなら `zfs.delegate=true` を設定して `overlay2` を使わせる**。実機で `docker info` の
 `Storage Driver` を必ず確認する（ここを確認せずに `vfs` のまま運用すると Supabase の起動が極端に遅くなる）。
 
-### 4.4 ソースコードの置き場所（重要な分岐）
+### 4.4 ソースコードの置き場所（macOS では最大の論点）
 
-| 方式 | 内容 | 評価 |
-|---|---|---|
-| **① コンテナ内に clone（推奨）** | `git clone` をコンテナ内で行い、編集は VS Code Remote-SSH / Cursor / JetBrains Gateway で繋ぐ | idmap の問題が起きない。I/O が最速。**macOS では virtiofs を挟まないぶん差が大きい** |
-| ② 母艦から bind mount | `incus config device add devbox src disk source=... path=/home/dev/app shift=true` | 母艦のエディタをそのまま使える。ただし **macOS では virtiofs + idmap の二段**になり、権限と速度の両方でリスク |
+**論点は「どこで書くか」ではなく「ファイルの実体がどこにあるか」。** どの方式でも、
+ツールチェイン（Nix / bun / uv / Docker）は Incus の中にあり、エディタは mac のものを使える。
+違うのは**ファイルの実体が mac 側にあるか、箱の中にあるか**の一点だけで、
+macOS ではこの境界を跨いだ瞬間に**ファイル監視（inotify）が効かなくなる**。
 
-**①を既定にする。** 「母艦にコードを置きたい」という要件があるなら②だが、その場合は `raw.idmap both 1000 1000`
-または `shift=true` を必ず設定する（未設定だと全ファイルが overflow uid で見える。調査 §4）。
+#### 決定的な事実: virtiofs / 9p はホスト側の変更を guest に通知しない
 
-なお **`node_modules` / `.venv` / `.devenv` / `/nix` は絶対に共有しない**（プラットフォーム依存のバイナリが混ざる）。
+mac 上のファイルを Lima VM 経由で見せる仕組み（virtiofs / 9p）では、
+**ホスト側でファイルを書き換えても guest 内のプロセスに inotify イベントが届かない**。
+Podman / Docker Desktop / Colima / Lima すべてで報告されている既知の制約で、
+実害は **「ホットリロードが動かない」**（[podman#22343](https://github.com/containers/podman/issues/22343)、
+[vfkit#126](https://github.com/crc-org/vfkit/issues/126)、[lima#615](https://github.com/lima-vm/lima/issues/615)）。
+Lima には実験的な `mountInotify` があるが、ファイル削除は扱えないなど部分的な対応にとどまる。
+
+→ **mac のエディタで保存 → 箱の中の Next.js / Vite / Metro が気づかない**、という状態になる。
+本リポジトリは web(3000) / desktop(1420) / mobile Metro(8081) / Storybook(6006) と
+監視するプロセスが 4 つあるため、ここが壊れると開発体験が成立しない。
+
+#### 3 つの選択肢
+
+| 方式 | ファイルの実体 | HMR | 評価 |
+|---|---|---|---|
+| **① 箱の中に clone + Remote-SSH（推奨）** | 箱の中（ext4/btrfs） | **効く** | 編集は VS Code / Cursor / JetBrains Gateway で mac から。git 操作も箱の中。体感はローカルとほぼ同じ |
+| ② ホストに clone + 双方向同期（Mutagen / Unison） | 両方に実体 | **効く**（箱側はローカル FS なので） | mac 側にもファイルが残る。同期ツールという依存と、同期遅延・衝突の運用が増える |
+| ③ ホストに clone + bind mount（virtiofs） | mac 側のみ | **効かない**（ポーリング必須） | `CHOKIDAR_USEPOLLING` 等でポーリングに落とせば動くが、CPU を常時食い、大きなツリーでは反応が数秒遅れる。Metro は特に苦しい |
+
+**①を推奨する。** 「ホストに clone したい」という要望は②で満たせるが、Incus とは別に同期ツールを
+1 つ増やすことになる（`.claude/rules/minimal-implementation.md` の観点では依存が 1 つ増える）。
+
+③を採る場合の追加要件:
+- `raw.idmap both <uid> 1000` または `shift=true`（未設定だと全ファイルが overflow uid で見える）。
+  ただし **virtiofs 上の idmapped mount は比較的新しいカーネル / FUSE の機能**であり、
+  Colima が使う構成で通るかは実機確認が必須（推測で設計に入れない）
+- `node_modules` / `.venv` / `.devenv` / `.direnv` / `/nix` は**共有から除外し、箱の中のローカル FS に置く**
+  （プラットフォーム依存バイナリが混ざる。速度も段違い）
+- Colima は既定で `/Users/$USER` しか VM に見せない。その外にあるパスは**無言で空になる**
+
+> なお **「プロジェクトを並列に持ちたい」**という主目的からすると、どの方式でも
+> **箱ごとに独立した作業ツリーが要る**（同じツリーを複数の箱から同時にビルドさせることはできない）。
+> その意味でも①が構成として素直。
 
 ### 4.5 再現性 — golden image と snapshot
 
@@ -200,16 +231,22 @@ incus snapshot restore proj-x before-migration
 
 ---
 
-## 8. ユーザーに確認したい点（ここが決まらないと構成が決まらない）
+## 8. 確定した前提（2026-08-27 ユーザー回答）
 
-1. **母艦の OS は macOS か Linux か。** → 構成案 A / B の分岐。macOS なら層が 1 つ増えることを許容できるか
-2. **主目的は §1 の A / B / C のどれか。** → C ならコンテナではなく VM インスタンスを選ぶべき
-3. **ソースコードは箱の中に置いてよいか**（= 編集は Remote-SSH 等になる）。母艦に置きたい場合は
-   idmap と virtiofs のコストを受け入れる必要がある
-4. **モバイル（Expo）を箱の中で開発したいか。** 実機の Expo Go / Metro 接続と Android 実機 USB は
-   2 層構成だと追加設計が要るため、「モバイルだけ母艦」で妥協するかを先に決めたい
+| 論点 | 回答 | 設計への反映 |
+|---|---|---|
+| 母艦の OS | **macOS** | **構成案 B**（Colima の incus runtime で Linux VM → その中に Incus コンテナ）。iOS ビルドは母艦に残る |
+| 隔離の主目的 | **プロジェクトを並列に持ちたい** | Incus を挟む価値が最も出るケース。**golden image + snapshot + 1 プロジェクト 1 インスタンス**を設計の中心に置く。VM インスタンス（案 C）は不要 |
+| ソースコードの置き場所 | **要検討**（「clone はホスト、環境は Incus 内」を想定していた） | §4.4 のとおり、macOS では virtiofs 越しに inotify が飛ばず **HMR が壊れる**。①箱の中に clone + Remote-SSH（推奨）／②ホストに clone + 双方向同期／③bind mount + ポーリング の 3 択で、**①を推奨** |
 
----
+### 残っている確認事項
+
+1. **§4.4 の ① / ② / ③ のどれを採るか。** ①なら追加依存ゼロ。②は Mutagen 等が 1 つ増える。
+   ③は HMR をポーリングに落とす覚悟が要る
+2. **モバイル（Expo）を箱の中で開発するか。** 実機の Expo Go は Metro(8081) に到達する必要があり、
+   macOS の 2 層構成では追加設計が要る。「モバイルだけ母艦」で妥協するかを先に決めたい
+3. Doppler の資格情報を箱にどう渡すか（`doppler login` の対話 vs dev スコープの service token）。
+   **本番スコープのトークンは箱に入れない**（`.claude/rules/mcp-doppler.md`）
 
 ## 9. 参考
 

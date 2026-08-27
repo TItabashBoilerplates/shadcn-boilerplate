@@ -102,6 +102,40 @@ gid 100000-110000 10000-20000
 
 ---
 
+## 4.5 macOS 特有: virtiofs / 9p はホスト側の変更を guest に通知しない
+
+**mac 側でファイルを編集しても、VM / コンテナ内のプロセスに inotify イベントが届かない。**
+Docker Desktop / Podman / Colima / Lima すべてで報告されている既知の制約で、
+実害は **ホットリロード（HMR）が動かないこと**。
+
+- [podman#22343](https://github.com/containers/podman/issues/22343): 「ホストがファイルを変更・削除しても
+  guest は inotify を受け取れず、コンテナ内の file watch が効かない。実害はコードのホットリロードが
+  正しく動かないこと」。colima / lima でも同様と明記されている
+- [crc-org/vfkit#126](https://github.com/crc-org/vfkit/issues/126): virtiofs 共有ディレクトリで
+  ホスト側変更時に inotify が飛ばない
+- [lima#615](https://github.com/lima-vm/lima/issues/615) / [lima#1913](https://github.com/lima-vm/lima/pull/1913):
+  Lima は `mountInotify` で部分対応を試みているが、**ファイル削除は扱えない**
+- FUSE / virtiofs 自体の inotify 対応は [LWN: Inotify support in FUSE and virtiofs](https://lwn.net/Articles/874000/)
+  の段階の話であり、完全対応を前提にできない
+
+→ **本リポジトリは監視プロセスが 4 つある**（Next.js 3000 / Vite 1420 / Metro 8081 / Storybook 6006）ため、
+ここが壊れると開発体験が成立しない。**macOS では「mac 側にファイルを置いて箱から見る」構成を既定にしない。**
+
+### 併せて確認した Colima のマウント制約
+
+- Colima が VM に見せるのは既定で **`/Users/$USER` だけ**。その外のパスを bind mount しても
+  **エラーにならず空になる**（[Colima troubleshooting](https://deepwiki.com/abiosoft/colima/9-troubleshooting)）
+- macOS 13+ では `--vm-type vz --mount-type virtiofs` が使える
+
+### virtiofs 上の idmapped mount（`shift=true`）
+
+FUSE / virtiofs の idmapped mount 対応は **比較的新しいカーネル機能**で、
+filesystem daemon が `FUSE_ALLOW_IDMAP` 等で能力をネゴシエートし、`default_permissions` で
+マウントされている等の条件が要る（[LWN: fuse: basic support for idmapped mounts](https://lwn.net/Articles/985803/)）。
+**Colima が使う構成で `shift=true` が通るかは実機で確認するまで前提にしない。**
+
+---
+
 ## 5. ポートの到達手段（proxy device）
 
 ```
