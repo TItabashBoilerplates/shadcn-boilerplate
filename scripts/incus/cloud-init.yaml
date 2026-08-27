@@ -1,0 +1,67 @@
+#cloud-config
+# Incus 開発コンテナのプロビジョニング（scripts/incus/devbox.sh が cloud-init.user-data として流し込む）。
+#
+# ここで入れるのは「devenv が動く土台」だけ。Node / Python / Deno / Bun / uv / Supabase CLI 等の
+# 開発ツールは devenv.nix が面倒を見るので**ここには書かない**（二重管理を避ける）。
+#
+# 前提: インスタンスに security.nesting=true が設定されていること。
+#   - Nix: build sandbox が user namespace を作る
+#   - Docker: Supabase ローカルスタックが子 namespace を作る
+users:
+  - name: dev
+    uid: 1000
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: [docker, sudo]
+    lock_passwd: true
+
+package_update: true
+packages:
+  - ca-certificates
+  - curl
+  - git
+  - xz-utils
+  - sudo
+  - direnv
+  - docker.io
+  - docker-compose-v2
+  - openssh-server
+  - locales
+
+write_files:
+  # Docker が nesting 環境であることを認識できるようにする（Incus 公式 FAQ の推奨）。
+  - path: /.dockerenv
+    content: ""
+    permissions: "0644"
+
+  - path: /home/dev/.bashrc.d/devbox.sh
+    owner: "dev:dev"
+    permissions: "0644"
+    content: |
+      # Nix (multi-user) を PATH に載せる
+      if [ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
+        . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+      fi
+      export PATH="$HOME/.nix-profile/bin:$PATH"
+      # direnv（リポジトリに cd した時点で devenv がアクティベートされる）
+      eval "$(direnv hook bash)"
+      # ログインしたらリポジトリへ
+      if [ -d "$HOME/app" ] && [ "$PWD" = "$HOME" ]; then cd "$HOME/app" || true; fi
+
+runcmd:
+  - [ systemctl, enable, --now, docker ]
+  # Nix を multi-user でインストール。trusted-users に dev を入れないと
+  # バイナリキャッシュが効かず devenv shell が毎回ビルドになる（README の Setup §2 と同じ理由）。
+  - |
+    curl -fsSL https://install.determinate.systems/nix | sh -s -- install linux \
+      --no-confirm \
+      --extra-conf "trusted-users = root dev"
+  # devenv を dev ユーザーの nix profile に入れる
+  - |
+    sudo -u dev bash -lc '
+      . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
+      nix profile install nixpkgs#devenv
+    '
+  - [ bash, -lc, 'echo ". /home/dev/.bashrc.d/devbox.sh" >> /home/dev/.bashrc' ]
+  - [ chown, -R, "dev:dev", /home/dev ]
+  - [ bash, -lc, 'touch /var/lib/devbox-provisioned' ]
