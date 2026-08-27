@@ -27,7 +27,7 @@ cd shadcn-boilerplate
 
 | 論点 | 決定 |
 |---|---|
-| 母艦の OS | **macOS**（Incus サーバは Linux 専用なので、Colima の incus runtime で Linux VM を 1 枚使う） |
+| 母艦の OS | **macOS**（Incus サーバは Linux 専用なので Linux VM が 1 枚要る。**既に入っている OrbStack を再利用する**のが既定で、Colima は代替） |
 | 隔離の主目的 | **プロジェクトの並列化**。VM インスタンスではなくコンテナで十分 |
 | ソースコードの置き場所 | **ホストに clone し、作業ツリーを箱へ bind mount する** |
 | 起動方法 | **リポジトリ同梱のスクリプト 1 本**。ホスト側に devenv を要求しない |
@@ -39,15 +39,26 @@ cd shadcn-boilerplate
 
 ---
 
-## 2. 構成
+## 2. 構成 — macOS で VM が要る理由と、その VM の選択肢
+
+**VM が要るのは `incusd`（Incus サーバ）が Linux 専用だから**であって、Docker のためではない。
+Docker は Incus コンテナの**中**に入るので、ホスト側の Docker(Desktop / OrbStack / Colima)とは無関係。
+
+したがって **VM は既に持っているものを再利用できる**。スクリプトは 3 つのドライバを自動判定する。
+
+| ドライバ | 前提 | Incus サーバの置き場 | mac からの到達 |
+|---|---|---|---|
+| **`orb`（推奨: OrbStack を既に使っているなら）** | `orb` コマンドがある | OrbStack の Linux machine（既定名 `incus`）の中の incusd | proxy device → OrbStack の自動転送 → **`localhost:<port>`** |
+| `colima` | colima がある | `colima --runtime incus` の VM | `--network-address` により**コンテナ IP へ直接** |
+| `native` | ホストが Linux | ホストの incusd | コンテナ IP へ直接 |
 
 ```
 ┌─ macOS ────────────────────────────────────────────────────────┐
 │  ~/dev/shadcn-boilerplate/     ← git clone（ソースの正本）        │
-│    └ scripts/incus/incus.sh   ← これを叩く                      │
-│  incus クライアント（brew）      Xcode / iOS ビルドはここに残る    │
+│    └ scripts/incus/incus.sh    ← これを叩く                      │
+│  Xcode / iOS ビルドはここに残る                                   │
 │                                                                │
-│  ┌─ Lima VM（colima start --runtime incus --network-address）─┐ │
+│  ┌─ Linux VM（OrbStack machine もしくは colima）──────────────┐ │
 │  │  incusd                                                    │ │
 │  │  ┌─ Incus container "shadcn-boilerplate" ────────────────┐ │ │
 │  │  │  security.nesting=true                                │ │ │
@@ -63,7 +74,16 @@ cd shadcn-boilerplate
 `security.nesting=true` は **Nix と Docker の両方**が要求する（Nix は build sandbox の user namespace、
 Docker は子 namespace）。片方だけの都合ではないので、外せない設定として扱う。
 
----
+### OrbStack を使う場合の固有事項
+
+- **macOS のホームは machine 内の `/mnt/mac` に見える**（パスが同一ではない）。
+  スクリプトは `$HOME` 配下のパスを `/mnt/mac/...` へ変換してから disk device の source にする
+- **ポートは 2 段**になる: Incus コンテナ → proxy device → machine → OrbStack の自動転送 → mac の `localhost`。
+  そのため **orb ドライバでは `--publish` を既定で有効**にする
+- **入れ子は 3 段**（OrbStack の VM → Incus コンテナ → Docker）。ここは PoC で必ず確認する（§8）
+- 先行事例: [mensfeld/code-on-incus](https://github.com/mensfeld/code-on-incus) が
+  macOS + OrbStack + Incus system container の構成で AI エージェントを隔離しており、
+  同じポート 2 段構成を明記している
 
 ## 3. コマンド
 
@@ -77,8 +97,8 @@ Docker は子 namespace）。片方だけの都合ではないので、外せな
 | `incus.sh stop` / `destroy` | 停止 / 破棄（破棄しても作業ツリーは残る） |
 | `incus.sh doctor` | 前提条件の診断のみ |
 
-環境変数で上書きできるもの: `INCUS_INSTANCE`（同一リポジトリを複数の箱で回すとき）/ `INCUS_IMAGE` /
-`INCUS_CPU` / `INCUS_MEMORY` / `INCUS_LOCAL_PATHS` / `COLIMA_*`。
+環境変数で上書きできるもの: `INCUS_DRIVER`（`orb` / `colima` / `native`）/ `INCUS_INSTANCE`（同一リポジトリを
+複数の箱で回すとき）/ `INCUS_IMAGE` / `INCUS_CPU` / `INCUS_MEMORY` / `INCUS_LOCAL_PATHS` / `ORB_MACHINE` / `COLIMA_*`。
 
 ---
 
@@ -136,21 +156,19 @@ frontend/node_modules   drizzle/node_modules   backend-py/.venv   .devenv   .dir
 
 ## 6. ネットワーク
 
-Colima を `--network-address` で起動しているため、**インスタンスの IP に macOS から直接届く**。
-`incus.sh status` がその IP と URL を出す。
+| ドライバ | 到達方法 |
+|---|---|
+| `orb` | proxy device で machine 側に出し、OrbStack の自動転送で **mac の `localhost:<port>`** に届く。`up` が既定で公開する |
+| `colima` | `--network-address` により**コンテナ IP へ直接**。ポート衝突が原理的に起きないので既定では公開しない |
+| `native` | コンテナ IP へ直接 |
 
-```
-web http://<ip>:3000   storybook http://<ip>:6006   backend http://<ip>:4040
-metro http://<ip>:8081  supabase http://<ip>:54321  studio http://<ip>:54323
-```
+対象ポート: web 3000 / desktop 1420 / Metro 8081 / backend 4040 / Storybook 6006 / Supabase 54321・54323・54324。
 
-`localhost` で受けたい場合は `up --publish`（proxy device）。ただし**並列運用が主目的なので既定にはしない**
-（複数の箱が `127.0.0.1:3000` を取り合う）。IP 経由なら**ポート衝突が原理的に起きない**のが、
-この構成の並列化における最大の利点。
+> **並列運用時の注意**: `orb` は `localhost` を共有するため、2 個目以降の箱は同じポートを取り合う。
+> 現状は「同時に走らせるのは 1 つ」か「`--no-publish` にして machine 内から使う」しかない。
+> ポートのオフセット割り当ては PoC 後に検討する（§9）。
 
 `env/*/.env.local` の `127.0.0.1:54322` は、**Supabase を同じ箱の中で動かす限り変更不要**。
-
----
 
 ## 7. できないこと
 
@@ -167,8 +185,9 @@ metro http://<ip>:8081  supabase http://<ip>:54321  studio http://<ip>:54323
 
 | # | 確認 | 落ちたときの対処 |
 |---|---|---|
-| 1 | `colima start --runtime incus --network-address` が通り、`incus info` に到達する | Colima のバージョン / VM タイプを確認 |
-| 2 | リポジトリのパスが VM から見える（`colima ssh -- test -e .../devenv.nix`） | ホーム配下へ移すか `colima start --mount` |
+| 1 | ドライバの自動判定が通り `incus info` に到達する（orb なら machine 内の incusd） | `INCUS_DRIVER` で明示 |
+| 1b | **orb: OrbStack machine の中で incusd が動き、その中の Incus コンテナで Docker が動く（3 段の入れ子）** | 駄目なら colima ドライバへ退避 |
+| 2 | リポジトリが VM から見える（orb は `/mnt/mac/...` へのパス変換が正しいか） | ホーム配下へ移す |
 | 3 | cloud-init が完走し `/var/lib/devenv-container-provisioned` ができる | `cloud-init status --long` |
 | 4 | `shift=true` が通る（駄目なら `raw.idmap` で読み書きできる） | フォールバック経路の動作確認 |
 | 5 | 箱の中で `direnv allow` → `devenv shell` が通る | `trusted-users` にバイナリキャッシュが効いているか |

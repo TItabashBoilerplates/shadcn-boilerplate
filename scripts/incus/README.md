@@ -14,11 +14,20 @@
 ## 前提（ホストに入れるのはこれだけ）
 
 ```bash
-brew install incus     # クライアント。Incus サーバは Linux 専用なので macOS はこれだけ
-brew install colima    # macOS のみ。Incus サーバを載せる Linux VM
+brew install incus     # クライアント
 ```
 
-Linux ホストなら `colima` は不要（`incusd` を直接動かす）。
+**Incus のサーバ（`incusd`）は Linux 専用**なので、macOS では Linux VM が 1 枚要る。
+これは Docker のためではない（Docker は Incus コンテナの中に入る）。
+VM は**すでに持っているものを再利用できる**ので、新しく入れる必要は無いことが多い。
+
+| ドライバ | 条件 | 備考 |
+|---|---|---|
+| `orb` | **OrbStack が入っている**（`orb` コマンドがある） | **既存の OrbStack をそのまま使う。Colima は不要。** 初回だけ `orb create ubuntu incus` で machine を作り、その中に incusd を入れる |
+| `colima` | OrbStack が無く colima がある | `colima start --runtime incus --network-address` |
+| `native` | ホストが Linux | VM 不要 |
+
+自動判定されるが `INCUS_DRIVER=orb|colima|native` で明示もできる。
 
 ## 使い方
 
@@ -58,7 +67,9 @@ INCUS_INSTANCE=shadcn-feature-a ./scripts/incus/incus.sh up
 | `INCUS_IMAGE` | `images:debian/13/cloud` | ベースイメージ |
 | `INCUS_CPU` / `INCUS_MEMORY` | `8` / `16GiB` | リソース上限 |
 | `INCUS_LOCAL_PATHS` | `frontend/node_modules drizzle/node_modules backend-py/.venv .devenv .direnv` | ホストと共有せず箱側の FS に置くパス |
-| `COLIMA_PROFILE` / `COLIMA_CPU` / `COLIMA_MEMORY` / `COLIMA_DISK` | `incus` / `8` / `16` / `100` | macOS の VM 設定 |
+| `INCUS_DRIVER` | 自動判定 | `orb` / `colima` / `native` |
+| `ORB_MACHINE` / `ORB_DISTRO` | `incus` / `ubuntu` | OrbStack の Linux machine |
+| `COLIMA_PROFILE` / `COLIMA_CPU` / `COLIMA_MEMORY` / `COLIMA_DISK` | `incus` / `8` / `16` / `100` | colima を使う場合の VM 設定 |
 | `DOPPLER_TOKEN` | （未設定なら渡さない） | 箱へ引き渡すシークレット。**本番スコープのトークンは渡さない** |
 
 ## できないこと
