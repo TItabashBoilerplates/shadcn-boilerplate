@@ -241,7 +241,7 @@ apt / Nix 取得は検証できていない**（下表の「未実測」）。�
 | idmap / overflow uid の問題 | 無し | 無し | 無し | **あり**（§8 の C/D） |
 | 宣言的に repo へ固定 | **YAML 1 枚**（`provision` / `mounts` / `portForwards` / `cpus` / `memory`） | `orb create` + プロビジョニングスクリプト | **`devcontainer.enable = true` の 1 行** | シェル 400 行 |
 | 並列化のコスト | **VM ぶんのメモリ**（数 GB × N） | 軽い（VM 1 枚を共有） | 軽い | 軽い |
-| スナップショット / 巻き戻し | VM 単位（重い） | `orb clone` | 無し（作り直し） | **`incus snapshot`（軽い）** |
+| スナップショット / 巻き戻し | VM 単位（重い） | **無し**（`orb clone` / `export` のみ） | 無し（作り直し） | **`incus snapshot`（軽い）** |
 | systemd | あり | あり | **無し**（常駐は工夫が要る） | あり |
 | devenv 相性 | 良（普通の Linux） | 良（普通の Linux） | **公式統合あり** | 良 |
 | Linux 母艦への移植 | 同じ YAML | 不可（OrbStack は macOS） | 同じ | **同じスクリプト** |
@@ -254,7 +254,10 @@ apt / Nix 取得は検証できていない**（下表の「未実測」）。�
   `portForwards` で mac の localhost に出せる。**入れ子が無いので今回の問題が全部消える**。
   代償はプロジェクトごとに VM 1 枚（メモリ数 GB の固定費）。
 - **OrbStack の machine 単体** — 既に入っているものだけで済み、層が最少。`orb create` / `orb clone` /
-  `/mnt/mac` 共有 / localhost 自動転送が揃っている。**注意点は Docker**:
+  `orb export` / `orb import` / `/mnt/mac` 共有 / localhost 自動転送が揃っている。
+  **リソース上限もマシン単位で設定できる**（`orb config set machine.<name>.memory_mib` /
+  `.cpu`。未設定のマシンは OrbStack 全体の上限を共有する）ため、Incus の `limits.*` に対する優位は無い。
+  **一方でスナップショット / ロールバックは無い**（clone と export/import のみ）。**注意点は Docker**:
   machine から**ホストの Docker エンジンを使うのは first-class ではない**
   （[orbstack#2568](https://github.com/orbstack/orbstack/issues/2568) が open）ので、
   machine 内で dockerd を動かす形になる。そこは要検証。
@@ -271,7 +274,8 @@ apt / Nix 取得は検証できていない**（下表の「未実測」）。�
 
 - **今日から動かしたい / 層を増やしたくない** → OrbStack machine 単体
 - **repo に宣言的に固定したい / 入れ子を無くしたい** → Lima
-- **snapshot で巻き戻したい / Linux 母艦でも同じ手順にしたい** → Incus（本設計を継続）
+- **snapshot で巻き戻したい / Linux 母艦でも同じ手順にしたい** → Incus（本設計を継続）。
+  **この 2 つが要らないなら OrbStack machine のほうが層が 2 つ少なく、実装も小さい**
 - **エディタ統合最優先で Supabase をホスト Docker に任せてよい** → devcontainer
 
 ## 10. 参考
