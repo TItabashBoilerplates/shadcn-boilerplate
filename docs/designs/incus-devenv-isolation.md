@@ -228,6 +228,52 @@ apt / Nix 取得は検証できていない**（下表の「未実測」）。�
 
 ---
 
+## 10. 代替案の比較（Incus 以外で同じことをする）
+
+実測で分かったとおり、**面倒の大半は「macOS で Incus を使う」ことに固有**（VM を挟む・入れ子が
+3 段になる・idmap が要る）。目的が「プロジェクトを並列に、母艦を汚さず」であれば、より層の少ない
+選択肢がある。
+
+| | **Lima**（VM 1 枚/プロジェクト） | **OrbStack machine**（Incus 無し） | **devcontainer**（devenv 公式） | **Incus**（本設計） |
+|---|---|---|---|---|
+| 追加で入れるもの | limactl | **なし**（既に使用中） | なし（OrbStack の Docker） | incus + VM |
+| 入れ子 | **無し**（Docker も Nix も VM 内で直に動く） | 1 段（machine 内で dockerd） | 1〜2 段（DinD or socket 共有） | **3 段**（VM→Incus→Docker） |
+| idmap / overflow uid の問題 | 無し | 無し | 無し | **あり**（§8 の C/D） |
+| 宣言的に repo へ固定 | **YAML 1 枚**（`provision` / `mounts` / `portForwards` / `cpus` / `memory`） | `orb create` + プロビジョニングスクリプト | **`devcontainer.enable = true` の 1 行** | シェル 400 行 |
+| 並列化のコスト | **VM ぶんのメモリ**（数 GB × N） | 軽い（VM 1 枚を共有） | 軽い | 軽い |
+| スナップショット / 巻き戻し | VM 単位（重い） | `orb clone` | 無し（作り直し） | **`incus snapshot`（軽い）** |
+| systemd | あり | あり | **無し**（常駐は工夫が要る） | あり |
+| devenv 相性 | 良（普通の Linux） | 良（普通の Linux） | **公式統合あり** | 良 |
+| Linux 母艦への移植 | 同じ YAML | 不可（OrbStack は macOS） | 同じ | **同じスクリプト** |
+
+### それぞれの決め手
+
+- **Lima** — `lima/devenv.yaml` を repo に置いて `limactl start ./lima/devenv.yaml`。
+  「repo 同梱で叩けば立つ」という要件を**YAML 1 枚**で満たし、`provision`（`mode: system` / `user`）で
+  Nix・devenv・Docker を宣言的に入れられる。`mounts` は `writable` + `mountType: virtiofs`（`vmType: vz`）、
+  `portForwards` で mac の localhost に出せる。**入れ子が無いので今回の問題が全部消える**。
+  代償はプロジェクトごとに VM 1 枚（メモリ数 GB の固定費）。
+- **OrbStack の machine 単体** — 既に入っているものだけで済み、層が最少。`orb create` / `orb clone` /
+  `/mnt/mac` 共有 / localhost 自動転送が揃っている。**注意点は Docker**:
+  machine から**ホストの Docker エンジンを使うのは first-class ではない**
+  （[orbstack#2568](https://github.com/orbstack/orbstack/issues/2568) が open）ので、
+  machine 内で dockerd を動かす形になる。そこは要検証。
+- **devcontainer** — devenv に**公式統合**がある。`devcontainer.enable = true` だけで
+  `.devcontainer/devcontainer.json` を生成し、image は `ghcr.io/cachix/devenv/devcontainer:latest`、
+  `updateContentCommand` は `devenv test`、VS Code 拡張 `mkhl.direnv` を同梱する。
+  エディタ統合は最強。ただし **Supabase の Docker が DinD かソケット共有**になり、
+  後者はホストの Docker を共有するので隔離が緩む。**systemd が無い**点も本リポジトリとは相性が悪い
+  （`devenv up` は動くが、Supabase CLI が前提にする環境から外れる）。
+- **Incus（本設計）** — 「軽いシステムコンテナ」を並列に持て、**snapshot が軽い**のが独自の強み。
+  Linux 母艦でも同じスクリプトが動く。代償が §8 で実測した複雑さ。
+
+### 判断の目安
+
+- **今日から動かしたい / 層を増やしたくない** → OrbStack machine 単体
+- **repo に宣言的に固定したい / 入れ子を無くしたい** → Lima
+- **snapshot で巻き戻したい / Linux 母艦でも同じ手順にしたい** → Incus（本設計を継続）
+- **エディタ統合最優先で Supabase をホスト Docker に任せてよい** → devcontainer
+
 ## 10. 参考
 
 - 一次情報と出典: [`docs/_research/2026-08-27-incus-devenv-isolation.md`](../_research/2026-08-27-incus-devenv-isolation.md)
