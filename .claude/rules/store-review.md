@@ -1,3 +1,7 @@
+---
+paths: frontend/apps/mobile/**, scripts/mobile/**, docs/store/**
+---
+
 # ストア審査要件ポリシー（コード側の不変条件）
 
 **CRITICAL / NON-NEGOTIABLE**: App Store / Google Play の審査要件のうち、**コードで守るもの**を
@@ -10,12 +14,12 @@
 対象は `frontend/apps/mobile/`。コンソール側の申告手続き（Data safety・年齢レーティング・
 輸出コンプライアンス等）は本ルールの対象外で、`docs/store/submission-checklist.md` が正本。
 
-> **boilerplate での適用範囲**: このリポジトリには bundle id も package name も、
-> 収集するデータの定義も**まだ無い**。したがって §1〜§4 のうち「そのアプリが何を
-> 収集し、何を第三者へ送るか」に依存する項目は、**派生プロジェクトで実装する時点から**
-> 効き始める。boilerplate 本体でそれらが未設定であることを不備として報告しないこと
+> **適用範囲は `PROJECT.md` で決まる**: `mode: boilerplate` の間は bundle id も package name も、
+> 収集するデータの定義も**無い**。したがって §1〜§4 のうち「そのアプリが何を収集し、何を第三者へ
+> 送るか」に依存する項目は、**`mode: product` かつ `distribution` に mobile を含む時点から**効き始める。
+> `mode: boilerplate` でそれらが未設定であることを不備として報告しないこと
 > （`.claude/rules/supabase-config.md` §0 と同じ扱い）。
-> **`store.config.js` / `play.config.js` / `iap.config.js` の整合だけは boilerplate でも
+> **`store.config.js` / `play.config.js` / `iap.config.js` の整合だけは `mode` に関係なく
 > 検査対象**で、`src/shared/config/store-metadata.test.ts` が常時走っている。
 
 ---
@@ -166,7 +170,7 @@ grep -E 'AD_ID|POST_NOTIFICATIONS' android/app/src/main/AndroidManifest.xml
 
 ## 7. 自動検知（CI で止める）
 
-`frontend/apps/mobile/src/shared/config/store-metadata.test.ts` が、**boilerplate でも
+`frontend/apps/mobile/src/shared/config/store-metadata.test.ts` が、**`mode` に関係なく
 常時検査できるもの**を見ている。**削除・スキップしない。**
 
 `frontend/apps/mobile/src/shared/config/release-plan.test.ts` は、**リリースを人の操作
@@ -197,7 +201,7 @@ grep -E 'AD_ID|POST_NOTIFICATIONS' android/app/src/main/AndroidManifest.xml
 | Mobile クライアントに `persistSession` 等がある | 起動のたびにログインになる |
 | en / ja のキー集合が一致している | 片方だけ翻訳を足す事故 |
 
-**派生プロジェクトでは、§1〜§4 のうち自分が実装したものに対する検査を追加すること**
+**`mode: product` では、§1〜§4 のうち自分が実装したものに対する検査を追加すること**
 （AI 同意ゲートの存在、privacy manifest の宣言、target API 36、**メール + パスワードのログイン導線**、
 **パスワード再設定・メールアドレス再設定の導線**、アカウント削除導線）。
 実装した機能に対応する検査が無いと、**消しても誰も気づかない**。

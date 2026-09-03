@@ -1,3 +1,7 @@
+---
+paths: backend-py/**
+---
+
 # Python Monorepo (uv Workspace) Policy
 
 **MANDATORY / NON-NEGOTIABLE**: `backend-py/` 配下に複数の Python サーバ・共有ライブラリを置く場合は、本ドキュメントの構造・命名・コマンドポリシーに厳密に従うこと。

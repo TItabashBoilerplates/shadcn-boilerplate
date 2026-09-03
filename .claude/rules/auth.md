@@ -256,10 +256,10 @@ Server Component / Route Handler / Proxy でユーザーを判定するときは
 
 ---
 
-## 4. `config.toml` 側の要件（派生プロジェクトで `config.toml` を作る時点から適用）
+## 4. `config.toml` 側の要件（`PROJECT.md` が `mode: product` になった時点から適用）
 
-> boilerplate 本体には `config.toml` を置かない（`.claude/rules/supabase-config.md` §0）。
-> 以下は派生プロジェクトで作成するときの必須項目。
+> `mode: boilerplate` の間は `config.toml` を置かない（`.claude/rules/supabase-config.md` §0）。
+> 以下は `mode: product` で作成するときの必須項目。
 
 ```toml
 [auth]

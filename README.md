@@ -115,7 +115,7 @@ By adopting these environments, we can ensure efficient development and maintain
 #### Configuration Management
 
 - **Supabase Services** (`supabase/config.toml`): Auth, Storage, API settings, service-level configurations
-  - 📌 このリポジトリは boilerplate なので **`config.toml` は意図的に置いていない**（`project_id` / `[remotes.*]` が派生先ごとに異なるため）。派生プロジェクトを起こした時点で作成する（[`.claude/rules/supabase-config.md`](.claude/rules/supabase-config.md) §0）
+  - 📌 `config.toml` の有無は [`PROJECT.md`](PROJECT.md) の `mode` で決まる。`boilerplate` では**意図的に置かない**（`project_id` / `[remotes.*]` がプロジェクトごとに異なるため）。template から起こして `mode: product` にする時点で作成する（[`.claude/rules/supabase-config.md`](.claude/rules/supabase-config.md) §0）
 - **Database Schema** (`drizzle/`): Tables, RLS policies, Realtime publications, functions, triggers managed with Drizzle ORM
 
 ### Key Features
