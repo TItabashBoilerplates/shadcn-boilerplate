@@ -149,6 +149,13 @@ FROM python:${PYTHON_VERSION}-slim AS final
 # manylinux wheel で完結し、追加の共有ライブラリは不要。
 # LiveKit / PyAV 等の音声・映像系（devenv の libopus / libvpx）を導入した際は、
 # ここに runtime 共有ライブラリ（例: libopus0 / libvpx*）を追記すること。
+#
+# 動画のサムネイル生成（ffmpeg / ffprobe）を実装するときも、バイナリをこの final stage に足す:
+#   RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
+# **devenv.nix の packages にも pkgs.ffmpeg-headless を足して揃えること**（片方だけだと
+# 「ローカルは通るのに本番で ffmpeg が見つからない」になる）。イメージ肥大が問題になったら
+# 上の割り当て表に従って別サービス（Containerfile.vercel）へ切り出す。
+# 手順・設計は .claude/rules/video-thumbnails.md §4。
 
 # PATH は `docker exec` などで人が使うための利便。**起動の解決には使わない**（②）。
 # PORT=8080: 非 root で bind できる非特権ポート（①）。Vercel project の env と揃える。

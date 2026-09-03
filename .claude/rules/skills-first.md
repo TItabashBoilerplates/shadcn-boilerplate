@@ -41,6 +41,7 @@
 |---|---|
 | Supabase / RLS / Auth / Storage / Edge Functions | `supabase`, `supabase-postgres-best-practices`, `rls`, `supabase-config`, `pgtap` |
 | 画像を表示する / アバター / サムネイル / OGP 画像 / 画像アップロード後の表示 / 「画像が重い」 | **まず `.claude/rules/storage-images.md`**（Storage の画像は必ず transform 経由・`SupabaseImage` 必須）+ `supabase` |
+| 動画を扱う / 動画をアップロードさせる / 動画一覧・フィード / 再生画面 / サムネイル・ポスター画像 / フレーム抽出 / ffmpeg / 「動画一覧が黒い箱になる」「動画で通信量が増えた」 | **まず `.claude/rules/video-thumbnails.md`**（サムネイル必須。生成は backend-py コンテナ + ffmpeg。**Edge Functions では実現不可**）+ `.claude/rules/storage-images.md` + `vercel-deploy`（コンテナ） |
 | ログイン / サインアップ / 認証を作る / OTP / マジックリンク / パスワード再設定 / メールアドレス変更 / アカウント設定画面 | **まず `.claude/rules/auth.md`**（Mobile はメール+パスワード必須・OTP のみ禁止、再設定導線は必須）+ `mobile-uiux`（入力属性・キーボード回避）+ `supabase` |
 | フォーム / 入力欄を作る / `TextInput` / `<input>` / `<textarea>` を足す / 検索バー / チャット入力 / 設定画面 / モバイル画面全般 / レスポンシブ / 「入力欄がキーボードに隠れる」「送信ボタンが押せない」「1 回目のタップが効かない」「Android だけ挙動が違う」「下部バーがキーボードの裏に入る」「小さくてタップしづらい」「セーフエリアがおかしい」 | **`mobile-uiux`（自作。正本）** + `.claude/rules/mobile-uiux.md` + `.claude/rules/form-controls.md`。Mobile は `gluestack`、Web は `shadcn` も併せて起動 |
 | MCP サーバ (Edge Functions) / BYO MCP / Streamable HTTP / Hono MCP | `edge-functions-mcp` |

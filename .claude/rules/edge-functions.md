@@ -79,6 +79,25 @@ export const corsHeaders = { ... }
 3. **型定義が重複していないか？** → _shared/types.ts に共通化
 4. **Drizzle スキーマを使用するか？** → _shared/drizzle/ から import
 
+## Edge Functions でやらないこと（メディア処理）
+
+**動画のフレーム抽出・トランスコード等のメディア処理を Edge Functions に置いてはならない。**
+ランタイムの制約で実現できない（Supabase 公式の [Limits](https://supabase.com/docs/guides/functions/limits)）:
+
+| 制約 | 値 |
+|---|---|
+| Maximum Memory | 256MB |
+| Maximum CPU Time | 2s / request |
+| Maximum Function Size | 20MB（バンドル後。ffmpeg のバイナリ / wasm を同梱できない） |
+| マルチスレッド前提のネイティブライブラリ | 非対応（公式が `libvips` / `sharp` を名指し） |
+
+→ **`backend-py`（Vercel の Docker コンテナ + ffmpeg）で実装する**。Edge Function を使うとしても
+「アップロードを検知して backend-py に投げる薄い中継」までに留める。
+**動画を扱うならサムネイルは必須**（`.claude/rules/video-thumbnails.md`）。
+
+同じ理由で、**画像も Edge Functions でリサイズしない**。Storage の Image Transformation を使う
+（`.claude/rules/storage-images.md`）。
+
 ## Import Management
 
 **MANDATORY**: Use `npm:` prefix for npm packages, **EXCEPT for postgres.js**.
