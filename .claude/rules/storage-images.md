@@ -1,3 +1,7 @@
+---
+paths: frontend/**, drizzle/schema/**, supabase/**
+---
+
 # Storage 画像ポリシー（Supabase Storage の画像は必ず transform 経由で表示する）
 
 **CRITICAL / NON-NEGOTIABLE**: **フロントエンド（Web / Mobile）で表示する画像のうち、
@@ -59,8 +63,9 @@ lint も通る。気づけるのは請求が上がったとき、あるいは「
 enabled = true
 ```
 
-> boilerplate 本体には `config.toml` を置いていない（`.claude/rules/supabase-config.md` §0）。
-> 派生プロジェクトで `config.toml` を作る時点から、この 2 行を必ず入れる。
+> `config.toml` は `PROJECT.md` が `mode: product` になる時点で作る（`.claude/rules/supabase-config.md` §0）。
+> 作るときにこの 2 行を必ず入れる。`supabase_plan` が `free` なら変換は使えないので、黙って無変換に
+> せずユーザーに判断をあおぐ（§9）。
 
 ---
 
@@ -202,7 +207,7 @@ transform: { width: containerWidth * devicePixelRatio }
 | 3 | `width` / `height` は表示サイズに基づいているか（元サイズを丸投げしていないか） |
 | 4 | 幅を自前計算せず `snapImageWidth` / `SupabaseImage` に任せているか |
 | 5 | DB に保存しているのは `bucket` / `path` か（完全な URL でないか） |
-| 6 | 派生プロジェクトなら `config.toml` に `[storage.image_transformation] enabled = true` があるか |
+| 6 | `mode: product` なら `config.toml` に `[storage.image_transformation] enabled = true` があるか |
 | 7 | `next.config.ts` の `imageSizes` / `deviceSizes` が `IMAGE_WIDTH_LADDER` と一致しているか |
 | 8 | 新しい表示状態を足したなら Storybook のストーリーがあるか（`.claude/rules/ui-testing.md`） |
 | 9 | `unit-test` が通るか（`storage-image.test.ts` / `storage-image.policy.test.ts`） |

@@ -1,475 +1,157 @@
-# Project Guidelines
+# AGENTS.md
 
-Full-stack application boilerplate with multi-platform frontend and backend services.
+コーディングエージェント（Claude Code / Codex / Cursor 等）向けの共通ガイド。
+ここに書くのは**スタック層**（技術規約。プロジェクトを跨いで同じもの）だけ。
+**このリポジトリが何のアプリで、何を決めたかは [`PROJECT.md`](PROJECT.md)（プロダクト層）にある。必ず先に読む。**
+
+## 読む順序
+
+1. **`PROJECT.md`**: `mode`（`boilerplate` / `product`）・配布形態・テナント・使うサービス・意図的な逸脱の記録。
+   **ここに無い決定は推測せず、ユーザーに確認する**（`.claude/rules/design-research.md` §3）
+2. このファイル: スタック・コマンド・ルール索引
+3. **`.claude/rules/*.md`**: 常時適用のポリシー（Claude Code は自動ロード。他のエージェントは下の索引から読む）
+4. **`.claude/skills/*/SKILL.md`**: 作業種別ごとの手順。該当するものを**作業前に**読む
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|------------|
 | **Frontend (Web)** | Next.js 16, React 19, TypeScript, Bun |
-| **Frontend (Mobile)** | Expo 55, React Native, TypeScript |
+| **Frontend (Mobile)** | Expo 57, React Native, TypeScript |
 | **UI (Web)** | shadcn/ui, Radix UI, TailwindCSS 4 |
 | **UI (Mobile)** | gluestack-ui, NativeWind 5, TailwindCSS 4 |
 | **State** | TanStack Query (server), Zustand (global) |
 | **Architecture** | Feature Sliced Design (FSD) |
-| **i18n** | next-intl (en, ja) |
-| **Backend** | FastAPI (Python), Supabase Edge Functions (Deno) |
+| **i18n** | next-intl（ロケールは `PROJECT.md` の `locales`） |
+| **Backend** | FastAPI (Python, `backend-py/` uv workspace), Supabase Edge Functions (Deno) |
 | **Database** | PostgreSQL, Drizzle ORM, pgvector |
 | **Auth** | Supabase Auth |
-
-## Commands (MANDATORY)
-
-**ALWAYS use devenv commands** (scripts on PATH or `devenv tasks run`) for development. Direct tool execution is prohibited. Makefile はもう存在しません。
-
-```bash
-# Setup
-# 不要 — `devenv shell` 進入 (direnv 経由含む) で setup:* タスクが自動実行:
-#   - secrets コピー / bun install (frontend, drizzle) / uv sync (backend-py)
-
-# Services（軽量 default = supabase + backend + storybook）
-devenv up              # 軽量セット起動 (TUI 付き)
-dev-web                # 軽量 + Next.js (web)
-dev-mobile             # 軽量 + Expo Metro (mobile, non-interactive)
-dev-all                # 全部入り
-devenv up backend web  # 任意組み合わせ
-stop                   # devenv プロセス + Supabase 全停止
-
-# Devenv 外（対話的 TUI 必要時）
-frontend               # turbo dev (web + mobile 並列、重い)
-mobile-ios / mobile-android / mobile-web   # Expo TUI を別ターミナルで
-
-# Quality
-lint                   # Lint all (auto-fix)
-format                 # Format all
-format-check           # Format check (CI)
-type-check             # Type check all
-ci-check               # CI gate (lint + format-check + type-check)
-
-# Tests
-test-db                # pgTAP DB tests
-e2e / e2e-web / e2e-mobile / e2e-ui
-
-# Database (user approval required)
-devenv tasks run app:migrate-dev   # Generate + apply migration + types (recommended)
-devenv tasks run db:migrate-dev    # Migration only
-devenv tasks run model:build       # Regenerate types only
-
-# Remote migration: GitHub Actions (migrate.yml) is the canonical path
-gh workflow run migrate.yml --ref main -f environment=production
-
-# Profile switching for remote ops (local invocation — emergency only)
-#   MUST prefix ENV=. The base enterShell does `export ENV="${ENV:-local}"`, so `-P` alone
-#   leaves ENV=local and the task picks up env/*/.env.local (local POSTGRES_URL).
-ENV=staging    devenv tasks run -P staging    db:migrate-deploy
-ENV=production devenv tasks run -P production deploy:functions
-```
-
-**NEVER execute tools directly**:
-
-```bash
-# WRONG
-cd frontend && bun run biome check --write
-npx tsc --noEmit
-make lint           # ❌ Makefile は削除済み
-
-# CORRECT
-lint-frontend
-type-check-frontend
-```
-
----
-
-## Core Policies (NON-NEGOTIABLE)
-
-### 1. Research-First Development & Design-Time Verification
-
-**Before implementation, you MUST**:
-
-1. Use **Context7 MCP** to fetch latest documentation
-2. Use **WebSearch** to verify current best practices
-3. Use **WebFetch** to read official documentation directly
-
-**NEVER**:
-- Make assumptions based on memory or general knowledge
-- Use outdated patterns without verification
-- Guess API signatures or parameter types
-
-#### 設計フェーズ（実装より前）で必須のこと
-
-**設計を書き始める前に、その設計で使うツール・API・パッケージ・サービスの一次情報を実際に読む。**
-canonical rule: `.claude/rules/design-research.md`
-
-1. **該当 Skill を先に起動する**（DB なら `supabase-postgres-best-practices` / `rls` / `drizzle`、
-   配置なら `fsd` / `feature-sliced-design` / `monorepo`、UI なら `ui-ux-pro-max` ほか）。
-2. **実際に入っているバージョンを確認する**（`bun info` / `bun outdated` / `package.json` /
-   `uv tree` / `deno.json`）。ドキュメントはバージョンごとに違う。
-3. **そのバージョンの一次情報を読む**。Context7 は
-   `mcp__context7__resolve-library-id` → `mcp__context7__query-docs`
-   （**`get-library-docs` は存在しない**。1 呼び出し 1 トピック、同一の問いに 3 回まで）。
-   Supabase は `mcp__supabase__search_docs`。載っていなければ WebFetch で公式サイトを直接読む。
-4. **型定義・スキーマを実物で確認する**（`*.d.ts` / OpenAPI / `supabase gen types`）。
-5. 埋めるべき項目: **API シグネチャ / 設定ファイル形式 / 非推奨・破壊的変更 / 制限値・クォータ /
-   料金体系 / 前提プラン・前提設定 / ライセンス / 認証と鍵の扱い**。
-6. **デザインパターン・アーキテクチャ・DB 設計もベストプラクティスを調査してから決める。**
-   DB は「テーブル定義」で終わらせず、**制約は DB 側 / `timestamptz` で UTC / RLS はテーブルと同時 /
-   ポリシー列とソートキーに index / ページングの tiebreaker / 削除カスケード / テナント境界 /
-   監査・使用量の集計軸**まで設計する（集計軸は後から足しても過去行が埋まらない）。
-7. 調査結果は `docs/_research/YYYY-MM-DD-<topic>.md`、設計と選定理由・出典は `docs/designs/` に残す。
-
-#### 乖離を見つけたら、必ずユーザーに確認する（勝手に解消しない）
-
-次の 4 類型はいずれも「**意図的な逸脱なのか、単なる記載ミスなのか**」をユーザーに聞く。
-**黙って設計書に合わせるのも、黙って自分の設計に差し替えるのも違反。**
-
-| 類型 | 内容 |
-|---|---|
-| A | 設計書 × 一次情報（公式仕様上できない / 非推奨 / 制限超過） |
-| B | 設計書 × ベストプラクティス（動くが既知の落とし穴を踏む） |
-| C | 設計書 × 本リポジトリのルール・既存の技術選定 |
-| D | 実装 × 設計書（設計書に無い実装 / 設計書にあるのに無い実装） |
-
-確認には **①該当箇所 ②事実 ③出典 URL とバージョン ④影響 ⑤選択肢と推奨** の 5 点を必ず添える。
-
-**後戻りできない論点**（DB スキーマ・集計軸・API 契約・認証方式・課金と単価・URL 設計・
-テナント境界・Storage パス）と**セキュリティ / 個人情報 / 決済 / ストア審査**に関わる乖離は、
-**回答が来るまでその部分に着手しない**。巻き戻せる論点は仮定を明記して進め、まとめて報告する。
-意図的だと回答されたら、その判断を受け入れて理由を記録し、同じ指摘を繰り返さない。
-
-### 2. Test-Driven Development (TDD)
-
-**MANDATORY workflow**:
-
-1. **Write Tests First**: Define expected inputs/outputs before implementation
-2. **Run Tests and Confirm Failure**: Verify tests fail (Red phase)
-3. **Implement to Pass Tests**: Write minimal code (Green phase)
-4. **Refactor if Needed**: Keep tests green
-
-**All Green Policy**: Work MUST end with all tests passing (`ci-check` に加えて関連テストを実行)。
-
-**NEVER**:
-- Write implementation code before tests
-- Modify tests to make them pass
-- Leave failing tests at end of work
-
-### 3. Supabase-First Architecture
-
-**Priority order**:
-1. **First**: `supabase-js` / `@supabase/ssr` from frontend
-2. **Second**: Edge Functions (if necessary)
-3. **Last Resort**: `backend-py` (only when required)
-
-**Use backend-py ONLY for**:
-- Complex database transactions
-- AI/ML processing (LangChain, embeddings)
-- Long-running background jobs
-- Python-specific library requirements
-
-### 4. Auto-Generated Files (DO NOT EDIT)
-
-**NEVER manually edit**:
-- `frontend/packages/types/schema.ts`
-- `supabase/functions/shared/types/supabase/schema.ts`
-- `backend-py/apps/api/src/api/domain/entity/models.py`
-
-**Correct workflow**: Edit `drizzle/schema/*.ts` → run `devenv tasks run app:migrate-dev`
-
-### 5. Internationalization (i18n)
-
-**ALL user-facing text MUST be internationalized**:
-
-```typescript
-// WRONG
-<Button>Save</Button>
-
-// CORRECT
-<Button>{t('common.save')}</Button>
-```
-
-Both `en.json` and `ja.json` are required.
-
-### 6. DateTime Handling
-
-| Layer | Timezone | Format |
-|-------|----------|--------|
-| **Database** | UTC | `TIMESTAMP WITH TIME ZONE` |
-| **API** | UTC | ISO 8601 string |
-| **Frontend** | Convert UTC ⇔ Local | `toISOString()` / `Intl.DateTimeFormat` |
-
-**Frontend is responsible for all timezone conversions**.
-
-### 7. Secrets & Environment Variable Naming
-
-**Name every Doppler key after the env var the consuming tool actually reads.** Do not invent
-abbreviations (`SB_*`, `VC_*`). Bridging is only for cases where two tools read the *same*
-credential under *different* official names, and it lives in `scripts/infra/tf.sh`.
-
-**NEVER use a prefix reserved by a sync target in a config that has that sync.** Doppler pushes a
-config's keys as a whole, so **one bad key makes the entire config stop syncing**.
-
-| Prefix | Reserved by | What happens |
-|---|---|---|
-| `GITHUB_` | GitHub Actions secrets | "Must not start with the `GITHUB_` prefix" |
-| `SUPABASE_` | Supabase Edge Function secrets | "Env name cannot start with SUPABASE_" |
-| `VERCEL_` | Vercel System Environment Variables | Collides with system-injected `VERCEL_*` |
-
-Which configs are constrained:
-
-| Doppler config | Sync attached | Forbidden prefix |
-|---|---|---|
-| `all/all` (shared access tokens) | none | none — use full names |
-| `<app>/bootstrap` (provisioning values) | none | none — use full names |
-| `<app>/{dev,stg,prd}` | GitHub Actions | **`GITHUB_` only** |
-
-> Adding a sync later breaks on pre-existing keys — re-check names before attaching one.
-
-**Supabase env vars are NOT managed in Doppler.** They are delivered by the platforms:
-
-- **Vercel (web / backend)** → the **Vercel Marketplace Supabase integration** (*Settings >
-  Integrations > Supabase > Connect Account*) auto-injects `SUPABASE_URL`,
-  `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`, `SUPABASE_JWT_SECRET`,
-  `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `POSTGRES_*`.
-- **Edge Functions** → Supabase platform provides them as **default secrets**.
-- **Local** → `env/{backend,frontend}/.env.local` (files, not synced — prefix rule does not apply).
-
-So "the app needs a Supabase value" is **never** a reason to create a Doppler key. Duplicating
-those keys in Doppler is prohibited (breaks sync *and* causes drift).
-
-**Values we do hold ourselves** live in the sync-free configs under their real names:
-`SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`, `VERCEL_TOKEN`, `DOPPLER_TOKEN`, `EXPO_TOKEN`.
-`GH_TOKEN` stays abbreviated only because `GITHUB_` is reserved everywhere — and it is the `gh`
-CLI's own official name anyway. Names like `NEXT_PUBLIC_SUPABASE_URL` are fine — only the
-**leading** prefix is restricted.
-
-Full policy: `.claude/rules/env-naming.md`
-
-### 8. Storage Policy
-
-**Default: Private buckets** (unless explicitly requested otherwise)
-
-```typescript
-// CORRECT: Use createSignedUrl for private files
-const { data } = await supabase.storage
-  .from('documents')
-  .createSignedUrl('path/to/file.pdf', 60)
-
-// WRONG: getPublicUrl on private bucket
-const { data } = supabase.storage
-  .from('documents')
-  .getPublicUrl('path/to/file.pdf')
-```
-
-**RESTful path structure**: `{resource}/{id}/{sub-resource}/{filename}`
-
-### 9. List Pagination
-
-**Paginate any list that can grow — without waiting to be asked.** Pick the UI pattern yourself.
-
-Pagination is REQUIRED unless the row count is hard-capped by schema or spec. "There is little data
-right now" is not a reason: seed data never surfaces the problem, production does.
-
-```typescript
-// WRONG: unbounded fetch + client-side slicing
-const { data } = await supabase.from('orders').select('*')
-const page = data.slice(offset, offset + 20)
-
-// CORRECT: paginate in the DB, with a unique tiebreaker in the sort
-const { data, count } = await supabase
-  .from('orders')
-  .select('*', { count: 'estimated' })
-  .order('created_at', { ascending: false })
-  .order('id', { ascending: false })      // required — otherwise rows repeat/vanish across pages
-  .range(from, from + PAGE_SIZE - 1)
-```
-
-**Default UI pattern by surface**:
-
-| Surface | Default |
-|---------|---------|
-| Web admin tables / search results / SEO-facing lists | Numbered pages synced to the URL (`?page=`) |
-| Web exploratory grids and galleries | "Load more" button |
-| Mobile (Expo / RN) lists | Infinite scroll (`onEndReached` + virtualized list) |
-| Chat / timelines / feeds (new rows prepended) | Keyset (cursor) pagination |
-
-When unsure, choose "Load more". Infinite scroll additionally requires: no footer, a real
-"Load more" button left in the DOM (keyboard fallback), and scroll-position restoration.
-
-Also required: clamp `limit` server-side, index the sort keys, skip `count` unless the total is
-shown (`estimated` on large tables), and ship all five states — initial loading, loading more,
-empty, error, end-of-list.
-
-Full policy: `.claude/rules/list-pagination.md`
-
-### 10. Minimal Implementation (Write Less Code)
-
-**Good engineers write less code.** Work is judged by how much you *avoided* building, not by how
-much you produced — code you never wrote cannot break, needs no review, and costs nothing to
-maintain. Before writing anything, evaluate in this order and stop at the first option that works:
-
-1. **What already exists in this repo** — `frontend/packages/*` (`@workspace/ui`, `query`, `auth`,
-   `client-supabase`, `logger`, `api-client`), an app's `shared/` and `entities/`,
-   `backend-py/packages/core`, `supabase/functions/shared/`. **Actually grep for it.**
-2. **Platform / framework built-ins** — `Intl`, `URL`, `crypto.randomUUID`; React 19 and Next.js 16
-   (Server Components, `loading.tsx`, `next/image`); PostgreSQL (constraints, generated columns,
-   RLS, indexes, pgvector).
-3. **Managed services** — Supabase (Auth / Storage / Realtime / Edge Functions), Stripe, Resend,
-   OneSignal, LiveKit, fal, Sentry, Doppler, Vercel, EAS.
-4. **A well-maintained OSS library** that passes the selection bar below.
-5. **Scratch** — only once 1–4 are ruled out.
-
-Adding a dependency is also adding a maintenance obligation, so the reverse is equally banned:
-do not pull in a package for something that takes a few lines of standard API, and do not wrap
-product-specific domain logic in a generic library. **Never hand-roll** crypto, auth/session
-handling (Supabase Auth), row-level authorization (RLS), payments (Stripe / RevenueCat), date-time
-and locale formatting (`Intl`), or email deliverability (Resend).
-
-**Library selection bar** — every item is required:
-
-| # | Requirement |
-|---|-------------|
-| 1 | Not archived or deprecated, with recent activity (OpenSSF Scorecard's `Maintained` scores full marks at ≥1 commit/week over the last 90 days) |
-| 2 | Real-world adoption (weekly downloads, dependents) |
-| 3 | No unfixed known vulnerabilities (`bun audit`, OSV) |
-| 4 | Commercially usable license (MIT / Apache-2.0 / BSD / ISC). **AGPL / SSPL / BUSL require asking the user** |
-| 5 | Ships types (bundled or official `@types`; `py.typed` for Python) |
-| 6 | Docs and release notes, with migration guidance for breaking changes |
-| 7 | Shallow transitive dependency tree |
-
-Verify with `bun info` / `bun outdated` / `bun why` / `bun audit` / `uv tree`,
-[deps.dev](https://deps.dev), `scorecard.dev/viewer/?uri=github.com/<owner>/<repo>`, and the
-official docs. **Stars are a secondary signal**: few stars (under a few hundred) is a reason to
-pass, but many stars is never a reason to adopt — stars are purchasable, and CMU / NC State /
-Socket (ICSE 2026) documented roughly six million suspected fake stars. **Do not introduce a
-library that overlaps an already-chosen area**: shadcn/ui + Radix (web), gluestack-ui (mobile),
-TanStack Query, Zustand, next-intl, Drizzle, Hey API, Supabase Auth.
-
-**Share code by the Rule of Three** — write it once, tolerate the second copy, extract on the
-third. Extract on the *second* copy when drift causes incidents (style constants, query keys,
-`PAGE_SIZE`, price tables, validation rules, API contracts). *Duplication is far cheaper than the
-wrong abstraction*; if an abstraction does not shrink total lines, it was not worth adding.
-
-**None of this licenses breaking maintainability.** Violating FSD layer direction or public APIs
-(`index.ts`), reaching across features, collapsing types with `any`/`as`, or skipping tests, error
-handling, i18n, or pagination to save lines is a violation of this policy, not compliance with it.
-"Less code" means less code *we own and maintain* — never fewer quality gates.
-
-Design against **officially recommended practice**, confirmed from primary sources (official docs >
-official blog / release notes > official repo code and examples > maintainer statements >
-third-party posts, which are never sufficient on their own). Use official CLIs, codemods, and
-scaffolds rather than reproducing them by hand; if you must deviate, record the reason.
-
-Full policy: `.claude/rules/minimal-implementation.md`
-
-### 11. Authentication Method and Recovery Flows
-
-**If the product ships a mobile app, email + password MUST be the primary sign-in method. OTP or
-magic link alone is forbidden.** OAuth, passkeys and OTP may be offered *in addition*, as long as
-email + password alone gets a user all the way in.
-
-The reason is App Review, not preference. App Store Review Guideline **2.1(a)** requires you to
-give the reviewer "an active demo account ... plus any other hardware or resources that might be
-needed to review your app (e.g. **login credentials**)". With OTP-only sign-in the reviewer cannot
-read the inbox the code is sent to, so the app is rejected under 2.1 — and papering over it with a
-review-only backdoor or fixed code creates a separate violation. Google Play asks for test-account
-credentials the same way.
-
-| Product shape | Primary sign-in |
-|---------------|-----------------|
-| Ships a mobile app (Expo / RN, store-distributed) | **Email + password (required)** |
-| Web only, no mobile app | OTP / magic link is fine |
-| Both web and mobile | **Both on email + password** (same credentials work everywhere; web may also offer OTP) |
-
-**Recovery flows are required, and are not optional extras** — a user who changed inboxes or forgot
-their password has no self-service path back into the account without them:
-
-| Flow | OTP (web-only) | Email + password | Where it goes |
-|------|----------------|------------------|---------------|
-| Change email address | **Required** | **Required** | Account settings |
-| Forgot password | — | **Required** | **The login screen** — someone who forgot the password cannot reach a signed-in screen |
-| Change password | — | **Required** | Account settings (send `current_password` — see below) |
-| Delete account | Mobile: required | Mobile: required | Account settings (`.claude/rules/store-review.md`) |
-
-```typescript
-// Mobile password reset — prefer the 6-digit code over deep links. Link prefetching by spam
-// scanners (e.g. Safe Links) consuming {{ .ConfirmationURL }} is a documented Supabase limitation,
-// and using {{ .Token }} is the official workaround.
-await supabase.auth.resetPasswordForEmail(email)                       // recovery template needs {{ .Token }}
-await supabase.auth.verifyOtp({ email, token, type: 'recovery' })      // establishes a session
-await supabase.auth.updateUser({ password: newPassword })
-
-// Changing the password while signed in — send current_password. Do NOT "verify" the current
-// password by calling signInWithPassword: that issues a new session and is not the documented flow.
-// Requires [auth.email] secure_password_change = true (defaults to false).
-await supabase.auth.updateUser({ email, current_password: currentPassword, password: newPassword })
-
-// Email change — keep double_confirm_changes = true (default): BOTH the old and the new
-// address must confirm before the address actually changes. Say so in the UI.
-await supabase.auth.updateUser({ email: newEmail })
-```
-
-Also required: set password strength (`minimum_password_length` ≥ 8, `password_requirements`) plus
-leaked-password protection (HaveIBeenPwned, Pro plan and above), and surface `WeakPasswordError`
-from `signInWithPassword` into the reset flow — otherwise existing users hit a dead end the day you
-tighten the rules. On mobile, configure the client with a storage adapter, `persistSession: true`,
-`autoRefreshToken: true` and `detectSessionInUrl: false`, or the session is lost on every launch.
-Server-side, authorize with `getUser()` — never `getSession()`, whose values "may not be authentic"
-when storage is request cookies.
-
-Never build auth yourself; never disable `double_confirm_changes`; never reveal whether an address
-is registered in the forgot-password response.
-
-Full policy: `.claude/rules/auth.md`
-
----
-
-## Domain Documentation
-
-| Domain | Documentation |
-|--------|---------------|
-| Frontend (Web) | [frontend/README.md](frontend/README.md) |
-| Frontend (Mobile) | [frontend/apps/mobile/README.md](frontend/apps/mobile/README.md) |
-| Backend Python | [backend-py/README.md](backend-py/README.md) |
-| Database Schema | [drizzle/README.md](drizzle/README.md) |
-| Edge Functions | [supabase/functions/README.md](supabase/functions/README.md) |
-
----
-
-## Package Management
+| **AI/ML** | LangChain/LangGraph, fal（画像生成の既定は `openai/gpt-image-2`）, LiveKit。使用量計測は標準で設計に含める |
 
 | Component | Package Manager |
 |-----------|-----------------|
-| Frontend Web | **Bun** |
-| Frontend Mobile | **Bun** |
-| Backend Python | **uv** |
-| Drizzle | **Bun** |
-| Edge Functions | **Deno** |
+| `frontend/`（web / mobile / packages）, `drizzle/` | **Bun**（`ni` / `nr` / `nlx` で抽象化。`nr dev` = `bun run dev`） |
+| `backend-py/` | **uv**（workspace root から `--all-packages`） |
+| `supabase/functions/` | **Deno** |
 
----
+## Commands（MANDATORY: devenv のみ）
 
-## Debugging (MANDATORY)
-
-フロントエンド・バックエンドのデバッグは **devenv 2.0 の native process manager の TUI** を主インターフェースとして使用する。`devenv up` を対話端末で実行すると TUI が自動起動し、プロセス状態・リアルタイムログ・個別再起動がキーボード操作で可能。process-compose は撤去済み。
-
-非対話環境（CI / Claude Code）では `/tmp/devenv-*/processes/logs/<process>.{stdout,stderr}.log` を直接 tail する:
+**すべて devenv の scripts（PATH 直結）か `devenv tasks run <name>` で実行する。** `bun run biome` /
+`uv run ruff` / `npx tsc` / `make` の直叩きは禁止（`.claude/rules/commands.md`）。一覧は `devenv tasks list`。
 
 ```bash
-tail -100 /tmp/devenv-*/processes/logs/backend.stderr.log
-tail -100 /tmp/devenv-*/processes/logs/storybook.stderr.log
-tail -100 /tmp/devenv-*/processes/logs/web.stderr.log     # devenv up web 起動時
+# Services（Supabase の Docker は Supabase CLI が所有。devenv が監視するのは backend / storybook だけ）
+devenv up                      # 軽量セット: Supabase + backend + storybook（TUI 付き）。終了しても Supabase は止まらない
+dev-web / dev-mobile / dev-all # 軽量セット + Next.js / Expo Metro / 全 frontendApps
+devenv up backend web          # 任意組み合わせ（frontend/apps/* は opt-in process）
+stop                           # devenv プロセス + Supabase をすべて停止（supabase-stop は Supabase のみ）
+devenv shell -P android        # Android ネイティブ toolchain（opt-in profile。数 GB）
+
+# Quality（ローカルも CI も同じ）
+lint / format / type-check     # 全体（auto-fix）。個別は lint-frontend / format-backend-py / type-check-mobile 等
+ci-check                       # = devenv tasks run ci:check（キャッシュ込み）。verify はこれ 1 本。`devenv test` は使わない
+
+# Tests
+unit-test                      # frontend(Vitest) + drizzle(bun test) + backend-py(pytest) + functions(Deno)
+test-frontend / test-drizzle / test-backend-py / test-functions / test-db(pgTAP)
+e2e / e2e-web / e2e-mobile / e2e-ui   # Maestro（--env local|staging|production）
+
+# Database（ローカルは実行可。本番 / staging はユーザー承認必須。.claude/rules/database.md）
+devenv tasks run app:migrate-dev   # 生成 + 適用 + 型生成
+devenv tasks run model:build       # 型のみ再生成
+# 本番は GitHub Actions（migrate.yml）が正規経路。ローカルから叩くなら ENV= を必ず前置:
+ENV=production devenv tasks run -P production db:migrate-deploy   # 緊急時のみ
+
+# Deploy / Release（資格情報はすべて Doppler。vercel / eas を直接叩かない）
+vercel-deploy [app]                # → .claude/skills/vercel-deploy/
+mobile-release-ios / -android      # 「アップロードまで」。配布・審査提出は store-status / store-testflight /
+                                   #   store-submit-ios / store-release-play → .claude/skills/mobile-release/
+store-push-* / store-create-*      # 掲載情報・課金商品（必ず先に --dry-run）→ .claude/skills/store-screenshots/
 ```
 
-詳細は `.claude/skills/debugging/SKILL.md` を参照。
+- Profile: `local` が既定。`-P dev|staging|production` で env を上書き。**`devenv tasks run` をリモート profile で叩くときは `ENV=<profile>` を前置**（`-P` だけだと ENV=local のまま）。
+- `devenv shell` 進入時に `setup:install-*` が lockfile 変更を検知して `bun install` / `uv sync` を自動同期する。
+- 非対話環境のログ: `/tmp/devenv-*/processes/logs/<process>.{stdout,stderr}.log`。対話環境は `devenv up` の TUI が主（`.claude/skills/debugging/`）。
 
----
+## Rules 索引（`.claude/rules/`）
 
-## Skills
+「常時」はどのファイルを触っていても効く。「paths」は該当ファイルを開いたときに効く（Claude Code の `paths:` frontmatter）。
+**どれも交渉の余地なし。** 判断に迷う点・後戻りできない論点は推測せずユーザーに確認する。
 
-Detailed guidance available in `.codex/skills/`:
+| ファイル | 一言 | 適用 |
+|---|---|---|
+| `skills-first.md` | 作業前に該当 Skill を確認・起動。確認せずに始めた実装はやり直し | 常時 |
+| `design-research.md` | 設計前に一次情報（バージョン確定 → 公式 doc → 型定義）と BP を読む。**設計書・指示・既存実装との乖離は「意図的かミスか」を必ず確認** | 常時 |
+| `research.md` | 実装前に Context7 / 公式 doc で API・設定形式を確認。推測・記憶での実装禁止 | 常時 |
+| `minimal-implementation.md` | 既存資産 → 標準機能 → マネージド → 実績ある OSS → スクラッチ の順。依存追加は選定基準 7 項目。star 数だけで選ばない | 常時 |
+| `clean-code.md` | 後方互換・重複・未使用コードを残さない。Tailwind クラス文字列も重複コード | 常時 |
+| `tdd.md` | テスト先行（Red → Green）。UI は Storybook。終了時 All Green | 常時 |
+| `ui-testing.md` | UI は単体テストではなく Storybook。「ビルドが通った」で終わらせず描画を確認 | 常時 |
+| `error-handling.md` | 握りつぶし禁止。catch はログ + リスロー or Result 型。supabase-js の `{ error }` は必ず見る | 常時 |
+| `supabase-first.md` | supabase-js → Edge Functions → backend-py（LLM / エージェント / 長時間 / 複雑のみ）。Storage は private 既定 | 常時 |
+| `commands.md` | devenv コマンド必須。`devenv test` を verify に使わない。`scripts/` はルートの biome 設定 | 常時 |
+| `auto-generated.md` | `packages/types/schema.ts` 等の生成物は編集しない。正は `drizzle/schema/` | 常時 |
+| `mcp-supabase.md` | Supabase インフラの調査・操作は `supabase` / `supabase-prod`(read-only) MCP。psql / curl / CLI 直叩き禁止 | 常時 |
+| `mcp-doppler.md` | Doppler は `doppler` MCP のみ。フェーズは `PROJECT.md` の `doppler_phase`。値をチャット / ログに出さない | 常時 |
+| `env-naming.md` | キー名は読むツールの名前に揃える。sync 付き config で `GITHUB_` 禁止。Supabase の env は Doppler に置かない | 常時 |
+| `auth.md` | モバイルがあるならメール + パスワード必須（OTP のみ禁止）。メール再設定 / パスワード忘れ / 変更 / 削除の導線は指示を待たず実装 | 常時 |
+| `list-pagination.md` | 増えうる一覧は最初からページング。全件取得禁止。UI パターンは自分で選ぶ（迷ったら「もっと見る」） | 常時 |
+| `render-optimization.md` | FSD スライス単位でステート局所化。Zustand はセレクター。invalidation はピンポイント | paths |
+| `page-navigation.md` | `loading.tsx` + Suspense でストリーミング。遷移はリンク | paths |
+| `frontend.md` | FSD レイヤー・公開 API・import 規約 | paths |
+| `form-controls.md` | フォーム要素はモバイル幅で 16px 以上（iOS ズーム防止）。共有コンポーネント 1 か所 | paths |
+| `mobile-uiux.md` | キーボードが画面半分を覆う前提。RN 標準 `KeyboardAvoidingView` 禁止（`react-native-keyboard-controller`）。タップ標的 44px | paths |
+| `i18n.md` | ユーザー向け文言はすべて next-intl。全ロケール揃える | paths |
+| `storage-images.md` | Storage の画像は必ず transform 経由（`SupabaseImage`）。`loaderFile` 禁止 | paths |
+| `datetime.md` | DB / API は UTC（`timestamptz`）。TZ 変換はフロントの `useEffect` 内 | paths |
+| `database.md` | マイグレーションは Drizzle。本番適用はユーザー承認 | paths |
+| `backend-py.md` | Python 規約。外部 SDK を丸ごと Mock しない | paths |
+| `python-monorepo.md` | uv workspace（apps/ + packages/、src-layout、単一 uv.lock） | paths |
+| `edge-functions.md` | Edge Functions 規約 | paths |
+| `supabase-config.md` | サービス設定は `config.toml` に集約（`mode: product` から）。`[remotes.*]` 必須。DB だけ Drizzle | paths |
+| `store-review.md` | 第三者 AI 同意 / privacy manifest / target API 36 / 掲載情報と実装の一致 | paths |
 
-- `fsd/` - Feature Sliced Design
-- `drizzle/` - Drizzle ORM schema management
-- `supabase/` - Supabase Auth, RLS, Storage
-- `tanstack-query/` - TanStack Query v5
-- `datetime/` - DateTime handling patterns
-- `i18n/` - next-intl internationalization
-- `shadcn-ui/` - shadcn/ui + TailwindCSS
-- `debugging/` - デバッグ手順（devenv 2.0 native process manager の TUI 優先）
+## Skills（`.claude/skills/`）
+
+- 公式提供の Skill は **`skills-lock.json` 管理**。実体は `.agents/skills/`、`.claude/skills/` からは symlink。
+  **追加・更新は必ずリポジトリルートで `npx skills add <owner>/<repo> -s <skill>`**（`.claude/skills/` 内で実行すると
+  入れ子の `.agents/` ができる）。**ディレクトリを手でコピーしない**（上流の改名で旧名と新名が二重に残る）。
+  復元は `npx skills experimental_install`、更新は `npx skills update`。
+- 選定理由と見送ったもの: `docs/_research/2026-08-06-service-clis.md` / `docs/_research/2026-08-16-ui-ux-skills.md`。
+- **本リポジトリ固有の自作 Skill**（lock 管理外。`.claude/skills/<name>/SKILL.md` 直置き）:
+
+| Skill | 用途 |
+|---|---|
+| `ai-usage-metering` | LLM / 生成 AI を呼ぶコードは使用量イベントの記録とセット。集計軸・単価表・円換算は後から変えられない |
+| `mobile-uiux` | キーボード回避・セーフエリア・入力属性・タップ標的の正本 |
+| `mobile-release` / `store-screenshots` | EAS リリース（アップロード後の配布・審査提出・ロールアウトまで）/ ストア掲載画像 |
+| `vercel-deploy` | Vercel 連携とデプロイ。Docker コンテナが「READY なのに 500」になる 2 大原因 |
+| `tauri` | デスクトップ（`apps/desktop`） |
+| `edge-functions-mcp` | Edge Functions 上の MCP サーバ |
+| `onesignal` / `livekit` / `fal` | 公式 Skill が無い外部サービス |
+| `fsd` / `monorepo` / `python-monorepo` / `gluestack` / `shadcn-ui` / `drizzle` / `rls` / `supabase-config` | 本リポジトリの配置・規約 |
+| `debugging` / `dev-check` / `devenv-cicd` / `datetime` / `i18n` / `logger` / `seed` / `hey-api` / `storybook` / `pgtap` / `python-testing` / `maestro` / `langchain` / `fastapi` / `tanstack-query` / `nextjs` / `detailed-design` | 手順・規約 |
+
+## Domain Documentation
+
+| ドメイン | ドキュメント |
+|---|---|
+| Frontend (Web) | [`frontend/README.md`](frontend/README.md) |
+| Frontend (Mobile) | [`frontend/apps/mobile/README.md`](frontend/apps/mobile/README.md) |
+| Database Schema | [`drizzle/README.md`](drizzle/README.md) |
+| Backend Python | [`backend-py/README.md`](backend-py/README.md) |
+| Edge Functions | [`supabase/functions/README.md`](supabase/functions/README.md) |
+| Store release | [`docs/store/release-runbook.md`](docs/store/release-runbook.md) / [`docs/store/submission-checklist.md`](docs/store/submission-checklist.md) |
+| Research / Design | `docs/_research/YYYY-MM-DD-<topic>.md` / `docs/designs/` |
+
+## Where things live
+
+| 対象 | 場所 |
+|---|---|
+| Supabase サービス設定（Auth / Storage / API / Functions の `verify_jwt` / メールテンプレート配線） | `supabase/config.toml`（`mode: product` から。`[remotes.*]` 必須） |
+| メールテンプレート本体 | `supabase/templates/email/*.html` |
+| Tables / RLS / Realtime publication / Migrations | `drizzle/schema/` / `drizzle/config/post-migration/` / `drizzle/migrations/` |
+| 非機密のローカル config | `env/<service>/.env.local`（`env/README.md`） |
+| シークレット・リモート値 | Doppler 一本（`doppler-set <KEY>`。`GITHUB_` / `SUPABASE_` / `VERCEL_` prefix 禁止） |
+| MCP 定義 | `.mcp.json` が正本。`.codex/config.toml` / `.cursor/mcp.json` は `mcp-sync` で生成 |
+| ストア掲載情報 / 課金商品 | `frontend/apps/mobile/{store,play,iap}.config.js` |

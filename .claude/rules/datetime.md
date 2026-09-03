@@ -1,3 +1,7 @@
+---
+paths: frontend/**, backend-py/**, drizzle/**, supabase/functions/**
+---
+
 # DateTime Handling Policy
 
 **MANDATORY**: すべての日時処理は以下のルールに従う。

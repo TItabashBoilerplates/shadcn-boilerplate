@@ -1,3 +1,7 @@
+---
+paths: supabase/**, terraform/**, scripts/supabase/**, .github/workflows/**
+---
+
 # Supabase Config-as-Code Policy
 
 **CRITICAL / NON-NEGOTIABLE**: Supabase の**サービス設定値はすべて `supabase/config.toml` を single source of truth として Git 管理する**。Dashboard での手動変更は禁止。**唯一の例外は DB（スキーマ / RLS / Realtime publication / migration）で、これは Drizzle が source of truth**。
@@ -6,24 +10,21 @@
 
 ---
 
-## 0. 適用範囲: 本ルールは「派生した実プロジェクト」に適用される
-
-**このリポジトリは boilerplate であり、`supabase/config.toml` は意図的に置いていない。**
+## 0. 適用範囲: `PROJECT.md` の `mode` で決まる
 
 `config.toml` の中身は **`project_id` / `[remotes.*]` / site_url / OAuth provider / バケット定義**など、
-**派生先ごとに異なる値**が本体である。boilerplate に置くと、派生プロジェクトが必ず全面的に書き換える
-（＝雛形として役に立たない）うえ、書き換え漏れが「設定が無言でスキップされる」形の事故になる（§1.5）。
+**プロジェクトごとに異なる値**が本体である。したがって適用範囲は **`PROJECT.md` の `mode`** で決まる。
 
-したがって本ルールが効き始めるのは **この boilerplate から実プロジェクトを起こした後**であり、
-その時点で `config.toml` を新規作成し、`[remotes.<name>]` まで含めて整備する。
+| `mode` | `supabase/config.toml` |
+|---|---|
+| `boilerplate` | **意図的に置かない**。雛形に置くと template から起こした側が必ず全面的に書き換える（＝雛形として役に立たない）うえ、書き換え漏れが「設定が無言でスキップされる」形の事故になる（§1.5）。**無いことを不備・未対応事項として報告しない** |
+| `product` | **必須**。`mode` を切り替える時点で新規作成し、`[remotes.<name>]` まで含めて整備する。無いのは不備 |
 
-> ⚠️ **エージェントへ**: このリポジトリで `supabase/config.toml` が存在しないことを
-> **不備・未対応事項として報告しないこと**。意図された状態である。
-> `[functions.*]` の `verify_jwt` やメールテンプレートの `content_path` について記述するときは、
-> 「派生プロジェクトではここに書く」という形で説明する。
+> `mode: boilerplate` のときに `[functions.*]` の `verify_jwt` やメールテンプレートの `content_path` に
+> ついて記述するなら、「`mode: product` にする時点でここに書く」という形で説明する。
 >
-> `supabase/templates/email/*.html` が boilerplate に置いてあるのは、**テンプレート本体は
-> 派生先でもそのまま使えるから**（配線先の `config.toml` だけが派生先固有になる）。
+> `supabase/templates/email/*.html` は `mode` に関係なく置いてある。**テンプレート本体はプロジェクトを
+> 跨いでそのまま使える**ためで、配線先の `config.toml` だけがプロジェクト固有になる。
 
 ---
 

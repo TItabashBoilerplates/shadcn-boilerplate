@@ -4,6 +4,12 @@
 
 This is a full-stack application boilerplate with a multi-platform frontend and backend services:
 
+> **template から新しいプロジェクトを起こしたら、最初に [`PROJECT.md`](PROJECT.md) を埋める。**
+> AI 向けの設定は 2 層に分かれている: `.claude/` / `AGENTS.md` は**スタック層**（技術規約。プロジェクトを跨いで同じ）、
+> `PROJECT.md` は**プロダクト層**（そのアプリの決定事項: 配布形態・テナント・使うサービス・意図的な逸脱）。
+> `PROJECT.md` の `mode` を `product` にし、`TODO` を埋め、`supabase/config.toml` を作るまでが初期化
+> （`frontend/policy/project-manifest.policy.test.ts` が CI で検査する）。
+
 - **Frontend (Web)**: Next.js 16, React 19, shadcn/ui, TailwindCSS 4, Bun
 - **Frontend (Mobile)**: Expo 57, React Native 0.86, gluestack-ui, NativeWind 5
 - **Backend**: FastAPI (Python) with Supabase Edge Functions (Deno)
@@ -115,7 +121,7 @@ By adopting these environments, we can ensure efficient development and maintain
 #### Configuration Management
 
 - **Supabase Services** (`supabase/config.toml`): Auth, Storage, API settings, service-level configurations
-  - 📌 このリポジトリは boilerplate なので **`config.toml` は意図的に置いていない**（`project_id` / `[remotes.*]` が派生先ごとに異なるため）。派生プロジェクトを起こした時点で作成する（[`.claude/rules/supabase-config.md`](.claude/rules/supabase-config.md) §0）
+  - 📌 `config.toml` の有無は [`PROJECT.md`](PROJECT.md) の `mode` で決まる。`boilerplate` では**意図的に置かない**（`project_id` / `[remotes.*]` がプロジェクトごとに異なるため）。template から起こして `mode: product` にする時点で作成する（[`.claude/rules/supabase-config.md`](.claude/rules/supabase-config.md) §0）
 - **Database Schema** (`drizzle/`): Tables, RLS policies, Realtime publications, functions, triggers managed with Drizzle ORM
 
 ### Key Features
