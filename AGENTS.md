@@ -103,6 +103,7 @@ store-push-* / store-create-*      # 掲載情報・課金商品（必ず先に 
 | `mobile-uiux.md` | キーボードが画面半分を覆う前提。RN 標準 `KeyboardAvoidingView` 禁止（`react-native-keyboard-controller`）。タップ標的 44px | paths |
 | `i18n.md` | ユーザー向け文言はすべて next-intl。全ロケール揃える | paths |
 | `storage-images.md` | Storage の画像は必ず transform 経由（`SupabaseImage`）。`loaderFile` 禁止 | paths |
+| `video-thumbnails.md` | 動画を扱うならサムネイル必須。生成は backend-py（Vercel コンテナ + ffmpeg）。Edge Functions では不可 | paths |
 | `datetime.md` | DB / API は UTC（`timestamptz`）。TZ 変換はフロントの `useEffect` 内 | paths |
 | `database.md` | マイグレーションは Drizzle。本番適用はユーザー承認 | paths |
 | `backend-py.md` | Python 規約。外部 SDK を丸ごと Mock しない | paths |

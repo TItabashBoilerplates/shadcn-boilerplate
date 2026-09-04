@@ -187,6 +187,25 @@ private バケットでは **`createSignedStorageImageUrl()` で transform 付�
 
 → 詳細・禁止パターン・チェックリストは **`.claude/rules/storage-images.md`** を参照。
 
+### Video Thumbnails (MANDATORY)
+
+**動画を Storage に置くなら、サムネイル（ポスター画像）の生成・保存・表示までをセットで実装する。**
+Storage の Image Transformation は画像専用で、**動画からフレームは取り出せない**。
+
+そして**サムネイル生成は Edge Functions では実現できない**（Memory 256MB / CPU 2s / bundle 20MB /
+ネイティブのマルチスレッドライブラリ非対応 → ffmpeg を置けない）。**上の判断順のエスカレーション条件
+（長時間処理 / ネイティブ依存）に該当するので `backend-py`（Vercel の Docker コンテナ + ffmpeg）で実装する。**
+
+```
+client → Storage へ直接アップロード（>6MB は resumable）
+       → backend-py: ffprobe/ffmpeg で 1 フレーム抽出 → Storage へ保存 → 行を update
+       → 表示は SupabaseImage（transform 経由）
+```
+
+動画本体を backend-py の HTTP ボディに載せない（Vercel の request body 上限 4.5MB）。
+
+→ 詳細・DB 設計・禁止パターン・チェックリストは **`.claude/rules/video-thumbnails.md`** を参照。
+
 ### When to Use Public Buckets
 
 Public buckets are allowed **ONLY** when:
