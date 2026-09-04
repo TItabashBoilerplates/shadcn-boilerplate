@@ -1,5 +1,6 @@
 'use client'
 
+import { assertResponsiveSizes } from '@workspace/client-supabase/storage-image'
 import Image, { type ImageLoaderProps, type ImageProps } from 'next/image'
 import { supabaseImageLoader } from '@/shared/lib/supabase-image'
 
@@ -12,9 +13,28 @@ import { supabaseImageLoader } from '@/shared/lib/supabase-image'
  */
 const signedUrlLoader = ({ src }: ImageLoaderProps): string => src
 
-type SupabaseImageBaseProps = Omit<ImageProps, 'src' | 'loader' | 'unoptimized'>
+type SupabaseImageBaseProps = Omit<ImageProps, 'src' | 'loader' | 'unoptimized' | 'fill' | 'sizes'>
+
+/**
+ * `fill` を使う画像は `sizes` が無いとブラウザが 100vw と解釈し、小さな枠でも srcset の
+ * 最大幅（2500px）を落としてくる。**transform は通っているのにサイズが最適でない**という
+ * 一番気づきにくい形になるので、型で塞ぐ（`.claude/rules/storage-images.md`）。
+ */
+type SupabaseImageSizingProps =
+  | {
+      /** 親要素いっぱいに広げる。**このとき `sizes` は必須** */
+      fill: true
+      /** 表示幅の宣言（例: `(max-width: 768px) 100vw, 384px`） */
+      sizes: string
+    }
+  | {
+      fill?: false | undefined
+      /** CSS で伸縮させるなら固定幅でも指定する（未指定は 1x/2x の srcset） */
+      sizes?: string
+    }
 
 export type SupabaseImageProps = SupabaseImageBaseProps &
+  SupabaseImageSizingProps &
   (
     | {
         /** public バケット名 */
@@ -52,6 +72,9 @@ export type SupabaseImageProps = SupabaseImageBaseProps &
  * <SupabaseImage bucket="public-assets" path="hero/cover.jpg" width={1200} height={630} alt="" />
  * ```
  *
+ * `fill` で親要素いっぱいに広げる場合は **`sizes` が必須**（無いとブラウザが 100vw と解釈し、
+ * 小さな枠でも最大幅の画像を落としてくる）。
+ *
  * @example private バケット（Server Component で署名して渡す）
  * ```tsx
  * const signedUrl = await createSignedStorageImageUrl(supabase, {
@@ -64,6 +87,9 @@ export type SupabaseImageProps = SupabaseImageBaseProps &
  * ```
  */
 export function SupabaseImage({ bucket, path, signedUrl, alt, ...imageProps }: SupabaseImageProps) {
+  // 型で塞いでいるが、spread や JS からの呼び出しは型を素通りするので実行時にも見る
+  assertResponsiveSizes(imageProps, 'SupabaseImage')
+
   // alt は spread に混ぜず明示的に渡す（jsx-a11y/alt-text は spread の中身を追えない）
   if (signedUrl !== undefined) {
     return <Image {...imageProps} alt={alt} src={signedUrl} loader={signedUrlLoader} unoptimized />

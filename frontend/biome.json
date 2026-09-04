@@ -45,7 +45,8 @@
         "recommended": true
       },
       "performance": {
-        "recommended": true
+        "recommended": true,
+        "noImgElement": "error"
       },
       "security": {
         "recommended": true
