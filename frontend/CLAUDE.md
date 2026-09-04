@@ -435,6 +435,10 @@ For complete examples and detailed patterns, see `docs/rendering-strategy.md` - 
 | private（既定） | サーバー側で `createSignedStorageImageUrl()` → `<SupabaseImage signedUrl={...} ... />` |
 | URL だけ欲しい | `@workspace/client-supabase/storage-image` の `buildStorageImageUrl` / `toStorageImageUrl` |
 
+- **変換を通すだけでは足りない。`width` / `height` は実際の表示サイズから決める**（元サイズの丸投げ禁止）。
+- **`fill` を使うなら `sizes` は必須**（無いとブラウザは 100vw と解釈し、小さな枠でも最大幅が落ちてくる）。
+  `SupabaseImage` が型と実行時（`assertResponsiveSizes`）で要求する。
+- **`<img>` は使わない**（biome の `noImgElement` が error）。
 - 幅は `IMAGE_WIDTH_LADDER` の段に丸まる（CDN キャッシュのため）。自前で計算しない。
 - `next.config.ts` の `images.imageSizes` / `deviceSizes` はこの段と一致させる（Supabase の上限は 2500）。
 - `images.loaderFile` は使わない（全 `next/image` に効いてローカル静的画像まで壊れる）。

@@ -173,6 +173,38 @@ function encodePath(path: string): string {
     .join('/')
 }
 
+/**
+ * レスポンシブ表示（`fill` / CSS で伸縮）のときに `sizes` があるかを検査する
+ *
+ * **transform を通していても、要求する幅が表示サイズより大きければ最適化されていない。**
+ * `next/image` は `sizes` が無いとブラウザに「ビューポート幅いっぱい（100vw）」と解釈させるため、
+ * 小さな枠に置いた画像でも srcset の最大幅（本リポジトリでは 2500px）が落ちてくる。
+ *
+ * > 公式: 「If `sizes` is missing, the browser assumes the image will be as wide as the viewport
+ * > (`100vw`). This can cause unnecessarily large images to be downloaded.」
+ * > 「`sizes` should be used when: The image is using the `fill` prop / CSS is used to make the
+ * > image responsive」
+ *
+ * 固定幅（`width` / `height` 指定）の画像は `sizes` 無しでも 1x / 2x の srcset に収まるので対象外。
+ * CSS で伸縮させる場合は静的に判定できないため、`.claude/rules/storage-images.md` の規約で担保する。
+ *
+ * @throws `fill` を使っているのに `sizes` が無い（または空）場合
+ * @see https://nextjs.org/docs/app/api-reference/components/image#sizes
+ */
+export function assertResponsiveSizes(
+  props: { fill?: boolean; sizes?: string },
+  caller: string
+): void {
+  if (props.fill !== true) return
+  if (props.sizes !== undefined && props.sizes.trim() !== '') return
+
+  throw new Error(
+    `${caller}: fill を使う画像には sizes が必要です。` +
+      'sizes が無いとブラウザは 100vw と解釈し、小さな枠でも最大幅の画像を落としてくる' +
+      '（.claude/rules/storage-images.md）。例: sizes="(max-width: 768px) 100vw, 384px"'
+  )
+}
+
 /** Storage の URL 断片（`/storage/v1/{object|render/image}/public/<bucket>/<path>`） */
 const STORAGE_PUBLIC_PATH = /^\/storage\/v1\/(?:object|render\/image)\/public\/([^/]+)\/(.+)$/
 const STORAGE_PREFIX = '/storage/v1/'

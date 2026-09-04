@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  assertResponsiveSizes,
   buildStorageImageUrl,
   createSignedStorageImageUrl,
   IMAGE_TRANSFORM_LIMITS,
@@ -359,5 +360,28 @@ describe('createSignedStorageImageUrl', () => {
         transform: { width: 300 },
       })
     ).rejects.toThrow(/expiresIn/i)
+  })
+})
+
+describe('assertResponsiveSizes', () => {
+  it('fill を使うのに sizes が無ければ throw する（100vw 扱いで最大幅が落ちてくる）', () => {
+    expect(() => assertResponsiveSizes({ fill: true }, 'SupabaseImage')).toThrow(/sizes/i)
+  })
+
+  it('fill + 空文字の sizes も throw する', () => {
+    expect(() => assertResponsiveSizes({ fill: true, sizes: '   ' }, 'SupabaseImage')).toThrow(
+      /sizes/i
+    )
+  })
+
+  it('fill + sizes があれば通る', () => {
+    expect(() =>
+      assertResponsiveSizes({ fill: true, sizes: '(max-width: 768px) 100vw, 384px' }, 'x')
+    ).not.toThrow()
+  })
+
+  it('fill を使わないなら sizes は要らない（固定幅は 1x/2x の srcset で足りる）', () => {
+    expect(() => assertResponsiveSizes({}, 'x')).not.toThrow()
+    expect(() => assertResponsiveSizes({ fill: false }, 'x')).not.toThrow()
   })
 })

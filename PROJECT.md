@@ -10,7 +10,7 @@ distribution: TODO           # web | web+mobile | mobile
 tenancy: TODO                # personal | organization
 locales: [en, ja]
 seo_public_pages: TODO       # true | false
-supabase_plan: TODO          # free | pro | team | enterprise
+supabase_plan: pro           # free | pro | team | enterprise（画像変換 = storage-images.md の前提）
 doppler_phase: full-access   # full-access | protected  ← 実ユーザーが付いたら protected にする
 services:
   stripe: TODO               # true | false（以下同じ）

@@ -59,6 +59,20 @@ describe('共有コンポーネントの存在', () => {
     expect(content).toContain(expectedSymbol)
   })
 
+  it('web の SupabaseImage が fill 時の sizes を検査している（最適サイズの担保）', () => {
+    // sizes が無い fill は 100vw 扱い → 小さな枠でも srcset の最大幅が落ちてくる
+    const content = readFileSync(
+      join(FRONTEND_ROOT, 'apps/web/src/shared/ui/supabase-image/SupabaseImage.tsx'),
+      'utf-8'
+    )
+    expect(content).toContain('assertResponsiveSizes')
+  })
+
+  it('<img> 要素を biome が error で止める（next/image・SupabaseImage を迂回させない）', () => {
+    const biomeConfig = JSON.parse(readFileSync(join(FRONTEND_ROOT, 'biome.json'), 'utf-8'))
+    expect(biomeConfig.linter?.rules?.performance?.noImgElement).toBe('error')
+  })
+
   it('web のローダーは next/image のグローバル loaderFile ではなく loader prop で使う', () => {
     // loaderFile はアプリ内の全 next/image に適用され、ローカル静的画像まで壊す
     const nextConfig = readFileSync(join(FRONTEND_ROOT, 'apps/web/next.config.ts'), 'utf-8')
