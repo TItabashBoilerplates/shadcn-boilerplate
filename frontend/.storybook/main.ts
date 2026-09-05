@@ -10,6 +10,7 @@ const require = createRequire(import.meta.url)
 
 const WEB_SRC = resolve(__dirname, '../apps/web/src')
 const MOBILE_ROOT = resolve(__dirname, '../apps/mobile')
+const DESKTOP_SRC = resolve(__dirname, '../apps/desktop/src')
 
 /**
  * apps/mobile の tsconfig は `@/` を **2 段構え**でマップしている:
@@ -48,16 +49,24 @@ function fsdAliasPlugin(): PluginOption {
       if (!source.startsWith('@/') || !importer) return null
 
       const isMobileImporter = importer.includes(`${sep}apps${sep}mobile${sep}`)
+      const isDesktopImporter = importer.includes(`${sep}apps${sep}desktop${sep}`)
 
       // apps/web の i18n ナビゲーション（next-intl の createNavigation）は
       // Next.js のルーターコンテキストを前提にしており Storybook では落ちる。
       // 実体の解決より前にモックへ差し替える。
-      if (!isMobileImporter && source === '@/shared/lib/i18n') {
+      if (!isMobileImporter && !isDesktopImporter && source === '@/shared/lib/i18n') {
         return resolve(__dirname, './mocks/web-i18n-navigation.tsx')
       }
 
       const subpath = source.slice(2)
-      const base = isMobileImporter ? mobileBaseFor(subpath) : WEB_SRC
+      // apps/desktop は Vite の素直な構成（`@/*` -> src/*）。
+      // ここに足さないと desktop の `@/` が **黙って apps/web/src に解決される**
+      // （エラーにならず「なぜか web の実装が動く」形で壊れる）。
+      const base = isMobileImporter
+        ? mobileBaseFor(subpath)
+        : isDesktopImporter
+          ? DESKTOP_SRC
+          : WEB_SRC
 
       // 拡張子解決や条件付き exports は Vite 本体に任せる（skipSelf で無限再帰を防ぐ）
       const resolved = await this.resolve(join(base, subpath), importer, {
@@ -209,6 +218,23 @@ const config: StorybookConfig = {
       directory: '../apps/mobile/src/shared/ui',
       files: '**/*.stories.@(js|jsx|ts|tsx)',
       titlePrefix: 'Apps/Mobile/Shared',
+    },
+
+    // ============================================
+    // FSD LAYERS (apps/desktop) — Tauri アプリ側のカタログ
+    //
+    // デスクトップ専用の UI（自動更新の通知など）はここに出す。
+    // 共有 UI は `@workspace/ui` 側のストーリーで見る（desktop で複製しない）。
+    // ============================================
+    {
+      directory: '../apps/desktop/src/features',
+      files: '**/ui/**/*.stories.@(js|jsx|ts|tsx)',
+      titlePrefix: 'Apps/Desktop/Features',
+    },
+    {
+      directory: '../apps/desktop/src/views',
+      files: '**/ui/**/*.stories.@(js|jsx|ts|tsx)',
+      titlePrefix: 'Apps/Desktop/Views',
     },
 
     // ============================================

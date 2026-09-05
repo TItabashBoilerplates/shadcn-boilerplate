@@ -179,5 +179,23 @@
     "deleteAccountConfirm": "Delete my account",
     "deletingAccount": "Deleting…",
     "cancel": "Cancel"
+  },
+  "Download": {
+    "eyebrow": "Desktop app",
+    "title": "Desktop edition",
+    "description": "Use it in a native window. Your account and data are shared with the web app.",
+    "latestVersion": "Latest v{version}",
+    "publishedAt": "Released {date}",
+    "macos": {
+      "name": "macOS",
+      "requirements": "Apple Silicon (M1 or later)",
+      "button": "Download for macOS"
+    },
+    "windows": {
+      "name": "Windows",
+      "requirements": "Windows 10 / 11 (64-bit)",
+      "button": "Download for Windows",
+      "smartscreenNote": "Windows SmartScreen may warn about a newly published app. Choose “More info” → “Run anyway” to continue."
+    }
   }
 }

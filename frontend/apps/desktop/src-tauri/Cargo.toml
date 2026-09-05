@@ -17,6 +17,10 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
+# 自動更新（latest.json の確認・署名検証・インストール）と、更新後の再起動。
+# 更新の仕組みは自作しない（.claude/rules/minimal-implementation.md: 公式プラグインを使う）
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 
 [features]
 # 既定で有効にはしない（`tauri dev` が必要に応じて付ける）

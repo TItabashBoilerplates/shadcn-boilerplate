@@ -71,6 +71,20 @@ services:
 - 審査用アカウントは Doppler の `APPLE_REVIEW_DEMO_ACCOUNT` / `APPLE_REVIEW_DEMO_PASSWORD`（値はここに書かない）。
 - 第三者 AI へ送る personal data の有無と送り先（`store-review.md` §1 の開示対象）: TODO
 
+## デスクトップ（`distribution` にデスクトップ配布を含む場合。含まなければ `n/a`）
+
+`frontend/apps/desktop`（Tauri）を Web 経由で配り、`tauri-plugin-updater` で自動更新する。
+手順の正本は [`docs/desktop/release-runbook.md`](docs/desktop/release-runbook.md)、
+判断の正本は `.claude/skills/desktop-release/`。
+
+- アプリ名（`productName`）と bundle identifier は `frontend/apps/desktop/src-tauri/tauri.conf.json` が正本: TODO
+  （**identifier は配布後に変えるとインストール済みアプリと別物になる**）
+- 配布対象の OS / アーキテクチャ（既定は macOS Apple Silicon + Windows x64）: TODO
+- Windows のコード署名を行うか（行わないと SmartScreen の警告が出る）: TODO
+- 自動更新の endpoint と公開鍵は `tauri.conf.json` の `plugins.updater` が正本
+  （`desktop-updater-keygen` が書く。**endpoint と秘密鍵はどちらも永続**で、
+  変えると配布済みアプリが以後の更新を検証できない。値はここに複製しない）。
+
 ## AI 機能（`services.langchain` / `services.fal` のどちらかが true の場合。どちらも false なら `n/a`）
 
 - 使用量の集計軸（user / organization / feature / conversation）: TODO

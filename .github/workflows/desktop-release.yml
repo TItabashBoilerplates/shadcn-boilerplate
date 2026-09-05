@@ -1,0 +1,250 @@
+name: Desktop Release
+
+# デスクトップアプリ（Tauri）のビルド → 署名/公証 → Supabase Storage へのアップロード
+# → 自動更新マニフェスト（latest.json）の公開。
+#
+#   起動: main への push で tauri.conf.json が変わったとき（gate job が公開済み latest.json の
+#         version と比べ、上がっていれば build を走らせる。scripts/desktop/check-release-gate.mjs）。
+#         手動: gh workflow run desktop-release.yml --ref main（= desktop-release script。
+#         version を見ずに走らせる。初回の配布・同じ版の再実行・障害時の復旧に使う）
+#
+# - macOS: Apple Silicon（aarch64）のみ。Developer ID Application で署名し、
+#   ASC API キーで公証（tauri build が notarytool submit → staple まで自動実行する）。
+#   Intel Mac も配るなら matrix に x86_64-apple-darwin を足し、
+#   scripts/desktop/release-paths.mjs に darwin-x64 を戻す（2 か所だけ）。
+# - Windows: NSIS x64。**既定は未署名**（コード署名証明書は各プロジェクトで用意する。
+#   SmartScreen 警告は /download ページで案内している。導入するときは
+#   tauri.windows.conf.json に Azure Trusted Signing 等の設定を足すだけでよい）。
+# - 配布先は Supabase Storage の public バケット `releases`（config.toml が正本）。
+#   GitHub Releases を使わないのは private リポジトリでは公開ダウンロードにならないため。
+#
+# ## 自動更新（tauri-plugin-updater）
+#
+# `--config src-tauri/tauri.release.conf.json`（createUpdaterArtifacts: true）で署名付きの
+# payload（macOS: .app.tar.gz / Windows: -setup.exe）と .sig を作り、OS ごとの job が
+# payload を desktop/v<version>/ へ上げて断片 JSON を artifact に残す。最後の job が
+# 両 OS の断片を束ねて desktop/latest/latest.json を公開する（配布済みアプリはこれを読む）。
+# 署名鍵は Doppler all/all（desktop-updater-keygen が登録）→ Repository secrets。
+# **version（tauri.conf.json）を上げないと更新扱いにならない**ことに注意。
+#
+# ## secrets / variables の供給元（3 系統。docs/desktop/release-runbook.md）
+#
+# - `vars.SUPABASE_PROJECT_REF`  : Terraform が GitHub Environment variable に書く（非機密）
+# - `secrets.SB_SECRET_KEY`      : Doppler <app>/prd → GitHub Environment `production`（既存 sync）
+#     ※ Storage への書き込みに要る。`SUPABASE_` prefix は Doppler の予約 prefix に当たるので
+#       `SB_SECRET_KEY` で持つ（.claude/rules/env-naming.md）
+# - `secrets.APPLE_*` / `TAURI_SIGNING_PRIVATE_KEY`: Doppler all/all → **Repository secrets**
+#     （`desktop-wire-signing` script が写す。environment 側に置かないのは Doppler の
+#     environment sync の管理集合に手出ししないため）
+#
+# ## なぜ devenv shell を使わないのか（commands.md からの意図的な逸脱）
+#
+# ビルドは macos / windows ランナーで行う。Windows に Nix は無く、macOS ランナーでの
+# Nix セットアップはビルド時間を大きく増やす。必要な toolchain は bun + rustup +
+# OS 標準（Xcode CLT / MSVC）だけなので、ここは公式 Tauri パイプラインの形に揃える。
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      # version はここにしか無い（package.json / Cargo.toml は policy test が一致を検査する）
+      - frontend/apps/desktop/src-tauri/tauri.conf.json
+
+concurrency:
+  group: desktop-release
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    name: gate (version vs published latest.json)
+    # push では tauri.conf.json の version が公開済みより上がったときだけ build を走らせる
+    # （version を上げていないマージで同じ版を再配布しない）。手動実行は無条件に走らせる
+    runs-on: ubuntu-latest
+    outputs:
+      release: ${{ steps.gate.outputs.release }}
+      version: ${{ steps.gate.outputs.version }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+
+      - id: gate
+        name: Compare version with published latest.json
+        run: bun scripts/desktop/check-release-gate.mjs
+
+  build:
+    name: ${{ matrix.name }}
+    needs: gate
+    if: needs.gate.outputs.release == 'true'
+    # `production` environment（branch policy: main のみ）。SUPABASE_PROJECT_REF / SB_SECRET_KEY が解決される
+    environment: production
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macos-apple-silicon
+            runner: macos-latest
+            rust_target: aarch64-apple-darwin
+            installer_subdir: dmg
+            # updater の payload（.app.tar.gz + .sig）は macos/ に出る
+            updater_subdir: macos
+            platform: darwin-aarch64
+          - name: windows-x64
+            runner: windows-latest
+            rust_target: x86_64-pc-windows-msvc
+            installer_subdir: nsis
+            # Windows は NSIS の -setup.exe がそのまま payload（.sig も同じ場所）
+            updater_subdir: nsis
+            platform: windows-x86_64
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      # Vite がビルド時に焼き込む公開値。デスクトップがバックエンドを参照するように
+      # なったら vite.config.ts の define に足し、ここにも足す（guard step が検査する）
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+      NEXT_PUBLIC_BACKEND_PY_URL: ${{ secrets.NEXT_PUBLIC_BACKEND_PY_URL }}
+      BUNDLE_DIR: frontend/apps/desktop/src-tauri/target/${{ matrix.rust_target }}/release/bundle
+      # 断片 JSON の置き場は step 側で $RUNNER_TEMP から組む（job レベルの env では
+      # `runner` コンテキストが使えず、workflow ごと無効になる）
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: frontend/apps/desktop/src-tauri -> target
+
+      - name: Guard build-time env & signing secrets
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          # 焼き込み env は「アプリが実際に読んでいるなら必須」。vite.config.ts に
+          # NEXT_PUBLIC_ の define があるかで自動的に効き始める（雛形の間は素通り）。
+          # 空のままビルドすると「起動はするがログインできない」配布物が無言でできる
+          if grep -q 'NEXT_PUBLIC_' frontend/apps/desktop/vite.config.ts; then
+            case "${NEXT_PUBLIC_SUPABASE_URL:-}" in
+              ""|*localhost*|*127.0.0.1*)
+                echo "::error::NEXT_PUBLIC_SUPABASE_URL が本番値ではありません（environment 'production' の secret 同期を確認）"
+                exit 1 ;;
+            esac
+          fi
+          if [ "$RUNNER_OS" = "macOS" ] && { [ -z "$APPLE_CERTIFICATE" ] || [ -z "$APPLE_API_KEY" ]; }; then
+            # 署名 env が無いと tauri build は**未署名のまま成功**する。公証されない配布物を
+            # 無言で出さないよう、ここで止める
+            echo "::error::APPLE_* secrets がありません。'desktop-wire-signing' を実行してください"
+            exit 1
+          fi
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            # 無いと updater artifact の署名で落ちる（= latest.json が作れず、更新が届かない版になる）
+            echo "::error::TAURI_SIGNING_PRIVATE_KEY がありません。'desktop-updater-keygen' を実行してください"
+            exit 1
+          fi
+
+      - name: Install frontend workspace
+        working-directory: frontend
+        run: bun install --frozen-lockfile
+
+      - name: Write notarization key (.p8)
+        if: runner.os == 'macOS'
+        env:
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+        run: |
+          p8="$RUNNER_TEMP/AuthKey.p8"
+          if printf '%s' "$APPLE_API_KEY_P8" | grep -q "BEGIN PRIVATE KEY"; then
+            printf '%s' "$APPLE_API_KEY_P8" > "$p8"
+          else
+            printf '%s' "$APPLE_API_KEY_P8" | base64 -d > "$p8"
+          fi
+          echo "APPLE_API_KEY_PATH=$p8" >> "$GITHUB_ENV"
+
+      - name: Tauri build (sign + notarize on macOS, updater artifacts)
+        working-directory: frontend/apps/desktop
+        env:
+          # 署名: Tauri が base64 .p12 から一時キーチェーンを自動作成・自動削除する
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          # 公証: ASC API キー方式（APPLE_API_KEY_PATH は前 step が export）
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          # 自動更新の署名（minisign）。鍵は --ci で作った空パスワードのもの。
+          # パスワード env を**空文字で明示**する — 未設定だと signer が対話プロンプトを出して固まる
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+        # release overlay = createUpdaterArtifacts: true（ローカルの --build には掛けない。
+        # 掛けると秘密鍵の無いローカルでビルドが落ちる）
+        run: bun run tauri build --target ${{ matrix.rust_target }} --config src-tauri/tauri.release.conf.json
+
+      - name: Verify signature & notarization (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          # productName はプロジェクトごとに違うので tauri.conf.json から読む
+          product="$(node -p 'require("./frontend/apps/desktop/src-tauri/tauri.conf.json").productName')"
+          app="$BUNDLE_DIR/macos/${product}.app"
+          codesign --verify --deep --strict --verbose=2 "$app"
+          xcrun stapler validate "$app"
+          spctl --assess --type execute --verbose "$app"
+          codesign --verify --verbose=2 "$BUNDLE_DIR"/dmg/*.dmg
+
+      - name: Upload installers & updater payload to Supabase Storage
+        env:
+          # project ref は公開値（Terraform が Environment variable に書く）。
+          # 取り違えに気づけるよう、あえて secret にしていない
+          SB_URL: https://${{ vars.SUPABASE_PROJECT_REF }}.supabase.co
+          SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}
+        run: |
+          if [ -z "${{ vars.SUPABASE_PROJECT_REF }}" ]; then
+            echo "::error::GitHub Environment 'production' に Actions variable SUPABASE_PROJECT_REF がありません（infra-deploy で Terraform が書きます）"
+            exit 1
+          fi
+          bun scripts/desktop/upload-release.mjs \
+            --platform ${{ matrix.platform }} \
+            --manifest-out "$RUNNER_TEMP/updater-manifest-${{ matrix.platform }}.json" \
+            "$BUNDLE_DIR/${{ matrix.installer_subdir }}" \
+            "$BUNDLE_DIR/${{ matrix.updater_subdir }}"
+
+      - name: Keep updater manifest fragment
+        uses: actions/upload-artifact@v4
+        with:
+          name: updater-manifest-${{ matrix.platform }}
+          path: ${{ runner.temp }}/updater-manifest-${{ matrix.platform }}.json
+          if-no-files-found: error
+          retention-days: 7
+
+  publish-manifest:
+    name: publish latest.json
+    # 両 OS の payload が上がってから、両方の署名を束ねた latest.json を 1 回だけ公開する。
+    # OS ごとに latest.json を書くと、後から書いたほうが前の OS の項目を消してしまう
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: oven-sh/setup-bun@v2
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: updater-manifest-*
+          merge-multiple: true
+          path: manifests
+
+      - name: Publish latest.json
+        env:
+          SB_URL: https://${{ vars.SUPABASE_PROJECT_REF }}.supabase.co
+          SB_SECRET_KEY: ${{ secrets.SB_SECRET_KEY }}
+        run: bun scripts/desktop/publish-manifest.mjs manifests/*.json

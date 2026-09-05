@@ -179,5 +179,23 @@
     "deleteAccountConfirm": "アカウントを削除する",
     "deletingAccount": "削除しています…",
     "cancel": "キャンセル"
+  },
+  "Download": {
+    "eyebrow": "デスクトップアプリ",
+    "title": "デスクトップ版",
+    "description": "ネイティブウィンドウで使えます。アカウントもデータも Web 版と共通です。",
+    "latestVersion": "最新版 v{version}",
+    "publishedAt": "{date} 公開",
+    "macos": {
+      "name": "macOS",
+      "requirements": "Apple Silicon（M1 以降）",
+      "button": "macOS 版をダウンロード"
+    },
+    "windows": {
+      "name": "Windows",
+      "requirements": "Windows 10 / 11（64-bit）",
+      "button": "Windows 版をダウンロード",
+      "smartscreenNote": "公開直後のアプリは Windows SmartScreen の警告が出ることがあります。「詳細情報」→「実行」で続行できます。"
+    }
   }
 }

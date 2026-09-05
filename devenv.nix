@@ -187,7 +187,7 @@ let
     web   = { port = 3000; };
     # Tauri の devUrl（src-tauri/tauri.conf.json）と一致させること。
     # `dev-desktop` は Vite だけを起動する。ネイティブウィンドウを出すのは
-    # `cd frontend/apps/desktop && nr tauri:dev`（Rust のビルドが要るため devenv 外）。
+    # `desktop-run`（Rust とバックエンドの向き先の profile を重ねる必要があるため devenv 外）。
     desktop = { port = 1420; };
     mobile = {
       port = 8081;
@@ -588,9 +588,9 @@ in
     # GTK3 の開発ヘッダが要り、closure が数 GB になる。web / mobile しか触らない開発者と
     # CI に負わせる理由が無いので、デスクトップを触るときだけ有効化する（android と同じ方針）。
     #
-    #   devenv shell -P desktop                    # Tauri toolchain 入りの shell
-    #   devenv shell -P desktop -- bash -c 'cd frontend/apps/desktop && nr tauri:dev'
-    #   devenv shell -P desktop -- bash -c 'cd frontend/apps/desktop && nr tauri:build'
+    #   desktop-run                # ネイティブウィンドウ（この profile を内側で使う。既定の入口）
+    #   desktop-run --build        # 配布物を作る（署名なし。配布は desktop-release）
+    #   devenv shell -P desktop    # Tauri toolchain 入りの shell（素で触りたいとき）
     #
     # **macOS / Windows ではこの profile は不要**（Xcode Command Line Tools / MSVC +
     # WebView2 という OS 側の前提だけで足りる）。ここで入れているのは
@@ -600,8 +600,13 @@ in
     # ⚠️ これらが無いと `cargo check` の時点で
     #    「HINT: you may need to install a package such as glib-2.0」等で落ちる
     #    （Rust さえあればビルドできる、ではない）。
-    desktop.module = { pkgs, ... }: {
-      packages = with pkgs; [
+    desktop.module = { pkgs, lib, ... }: {
+      # ⚠️ **Linux の依存は `isLinux` で囲う。** 素の `packages` に並べると、macOS では
+      # `webkitgtk` が「broken: This package is broken.」で評価に失敗し、
+      # **`devenv shell -P desktop` に入ること自体ができなくなる**
+      # （= macOS で Rust が手に入らず `desktop-run` が起動できない）。
+      # macOS / Windows が要るのは Rust だけなので、WebKitGTK 一式は Linux のときにだけ入れる。
+      packages = lib.optionals pkgs.stdenv.hostPlatform.isLinux (with pkgs; [
         # Tauri 本体（wry / tao）がリンクする WebView とウィンドウ系。
         # webkitgtk は **abi=4.1 の派生**を使う（4.0 は EOL で Tauri 2 が要求しない）。
         webkitgtk_4_1
@@ -633,7 +638,7 @@ in
         openssl
         librsvg
         patchelf
-      ];
+      ]);
 
       languages.rust.enable = true;
     };
@@ -1428,6 +1433,48 @@ in
     "sync-eas-env" = {
       exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/sync-eas-env.sh" "$@"'';
       description = "Doppler の EXPO_PUBLIC_* を EAS の Environment Variables へ同期";
+    };
+
+    # ---------- デスクトップ（Tauri v2: frontend/apps/desktop）----------
+    # `dev-desktop` は Vite だけ（ブラウザで UI を見る用）。**ネイティブウィンドウを
+    # 出す / 配布物を作るのはこちら**で、Rust（-P desktop）とバックエンドの向き先
+    # （-P production 等）の profile を両方まとめて面倒を見る。
+    #   desktop-run                  # 本番バックエンドに向けてウィンドウを開く（既定）
+    #   desktop-run --env local      # ローカル Supabase / backend
+    #   desktop-run --build          # .app / .dmg / .msi / .AppImage を作る（署名なし）
+    "desktop-run" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/desktop/run.sh" "$@"'';
+      description = "Tauri デスクトップを起動 / ビルド（--build / --env local|dev|staging|production）";
+    };
+
+    # 配布リリース（ビルド → macOS 署名/公証 → Supabase Storage `releases` へアップロード
+    # → latest.json の公開）は GitHub Actions（desktop-release.yml）が正規経路。
+    # Windows は macOS からビルドできないためローカルでは完結しない。
+    # 手順の正本は docs/desktop/release-runbook.md。
+    "desktop-release" = {
+      exec = ''
+        gh workflow run desktop-release.yml --ref main "$@"
+        echo "→ 実行を開始しました。進捗: gh run watch（または Actions の Desktop Release）"
+        echo "→ 完了後の配布 URL 確認: docs/desktop/release-runbook.md"
+      '';
+      description = "デスクトップ配布リリースを実行（GitHub Actions desktop-release.yml を起動）";
+    };
+
+    # 自動更新（tauri-plugin-updater）の署名鍵と配布 endpoint。**鍵は永続**（公開鍵が
+    # 配布物に焼かれる。変えると配布済みアプリは以後の更新を検証できない）ので、
+    # 登録済みなら再生成しない。**初回セットアップはこれから始める**。
+    #   desktop-updater-keygen --supabase-url https://<ref>.supabase.co
+    #   desktop-updater-keygen --force   # 再生成（事故時のみ。配布済みアプリは更新不能になる）
+    "desktop-updater-keygen" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/desktop/updater-keygen.sh" "$@"'';
+      description = "自動更新の署名鍵と endpoint を Doppler all/all → GitHub secrets → tauri.conf.json へ配線（--force で再生成）";
+    };
+
+    # Apple の署名・公証シークレット（Doppler all/all の APPLE_*）と updater の署名鍵を
+    # GitHub の Repository secrets へ写す。証明書ローテーション時に再実行する。
+    "desktop-wire-signing" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/desktop/wire-signing-secrets.sh" "$@"'';
+      description = "Apple 署名/公証 + 自動更新の署名鍵を Doppler all/all → GitHub Repository secrets へ配線";
     };
 
     # ---------- Doppler（シークレット管理・移行下準備）----------

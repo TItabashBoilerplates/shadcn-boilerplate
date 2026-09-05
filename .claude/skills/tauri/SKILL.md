@@ -173,10 +173,19 @@ Tauri v2 は **capability = 「どのウィンドウに、どの permission を�
 # フロントだけ（ブラウザで UI を確認する。Rust 不要・devenv 既定の shell で動く）
 dev-desktop                         # devenv script（Vite を 1420 で起動）
 
-# ネイティブウィンドウを出す / 配布物を作る（Rust とシステム依存が要る）
-devenv shell -P desktop -- bash -c 'cd frontend/apps/desktop && nr tauri:dev'
-devenv shell -P desktop -- bash -c 'cd frontend/apps/desktop && nr tauri:build'
+# ネイティブウィンドウを出す / 配布物を作る
+desktop-run                         # 既定は **本番バックエンド**に向けて起動
+desktop-run --env local             # ローカル Supabase / backend
+desktop-run --build                 # .app / .dmg / .msi / .AppImage（**署名なし**。配布は §6.5）
 ```
+
+**`nr tauri:dev` を素の shell から直接叩かないこと。** 2 つの前提が同時に要り、
+`desktop-run`（`scripts/desktop/run.sh`）がまとめて面倒を見る:
+
+| 前提 | 欠けたときの症状 |
+|---|---|
+| **Rust** … opt-in profile `-P desktop` にしか無い | `cargo: command not found` |
+| **バックエンドの向き先** … `NEXT_PUBLIC_*` は Vite が**ビルド時に焼き込む** | 起動はするが **localhost を見る .app** ができる（`-P production` 等の env profile が Doppler から入れる） |
 
 ### Linux は WebKitGTK が要る（`-P desktop` が必要な理由）
 
@@ -220,6 +229,43 @@ OS 側の前提だけで足りる）。公式の前提条件は下表のとお�
 
 ---
 
+## 6.5. 配布と自動更新（**まず `desktop-release` スキルを起動する**）
+
+**手順の正本は `docs/desktop/release-runbook.md`、判断の正本は
+`.claude/skills/desktop-release/`。** 配布・更新の話が出たらそちらを先に読む。
+ここでは Tauri 側の設定がどう絡むかだけ書く。
+
+```
+tauri.conf.json          … productName / identifier / version / plugins.updater（endpoint + 公開鍵）
+tauri.release.conf.json  … createUpdaterArtifacts: true（**CI 専用 overlay**。--config で重ねる）
+tauri.macos.conf.json    … bundle.targets = ["app", "dmg"]
+tauri.windows.conf.json  … bundle.targets = ["nsis"] / installMode = currentUser
+capabilities/default.json… updater:default / process:default
+src/lib.rs               … tauri_plugin_updater / tauri_plugin_process の .plugin() 登録
+```
+
+- リリースは **GitHub Actions `desktop-release.yml`**（`tauri.conf.json` の版を上げて main へ
+  マージすると自動で走る。手動起動は `desktop-release` script）。macOS は Apple Silicon の DMG
+  （Developer ID 署名 + 公証 + staple を `tauri build` が自動実行）、Windows は NSIS x64。
+  配布先は Supabase Storage の public バケット `releases`、Web の入口は `/download`。
+- **`createUpdaterArtifacts` を base の `tauri.conf.json` に書かない。** 書くと秘密鍵の無い
+  ローカル `desktop-run --build` が落ちる。CI だけ overlay を重ねる。
+- **JSON Merge Patch では配列が丸ごと置換される** — `tauri.macos.conf.json` /
+  `tauri.windows.conf.json` の `bundle.targets` が各 OS の確定値になる。
+- 署名 env（`APPLE_CERTIFICATE` 等）が無くても **`tauri build` は未署名のまま成功する**。
+  CI は guard step で止めている（外さない）。
+- **`plugins.updater.endpoints` と `pubkey` は永続。** 配布済みアプリはその URL しか見ず、
+  焼き込んだ公開鍵でしか検証しない。生成・配線は `desktop-updater-keygen`
+  （Doppler `all/all` に秘密鍵 → GitHub Repository secret → `tauri.conf.json` に公開鍵）。
+- **sidecar（`externalBin`）を足すなら macOS の entitlements**: hardened runtime（署名時に必須・
+  Tauri 既定で有効）下で bun compile のバイナリ等を動かすには `bundle.macOS.entitlements` に
+  JIT 系の plist を配線する。Tauri はその plist を**メインバイナリと sidecar の両方**に適用して
+  署名する（sidecar だけに別の plist を渡す仕組みは無い）。**開発ビルドでは hardened runtime が
+  無いので再現せず、署名済みビルドでだけ起動に失敗する。**
+- 配線は `src/shared/config/desktop.policy.test.ts` が検査している（消さない）。
+
+---
+
 ## 7. このリポジトリのルールとの関係
 
 | ルール | 効き方 |
@@ -227,7 +273,8 @@ OS 側の前提だけで足りる）。公式の前提条件は下表のとお�
 | `.claude/rules/minimal-implementation.md` | プラットフォーム情報程度のために `@tauri-apps/plugin-os` を足さない（Rust コマンド 3 行で済む）。逆に**自動更新・ファイル選択・通知は自作せず公式プラグイン**を使う |
 | `.claude/rules/clean-code.md` | UI は `@workspace/ui`。デスクトップ用にコンポーネントを複製しない |
 | `.claude/rules/error-handling.md` | Rust 側は `Result` で返す。`unwrap()` でパニックさせない。JS 側も握りつぶさない |
-| `.claude/rules/i18n.md` | デスクトップの文言も i18n 必須 |
+| `.claude/rules/i18n.md` | デスクトップの文言も i18n 必須（このアプリは未導入なので、文言は接続コンポーネント 1 か所に集める） |
+| `.claude/skills/desktop-release/` | **配布・署名・自動更新はこちらが正本**（鍵と endpoint は永続 = 間違えると取り返しがつかない） |
 | `.claude/rules/ui-testing.md` | UI は Storybook（`@workspace/ui` 側でカバー）。Tauri 固有の IPC は単体テスト |
 | `.claude/skills/monorepo/` | `packages/` への切り出し境界。`design-system.md` が Web/Native/Desktop の共有範囲の正本 |
 
@@ -241,3 +288,5 @@ OS 側の前提だけで足りる）。公式の前提条件は下表のとお�
 - [Capabilities](https://v2.tauri.app/security/capabilities/) — permission / scope / ウィンドウ境界
 - [Next.js フロントエンド](https://v2.tauri.app/start/frontend/nextjs/) — **SSG のみ**という制約の根拠
 - [Configuration リファレンス](https://v2.tauri.app/reference/config/)
+- [Updater plugin](https://v2.tauri.app/plugin/updater/) — 静的 JSON マニフェスト / `createUpdaterArtifacts` / 署名鍵
+- [Code signing (macOS)](https://v2.tauri.app/distribute/sign/macos/) — `APPLE_*` env / notarytool / entitlements
