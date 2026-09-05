@@ -67,6 +67,14 @@ vercel-deploy [app]                # → .claude/skills/vercel-deploy/
 mobile-release-ios / -android      # 「アップロードまで」。配布・審査提出は store-status / store-testflight /
                                    #   store-submit-ios / store-release-play → .claude/skills/mobile-release/
 store-push-* / store-create-*      # 掲載情報・課金商品（必ず先に --dry-run）→ .claude/skills/store-screenshots/
+
+# Desktop（Tauri: frontend/apps/desktop）
+dev-desktop                        # Vite だけ（ブラウザで UI を見る。Rust 不要）
+desktop-run [--build] [--env ...]  # ネイティブウィンドウ / 配布物（署名なし）
+desktop-release                    # 配布リリース（GitHub Actions desktop-release.yml を起動）
+desktop-updater-keygen             # 自動更新の署名鍵と endpoint を配線（**初回はこれから**。鍵は永続）
+desktop-wire-signing               # Apple 署名/公証 + updater 鍵を Doppler → GitHub secrets へ
+                                   # → .claude/skills/desktop-release/ / docs/desktop/release-runbook.md
 ```
 
 - Profile: `local` が既定。`-P dev|staging|production` で env を上書き。**`devenv tasks run` をリモート profile で叩くときは `ENV=<profile>` を前置**（`-P` だけだと ENV=local のまま）。
@@ -127,7 +135,8 @@ store-push-* / store-create-*      # 掲載情報・課金商品（必ず先に 
 | `mobile-uiux` | キーボード回避・セーフエリア・入力属性・タップ標的の正本 |
 | `mobile-release` / `store-screenshots` | EAS リリース（アップロード後の配布・審査提出・ロールアウトまで）/ ストア掲載画像 |
 | `vercel-deploy` | Vercel 連携とデプロイ。Docker コンテナが「READY なのに 500」になる 2 大原因 |
-| `tauri` | デスクトップ（`apps/desktop`） |
+| `tauri` | デスクトップ（`apps/desktop`）の実装（IPC / capabilities / CSP / Linux 依存） |
+| `desktop-release` | デスクトップの Web 配布と自動更新。**署名鍵と endpoint は永続**（間違えると配布済みが更新不能） |
 | `edge-functions-mcp` | Edge Functions 上の MCP サーバ |
 | `onesignal` / `livekit` / `fal` | 公式 Skill が無い外部サービス |
 | `fsd` / `monorepo` / `python-monorepo` / `gluestack` / `shadcn-ui` / `drizzle` / `rls` / `supabase-config` | 本リポジトリの配置・規約 |
@@ -143,6 +152,7 @@ store-push-* / store-create-*      # 掲載情報・課金商品（必ず先に 
 | Backend Python | [`backend-py/README.md`](backend-py/README.md) |
 | Edge Functions | [`supabase/functions/README.md`](supabase/functions/README.md) |
 | Store release | [`docs/store/release-runbook.md`](docs/store/release-runbook.md) / [`docs/store/submission-checklist.md`](docs/store/submission-checklist.md) |
+| Desktop release | [`docs/desktop/release-runbook.md`](docs/desktop/release-runbook.md) |
 | Research / Design | `docs/_research/YYYY-MM-DD-<topic>.md` / `docs/designs/` |
 
 ## Where things live
@@ -156,3 +166,5 @@ store-push-* / store-create-*      # 掲載情報・課金商品（必ず先に 
 | シークレット・リモート値 | Doppler 一本（`doppler-set <KEY>`。`GITHUB_` / `SUPABASE_` / `VERCEL_` prefix 禁止） |
 | MCP 定義 | `.mcp.json` が正本。`.codex/config.toml` / `.cursor/mcp.json` は `mcp-sync` で生成 |
 | ストア掲載情報 / 課金商品 | `frontend/apps/mobile/{store,play,iap}.config.js` |
+| デスクトップ配布物のパス規約 | `scripts/desktop/release-paths.mjs`（Web の `/download` と CI が共有。テストが一致を固定） |
+| デスクトップの版 / 配布 endpoint / 更新の公開鍵 | `frontend/apps/desktop/src-tauri/tauri.conf.json`（版は `package.json` / `Cargo.toml` とも一致） |

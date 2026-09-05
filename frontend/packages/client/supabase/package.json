@@ -8,7 +8,8 @@
     ".": "./index.ts",
     "./client": "./client.ts",
     "./native": "./native.ts",
-    "./storage-image": "./storage-image.ts"
+    "./storage-image": "./storage-image.ts",
+    "./storage-object": "./storage-object.ts"
   },
   "scripts": {
     "type-check": "workspace-tsc --noEmit"

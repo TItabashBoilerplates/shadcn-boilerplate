@@ -232,6 +232,12 @@ git push origin main       # → prd:  各 PaaS 反映 + migrate は GitHub で�
 - Drizzle マイグレ … `migrate.yml`。`drizzle/{schema,migrations,config}` / `migrate.ts` /
   `drizzle.config.ts` / `package.json` / `bun.lock` 変更時に起動。
   **production のみ GitHub Environment の承認待ち**（承認するまで適用されない）。
+- デスクトップ配布 … `desktop-release.yml`。`frontend/apps/desktop/src-tauri/tauri.conf.json` の
+  `version` を上げて main へマージすると、ビルド → macOS 署名/公証 → Supabase Storage
+  （public バケット `releases`）→ 自動更新の `latest.json` 公開まで走る。
+  一度きりの準備（バケット・署名鍵・endpoint）と手順は
+  [`docs/desktop/release-runbook.md`](../desktop/release-runbook.md) が正本。
+- モバイル配布 … [`docs/store/release-runbook.md`](../store/release-runbook.md)。
 
 ### アプリを 1 つ後から Vercel へ足す / 手で本番へ出す
 

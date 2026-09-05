@@ -1,3 +1,5 @@
+import { isTauriRuntime } from './tauri'
+
 /**
  * 実行中のプラットフォーム名を Rust 側から取得する。
  *
@@ -12,7 +14,7 @@
  */
 export async function getPlatformLabel(): Promise<string | null> {
   // Tauri が WebView に注入するグローバル。無ければ通常のブラウザで開かれている。
-  if (!('__TAURI_INTERNALS__' in window)) return null
+  if (!isTauriRuntime()) return null
 
   const { invoke } = await import('@tauri-apps/api/core')
   return invoke<string>('platform_label')
