@@ -130,6 +130,7 @@ Expo はパッケージ側の宣言と**マージ**するので、`NSPrivacyAcce
 | **バックグラウンド位置情報の prominent disclosure** | OS の権限ダイアログ**より前**に、何のために継続取得するかを自前の画面で説明する（Play の位置情報ポリシー） |
 | **AI が生成した内容の免責** | §1 参照 |
 | **審査用アカウント** | ログインが要るなら、審査メモに有効な資格情報を書く（毎回失効させない） |
+| **強制アップデートのゲート** | 実装しているなら、**審査担当者がそこに到達しないこと**。`minimum_version` を上げるのは版が**ストアで公開開始された後**（審査提出時ではない）。方針の取得に失敗したら必ず通す（2.1(a) は "turn on your back-end service!" と明記）。詳細は `.claude/skills/app-update/` |
 
 ---
 
@@ -187,6 +188,20 @@ grep -E 'AD_ID|POST_NOTIFICATIONS' android/app/src/main/AndroidManifest.xml
 | 雛形ガード | `STORE_WEB_BASE_URL` 未設定で push できないこと |
 | Play の文字数上限 | title(30) / shortDescription(80) / fullDescription(4000) |
 | 課金商品の整合 | productId の重複、両ストアぶんの定義、ロケールの対、benefits ≤ 4、トライアルの enum |
+
+`frontend/apps/mobile/src/features/app-update/model/gate.policy.test.ts` は
+**推奨 / 強制アップデートの配線とフェイルオープン**を守っている。この機能は
+**平時に一度も発火しない**ため、ゲートを外してもフェイルクローズに変えても
+ビルド・型・lint・Storybook が全部通る（`.claude/skills/app-update/`）:
+
+| 検査 | 落ちたときに防いでいる事故 |
+|---|---|
+| `AppProvider` が `AppUpdateGate` を描画している | 機能ごと消えて、下限を上げても誰にも届かない |
+| 取得失敗が `null`（throw しない）・タイムアウトがある | バックエンド障害で**審査担当者を含む全員が起動不能**（2.1(a)） |
+| 判定の初期値が `none` | 応答が返らない回線でアプリが永久に開かない |
+| `expo-application` の版を使っている（`expoConfig` ではない） | OTA 適用後にバイナリと版がずれる |
+| `app_release_policies` に書き込みポリシーが無い | 任意のユーザーが全員をブロックできる |
+| `minimum_version <= latest_version` の CHECK が残っている | ストアに無い版を要求して全員が詰む |
 
 `frontend/apps/{web,mobile}/src/features/auth/model/required-flows.test.ts` は
 **認証の必須導線**を同じ考え方で守っている（`.claude/rules/auth.md`）:

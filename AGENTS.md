@@ -133,6 +133,7 @@ desktop-wire-signing               # Apple 署名/公証 + updater 鍵を Dopple
 |---|---|
 | `ai-usage-metering` | LLM / 生成 AI を呼ぶコードは使用量イベントの記録とセット。集計軸・単価表・円換算は後から変えられない |
 | `mobile-uiux` | キーボード回避・セーフエリア・入力属性・タップ標的の正本 |
+| `app-update` | 推奨 / 強制アップデート。**誤発動すると全ユーザーが起動不能になり復旧手段が無い**。フェイルオープンが不変条件 |
 | `mobile-release` / `store-screenshots` | EAS リリース（アップロード後の配布・審査提出・ロールアウトまで）/ ストア掲載画像 |
 | `vercel-deploy` | Vercel 連携とデプロイ。Docker コンテナが「READY なのに 500」になる 2 大原因 |
 | `tauri` | デスクトップ（`apps/desktop`）の実装（IPC / capabilities / CSP / Linux 依存） |
@@ -152,6 +153,7 @@ desktop-wire-signing               # Apple 署名/公証 + updater 鍵を Dopple
 | Backend Python | [`backend-py/README.md`](backend-py/README.md) |
 | Edge Functions | [`supabase/functions/README.md`](supabase/functions/README.md) |
 | Store release | [`docs/store/release-runbook.md`](docs/store/release-runbook.md) / [`docs/store/submission-checklist.md`](docs/store/submission-checklist.md) |
+| Mobile app update | [`docs/mobile/app-update-runbook.md`](docs/mobile/app-update-runbook.md) |
 | Desktop release | [`docs/desktop/release-runbook.md`](docs/desktop/release-runbook.md) |
 | Research / Design | `docs/_research/YYYY-MM-DD-<topic>.md` / `docs/designs/` |
 
@@ -166,5 +168,6 @@ desktop-wire-signing               # Apple 署名/公証 + updater 鍵を Dopple
 | シークレット・リモート値 | Doppler 一本（`doppler-set <KEY>`。`GITHUB_` / `SUPABASE_` / `VERCEL_` prefix 禁止） |
 | MCP 定義 | `.mcp.json` が正本。`.codex/config.toml` / `.cursor/mcp.json` は `mcp-sync` で生成 |
 | ストア掲載情報 / 課金商品 | `frontend/apps/mobile/{store,play,iap}.config.js` |
+| モバイルの推奨 / 強制アップデート方針（下限バージョン・ストア URL） | `app_release_policies`（`drizzle/schema/app-release-policies.ts`）。運用は `docs/mobile/app-update-runbook.md` |
 | デスクトップ配布物のパス規約 | `scripts/desktop/release-paths.mjs`（Web の `/download` と CI が共有。テストが一致を固定） |
 | デスクトップの版 / 配布 endpoint / 更新の公開鍵 | `frontend/apps/desktop/src-tauri/tauri.conf.json`（版は `package.json` / `Cargo.toml` とも一致） |

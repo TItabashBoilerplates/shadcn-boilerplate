@@ -53,6 +53,7 @@
 | Vercel 連携 / デプロイ / 本番に出す / Vercel project 作成 / rootDirectory / 15000 files エラー | `vercel-deploy`（自作） |
 | **デスクトップアプリを配布する / dmg・exe を配りたい / インストーラ / 自動更新 / アップデート通知 / ダウンロードページ / 署名・公証（notarize）/ SmartScreen の警告 / 「更新が届かない」** | **`desktop-release`（自作。配布と自動更新の正本。鍵と endpoint は永続）** + `tauri`（実装）。手順の正本は `docs/desktop/release-runbook.md` |
 | デスクトップアプリ / Tauri / ネイティブアプリにしたい / Electron / invoke / ウィンドウサイズ / Rust から値を取りたい | `tauri`（自作） |
+| **強制アップデート / 推奨アップデート / 最小サポートバージョン / 古いアプリを使わせたくない / 更新を必須にしたい / 起動時にストアへ飛ばす / バージョンチェック / in-app updates / 「不具合版を回収したい」「アップデートを促したい」** | **`app-update`（自作。判断の正本。フェイルオープンが不変条件）** + `mobile-release`（公開状態の確認）。運用手順は `docs/mobile/app-update-runbook.md` |
 | リリース / TestFlight / Play ストア / EAS ビルド / アプリを提出 / ストア配信 / **審査に出す / 公開する / 段階的に配る / ロールアウトを止める / 審査を取り下げる / リリースの状況を見る / アップロードしたのに配布されない** | `mobile-release`（自作。**アップロード後の配布・審査提出・ロールアウトまで**）, `expo-deployment`, `expo-cicd-workflows`。手順の正本は `docs/store/release-runbook.md` |
 | ストアのスクショ / 掲載画像 / ASO の画像 / フィーチャーグラフィック / iPad の掲載画像 | `store-screenshots`（自作） |
 | 掲載文 / ストアの説明文 / キーワード / 審査に落ちた / 課金商品を作る / サブスク商品 / 無料トライアル | `mobile-release`（§6.6）+ `.claude/rules/store-review.md` + `docs/store/` |

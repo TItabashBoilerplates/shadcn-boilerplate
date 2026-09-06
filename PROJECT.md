@@ -70,6 +70,11 @@ services:
 - bundle id / package name は `frontend/apps/mobile/app.json` が正本: TODO
 - 審査用アカウントは Doppler の `APPLE_REVIEW_DEMO_ACCOUNT` / `APPLE_REVIEW_DEMO_PASSWORD`（値はここに書かない）。
 - 第三者 AI へ送る personal data の有無と送り先（`store-review.md` §1 の開示対象）: TODO
+- **推奨 / 強制アップデートのストア URL**（`app_release_policies.store_url`。`mode: product` で必須）: TODO
+  - iOS: `https://apps.apple.com/app/id<APP_STORE_ID>`（`APP_STORE_ID` は `scripts/mobile/config.env` の `APPLE_ASC_APP_ID`）
+  - Android: `https://play.google.com/store/apps/details?id=<package_name>`
+  - 下限バージョンの運用（いつ上げるか）は [`docs/mobile/app-update-runbook.md`](docs/mobile/app-update-runbook.md)、
+    判断の正本は `.claude/skills/app-update/`。**`mode: boilerplate` の間は seed のプレースホルダのままでよい**
 
 ## デスクトップ（`distribution` にデスクトップ配布を含む場合。含まなければ `n/a`）
 
