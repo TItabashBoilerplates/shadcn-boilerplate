@@ -1,0 +1,192 @@
+{
+  "id": "19c551cf-8b2f-496e-9d92-c854fd6b5b57",
+  "prevId": "78ba6fd0-846f-404c-af66-2bdf6b988755",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.app_release_policies": {
+      "name": "app_release_policies",
+      "schema": "",
+      "columns": {
+        "platform": {
+          "name": "platform",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "minimum_version": {
+          "name": "minimum_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "latest_version": {
+          "name": "latest_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "store_url": {
+          "name": "store_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "release_notes": {
+          "name": "release_notes",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {
+        "select_app_release_policies": {
+          "name": "select_app_release_policies",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "anon",
+            "authenticated"
+          ],
+          "using": "true"
+        }
+      },
+      "checkConstraints": {
+        "app_release_policies_platform_check": {
+          "name": "app_release_policies_platform_check",
+          "value": "\"app_release_policies\".\"platform\" in ('ios', 'android')"
+        },
+        "app_release_policies_minimum_version_format_check": {
+          "name": "app_release_policies_minimum_version_format_check",
+          "value": "\"app_release_policies\".\"minimum_version\" ~ '^[0-9]+\\.[0-9]+\\.[0-9]+$'"
+        },
+        "app_release_policies_latest_version_format_check": {
+          "name": "app_release_policies_latest_version_format_check",
+          "value": "\"app_release_policies\".\"latest_version\" ~ '^[0-9]+\\.[0-9]+\\.[0-9]+$'"
+        },
+        "app_release_policies_minimum_not_above_latest_check": {
+          "name": "app_release_policies_minimum_not_above_latest_check",
+          "value": "string_to_array(\"app_release_policies\".\"minimum_version\", '.')::int[] <= string_to_array(\"app_release_policies\".\"latest_version\", '.')::int[]"
+        },
+        "app_release_policies_store_url_check": {
+          "name": "app_release_policies_store_url_check",
+          "value": "\"app_release_policies\".\"store_url\" ~ '^https://'"
+        }
+      },
+      "isRLSEnabled": true
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "account_name": {
+          "name": "account_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp (3) with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "users_account_name_unique": {
+          "name": "users_account_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "account_name"
+          ]
+        }
+      },
+      "policies": {
+        "edit_policy_users": {
+          "name": "edit_policy_users",
+          "as": "PERMISSIVE",
+          "for": "ALL",
+          "to": [
+            "authenticated"
+          ],
+          "using": "(SELECT auth.uid()) = id",
+          "withCheck": "(SELECT auth.uid()) = id"
+        },
+        "insert_policy_users": {
+          "name": "insert_policy_users",
+          "as": "PERMISSIVE",
+          "for": "INSERT",
+          "to": [
+            "supabase_auth_admin"
+          ],
+          "withCheck": "true"
+        },
+        "select_own_user": {
+          "name": "select_own_user",
+          "as": "PERMISSIVE",
+          "for": "SELECT",
+          "to": [
+            "anon",
+            "authenticated"
+          ],
+          "using": "true"
+        }
+      },
+      "checkConstraints": {},
+      "isRLSEnabled": true
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

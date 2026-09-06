@@ -768,6 +768,18 @@ in
       after = [ "supabase:start" ];
     };
 
+    # スキーマ → マイグレーション SQL の生成のみ（**DB に接続しない**）。
+    #
+    # `db:migrate-dev` は Supabase の起動を待つので、Docker が使えない環境
+    # （CI のスキーマ検証・コンテナ内の作業）では回せない。drizzle-kit の generate は
+    # `migrations/meta/` のスナップショットとの差分で SQL を作るだけで接続を要しないため、
+    # 生成だけを切り出しておく。**適用は別**（db:migrate-dev / db:migrate-deploy）。
+    "db:generate".exec = ''
+      set -euo pipefail
+      cd "$DEVENV_ROOT/drizzle"
+      nr generate
+    '';
+
     # 全環境共通: 既存マイグレーションの適用のみ
     #
     # リモート適用時の接続先の受け渡しについて（実測に基づく設計）:
