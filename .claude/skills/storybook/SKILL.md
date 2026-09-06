@@ -73,8 +73,28 @@ const cs = getComputedStyle(el)
 // bg-primary が効いていれば backgroundColor は transparent 以外になる
 ```
 
-`screenshots-storybook` は撮影のついでにこの検査（描画の有無・画像の読み込み・
-テーマ適用）を行うので、**設定変更後の回帰確認にも使える**。
+**機械的に確かめる手段は 2 つある。**
+
+```bash
+build-storybook
+devenv shell -P store-listing -- storybook-smoke    # 全ストーリーを開いて空描画 / ページエラーを検知
+devenv shell -P store-listing -- storybook-smoke --filter "Apps/Mobile"
+devenv shell -P store-listing -- storybook-smoke --url http://localhost:6006   # 起動中の Storybook を見る
+```
+
+| 手段 | 見るもの | いつ |
+|---|---|---|
+| **`storybook-smoke`** | **ストーリーが 1 要素でも描けたか / ページエラーが出ていないか**。全ストーリーが対象で、CI（`storybook-smoke` job）でも回る | `.storybook/` を触ったとき / ストーリーを追加したとき |
+| `screenshots-storybook` | 撮影のついでに描画の有無・画像の読み込み・テーマ適用を検査 | 掲載画像を作るとき・回帰確認 |
+
+`storybook-smoke` が見ているのは**「描けたか」だけ**。上表の壊れ方はどれも
+「1 つも描画されない」形で出るため、そこに絞れば誤検知が無く、オフにされずに残る。
+見た目・配色・レイアウトは対象外（人が見る / 撮って比べる領域）。
+
+実装は `scripts/storybook/smoke.mjs`。storybook-static の配信と Chromium の探索は
+`scripts/storybook/harness.mjs` に切り出してあり、`screenshots-storybook` と共通。
+**Chromium は `-P store-listing`（`pkgs.chromium`）が供給する**
+（`PLAYWRIGHT_CHROMIUM_PATH` で明示することもできる）。
 
 ## 起動方法
 
@@ -1014,5 +1034,6 @@ export const MobileView: Story = { ... }  // これは不要
 ### ビルドチェック
 
 - [ ] Story 追加・変更後は `build-storybook` でビルドチェック
+- [ ] **`build-storybook` の後に `devenv shell -P store-listing -- storybook-smoke` で実際に描画されることを確認**（ビルド成功は動作保証にならない）
 - [ ] 設定変更後は `cd frontend && rm -rf node_modules/.cache/storybook node_modules/.vite` でキャッシュクリア後に再起動
 - [ ] 開発中のエラー確認は `frontend` のターミナルログでリアルタイム監視

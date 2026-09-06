@@ -23,22 +23,19 @@
  *     Android : store-listing/android/<play-locale>/phoneScreenshots/
  *   撮影後は必ず `screenshots-validate` を通すこと（screenshots-mobile --skip-capture でも可）。
  */
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
-import { createServer } from "node:http";
-import { createRequire } from "node:module";
-import { dirname, extname, join, resolve } from "node:path";
+import { mkdirSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+// storybook-static の配信・Chromium の探索は storybook-smoke と共通
+// （`.claude/rules/clean-code.md`。2 か所にコピーしない）。
+import {
+	findChromium,
+	frontendRequire,
+	openStorybook,
+	REPO_ROOT,
+} from "../storybook/harness.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = resolve(__dirname, "../..");
-const STORYBOOK_STATIC = join(REPO_ROOT, "frontend/storybook-static");
-
-// playwright-core は frontend の devDependency に入れてある（ブラウザ自動 DL をしない軽量版）。
-// このファイルは scripts/ 配下で node の通常解決では frontend/node_modules に届かないため、
-// frontend の package.json を基点に解決する。
-const frontendRequire = createRequire(
-	pathToFileURL(join(REPO_ROOT, "frontend/package.json")),
-);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 引数
@@ -73,77 +70,6 @@ function parseArgs(argv) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// storybook-static を配信する最小サーバ（依存を足さないため自前）
-// ─────────────────────────────────────────────────────────────────────────────
-const MIME = {
-	".html": "text/html",
-	".js": "text/javascript",
-	".mjs": "text/javascript",
-	".css": "text/css",
-	".json": "application/json",
-	".png": "image/png",
-	".jpg": "image/jpeg",
-	".svg": "image/svg+xml",
-	".woff2": "font/woff2",
-	".woff": "font/woff",
-	".ttf": "font/ttf",
-	".map": "application/json",
-};
-
-function serveStatic(root) {
-	const server = createServer((req, res) => {
-		const urlPath = decodeURIComponent(req.url.split("?")[0]);
-		const file = join(root, urlPath === "/" ? "/index.html" : urlPath);
-		if (!file.startsWith(root)) {
-			res.writeHead(403).end();
-			return;
-		}
-		if (!existsSync(file)) {
-			res.writeHead(404).end("not found");
-			return;
-		}
-		try {
-			const body = readFileSync(file);
-			res.writeHead(200, {
-				"content-type": MIME[extname(file)] ?? "application/octet-stream",
-			});
-			res.end(body);
-		} catch {
-			res.writeHead(500).end();
-		}
-	});
-	return new Promise((r) =>
-		server.listen(0, "127.0.0.1", () =>
-			r({ server, port: server.address().port }),
-		),
-	);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Chromium の実行ファイル探索
-// ─────────────────────────────────────────────────────────────────────────────
-function findChromium() {
-	const candidates = [
-		process.env.PLAYWRIGHT_CHROMIUM_PATH,
-		process.env.CHROME_BIN,
-		// devenv の store-listing profile が入れる chromium
-		...(process.env.PATH ?? "")
-			.split(":")
-			.flatMap((d) => [
-				join(d, "chromium"),
-				join(d, "chromium-browser"),
-				join(d, "google-chrome"),
-			]),
-		// CCR / web-sandbox のプリインストール
-		"/opt/pw-browsers/chromium",
-		"/opt/pw-browsers/chromium-1194/chrome-linux/chrome",
-	].filter(Boolean);
-	for (const c of candidates) if (existsSync(c)) return c;
-	throw new Error(
-		"Chromium が見つかりません。`devenv shell -P store-listing` に入るか、" +
-			"PLAYWRIGHT_CHROMIUM_PATH で実行ファイルのパスを指定してください。",
-	);
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 忠実度チェック
@@ -205,21 +131,15 @@ async function main() {
 	const deviceKeys = opts.devices ?? Object.keys(config.devices);
 	const localeKeys = opts.locales ?? Object.keys(config.locales);
 
-	let baseUrl = opts.url;
-	let server = null;
-	if (!baseUrl) {
-		if (!existsSync(join(STORYBOOK_STATIC, "index.json"))) {
-			console.error(
-				`storybook-static がありません: ${STORYBOOK_STATIC}\n` +
-					"先に `build-storybook` を実行するか、--url で起動中の Storybook を指定してください。",
-			);
-			process.exit(1);
-		}
-		const s = await serveStatic(STORYBOOK_STATIC);
-		server = s.server;
-		baseUrl = `http://127.0.0.1:${s.port}`;
-		console.log(`storybook-static を配信: ${baseUrl}`);
+	let baseUrl;
+	let server;
+	try {
+		({ baseUrl, server } = await openStorybook(opts.url));
+	} catch (error) {
+		console.error(String(error.message ?? error));
+		process.exit(1);
 	}
+	if (!opts.url) console.log(`storybook-static を配信: ${baseUrl}`);
 
 	const { chromium } = frontendRequire("playwright-core");
 	const executablePath = findChromium();

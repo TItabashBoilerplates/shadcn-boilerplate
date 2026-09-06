@@ -55,6 +55,8 @@ ci-check                       # = devenv tasks run ci:check（キャッシュ�
 unit-test                      # frontend(Vitest) + drizzle(bun test) + backend-py(pytest) + functions(Deno)
 test-frontend / test-drizzle / test-backend-py / test-functions / test-db(pgTAP)
 e2e / e2e-web / e2e-mobile / e2e-ui   # Maestro（--env local|staging|production）
+build-storybook && \
+  devenv shell -P store-listing -- storybook-smoke   # 全ストーリーが描画されるか（ビルド成功は動作保証にならない）
 
 # Database（ローカルは実行可。本番 / staging はユーザー承認必須。.claude/rules/database.md）
 devenv tasks run app:migrate-dev   # 生成 + 適用 + 型生成
