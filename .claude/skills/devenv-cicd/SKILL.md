@@ -76,6 +76,27 @@ defaults によりすでに devenv shell 内なので、`devenv shell unit-test`
 
 > **Note**: script 名を `test` ではなく **`unit-test`** にしているのは、`test` が bash 組み込みコマンド（`[` と等価）と名前衝突するため。bash では builtin が PATH より優先されるため、`run: test` と書くと**引数なしの builtin `test` が実行されて exit 1 を返し**、`-e` で即座にジョブが落ちる（devenv の同名 script は呼ばれない）。`unit-test` のように builtin と衝突しない名前にする必要がある。
 
+#### `storybook-smoke` job（描画チェック）
+
+`build-storybook` の後、全ストーリーを headless Chromium で開いて
+**空描画とページエラー**を検知する（`needs: [ci-check]`）。
+
+lint / type-check / unit-test では**原理的に検知できない**壊れ方
+（「ビルドは通るのにブラウザで全ストーリーが落ちる」「プロバイダ不足でストーリーが空になる」）
+だけを見るための独立ジョブ。
+
+**Chromium は `-P store-listing` profile（`pkgs.chromium`）から供給する**ので、
+このステップだけ shell を上書きする:
+
+```yaml
+- name: Smoke-render every story
+  shell: devenv shell -P store-listing bash -- -e {0}
+  run: storybook-smoke
+```
+
+> runner に入っている Chrome を当てにしない。`screenshots-storybook` と同じ経路にすることで
+> 「ローカルと CI で別のブラウザ」を作らない（profile を宣言している理由そのもの）。
+
 ### なぜ `devenv test` を使わないか
 
 `devenv test` は `ci:check` aggregator (`before = [ "devenv:enterTest" ]`) を起動する。`devenv:enterTest` は **process phase を含む**ため、本リポジトリの設定では:

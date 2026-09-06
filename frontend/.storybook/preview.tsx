@@ -57,10 +57,23 @@ const preview: Preview = {
       )
     },
     // Mobile ストーリーだけ gluestack のプロバイダーで包む。
-    // SafeAreaProvider が無いと `useSafeAreaInsets()` が例外を投げるため、
-    // SafeAreaView 等を含むストーリーはこれが無いとレンダリング自体が失敗する。
+    //
+    // `GluestackUIProvider` は **`SafeAreaProvider` を供給する**。これが無いと
+    // `useSafeAreaInsets()` が
+    //   "No safe area value available. Make sure you are rendering `<SafeAreaProvider>`"
+    // を投げ、**ストーリーが丸ごと空になる**（`#storybook-root` が空の div になる）。
+    //
+    // ⚠️ **ビルドも型も lint も通る。** 気づけるのは実際に描画したときだけ
+    // （`.claude/rules/ui-testing.md`「ビルドが通ったで終わらせない」）。
+    //
+    // 対象は `Packages/UI Mobile/*` だけでなく **`Apps/Mobile/*` も**。
+    // 実機では mobile の全画面が `AppProvider` → `GluestackUIProvider` の下にあるので、
+    // 包むほうが本番の木構造に忠実でもある。
     (Story, context) => {
-      if (context.title.startsWith('Packages/UI Mobile')) {
+      const isMobileStory =
+        context.title.startsWith('Packages/UI Mobile') || context.title.startsWith('Apps/Mobile')
+
+      if (isMobileStory) {
         return (
           <GluestackUIProvider>
             <Story />

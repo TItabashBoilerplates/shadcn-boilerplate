@@ -1,4 +1,17 @@
 export const en = {
+  appUpdate: {
+    requiredTitle: 'Update required',
+    requiredDescription:
+      'This version is no longer supported. Update to the latest version from the store to continue.',
+    availableTitle: 'A new version is available',
+    availableDescription: 'Update to get the latest improvements and fixes.',
+    latestVersion: 'Latest version: %{version}',
+    whatsNew: "What's new",
+    openStore: 'Update now',
+    opening: 'Opening the store...',
+    later: 'Later',
+    openStoreFailed: "We couldn't open the store. Search for this app in the store and update it.",
+  },
   auth: {
     signInTitle: 'Sign in',
     signInDescription: 'Enter your email address and password to continue.',

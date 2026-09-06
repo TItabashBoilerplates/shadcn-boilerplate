@@ -52,6 +52,36 @@ export type Database = {
         }
         Relationships: []
       }
+      app_release_policies: {
+        Row: {
+          created_at: string
+          latest_version: string
+          minimum_version: string
+          platform: string
+          release_notes: Json | null
+          store_url: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          latest_version: string
+          minimum_version: string
+          platform: string
+          release_notes?: Json | null
+          store_url: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          latest_version?: string
+          minimum_version?: string
+          platform?: string
+          release_notes?: Json | null
+          store_url?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           account_name: string

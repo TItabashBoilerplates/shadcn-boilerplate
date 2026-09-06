@@ -9,18 +9,16 @@
  *
  * All master data seeds should be idempotent (safe to run multiple times).
  *
- * Currently empty — the boilerplate ships with only the `users` table, which
- * is populated automatically via the `handle_new_user()` trigger on
- * `auth.users` insertions. Add project-specific master data here as needed.
+ * The `users` table needs no master seed — rows are created by the
+ * `handle_new_user()` trigger on `auth.users` insertions.
  */
 import type { PostgresJsDatabase } from 'drizzle-orm/postgres-js'
 import type * as schema from '../../schema'
+import { seedAppReleasePolicies } from './app-release-policies'
 
 type Database = PostgresJsDatabase<typeof schema>
 
-export async function seedMasterData(_db: Database): Promise<void> {
+export async function seedMasterData(db: Database): Promise<void> {
   // Add master data seeds here in order of dependency.
-  // Example:
-  //   await seedCategories(_db)
-  //   await seedDefaultSettings(_db)
+  await seedAppReleasePolicies(db)
 }

@@ -768,6 +768,18 @@ in
       after = [ "supabase:start" ];
     };
 
+    # スキーマ → マイグレーション SQL の生成のみ（**DB に接続しない**）。
+    #
+    # `db:migrate-dev` は Supabase の起動を待つので、Docker が使えない環境
+    # （CI のスキーマ検証・コンテナ内の作業）では回せない。drizzle-kit の generate は
+    # `migrations/meta/` のスナップショットとの差分で SQL を作るだけで接続を要しないため、
+    # 生成だけを切り出しておく。**適用は別**（db:migrate-dev / db:migrate-deploy）。
+    "db:generate".exec = ''
+      set -euo pipefail
+      cd "$DEVENV_ROOT/drizzle"
+      nr generate
+    '';
+
     # 全環境共通: 既存マイグレーションの適用のみ
     #
     # リモート適用時の接続先の受け渡しについて（実測に基づく設計）:
@@ -1794,6 +1806,17 @@ in
     # ---------- Storybook standalone ----------
     "storybook-local" = { exec = ''cd "$DEVENV_ROOT/frontend" && exec bun run storybook''; description = "Storybook standalone (without devenv up)"; };
     "build-storybook" = { exec = ''cd "$DEVENV_ROOT/frontend" && bun run build-storybook''; description = "Build Storybook"; };
+    # 全ストーリーを headless で開き、**空描画とページエラー**を検知する。
+    #
+    # `build-storybook` の成功は動作保証にならない。「ビルドは通るのに
+    # ブラウザで全ストーリーが落ちる」「プロバイダ不足でストーリーが空の div になる」は
+    # どちらも実際に起きていて、lint / type-check / unit-test では検知できない
+    # （`.claude/rules/ui-testing.md`）。
+    #
+    # 先に `build-storybook`。Chromium は `-P store-listing` が供給する
+    # （`screenshots-storybook` と同じ。PLAYWRIGHT_CHROMIUM_PATH でも指定可）:
+    #   devenv shell -P store-listing -- storybook-smoke
+    "storybook-smoke" = { exec = ''exec node "$DEVENV_ROOT/scripts/storybook/smoke.mjs" "$@"''; description = "Storybook の全ストーリーが描画されるか検査（要 chromium）"; };
 
     # Storybook は「ビルド成功・型 OK・lint OK」を全部満たしたまま描画だけ壊れることがある
     # （実際に全ストーリーが無スタイル / 実行時エラーで落ちた事故がある）。

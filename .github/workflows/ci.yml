@@ -255,6 +255,60 @@ jobs:
         if: always()
         run: supabase stop --no-backup || true
 
+  storybook-smoke:
+    name: Storybook Smoke (全ストーリーが描画されるか)
+    runs-on: ubuntu-latest
+    # ここが守るのは「ビルドは通るのに描画されない」という壊れ方。
+    # lint / type-check / unit-test では**原理的に検知できない**ので独立ジョブにする
+    # （.claude/rules/ui-testing.md / .claude/skills/storybook/SKILL.md）。
+    # 壊れているものを土台に回しても意味が無いので ci-check の後。
+    needs: [ci-check]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            keep-outputs = true
+            keep-env-derivations = true
+      - uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('devenv.nix', 'devenv.lock', 'devenv.yaml') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+          gc-max-store-size-linux: 5G
+          purge: true
+          purge-prefixes: nix-${{ runner.os }}-
+          purge-created: 0
+          purge-primary-key: never
+      - uses: cachix/cachix-action@v16
+        with:
+          name: devenv
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            frontend/node_modules
+            frontend/apps/*/node_modules
+            frontend/packages/*/node_modules
+            frontend/tooling/*/node_modules
+            drizzle/node_modules
+          key: v2-${{ runner.os }}-node-modules-${{ hashFiles('frontend/bun.lock', 'drizzle/bun.lock') }}
+      - name: Install devenv.sh
+        shell: bash
+        run: nix profile add nixpkgs#devenv
+      # ci-check job と同じ理由（execIfModified による install の skip）。
+      - name: Sync JS dependencies (install into a lockfile-matched tree)
+        run: |
+          cd "$DEVENV_ROOT/frontend" && bun install --frozen-lockfile
+          cd "$DEVENV_ROOT/drizzle"  && bun install --frozen-lockfile
+      - name: Build Storybook
+        run: build-storybook
+      # playwright-core はブラウザを同梱しないので、実行体は store-listing profile
+      # （pkgs.chromium）から供給する。screenshots-storybook と同じ経路にして
+      # 「各自の Chrome 有無」に依存させない。
+      - name: Smoke-render every story
+        shell: devenv shell -P store-listing bash -- -e {0}
+        run: storybook-smoke
+
   e2e-web:
     name: E2E (Web / Maestro headless Chromium)
     runs-on: ubuntu-latest
