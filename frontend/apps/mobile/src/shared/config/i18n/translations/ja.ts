@@ -1,4 +1,17 @@
 export const ja = {
+  appUpdate: {
+    requiredTitle: 'アップデートが必要です',
+    requiredDescription:
+      'このバージョンはサポートを終了しました。ストアから最新版に更新すると引き続きご利用いただけます。',
+    availableTitle: '新しいバージョンがあります',
+    availableDescription: '最新の改善と修正を反映するには更新してください。',
+    latestVersion: '最新バージョン: %{version}',
+    whatsNew: '更新内容',
+    openStore: '今すぐ更新',
+    opening: 'ストアを開いています...',
+    later: 'あとで',
+    openStoreFailed: 'ストアを開けませんでした。ストアでこのアプリを検索して更新してください。',
+  },
   auth: {
     signInTitle: 'ログイン',
     signInDescription: 'メールアドレスとパスワードを入力してください。',

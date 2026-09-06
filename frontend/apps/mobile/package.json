@@ -22,6 +22,7 @@
     "@workspace/native-ui": "workspace:*",
     "@workspace/tokens": "workspace:*",
     "expo": "~57.0.10",
+    "expo-application": "~57.0.2",
     "expo-constants": "~57.0.9",
     "expo-font": "~57.0.1",
     "expo-haptics": "~57.0.1",

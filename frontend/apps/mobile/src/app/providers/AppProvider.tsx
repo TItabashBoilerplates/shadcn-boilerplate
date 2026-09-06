@@ -5,6 +5,7 @@ import { useColorScheme } from '@workspace/native-ui/hooks'
 import { PostHogProvider } from 'posthog-react-native'
 import type { PropsWithChildren } from 'react'
 import { posthog } from '@/shared/lib/analytics'
+import { AppUpdateGate } from './AppUpdateGate'
 import { OneSignalInitializer } from './OneSignalInitializer'
 
 /**
@@ -21,6 +22,12 @@ import { OneSignalInitializer } from './OneSignalInitializer'
  * const { user } = useAuth()
  * <OneSignalInitializer userId={user?.id} />
  * ```
+ *
+ * ## 推奨 / 強制アップデート
+ *
+ * `AppUpdateGate` が `app_release_policies` を見て、下限を割っていれば
+ * 画面を差し替える。**判定が終わるまでは何も出さない**ので、通信状況で
+ * 起動が止まることはない（`.claude/skills/app-update/`）。
  */
 export function AppProvider({ children }: PropsWithChildren) {
   const colorScheme = useColorScheme()
@@ -38,7 +45,8 @@ export function AppProvider({ children }: PropsWithChildren) {
         <GluestackUIProvider>
           {/* OneSignal 初期化（認証連携は user?.id を渡す） */}
           <OneSignalInitializer userId={undefined} />
-          {children}
+          {/* 推奨 / 強制アップデート。forced のときだけ children を差し替える */}
+          <AppUpdateGate>{children}</AppUpdateGate>
         </GluestackUIProvider>
       </ThemeProvider>
     </PostHogProvider>
