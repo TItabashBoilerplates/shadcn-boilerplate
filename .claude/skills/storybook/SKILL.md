@@ -35,6 +35,7 @@ Mobile のスタイルも適用される（仕組みと注意点は末尾の
 | mobile の import が**なぜか web の実装に解決される**（エラーは出ない） | `@/` が web/mobile で別物を指すのに Vite の alias はグローバル | `main.ts` の `fsdAliasPlugin`（importer で振り分け） |
 | `require('@/assets/...')` だけ壊れる | mobile の `@/` は **2 段構え**（FSD は `src/`、それ以外はアプリ直下） | 同上（`mobileBaseFor`） |
 | `ReferenceError: require is not defined` | `expo-router` 内部の CJS | `.storybook/mocks/expo-router.tsx`（完全一致 alias） |
+| **ストーリーが空になる**（`#storybook-root` が空 div。ビルドも型も lint も通る） | `SafeAreaView` / `useSafeAreaInsets` を含む mobile ストーリーが `SafeAreaProvider` の外で描かれている（コンソールに `No safe area value available`） | `preview.tsx` の mobile デコレータの対象に**そのストーリーの `title` が入っているか**を確認する（現在は `Packages/UI Mobile*` と `Apps/Mobile*`）。新しい title 接頭辞を作ったら足す |
 | **URL でテーマを指定しても切り替わらない** | **story 側の `globals` が URL の globals を上書きする** | story に `globals` を書かない（下記） |
 | **dark を指定したのに light のまま撮れる** | reanimated の CSS アニメーションを含む story で addon-themes の effect が走らない | 撮影側で強制適用 + 検証（下記） |
 
