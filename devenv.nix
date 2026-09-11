@@ -52,7 +52,7 @@ let
         description = "HashiCorp Terraform (official prebuilt binary)";
         homepage = "https://www.terraform.io/";
         # BUSL-1.1。社内利用は許諾範囲内だが、nixpkgs 的には unfree 扱いになるライセンス。
-        # devenv.yaml で allow_unfree: true 済み。
+        # devenv.yaml で `nixpkgs.allowUnfree: true` 済み（キー名は camelCase。理由は devenv.yaml）。
         license = lib.licenses.bsl11;
         mainProgram = "terraform";
       };
@@ -448,7 +448,7 @@ in
     # 「無いバージョンを sdkmanager で追加インストール」する救済が効かない。**版数がズレると
     # そのままビルド失敗になる**ので、react-native を上げたら上記 toml を見て必ず追従すること。
     #
-    # 前提: devenv.yaml の `nixpkgs.allow_unfree: true`（Android SDK は unfree ライセンス）。
+    # 前提: devenv.yaml の `nixpkgs.allowUnfree: true`（Android SDK は unfree ライセンス）。
     android.module = {
       android = {
         enable = true;

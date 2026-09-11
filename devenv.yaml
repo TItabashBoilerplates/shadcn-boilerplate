@@ -9,9 +9,17 @@ inputs:
   nixpkgs:
     url: git+https://github.com/NixOS/nixpkgs?ref=nixpkgs-unstable
 
-# Android SDK (platform / build-tools / NDK / cmake) は Google の SDK ライセンス配下で
-# nixpkgs 上は unfree 扱いになるため、許可しないと `-P android` の評価が
-# "Refusing to evaluate package 'androidsdk' ... unfree license" で失敗する。
-# 実際にダウンロードされるのは android profile を有効にしたときだけ。
+# unfree ライセンスのパッケージを評価できるようにする。対象は 2 つ:
+#   - Terraform（devenv.nix の terraformCli。BUSL-1.1 = `lib.licenses.bsl11`）
+#   - Android SDK（`-P android` のときだけ評価される。Google の SDK ライセンス）
+# 許可しないと "Refusing to evaluate package '...' because it has an unfree license" で
+# devenv shell 自体に入れなくなる。
+#
+# キー名は **camelCase の `allowUnfree`** で書く。devenv CLI 2.0.x は `nixpkgs:` 配下を
+# camelCase でしか読まず、snake_case の `allow_unfree` は未知キーとして無視される
+# （生成される .devenv/nixpkgs-config-*.nix が `cfg = {}` になる）。2.1 以降は
+# `allowUnfree` を alias として受け付けるので、この表記なら両方で通る。
+# 出典: devenv v2.0.6 docs/src/devenv.schema.json（`nixpkgs.allowUnfree`）、
+#       devenv v2.3 devenv-core/src/config.rs（`#[setting(alias = "allowUnfree")]`）。
 nixpkgs:
-  allow_unfree: true
+  allowUnfree: true
