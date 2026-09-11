@@ -12,6 +12,14 @@
 3. **`.claude/rules/*.md`**: 常時適用のポリシー（Claude Code は自動ロード。他のエージェントは下の索引から読む）
 4. **`.claude/skills/*/SKILL.md`**: 作業種別ごとの手順。該当するものを**作業前に**読む
 
+## Codex での読み込み
+
+**Codex は作業前に [`docs/agents/codex.md`](docs/agents/codex.md) を読む。**
+Claude の `@import`・`paths` 付きルール・ツール名の読み替えと、GPT-6 Astra での読み込み・検証の方針をまとめている。
+技術規約の正本は引き続き `.claude/rules/` と `.claude/skills/`。本文を Codex 用に複製しない。
+Codex の標準探索先 `.agents/skills/claude` は `.claude/skills/` への相対 symlink なので、自作 Skill も一覧に入る。
+個人用の `~/.codex/AGENTS.md` やフォールバック設定は、このリポジトリを使うための前提にしない。
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -129,6 +137,7 @@ desktop-wire-signing               # Apple 署名/公証 + updater 鍵を Dopple
   入れ子の `.agents/` ができる）。**ディレクトリを手でコピーしない**（上流の改名で旧名と新名が二重に残る）。
   復元は `npx skills experimental_install`、更新は `npx skills update`。
 - 選定理由と見送ったもの: `docs/_research/2026-08-06-service-clis.md` / `docs/_research/2026-08-16-ui-ux-skills.md`。
+- `.agents/skills/claude` は Codex 用の探索入口（`../../.claude/skills` への symlink）。この名前は予約し、Skill 本文や追加の `.agents/` を中に作らない。自作 Skill は従来どおり `.claude/skills/<name>/` に追加する。
 - **本リポジトリ固有の自作 Skill**（lock 管理外。`.claude/skills/<name>/SKILL.md` 直置き）:
 
 | Skill | 用途 |

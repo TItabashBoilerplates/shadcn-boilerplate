@@ -56,7 +56,7 @@ Phase 3: Test (test-frontend + test-backend-py)
 
 ## 修正ルール
 
-- **Makefile コマンド必須**: 品質チェックは必ず `make` コマンドで実行（直接コマンド禁止）
+- **devenv コマンド必須**: 品質チェックは devenv の scripts / tasks で実行する。正本は `.claude/rules/commands.md`（Makefile は廃止済み。基礎ツールの直接実行は禁止）。
 - **TDD ポリシー厳守**: テスト失敗時は実装を修正、テストは変更しない
 - **クリーンコード**: 修正時に未使用コード・重複コードを残さない
 - **自動生成ファイル編集禁止**: `frontend/packages/types/schema.ts` 等は手動編集しない
