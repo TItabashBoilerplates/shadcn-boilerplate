@@ -538,6 +538,38 @@ Error:   × Failed to get dev environment from derivation
 - 公式 devenv の GitHub Actions ドキュメントの最小例は `.devenv/` を cache していないので、それに従うのが正解。逆に「最適化のつもりで `.devenv/` を cache 対象に追加する」のはアンチパターン。
 - 同じ cache key で 2 job 並列走らせて結果が分岐する場合、**SQLite WAL / gc-roots 等の「cache 内に入っている可変状態」が原因**であることを疑う。
 
+### 事故 4: 古い devenv CLI が `devenv.yaml` のキーを黙って無視する（2026-09-17）
+
+**症状**: `devenv.yaml` に `nixpkgs.allow_unfree: true` を書いたのに効かず、生成される
+`.devenv/nixpkgs-config-<hash>.nix` が `cfg = {}` のまま。unfree（Terraform / Android SDK）の
+評価が通らない。**CI は同じ commit で通る。**
+
+**原因**: 手元の devenv CLI が古く（2.0.6）、`nixpkgs:` 配下を **camelCase でしか読まなかった**。
+公式ドキュメントは snake_case（`allow_unfree`）で書かれているが、snake_case を alias として
+受け付けるのは **2.1 以降**。そして **devenv は知らないキーをエラーにせず黙って捨てる**
+（2.2.2 で `bogus_key_xyz: true` を書いても素通りすることを実測）。
+CI は `nix profile add nixpkgs#devenv` で毎回最新を入れるため影響を受けず、
+**「ローカルだけ壊れている」＝設定ミスに見える**という形で現れた。
+
+**修正**:
+
+1. キーは **camelCase（`allowUnfree`）** で書く。2.0.x でも 2.1 以降（alias）でも通る唯一の表記。
+2. `devenv.yaml` に **`require_version: ">=2.1"`** を宣言。2.1 以降の CLI なら
+   `devenv version X does not satisfy the constraint '>=2.1' in devenv.yaml` で即座に落ちる
+   （実測）。CI は常に最新なので影響なし。
+3. README の Setup に `devenv --version` の確認と
+   `nix profile upgrade devenv` / `nix-env -u devenv` を明記。
+
+**教訓**:
+
+- **`devenv.yaml` は未知キーを黙って無視する。** 「書いたのに効かない」ときは文法ではなく
+  **CLI のバージョンを疑う**。`.devenv/nixpkgs-config-*.nix` を見れば、読まれたかどうかが分かる。
+- **devenv CLI は自動で上がらない**（`nix profile install` / `nix-env` で固定される）一方、
+  **CI は毎回最新**。この非対称が「CI は通るのにローカルだけ違う」を生む。バージョン差を
+  疑う前に設定を書き換えると、**CI 側を壊す修正**をしてしまう。
+- 公式ドキュメントは**常に最新版の表記**。古い CLI を使う可能性があるなら、
+  ドキュメントのコピペではなく**手元の版で実際に読まれたか**を確認する。
+
 ## 関連ドキュメント
 
 - 公式: [Using devenv in GitHub Actions](https://devenv.sh/integrations/github-actions/)

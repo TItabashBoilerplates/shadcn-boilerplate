@@ -9,6 +9,16 @@ inputs:
   nixpkgs:
     url: git+https://github.com/NixOS/nixpkgs?ref=nixpkgs-unstable
 
+# devenv CLI のバージョン下限。**CLI が古いと devenv.yaml の未知キーは黙って無視される**
+# （エラーにならないので、設定を書いたのに効かない＝ローカルだけ挙動が違う、という形でしか出ない。
+# 実際に `nixpkgs.allow_unfree` が 2.0.x で無視され、unfree の許可が効かない事故を起こしている）。
+# `require_version` は 2.1 で入った公式の下限宣言で、2.1 以降の CLI なら
+# 「devenv version X does not satisfy the constraint '>=2.1' in devenv.yaml」で即座に落ちる。
+# CI は `nix profile add nixpkgs#devenv`（常に最新）なので影響しない。手元が古いときは
+# `nix profile upgrade devenv`（`nix-env` で入れたなら `nix-env -u devenv`）で上げる。
+# 出典: https://devenv.sh/reference/yaml-options/ （`require_version`。2.1 で導入）
+require_version: ">=2.1"
+
 # unfree ライセンスのパッケージを評価できるようにする。対象は 2 つ:
 #   - Terraform（devenv.nix の terraformCli。BUSL-1.1 = `lib.licenses.bsl11`）
 #   - Android SDK（`-P android` のときだけ評価される。Google の SDK ライセンス）

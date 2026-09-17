@@ -189,6 +189,22 @@ nix profile install nixpkgs#devenv
 brew install direnv
 ```
 
+> **devenv は 2.1 以上が必要**（`devenv.yaml` の `require_version: ">=2.1"` で宣言している）。
+> 一度入れた devenv は自動では上がらないので、**既に入っている場合はまずバージョンを確認**する:
+>
+> ```bash
+> devenv --version
+> # 古ければ更新（入れ方に合わせてどちらか）
+> nix profile upgrade devenv     # nix profile install で入れた場合
+> nix-env -u devenv              # nix-env --install で入れた場合
+> ```
+>
+> **古い CLI は `devenv.yaml` の知らないキーをエラーにせず黙って無視する。**
+> そのため症状は「設定を書いたのに効かない」「CI（常に最新の devenv）は通るのに手元だけ挙動が違う」
+> という形でしか出ない（実際に `nixpkgs.allow_unfree` が 2.0.x で無視され、unfree パッケージの
+> 許可が効かない事故が起きている）。**devenv.yaml の設定が効いていないと感じたら、まず
+> `devenv --version` を疑うこと。** 2.1 以上なら `require_version` が明示的なエラーで止めてくれる。
+
 シェルフックを `~/.zshrc` に追加:
 
 ```bash

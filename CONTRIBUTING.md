@@ -7,7 +7,7 @@ shadcn-boilerplateへのコントリビューションに興味を持ってい�
 ### 必要な環境
 
 - [Docker Desktop](https://www.docker.com/) (Supabase ローカル用)
-- [devenv](https://devenv.sh/getting-started/) (Nix ベースの開発環境)
+- [devenv](https://devenv.sh/getting-started/) **2.1 以上** (Nix ベースの開発環境。`devenv --version` で確認し、古ければ `nix profile upgrade devenv` / `nix-env -u devenv`。**古い CLI は `devenv.yaml` の知らないキーを黙って無視する**ので、「設定が効かない」ときは真っ先にここを疑う)
 - [direnv](https://direnv.net/) + シェルフック設定 (`eval "$(direnv hook zsh)"`)
 
 > **`make` は不要です**。日常コマンドはすべて devenv の **scripts** (PATH 直結) と **tasks** (`devenv tasks run <name>`) で提供されます。詳細なツール一覧 / インストール手順は [`README.md` の Setup](README.md#setup) を参照。
