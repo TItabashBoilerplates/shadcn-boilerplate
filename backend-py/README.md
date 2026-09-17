@@ -234,6 +234,36 @@ async def get_user(
     return UserResponse.from_orm(UserGateway().get_by_id(session, user_id))
 ```
 
+## DB 接続（lazy engine + POSTGRES_URL）
+
+接続文字列は **`POSTGRES_URL` が正本**（ローカルは `env/backend/.env.local`、本番は Vercel
+Marketplace の Supabase 連携が注入する。`.claude/rules/env-naming.md` §2）。
+engine は `api.infra.db_client.get_engine()` が **最初に DB を使う瞬間に生成**する。
+import 時に作ると、DB を触らない経路（OpenAPI 生成・テスト・`import api.app`）まで
+`POSTGRES_URL` 未設定で落ちるため。
+
+**pool のサイズは Supabase のプランに合わせて決まる**（`PROJECT.md` の `supabase_plan`）。
+この API が握る接続は、PostgREST / Auth / Storage / マイグレーションが使えなくなる接続でもある。
+
+| 接続先 | pool | 根拠 |
+|---|---|---|
+| **transaction mode pooler**（`...pooler.supabase.com:6543`。本番の `POSTGRES_URL` は通常これ） | `pool_size=1` | Supavisor がプラン側で接続を捌く。公式が "Set the pool to 1 connection."。warm instance の数だけ client 枠（Nano/Micro で 200）を食うため |
+| **direct / session mode**（`db.<ref>.supabase.co:5432` / pooler:5432 / ローカル） | プランの上限 × 40% ÷ 並走インスタンス数（既定 4） | Free=Nano・有料の既定=Micro はどちらも **direct 60 接続**。PostgREST と DB を共有する構成では「上限の 40% まで」が公式の指針 |
+
+いずれも `max_overflow=0`（予算を超える burst を作らない）・`pool_timeout=10s`（飽和を
+ハングにしない）・`pool_pre_ping=True`（pooler が切った接続を掴まない）。
+
+| env | 既定 | いつ設定するか |
+|---|---|---|
+| `SB_PLAN` | `free`（= 最小。`free`/`pro`/`team`/`enterprise` すべて baseline 60 接続） | `PROJECT.md` の `supabase_plan` に合わせる。`SUPABASE_` prefix は Doppler に登録できないため `SB_` を使う（`env-naming.md` §1） |
+| `POSTGRES_MAX_CONNECTIONS` | プランの baseline (60) | **compute add-on を積んだとき**（Small 90 / Medium 120 / Large 160 / XL 240 / ...）。ダッシュボードの表示値をそのまま入れる |
+| `POSTGRES_POOL_SIZE` | 上の式から算出 | 実測して手で決めたいとき（transaction mode の 1 本という上限は上書きしない） |
+| `SQL_ECHO` | 無効 | SQL をログに出したいとき（本番では値が漏れるので使わない） |
+
+出典: [Compute and Disk](https://supabase.com/docs/guides/platform/compute-and-disk)（接続上限の表） /
+[Connection management](https://supabase.com/docs/guides/database/connection-management)（40% / 80%） /
+[Connecting to Postgres](https://supabase.com/docs/guides/database/connecting-to-postgres)（pooler の 3 モード）。
+
 ## Container / Deploy
 
 ### Vercel (Production — Services のコンテナサービス)

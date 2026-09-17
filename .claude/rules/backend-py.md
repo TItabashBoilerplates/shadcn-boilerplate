@@ -202,6 +202,28 @@ async def get_user(
     return UserResponse.from_orm(user)
 ```
 
+### Engine と接続 pool（自分で create_engine しない）
+
+**engine は `api.infra.db_client.get_engine()` が唯一の入口**。接続文字列は `POSTGRES_URL`
+のみを読み、**engine は遅延生成**する（import 時に作ると、DB を触らない経路
+＝ OpenAPI 生成・テスト・`import api.app` まで未設定で落ちる）。
+
+**pool のサイズをここで勝手に決めない。** 上限は Supabase のプラン（`PROJECT.md` の
+`supabase_plan`）と compute サイズで決まっていて、この API が握った接続は PostgREST /
+Auth / Storage / マイグレーションが使えなくなる接続でもある。`db_client` が
+transaction mode pooler（`:6543`）なら 1 本、direct / session mode ならプラン上限の 40% を
+並走インスタンス数で割った値、という形で算出する。変えたいときは数値を書き換えるのではなく
+`SB_PLAN` / `POSTGRES_MAX_CONNECTIONS` / `POSTGRES_POOL_SIZE` を設定する
+（根拠と出典は `backend-py/README.md` の「DB 接続」）。
+
+```python
+# ❌ Bad: モジュールごとに engine を作る / pool を直書きする
+engine = create_engine(os.environ["POSTGRES_URL"], pool_size=20)
+
+# ✅ Good
+from api.infra.db_client import DBSessionDep
+```
+
 ## Python Unit Testing Policy (MANDATORY)
 
 **原則**: 外部SDKの型不整合・値不正を単体テストレベルで検知する。
