@@ -34,7 +34,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_MODE="cloud"
 IPA_INPUT=""
 METADATA_ONLY=0
-SUBMIT_VIA="${IOS_SUBMIT_VIA:-eas}"
+# ⚠️ 既定値をここで解決しない。config.env を読むのは main の mobile_load_config で、
+#    この時点の IOS_SUBMIT_VIA はまだ「設定ファイルに書いた値」を含んでいない。
+SUBMIT_VIA=""
 PUSH_ENV=1
 DRY_RUN=0
 
@@ -53,7 +55,12 @@ parse_args() {
       *)                mdie "未知のオプション: $1（--help 参照）" ;;
     esac
   done
-  case "$SUBMIT_VIA" in eas|altool) : ;; *) mdie "--submit-via は eas か altool" ;; esac
+}
+
+# 優先順位: コマンドラインの --submit-via > config.env / env の IOS_SUBMIT_VIA > eas
+resolve_submit_via() {
+  SUBMIT_VIA="${SUBMIT_VIA:-${IOS_SUBMIT_VIA:-eas}}"
+  case "$SUBMIT_VIA" in eas|altool) : ;; *) mdie "--submit-via は eas か altool（今の値: ${SUBMIT_VIA}）" ;; esac
 }
 
 # ── eas.json の汚染対策 ──────────────────────────────────────────────────
@@ -74,8 +81,19 @@ cleanup() {
   # 戻しても汚染版のまま。最後に必ず実物を見る。
   if eas_json_polluted; then restore_eas_json_from_git; fi
   rm -f "$P8_PATH" "$IPA_PATH" "$APP_DIR/.env.eas"
+  # altool は $HOME 側の固定パスからしか鍵を読まない。置きっぱなしにすると
+  # **ホームディレクトリに ASC の秘密鍵が残り続ける**ので、ここで必ず消す。
+  [ -z "${ALTOOL_KEY_PATH:-}" ] || rm -f "$ALTOOL_KEY_PATH"
   rmdir "$CRED_DIR" 2>/dev/null || true
   return 0
+}
+
+# ⚠️ INT / TERM で cleanup だけ走らせると、資格情報を消したまま**処理が続く**
+#    （eas.json も戻った状態でビルドが走る）。必ず終了まで持っていく。
+on_signal() {
+  mwarn "中断されました。資格情報と eas.json を戻します。"
+  cleanup
+  exit 130
 }
 
 inject_eas_json() {
@@ -149,8 +167,19 @@ submit_via_altool() {
   # 誤判定する既知バグの回避で、Apple 自身が用意した公式フラグ。
   # EAS の submit キューが混んでいるときの逃げ道として用意している（macOS 専用）。
   command -v xcrun >/dev/null 2>&1 || mdie "altool には macOS + Xcode が必要です（--submit-via eas を使ってください）"
-  mkdir -p "$HOME/.appstoreconnect/private_keys"
-  cp "$P8_PATH" "$HOME/.appstoreconnect/private_keys/AuthKey_${APPLE_API_KEY}.p8"
+  # altool は $HOME 側の固定パスからしか鍵を読まない（CLI で場所を渡せない）。
+  local key_path="$HOME/.appstoreconnect/private_keys/AuthKey_${APPLE_API_KEY}.p8"
+  if [ -f "$key_path" ]; then
+    # 既に開発者が置いている鍵。**こちらの都合で消さない**（他のツールが使っている）。
+    mlog "既存の鍵を使います: ~/.appstoreconnect/private_keys/AuthKey_${APPLE_API_KEY}.p8"
+  else
+    umask 077
+    mkdir -p "$HOME/.appstoreconnect/private_keys"
+    # cleanup が消せるようにパスを先に登録する（置いた後に落ちても残さない）
+    ALTOOL_KEY_PATH="$key_path"
+    cp "$P8_PATH" "$ALTOOL_KEY_PATH"
+    chmod 600 "$ALTOOL_KEY_PATH"
+  fi
   mlog "altool で App Store Connect へアップロード..."
   env -u SDKROOT -u MACOSX_DEPLOYMENT_TARGET -u LD -u LDFLAGS -u CFLAGS -u CPPFLAGS \
       -u NIX_CFLAGS_COMPILE -u NIX_LDFLAGS \
@@ -170,12 +199,14 @@ push_metadata() {
 main() {
   mobile_load_config
   parse_args "$@"
+  resolve_submit_via
   mobile_doppler_reexec "$@"
 
   EAS_JSON="$APP_DIR/eas.json"
   EAS_JSON_BACKUP="$EAS_JSON.orig"
   P8_PATH="$CRED_DIR/asc_api_key.p8"
   IPA_PATH="$CRED_DIR/build.ipa"
+  ALTOOL_KEY_PATH=""
 
   [ -f "$EAS_JSON" ] || mdie "eas.json がありません: ${MOBILE_APP_DIR}/eas.json"
 
@@ -186,7 +217,7 @@ main() {
 
   # Team ID は ASC API キーからは自動検出できず EAS に明示が要る。
   if [ -z "${APPLE_TEAM_ID:-}" ] && [ -n "${APPLE_SIGNING_IDENTITY:-}" ]; then
-    APPLE_TEAM_ID="$(printf '%s' "$APPLE_SIGNING_IDENTITY" | grep -oE '\(([A-Z0-9]{10})\)' | tr -d '()' | head -1)"
+    APPLE_TEAM_ID="$(mobile_apple_team_id "$APPLE_SIGNING_IDENTITY")"
   fi
   : "${APPLE_TEAM_ID:?APPLE_TEAM_ID を取得できません（Doppler に登録してください）}"
 
@@ -204,7 +235,8 @@ main() {
   printf '\n'
 
   mobile_init_credentials
-  trap cleanup EXIT INT TERM
+  trap cleanup EXIT
+  trap on_signal INT TERM
 
   # バックアップの前に洗う（前回の異常終了で残った注入を恒久化させない）
   if eas_json_polluted; then

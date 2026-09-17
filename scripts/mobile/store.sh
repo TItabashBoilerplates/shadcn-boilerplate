@@ -53,7 +53,7 @@ case "$CMD" in
 esac
 shift
 
-[ -n "${COMMANDS[$CMD]:-}" ] || mdie "不明なサブコマンド: $CMD（--help で一覧）"
+[ -n "${COMMANDS[$CMD]:-}" ] || mdie "不明なサブコマンド: ${CMD}（--help で一覧）"
 
 # --dry-run だけはここで解釈する（全サブコマンド共通で、環境変数として渡すため）。
 # それ以外はサブコマンド固有の引数（--track / --rollout / --groups / --build 等）なので

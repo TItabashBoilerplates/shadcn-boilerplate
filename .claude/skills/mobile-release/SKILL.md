@@ -38,7 +38,7 @@ sync-eas-env production            # EXPO_PUBLIC_* を EAS へ同期するだけ
 
 ```
 mobile-release-ios
-  └─ doppler run [--project <tokens>] -- doppler run --config <env> -- 自分自身を再実行
+  └─ doppler run [--project <tokens>] -- doppler run [--project <app>] --config <env> -- 自分自身を再実行
         └─ EXPO_TOKEN / APPLE_* / PLAY_* / EXPO_PUBLIC_* が env に載った状態で本編が動く
 ```
 
@@ -48,6 +48,13 @@ mobile-release-ios
 | アプリの環境別の値 | `ENV` に対応（`prd` / `stg` / `dev`） | `EXPO_PUBLIC_*` |
 
 単一 project 運用（`doppler.yaml` の既定）なら上段は不要で、自動的に 1 段だけになる。
+
+> ⚠️ **2 段にするときは、内側の `--project` を省けない。** 外側の `doppler run` は自分の
+> `DOPPLER_PROJECT` を**子プロセスの env に入れて**渡すので、内側が project を省くと
+> アプリの config をトークン側の project から探し、
+> `This token does not have access to requested config 'prd'` で落ちる。
+> script は `doppler setup` の紐付け（または `config.env` の `MOBILE_APP_DOPPLER_PROJECT`）から
+> アプリ側の project を解決して明示する。紐付けも宣言も無い環境では、**曖昧なまま実行せず落とす**。
 
 ### 守ること
 

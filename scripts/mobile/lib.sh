@@ -51,13 +51,39 @@ mobile_doppler_reexec() {
 
   local cfg; cfg="$(mobile_doppler_config)"
   mlog "Doppler からシークレットを注入して再実行します（config: ${cfg}）"
+
   if [ -n "${MOBILE_TOKENS_PROJECT:-}" ]; then
+    # ⚠️ 外側の `doppler run` は自分の DOPPLER_PROJECT / DOPPLER_CONFIG を**子プロセスの env に
+    #    入れて**渡す。内側で --project を省くと、アプリの config をトークン側の project から
+    #    探しにいき `This token does not have access to requested config 'prd'` で落ちる。
+    #    そこで 2 段構成のときだけ、アプリ側の project を明示する。
+    local app_project; app_project="$(mobile_doppler_app_project)"
+    [ -n "$app_project" ] || mdie "アプリ側の Doppler project が分かりません。\
+'doppler setup' で紐付けるか、scripts/mobile/config.env の MOBILE_APP_DOPPLER_PROJECT に書いてください。"
     exec doppler run --project "$MOBILE_TOKENS_PROJECT" \
                      --config "${MOBILE_TOKENS_CONFIG:-prd}" -- \
-         doppler run --config "$cfg" -- \
+         doppler run --project "$app_project" --config "$cfg" -- \
+         env _MOBILE_DOPPLER=1 bash "$0" "$@"
+  fi
+
+  # 1 段だけのときは scope の解決を doppler に任せる（doppler.yaml の `path:` で
+  # ディレクトリごとに別 project を紐付けている構成を、こちらで上書きしないため）。
+  if [ -n "${MOBILE_APP_DOPPLER_PROJECT:-}" ]; then
+    exec doppler run --project "$MOBILE_APP_DOPPLER_PROJECT" --config "$cfg" -- \
          env _MOBILE_DOPPLER=1 bash "$0" "$@"
   fi
   exec doppler run --config "$cfg" -- env _MOBILE_DOPPLER=1 bash "$0" "$@"
+}
+
+# アプリ側の Doppler project 名。config.env の宣言が最優先で、無ければ `doppler setup` の
+# ローカル紐付け（~/.doppler/.doppler.yaml）から読む。
+# --no-read-env は、外側の `doppler run` が入れた DOPPLER_PROJECT を拾わないため（必須）。
+mobile_doppler_app_project() {
+  if [ -n "${MOBILE_APP_DOPPLER_PROJECT:-}" ]; then
+    printf '%s\n' "$MOBILE_APP_DOPPLER_PROJECT"
+    return 0
+  fi
+  doppler configure get project --plain --no-read-env 2>/dev/null || true
 }
 
 # ENV → Doppler config。devenv.nix の loadDopplerByEnv と同じ対応表にすること。
@@ -87,6 +113,14 @@ eas_cli() { bunx "$EAS_CLI_SPEC" "$@"; }
 
 mobile_require_expo_token() {
   : "${EXPO_TOKEN:?EXPO_TOKEN がありません（Doppler に登録してください）}"
+}
+
+# 署名 ID（"Apple Distribution: Example Inc. (ABCDE12345)"）から Team ID を取り出す。
+# Team ID は ASC API キーからは自動検出できないので、これが最後の頼み。
+# ⚠️ grep は不一致で exit 1 を返す。握らないと、set -e + pipefail の呼び出し元が
+#    代入の時点で**無言のまま**落ち、「Doppler に登録してください」という案内に到達しない。
+mobile_apple_team_id() {
+  printf '%s' "${1:-}" | grep -oE '\(([A-Z0-9]{10})\)' | tr -d '()' | head -1 || true
 }
 
 # ── credentials/（実行中だけ存在する資格情報）──────────────────────────
@@ -125,25 +159,68 @@ mobile_write_secret_file() {
 # **落としたキーは必ず表示する**（黙って減らさない）。
 mobile_push_public_env() {
   local environment="$1" dry="${2:-}"
-  local file="$APP_DIR/.env.eas" skipped="" count=0
+  local file="$APP_DIR/.env.eas"
 
-  : >"$file"
-  local line
-  while IFS= read -r line; do
-    case "$line" in
-      EXPO_PUBLIC_*=?*) printf '%s\n' "$line" >>"$file"; count=$((count + 1)) ;;
-      EXPO_PUBLIC_*=)   skipped="$skipped ${line%%=*}" ;;
-    esac
-  done < <(env)
+  # ⚠️ 抽出を `env` の行舐めでやると、**改行を含む値が黙って尻切れ**になり、
+  #    壊れた値が EAS に入る（ビルドは通り、実行時にしか分からない）。os.environ を直接読む。
+  #    出す情報はキー名だけ（値はレポートにもログにも書かない）。
+  local report; report="$(mktemp)"
+  local PUSHED="" EMPTY="" MULTILINE="" AMBIGUOUS="" COUNT=0 status=0
+  MOBILE_ENV_FILE="$file" MOBILE_ENV_REPORT="$report" python3 - <<'PY' || status=$?
+import os
+import re
 
-  if [ "$count" -eq 0 ]; then
-    rm -f "$file"
+PREFIX = "EXPO_PUBLIC_"
+NAME = re.compile(r"\AEXPO_PUBLIC_[A-Za-z0-9_]+\Z")
+
+pushed, empty, multiline, ambiguous = [], [], [], []
+for key, value in sorted(os.environ.items()):
+    if not key.startswith(PREFIX) or not NAME.match(key):
+        continue
+    if value == "":
+        empty.append(key)            # EAS は空文字を拒否する（Variable value can not be empty）
+    elif "\n" in value or "\r" in value:
+        multiline.append(key)        # 1 行 1 変数の .env には書けない
+    else:
+        pushed.append(key)
+        # dotenv の解釈が処理系で割れる文字。push はするが目視確認を促す。
+        if value != value.strip() or any(c in value for c in "\"'#"):
+            ambiguous.append(key)
+
+with open(os.environ["MOBILE_ENV_REPORT"], "w", encoding="utf-8") as report:
+    report.write(f"PUSHED='{' '.join(pushed)}'\n")
+    report.write(f"EMPTY='{' '.join(empty)}'\n")
+    report.write(f"MULTILINE='{' '.join(multiline)}'\n")
+    report.write(f"AMBIGUOUS='{' '.join(ambiguous)}'\n")
+    report.write(f"COUNT={len(pushed)}\n")
+
+if multiline or not pushed:
+    raise SystemExit(0)              # 不備があるときは .env.eas を作らない
+
+with open(os.environ["MOBILE_ENV_FILE"], "w", encoding="utf-8") as env_file:
+    for key in pushed:
+        env_file.write(f"{key}={os.environ[key]}\n")
+PY
+  if [ "$status" -ne 0 ] || [ ! -s "$report" ]; then
+    rm -f "$report"
+    mdie "EXPO_PUBLIC_* の抽出に失敗しました（python3 の出力を確認してください）"
+  fi
+  # shellcheck disable=SC1090
+  . "$report"; rm -f "$report"
+
+  if [ -n "$MULTILINE" ]; then
+    mdie "改行を含む EXPO_PUBLIC_* は .env 経由で push できません:${MULTILINE}（Doppler の値を 1 行に直すか、EAS 側で直接設定してください）"
+  fi
+  if [ "$COUNT" -eq 0 ]; then
     mdie "EXPO_PUBLIC_* が env にありません（Doppler の $(mobile_doppler_config) config を確認）"
   fi
+  [ -f "$file" ] || mdie ".env.eas を生成できませんでした: ${file}"
 
-  mlog "EXPO_PUBLIC_* (${count} 件) を EAS[${environment}] へ push"
-  cut -d= -f1 "$file" | sed 's/^/    /'
-  [ -n "$skipped" ] && mwarn "値が空のため push しないキー:$skipped（該当機能はビルドで無効になる）"
+  mlog "EXPO_PUBLIC_* (${COUNT} 件) を EAS[${environment}] へ push"
+  # shellcheck disable=SC2086
+  printf '    %s\n' $PUSHED
+  [ -z "$EMPTY" ] || mwarn "値が空のため push しないキー:${EMPTY}（該当機能はビルドで無効になる）"
+  [ -z "$AMBIGUOUS" ] || mwarn "引用符 / # / 前後の空白を含む値:${AMBIGUOUS}（push 後に eas env:list で取り違えが無いか確認）"
 
   if [ -n "$dry" ]; then
     mok "[dry-run] env:push は実行しません"

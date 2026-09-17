@@ -59,6 +59,14 @@ cleanup() {
   return 0
 }
 
+# ⚠️ INT / TERM で cleanup だけ走らせると、サービスアカウント鍵を消したまま
+#    **処理が続く**（提出が鍵の無い状態で走る）。必ず終了まで持っていく。
+on_signal() {
+  mwarn "中断されました。資格情報を削除します。"
+  cleanup
+  exit 130
+}
+
 # app.json / app.config.ts の targetSdkVersion に対応する platform が入っているかを見る。
 # 入っていないと Gradle が分かりにくいエラーで落ちるので、先に落とす。
 require_android_toolchain() {
@@ -72,7 +80,7 @@ require_android_toolchain() {
 
   ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Library/Android/sdk}}"
   [ -d "$ANDROID_HOME/platforms" ] \
-    || mdie "Android SDK が見つかりません（ANDROID_HOME=$ANDROID_HOME）"
+    || mdie "Android SDK が見つかりません（ANDROID_HOME=${ANDROID_HOME}）"
   local target
   target="$(python3 -c "
 import json, re, sys
@@ -143,7 +151,8 @@ main() {
   printf '\n'
 
   mobile_init_credentials
-  trap cleanup EXIT INT TERM
+  trap cleanup EXIT
+  trap on_signal INT TERM
   mobile_write_secret_file "$PLAY_SERVICE_ACCOUNT_JSON" "$KEY_PATH" '"service_account"'
 
   if [ "$DRY_RUN" -eq 1 ]; then
