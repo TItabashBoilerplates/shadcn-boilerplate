@@ -48,7 +48,8 @@ defaults:
 - `nix-community/cache-nix-action@v7` で **`/nix/store` 自体**を GHA cache に乗せる
 - `cachix/cachix-action@v16` (`name: devenv`) を read-only substituter として併用
 - `actions/cache@v4` で `node_modules` 系を別 cache（`/nix/store` 外）
-- `Install devenv.sh` step は `shell: bash` override + `run: nix profile add nixpkgs#devenv`
+- devenv CLI は **`.github/actions/install-devenv`（composite action）で版を固定**して入れる
+  （`nix profile add nixpkgs#devenv` は nixpkgs 側の版次第で `require_version` を満たさない）
 
 #### `ci-check` job（lint + format + type-check）
 
@@ -219,19 +220,18 @@ setup task が lockfile 変更を検知して必要なときだけ install す�
 
 CI 用途では、verify task を直接列挙する。
 
-### NG: `Install devenv.sh` で defaults を上書きしない
+### NG: devenv CLI の版を nixpkgs 任せにする / defaults を上書きしない
 
 ```yaml
-# ❌ NG: devenv shell がまだ存在しないのに devenv shell bash -- -e で起動しようとする
+# ❌ NG: 版が nixpkgs 次第（require_version を満たさず CI だけ落ちる）。
+#        しかも defaults の shell のままだと devenv shell 経由で起動しようとする。
 - name: Install devenv.sh
   run: nix profile add nixpkgs#devenv
 ```
 
 ```yaml
-# ✅ OK: bash で override
-- name: Install devenv.sh
-  shell: bash
-  run: nix profile add nixpkgs#devenv
+# ✅ OK: 版を固定した composite action に寄せる（中で shell: bash も指定している）
+- uses: ./.github/actions/install-devenv
 ```
 
 ### NG: `.devenv/` を `actions/cache` で抱える
@@ -444,9 +444,7 @@ jobs:
           key: ${{ runner.os }}-node-modules-${{ hashFiles('frontend/bun.lock', 'drizzle/bun.lock') }}
           restore-keys:
             - ${{ runner.os }}-node-modules-
-      - name: Install devenv.sh
-        shell: bash
-        run: nix profile add nixpkgs#devenv
+      - uses: ./.github/actions/install-devenv
       - name: Run verify tasks
         run: |
           devenv tasks run \
@@ -548,8 +546,9 @@ Error:   × Failed to get dev environment from derivation
 公式ドキュメントは snake_case（`allow_unfree`）で書かれているが、snake_case を alias として
 受け付けるのは **2.1 以降**。そして **devenv は知らないキーをエラーにせず黙って捨てる**
 （2.2.2 で `bogus_key_xyz: true` を書いても素通りすることを実測）。
-CI は `nix profile add nixpkgs#devenv` で毎回最新を入れるため影響を受けず、
-**「ローカルだけ壊れている」＝設定ミスに見える**という形で現れた。
+当時 CI は `nix profile add nixpkgs#devenv` で毎回最新を入れていたため影響を受けず、
+**「ローカルだけ壊れている」＝設定ミスに見える**という形で現れた
+（現在は CI もローカルも `require_version` + `.github/actions/install-devenv` で版を固定している）。
 
 **修正**:
 
@@ -581,15 +580,27 @@ CI は `nix profile add nixpkgs#devenv` で毎回最新を入れるため影響�
 "No process manager is running" で exit 1 になるが、旧 `app:stop` が
 `2>/dev/null || true` で握りつぶしていたため、失敗が成功として表示されていた。
 
-**修正**: 停止処理を `scripts/devenv/services.sh` に出し、(a) manager ファイルが無くても
-プロセスを直接探して止める、(b) 止め切れなければ非ゼロで落ちる、(c) `stop` script を
-`devenv tasks run` 経由にしない（その呼び出し自体がバグを踏むため）、の 3 点にした。
+**修正**: **devenv を 2.3.1 へ上げて根本解決**（上流は 2.3.0 で修正済み）。
+あわせて停止処理を `scripts/devenv/services.sh` に出し、(a) 停止後に本当に残っていないかを
+確認する、(b) 止め切れなければ非ゼロで落ちる、(c) `stop` を `devenv tasks run` 経由にしない
+（task の中の `supabase stop` が端末に触って SIGTTOU で止まる事例があるため）、の 3 点にした。
 `frontend/policy/devenv-services.policy.test.ts` が挙動を固定している。
 
 **教訓**: **プロセスを止めるコマンドで `|| true` を書かない。** 止まっていないのに
 「止まった」と表示する状態は、ポート衝突・二重起動・古いコードでの動作確認という形で
 あとから高くつく。上流バグの回避を入れたら、**いつ外せるか（= どのバージョンで直ったか）**も
-一緒に書き残す。
+一緒に書き残す（今回はそれに従って、2.3.1 へ上げた時点で回避策を削除した）。
+
+### devenv 2.3.1 で踏む 2 つの罠（回避済み・消さないこと）
+
+| 罠 | 何が起きるか | このリポジトリでの対処 |
+|---|---|---|
+| **#3184**: shell 進入で git-hooks が全ファイルに走る | `devenv shell` / direnv のたびに 15 秒前後かかり、生成物まで書き換わる | `devenv.nix` で `tasks."devenv:git-hooks:run"` の `before` / `after` を `lib.mkForce [ ]` にして task グラフから外す。全ファイル実行は `devenv tasks run devenv:git-hooks:run` を明示的に叩く（upstream で直ったら削除してよい） |
+| `supabase:start` の失敗が `devenv up -d` に伝わらない | `dev-web` が成功扱いで進み、backend と Supabase だけ居ない | `devenv processes list` で stopped を確認 → `supabase-start` を単体実行してエラーを読む（`.claude/skills/debugging/`） |
+
+**バージョンは混在させない。** 2.2.2 がこのリポジトリで 1 度でも動くと、2.3 系のデーモンの
+manager ファイルまで消える。`devenv.yaml` の `require_version: ">=2.3.1"` が手元の CLI を、
+`.github/actions/install-devenv` が CI の CLI を、それぞれ固定する。
 
 ## 関連ドキュメント
 

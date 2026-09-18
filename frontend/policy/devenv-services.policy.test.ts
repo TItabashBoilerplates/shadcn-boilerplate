@@ -8,15 +8,14 @@ import { afterEach, describe, expect, it } from 'vitest'
 /**
  * `scripts/devenv/services.sh` の停止処理を固定する。
  *
- * devenv 2.2.2 の `devenv tasks run` は、終了時に**稼働中デーモンの**
- * `native-manager.pid` / `native.sock` まで削除する（2.3.0 で修正済みだが、2.3.x には
- * 別の不具合があり上げられない）。その状態の `devenv processes down` は
- * "No process manager is running" で失敗し、親を失ったデーモンと子（uvicorn / storybook）が
- * 生き残る。以前の `app:stop` はこの失敗を握りつぶして「✅ All services stopped.」と
- * 表示していたので、**止まっていないのに止まったと信じてしまう**状態だった。
+ * 「止めるコマンドが嘘をつく」事故を二度と起こさないための検査。過去に、
+ * `devenv processes down` の失敗を `2>/dev/null || true` で握りつぶしていたため、
+ * backend / storybook が生き残ったまま「✅ All services stopped.」と表示していた
+ * （devenv 2.2.2 のデーモン取りこぼしバグと組み合わさって顕在化した。バグ自体は
+ * 2.3.0 で修正済みで、このリポジトリは devenv >= 2.3.1 を要求する）。
  *
  * ここで守るのは 3 点:
- *   1. ファイルが消えていてもプロセスを見つけて止める
+ *   1. devenv から見えなくなっていてもプロセスを見つけて止める
  *   2. 止め切れなかったら成功を名乗らない（非ゼロで落ちる）
  *   3. 自分自身と別 runtime のデーモンは絶対に殺さない
  */
@@ -173,36 +172,5 @@ describe('services.sh stop', () => {
 
     expect(result.status).toBe(0)
     expect(result.stdout).toContain('All services stopped.')
-  })
-})
-
-describe('services.sh reap', () => {
-  it('devenv から見えているデーモンは止めない', () => {
-    const sandbox = makeSandbox()
-    writeFileSync(join(sandbox.runtime, 'processes/native-manager.pid'), '1\n')
-    spawnSync('bash', [
-      '-c',
-      `python3 -c "
-import socket, sys
-s = socket.socket(socket.AF_UNIX)
-s.bind(sys.argv[1])
-" "${join(sandbox.runtime, 'processes/native.sock')}"`,
-    ])
-    const pid = spawnFakeDaemon(sandbox, sandbox.runtime)
-
-    const result = run(sandbox, ['reap'])
-
-    expect(result.status).toBe(0)
-    expect(isAlive(pid)).toBe(true)
-  })
-
-  it('見えなくなったデーモンは止める', () => {
-    const sandbox = makeSandbox()
-    const pid = spawnFakeDaemon(sandbox, sandbox.runtime)
-
-    const result = run(sandbox, ['reap'])
-
-    expect(result.status).toBe(0)
-    expect(isAlive(pid)).toBe(false)
   })
 })

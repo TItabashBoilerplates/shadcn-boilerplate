@@ -101,9 +101,8 @@ jobs:
           key: ${{ runner.os }}-node-modules-${{ hashFiles('drizzle/bun.lock') }}
           restore-keys: |
             ${{ runner.os }}-node-modules-
-      - name: Install devenv.sh
-        shell: bash
-        run: nix profile add nixpkgs#devenv
+      # 版は .github/actions/install-devenv が固定する（devenv.yaml の require_version と対）。
+      - uses: ./.github/actions/install-devenv
       # 接続先が GitHub Secrets（Doppler sync 済み）から解決でき、**この runner から実際に使える
       # 経路**であることを、適用前に検証する（.claude/rules/error-handling.md: 握りつぶさない）。
       #

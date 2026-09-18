@@ -95,9 +95,8 @@ jobs:
           # さらに cache の保存は job 失敗時に skip されるので、CI が赤い間は
           # 古いツリーが延々と再利用され続ける。
           # exact key のみにすれば miss 時は空 → 下の Sync step が本物の install を行う。
-      - name: Install devenv.sh
-        shell: bash
-        run: nix profile add nixpkgs#devenv
+      # 版は .github/actions/install-devenv が固定する（devenv.yaml の require_version と対）。
+      - uses: ./.github/actions/install-devenv
       # ⚠️ この step は消さないこと（install を確実に走らせる唯一の場所）。
       #
       # `setup:install-frontend` / `setup:install-drizzle` は execIfModified 付きなので、
@@ -166,9 +165,8 @@ jobs:
           # さらに cache の保存は job 失敗時に skip されるので、CI が赤い間は
           # 古いツリーが延々と再利用され続ける。
           # exact key のみにすれば miss 時は空 → 下の Sync step が本物の install を行う。
-      - name: Install devenv.sh
-        shell: bash
-        run: nix profile add nixpkgs#devenv
+      # 版は .github/actions/install-devenv が固定する（devenv.yaml の require_version と対）。
+      - uses: ./.github/actions/install-devenv
       # ci-check job と同じ理由（execIfModified による install の skip）。
       - name: Sync JS dependencies (install into a lockfile-matched tree)
         run: |
@@ -226,9 +224,8 @@ jobs:
             frontend/tooling/*/node_modules
             drizzle/node_modules
           key: v2-${{ runner.os }}-node-modules-${{ hashFiles('frontend/bun.lock', 'drizzle/bun.lock') }}
-      - name: Install devenv.sh
-        shell: bash
-        run: nix profile add nixpkgs#devenv
+      # 版は .github/actions/install-devenv が固定する（devenv.yaml の require_version と対）。
+      - uses: ./.github/actions/install-devenv
       # ci-check job と同じ理由（execIfModified による install の skip）。
       - name: Sync JS dependencies (install into a lockfile-matched tree)
         run: cd "$DEVENV_ROOT/drizzle" && bun install --frozen-lockfile
@@ -292,9 +289,8 @@ jobs:
             frontend/tooling/*/node_modules
             drizzle/node_modules
           key: v2-${{ runner.os }}-node-modules-${{ hashFiles('frontend/bun.lock', 'drizzle/bun.lock') }}
-      - name: Install devenv.sh
-        shell: bash
-        run: nix profile add nixpkgs#devenv
+      # 版は .github/actions/install-devenv が固定する（devenv.yaml の require_version と対）。
+      - uses: ./.github/actions/install-devenv
       # ci-check job と同じ理由（execIfModified による install の skip）。
       - name: Sync JS dependencies (install into a lockfile-matched tree)
         run: |
@@ -345,9 +341,8 @@ jobs:
             frontend/tooling/*/node_modules
             drizzle/node_modules
           key: v2-${{ runner.os }}-node-modules-${{ hashFiles('frontend/bun.lock', 'drizzle/bun.lock') }}
-      - name: Install devenv.sh
-        shell: bash
-        run: nix profile add nixpkgs#devenv
+      # 版は .github/actions/install-devenv が固定する（devenv.yaml の require_version と対）。
+      - uses: ./.github/actions/install-devenv
       # ci-check job と同じ理由（execIfModified による install の skip）。
       - name: Sync JS dependencies (install into a lockfile-matched tree)
         run: |

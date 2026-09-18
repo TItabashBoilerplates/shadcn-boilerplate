@@ -74,32 +74,43 @@ stop
 
 ログは `.devenv/state/` 配下に保存されるが、レイアウトは manager 実装により変わり得るため、インタラクティブ確認には `devenv up`（フォアグラウンド + TUI）を使うのが確実。
 
-### 「stop したのに backend / storybook が止まらない」（devenv 2.2.2 の既知バグ）
+### devenv のバージョンは 2.3.1 以上に揃える（混在させない）
 
-**症状**: `stop` が `✅ All services stopped.` と出すのに `:4040` / `:6006` が生きている。
-`dev-web` を実行するたびに storybook が増える（`:6006` → `:6007` → `:6008`）。
+**devenv 2.2.2 には、`devenv tasks run` が終了時に稼働中デーモンの
+`<runtime>/processes/native-manager.pid` と `native.sock` を消すバグがある。**
+消えると `devenv processes down` は "No process manager is running" で終わり、
+**backend / storybook は生き残ったまま**になる。`dev-web` はそれを見つけられずに
+別のデーモンを立てるので、storybook が起動のたびに増える。
 
-**原因**: devenv 2.2.2 の `devenv tasks run` は、終了時に**稼働中デーモンの**
-`<runtime>/processes/native-manager.pid` と `native.sock` まで削除する。
-`ci-check` / `supabase-start` / `app:migrate-dev` のように内部で `devenv tasks run` を使う
-コマンドを 1 回実行するだけで、動いているデーモンが devenv から見えなくなる。
-以後 `devenv processes down` は "No process manager is running" で終了し（exit 1）、
-**親を失ったデーモンと子プロセスは生き残る**。次の `devenv up -d` はそれを見つけられず、
-別のデーモンを立てる。上流は devenv 2.3.0 で修正済みだが、2.3.x には別の不具合
-（[#3184](https://github.com/cachix/devenv/issues/3184): シェル進入のたびに git-hooks が全ファイルに走る）
-があるため、このリポジトリは 2.2.2 に留めている。
+上流は **2.3.0 で修正済み**で、このリポジトリは `devenv.yaml` の `require_version` で
+**2.3.1 以上**を要求している。注意点は 1 つだけ:
 
-**対処**: `stop` はファイルが消えていてもプロセス自体を探して止める
-（`scripts/devenv/services.sh`）。状況を見るだけなら `dev-status`。
+> **このマシンの devenv を 1 つも 2.2.2 のまま残さない。**
+> 2.2.2 がこのリポジトリで 1 回でも動くと、2.3 系が立てたデーモンのファイルまで消され、
+> 2.3 からも見つけられなくなる。古い devenv MCP を掴んでいる既存セッションは再起動する。
 
 ```bash
-dev-status   # 何が動いていて、devenv から見えているか（止めない）
-stop         # 迷子のデーモンごと停止。止め切れなければ非ゼロで落ちる
+devenv version                 # 2.3.1 以上であること
+nix profile upgrade devenv     # 古ければ上げる
+dev-status                     # 何が動いていて、devenv から見えているか（止めない）
+stop                           # 停止。止め切れなければ非ゼロで落ちる（黙って成功しない）
 ```
 
-- `dev-web` / `dev-mobile` は起動前に迷子のデーモンだけ掃除する（健全なデーモンには触らない）。
-- **別 runtime のデーモン**（別プロジェクト / 古い devenv の置き土産）は `dev-status` が報告するだけで触らない。手動で止めるなら PID を確認してから。
-- **devenv を 2.3 以降へ上げたら、この掃除は不要になる**（`services.sh` の reap 部分を落としてよい）。
+`dev-status` が「別 runtime のデーモン」を報告することがある。別プロジェクト（または
+古い devenv の置き土産）の可能性があるので、`stop` は触らない。止めるなら PID を確認してから。
+
+### 「dev-web は成功したのに backend が居ない」（devenv 2.3.1 の挙動）
+
+**2.3.1 は `supabase:start` が失敗しても `devenv up -d` を成功として返す。**
+`dev-web` は何も言わずに dev server を立ち上げるので、Supabase と backend だけが居ない状態になる。
+
+```bash
+devenv processes list     # backend が stopped なら↓
+supabase-start            # 単体で叩くと本当のエラーが読める（ポート衝突・Docker 未起動など）
+```
+
+他プロジェクトのコンテナが `54322`（Postgres）や `4040`（backend）を握っていると、
+ここで必ず衝突する。`docker ps` で確認する。
 
 ---
 

@@ -233,10 +233,9 @@ let
     in {
       exec = ''
         set -e
-        # devenv 2.2.2 は `devenv tasks run`（ci-check 等）の終了時に、稼働中デーモンの
-        # native-manager.pid / native.sock まで消す。放置すると devenv up -d が既存を
-        # 見つけられず、storybook が起動のたびに増える。先に迷子を止める。
-        bash "$DEVENV_ROOT/scripts/devenv/services.sh" reap
+        # ⚠️ devenv 2.3.1 は `supabase:start` が失敗しても `devenv up -d` を成功として返す。
+        #    backend が居ないと思ったら `dev-status` / `devenv processes list` を見て、
+        #    stopped なら `supabase-start` を単体で叩くとエラーが読める（.claude/skills/debugging/）。
         echo "🚀 Ensuring backend + storybook are running (detached)..."
         devenv up -d backend storybook
         echo "▶️  Starting ${name} dev server (foreground)..."
@@ -1174,10 +1173,9 @@ in
 
     # ---------- Stop ----------
     # ⚠️ ここで `devenv processes down ... || true` と書いてはいけない。
-    #    devenv 2.2.2 では `devenv tasks run` が稼働中デーモンの manager ファイルを消すため、
-    #    down は "No process manager is running" で失敗するのが常態で、握りつぶすと
-    #    **プロセスが生き残っているのに「✅ All services stopped.」と表示される**。
-    #    停止の実体は scripts/devenv/services.sh（迷子のデーモンも止める・失敗は非ゼロ）。
+    #    握りつぶすと **プロセスが生き残っているのに「✅ All services stopped.」と表示される**
+    #    （実際に devenv 2.2.2 のバグと組み合わさって起きた。バグ自体は 2.3.0 で修正済み）。
+    #    停止の実体は scripts/devenv/services.sh（停止後に残っていないか確認し、失敗は非ゼロ）。
     "app:stop".exec = ''
       exec bash "$DEVENV_ROOT/scripts/devenv/services.sh" stop
     '';
@@ -1221,8 +1219,8 @@ in
     };
 
     # ---------- Lifecycle shortcuts ----------
-    # `devenv tasks run app:stop` を経由しない。devenv 2.2.2 ではその呼び出し自体が
-    # manager ファイルを消すので、止める前に停止手段を壊してしまう。
+    # 停止は task を経由せず script を直接呼ぶ。`devenv tasks run` の中で `supabase stop` が
+    # 端末に触ると SIGTTOU で止まる事例があり、停止コマンドが返らなくなるため。
     "stop" = {
       exec = ''exec bash "$DEVENV_ROOT/scripts/devenv/services.sh" stop'';
       description = "Stop devenv processes + Supabase";
@@ -2007,7 +2005,25 @@ in
   #     → コミット時の lint が <200ms で完結 (full project lint と段違いに高速)
   #   - prek (Rust 実装) が pre-commit を駆動するので Python オーバーヘッドなし
   #
-  # 全プロジェクトの verify は `devenv test` (= ci:check task) で行う (役割分担)。
+  # 全プロジェクトの verify は `ci-check` で行う (役割分担)。
+  #
+  # ⚠️ **全ファイルに hook を掛けたいときは `devenv tasks run devenv:git-hooks:run`** を使う。
+  #    下の一行で `devenv:git-hooks:run` を task グラフから切り離してあるので、
+  #    `devenv shell` / `devenv test` では走らない（明示的に呼んだときだけ走る）。
+  #
+  # なぜ切り離すか（devenv 2.3.1 の既知バグ #3184）:
+  #   shell 進入は root = `devenv:enterShell` を RunMode::All で回すため、
+  #   本来 `devenv:enterTest` に紐づいているだけの **全ファイル実行まで巻き込まれ**、
+  #   毎回 15 秒前後かかる（upstream で未修正。devenv/src/devenv/mod.rs の
+  #   run_enter_shell_tasks + devenv-tasks の RunMode::All で確認）。
+  #   全ファイル実行は verify（`ci-check`）の仕事で、hook の役割は
+  #   「コミット時に変更ファイルだけ見る」ことなので、グラフから外しても失うものは無い。
+  #   **upstream で #3184 が直ったらこの 1 行は消してよい。**
+  tasks."devenv:git-hooks:run" = {
+    before = lib.mkForce [ ];
+    after = lib.mkForce [ ];
+  };
+
   git-hooks.hooks = {
     # ----- JS/TS/JSON: Biome (frontend + drizzle 共通) -----
     # ビルトインの types_or = [ "javascript" "jsx" "ts" "tsx" "json" ]

@@ -34,7 +34,7 @@ scripts は devenv shell（direnv 自動アクティベート含む）下で PAT
 | **Tests (unit)** | `unit-test` (all), `test-frontend` (Vitest), `test-drizzle` (bun test), `test-backend-py` (pytest), `test-functions` (Deno / Edge Functions) ※ `test` は bash 組み込みと衝突するため `unit-test` |
 | **Tests (DB / E2E)** | `test-db` (pgTAP), `e2e`, `e2e-web`, `e2e-mobile`, `e2e-ui`, `e2e-storyboard` |
 | **CI Check (full gate)** | `ci-check` (= `devenv tasks run ci:check`、execIfModified キャッシュで incremental)。ローカルも CI もこれ |
-| **git-hooks を全ファイルに実行** | `devenv test` ※ **verify 用途では使わない**（下記「⚠️ `devenv test` を verify に使ってはならない」参照） |
+| **git-hooks を全ファイルに実行** | `devenv tasks run devenv:git-hooks:run` ※ **verify は `ci-check`**（下記「⚠️ `devenv test` を verify に使ってはならない」参照） |
 | **Services (軽量)** | `devenv up` (= Supabase + backend + storybook), `stop` (停止), `supabase-start` / `supabase-stop` |
 | **Services (frontend apps)** | `dev-web`, `dev-mobile`, `dev-all`, または `devenv up <names...>` |
 | **Services (devenv 外)** | `frontend` (turbo dev), `mobile-ios`, `mobile-android`, `mobile-web` (Expo TUI) |
@@ -144,7 +144,13 @@ ci-check  (= devenv tasks run ci:check)
 | **process phase** (`supabase:start`) | `after` の `model:frontend` が走り、`supabase gen types typescript --local` が **auto-generated な `frontend/packages/types/schema.ts` を上書き**する。ローカル DB が未マイグレーションだと `public.Tables` が空になり `Tables<'users'>` 等が型エラー化（生成物が壊れる破壊的副作用） |
 | **`devenv:git-hooks:run`** (prek) | verify task と**並行実行**され、prek が「hook 実行中に worktree の mtime が変わった」を検知して `files were modified by this hook` の **false failure** を出す。`show_output = false` なので原因が見えない |
 
-そもそも hook (biome/ruff/ruff-format/mypy/denofmt/denolint) の検査内容は verify task と**完全に重複**しており、二重に回す意味がない。`devenv test` は **git-hooks を全ファイルに掛けるだけの用途**に留める。
+そもそも hook (biome/ruff/ruff-format/mypy/denofmt/denolint) の検査内容は verify task と**完全に重複**しており、二重に回す意味がない。
+
+**全ファイルに hook を掛けたいときは `devenv tasks run devenv:git-hooks:run` を直接叩く。**
+`devenv test` では走らない: devenv 2.3.1 は shell 進入（root = `devenv:enterShell` / `RunMode::All`）で
+`devenv:enterTest` 側の全ファイル実行まで巻き込み、**シェルに入るたびに 15 秒前後かかって生成物も
+書き換わる**（upstream の [#3184](https://github.com/cachix/devenv/issues/3184)、未修正）。
+そのため `devenv.nix` で `devenv:git-hooks:run` を task グラフから外してある。
 
 > **使い分け**: 日常の auto-fix は `lint` / `format` script (シンプル sequential、execIfModified なし → 副作用ループ回避)。CI 相当の verify は**ローカル・CI とも `ci-check`**。
 

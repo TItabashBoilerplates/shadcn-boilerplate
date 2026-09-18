@@ -59,6 +59,7 @@ devenv shell -P android        # Android ネイティブ toolchain（opt-in prof
 # Quality（ローカルも CI も同じ）
 lint / format / type-check     # 全体（auto-fix）。個別は lint-frontend / format-backend-py / type-check-mobile 等
 ci-check                       # = devenv tasks run ci:check（キャッシュ込み）。verify はこれ 1 本。`devenv test` は使わない
+devenv tasks run devenv:git-hooks:run   # 全ファイルに hook を掛けたいとき（shell 進入では走らない）
 
 # Tests
 unit-test                      # frontend(Vitest) + drizzle(bun test) + backend-py(pytest) + functions(Deno)

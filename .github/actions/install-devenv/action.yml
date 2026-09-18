@@ -1,0 +1,27 @@
+name: Install devenv.sh
+description: >-
+  devenv CLI を**バージョン固定**で入れる。CI とローカルで版がずれると、
+  devenv.yaml の require_version で CI だけ落ちる / ローカルだけ挙動が違う、が起きる。
+
+inputs:
+  version:
+    description: >-
+      入れる devenv のリリースタグ。devenv.yaml の require_version と揃えること。
+      ⚠️ 2.2.2 以前は `devenv tasks run` が稼働中デーモンの manager ファイルを消すバグ
+      （2.3.0 で修正）を踏むので、下げない。
+    required: false
+    default: v2.3.1
+
+runs:
+  using: composite
+  steps:
+    # `nix profile add nixpkgs#devenv` は nixpkgs 側の版に左右され、require_version を
+    # 満たさない版が入りうる。リリースタグを直接指定して固定する。
+    # --accept-flake-config は devenv 公式の cachix を substituter として使うため
+    # （付けないと Rust のソースビルドに落ちて CI が数十分かかる）。
+    - name: Install devenv.sh (${{ inputs.version }})
+      shell: bash
+      run: nix profile add --accept-flake-config "github:cachix/devenv/${{ inputs.version }}"
+    - name: Verify devenv version
+      shell: bash
+      run: devenv version

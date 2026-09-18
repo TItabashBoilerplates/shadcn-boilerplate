@@ -1,23 +1,20 @@
 #!/usr/bin/env bash
-# devenv のプロセス（backend / storybook）を、devenv 2.2.2 のバグを踏んでも確実に止める。
+# devenv のプロセス（backend / storybook）と Supabase をまとめて止める / 状態を見る。
 #
 #   services.sh stop     # devenv のプロセス + Supabase を停止（止め切れなければ非ゼロで落ちる）
-#   services.sh reap     # 到達不能になったデーモンだけ止める（dev-* の起動前に呼ぶ）
 #   services.sh status   # 何が動いているかを表示するだけ（何も止めない）
 #
-# なぜ専用 script が必要か:
-#   devenv 2.2.2 の `devenv tasks run` は終了時に、**稼働中のデーモンのものであっても**
-#   <runtime>/processes/native-manager.pid と native.sock を削除する。
-#   ci-check / supabase-start / app:migrate-dev のように中で `devenv tasks run` を使う
-#   コマンドを 1 回実行するだけで、動いているデーモンが devenv から見えなくなる。
-#   その状態の `devenv processes down` は "No process manager is running" で終了し、
-#   **親を失ったデーモンと子（uvicorn / storybook）は生き残る**。次の `devenv up -d` は
-#   それを見つけられずに別のデーモンを立てるので、storybook が何個も増えていく。
-#   → ファイルが消えていても、プロセスそのものを見つけて止める必要がある。
+# なぜ `devenv processes down` を直に呼ばないか:
+#   止めるコマンドが「止まっていないのに成功を名乗る」と、ポート衝突・二重起動・
+#   古いコードでの動作確認という形であとから高くつく。ここでは
+#   (a) down のあとに**本当に残っていないか**を確認し、
+#   (b) 残っていたら止め切り、それでも駄目なら**非ゼロで落ちる**。
+#   `|| true` で握りつぶさないこと（過去にこれで「止まらない stop」を作った）。
 #
-#   上流は devenv 2.3.0 で修正済み。ただし 2.3.x には別の不具合
-#   （#3184: シェルに入るたびに git-hooks が全ファイルに走る）があり、今は上げられない。
-#   **2.3 以降へ上げたらこの script の掃除部分は不要になる**（stop の入口としては残してよい）。
+#   ※ devenv 2.2.2 には `devenv tasks run` が稼働中デーモンの native-manager.pid /
+#     native.sock を消すバグがあり、down が常に失敗する状態だった。これは**2.3.0 で修正済み**で、
+#     このリポジトリは devenv >= 2.3.1 を要求する（devenv.yaml の require_version）。
+#     2.2.2 をこのリポジトリで 1 度でも動かすと 2.3 のデーモンも見失うので混在させない。
 #
 # 触る範囲:
 #   このプロジェクトの runtime ディレクトリ（.devenv/run のリンク先）を cmdline に含む
@@ -132,20 +129,17 @@ cmd_status() {
   local runtime; runtime="$(runtime_dir)"
   log "runtime: ${runtime:-（未作成）}"
 
-  if manager_files_present "$runtime"; then
-    ok "devenv からデーモンが見えています（native-manager.pid / native.sock あり）"
-  else
-    warn "デーモンを指すファイルがありません（devenv からは「起動していない」ように見えます）"
-  fi
-
   local mine; mine="$(project_daemon_pids "$runtime")"
   if [ -n "$mine" ]; then
     log "このプロジェクトのデーモン:"
     local pid; for pid in $mine; do describe_pid "$pid"; done
-    manager_files_present "$runtime" \
-      || warn "↑ は devenv から到達できません（'stop' か 'reap' で止まります）"
+    if manager_files_present "$runtime"; then
+      ok "devenv から見えています（native-manager.pid / native.sock あり）"
+    else
+      warn "devenv からは見えていません（'stop' で止まります）"
+    fi
   else
-    ok "このプロジェクトのデーモンは動いていません"
+    ok "このプロジェクトのプロセスは動いていません"
   fi
 
   local others; others="$(foreign_daemon_pids "$runtime")"
@@ -155,27 +149,6 @@ cmd_status() {
   fi
 }
 
-# 到達不能なデーモンだけ止める。健全に動いているものには触らない。
-cmd_reap() {
-  local runtime; runtime="$(runtime_dir)"
-  local pids; pids="$(project_daemon_pids "$runtime")"
-  [ -n "$pids" ] || return 0
-
-  if manager_files_present "$runtime"; then
-    return 0   # devenv から管理できている＝正常
-  fi
-
-  warn "devenv から見えなくなったデーモンが残っています（devenv 2.2.2 の既知バグ）。先に止めます:"
-  local pid; for pid in $pids; do describe_pid "$pid" >&2; done
-
-  # shellcheck disable=SC2086  # PID 一覧なので分割させる
-  local remaining; remaining="$(stop_pids $pids)"
-  if [ -n "$remaining" ]; then
-    die "止められなかったデーモンがあります: ${remaining}。手動で kill -9 してください"
-  fi
-  ok "迷子のデーモンを停止しました（このあと起動し直します）"
-}
-
 stop_devenv_processes() {
   local runtime; runtime="$(runtime_dir)"
 
@@ -183,7 +156,7 @@ stop_devenv_processes() {
   if manager_files_present "$runtime"; then
     devenv processes down || warn "devenv processes down が失敗しました。プロセスを直接止めます。"
   else
-    warn "デーモンを指すファイルがありません（devenv tasks run が消した可能性）。プロセスを直接探します。"
+    log "devenv から見えるデーモンはありません。念のためプロセスを確認します。"
   fi
 
   local pids; pids="$(project_daemon_pids "$runtime")"
@@ -236,9 +209,8 @@ cmd_stop() {
 
 case "${1:-}" in
   stop)   cmd_stop ;;
-  reap)   cmd_reap ;;
   status) cmd_status ;;
   ""|-h|--help)
     awk 'NR == 1 { next } /^#/ { sub(/^# ?/, ""); print; next } { exit }' "${BASH_SOURCE[0]}" ;;
-  *) die "不明なサブコマンド: ${1}（stop | reap | status）" ;;
+  *) die "不明なサブコマンド: ${1}（stop | status）" ;;
 esac

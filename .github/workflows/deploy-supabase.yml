@@ -110,9 +110,8 @@ jobs:
           name: devenv
       # node_modules は不要（このジョブが使うのは supabase CLI だけで、
       # Edge Functions のバンドルは CLI 内蔵の esbuild が行う）。
-      - name: Install devenv.sh
-        shell: bash
-        run: nix profile add nixpkgs#devenv
+      # 版は .github/actions/install-devenv が固定する（devenv.yaml の require_version と対）。
+      - uses: ./.github/actions/install-devenv
 
       # 適用前に、供給元の 2 系統が両方とも解決できていることを検証する。
       # どちらが欠けても「成功したように見えて何も届かない」形で失敗するため、ここで止める

@@ -1,6 +1,8 @@
 inputs:
   devenv:
-    url: git+https://github.com/cachix/devenv?dir=src/modules&ref=refs/heads/main&rev=e30eb49258bee68353bd9c619823f635f4afa86c
+    # CLI（.github/actions/install-devenv / 手元の nix profile）と**同じリリース**を指す。
+    # 版がずれると「CLI は新しいのにモジュールが古い」状態になり、警告だけ出て挙動が変わる。
+    url: git+https://github.com/cachix/devenv?dir=src/modules&ref=refs/tags/v2.3.1&rev=2418e1b43797c44de5166176622c8d8fa0149871
   git-hooks:
     url: git+https://github.com/cachix/git-hooks.nix
     inputs:
@@ -17,7 +19,16 @@ inputs:
 # CI は `nix profile add nixpkgs#devenv`（常に最新）なので影響しない。手元が古いときは
 # `nix profile upgrade devenv`（`nix-env` で入れたなら `nix-env -u devenv`）で上げる。
 # 出典: https://devenv.sh/reference/yaml-options/ （`require_version`。2.1 で導入）
-require_version: ">=2.1"
+#
+# ⚠️ **2.3.1 未満を使わないこと（この下限は下げない）。**
+# devenv 2.2.2 以前の `devenv tasks run` は、終了時に**稼働中デーモンの**
+# <runtime>/processes/native-manager.pid と native.sock を削除する（2.3.0 で修正）。
+# 消えると `devenv processes down` は "No process manager is running" で終わり、
+# backend / storybook が生き残ったまま `dev-web` のたびに増える。しかも 2.2.2 を
+# **1 回このリポジトリで動かすだけで、2.3 系が立てたデーモンのファイルまで消える**ので、
+# 「片方だけ古い」状態が一番たちが悪い。CI 側の固定は .github/actions/install-devenv。
+# 手元が古いときは `nix profile upgrade devenv`（または devenv 公式の手順で v2.3.1 を入れる）。
+require_version: ">=2.3.1"
 
 # unfree ライセンスのパッケージを評価できるようにする。対象は 2 つ:
 #   - Terraform（devenv.nix の terraformCli。BUSL-1.1 = `lib.licenses.bsl11`）
