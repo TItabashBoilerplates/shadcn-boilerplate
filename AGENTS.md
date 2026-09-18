@@ -53,6 +53,7 @@ devenv up                      # 軽量セット: Supabase + backend + storybook
 dev-web / dev-mobile / dev-all # 軽量セット + Next.js / Expo Metro / 全 frontendApps
 devenv up backend web          # 任意組み合わせ（frontend/apps/* は opt-in process）
 stop                           # devenv プロセス + Supabase をすべて停止（supabase-stop は Supabase のみ）
+dev-status                     # 何が動いているか・devenv から見えているかを表示（止めない）
 devenv shell -P android        # Android ネイティブ toolchain（opt-in profile。数 GB）
 
 # Quality（ローカルも CI も同じ）

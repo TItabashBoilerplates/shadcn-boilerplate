@@ -233,8 +233,12 @@ let
     in {
       exec = ''
         set -e
+        # devenv 2.2.2 は `devenv tasks run`（ci-check 等）の終了時に、稼働中デーモンの
+        # native-manager.pid / native.sock まで消す。放置すると devenv up -d が既存を
+        # 見つけられず、storybook が起動のたびに増える。先に迷子を止める。
+        bash "$DEVENV_ROOT/scripts/devenv/services.sh" reap
         echo "🚀 Ensuring backend + storybook are running (detached)..."
-        devenv up -d backend storybook 2>/dev/null || true
+        devenv up -d backend storybook
         echo "▶️  Starting ${name} dev server (foreground)..."
         ${appExec}
       '';
@@ -1169,12 +1173,13 @@ in
     };
 
     # ---------- Stop ----------
+    # ⚠️ ここで `devenv processes down ... || true` と書いてはいけない。
+    #    devenv 2.2.2 では `devenv tasks run` が稼働中デーモンの manager ファイルを消すため、
+    #    down は "No process manager is running" で失敗するのが常態で、握りつぶすと
+    #    **プロセスが生き残っているのに「✅ All services stopped.」と表示される**。
+    #    停止の実体は scripts/devenv/services.sh（迷子のデーモンも止める・失敗は非ゼロ）。
     "app:stop".exec = ''
-      echo "🛑 Stopping devenv processes (backend + storybook)..."
-      devenv processes down 2>/dev/null || true
-      echo "🛑 Stopping Supabase (Docker)..."
-      supabase stop 2>/dev/null || true
-      echo "✅ All services stopped."
+      exec bash "$DEVENV_ROOT/scripts/devenv/services.sh" stop
     '';
   };
 
@@ -1216,9 +1221,17 @@ in
     };
 
     # ---------- Lifecycle shortcuts ----------
+    # `devenv tasks run app:stop` を経由しない。devenv 2.2.2 ではその呼び出し自体が
+    # manager ファイルを消すので、止める前に停止手段を壊してしまう。
     "stop" = {
-      exec = ''exec devenv tasks run app:stop'';
+      exec = ''exec bash "$DEVENV_ROOT/scripts/devenv/services.sh" stop'';
       description = "Stop devenv processes + Supabase";
+    };
+
+    # 何が動いていて、devenv から見えているかを表示するだけ（止めない）。
+    "dev-status" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/devenv/services.sh" status'';
+      description = "devenv のプロセス状態を表示（迷子のデーモンも検出）";
     };
 
     "supabase-start" = {
@@ -2100,6 +2113,7 @@ in
     echo "    └ mobile-android-run            #   expo run:android (ローカル実機ビルド)"
     echo "  devenv tasks run db:migrate-dev   # DB schema migration"
     echo "  ci-check                          # full CI gate"
+    echo "  dev-status                        # 動いているプロセスの状態（迷子のデーモンも検出）"
     echo "  stop                              # stop everything"
   '';
 }

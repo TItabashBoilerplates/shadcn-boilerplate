@@ -74,6 +74,33 @@ stop
 
 ログは `.devenv/state/` 配下に保存されるが、レイアウトは manager 実装により変わり得るため、インタラクティブ確認には `devenv up`（フォアグラウンド + TUI）を使うのが確実。
 
+### 「stop したのに backend / storybook が止まらない」（devenv 2.2.2 の既知バグ）
+
+**症状**: `stop` が `✅ All services stopped.` と出すのに `:4040` / `:6006` が生きている。
+`dev-web` を実行するたびに storybook が増える（`:6006` → `:6007` → `:6008`）。
+
+**原因**: devenv 2.2.2 の `devenv tasks run` は、終了時に**稼働中デーモンの**
+`<runtime>/processes/native-manager.pid` と `native.sock` まで削除する。
+`ci-check` / `supabase-start` / `app:migrate-dev` のように内部で `devenv tasks run` を使う
+コマンドを 1 回実行するだけで、動いているデーモンが devenv から見えなくなる。
+以後 `devenv processes down` は "No process manager is running" で終了し（exit 1）、
+**親を失ったデーモンと子プロセスは生き残る**。次の `devenv up -d` はそれを見つけられず、
+別のデーモンを立てる。上流は devenv 2.3.0 で修正済みだが、2.3.x には別の不具合
+（[#3184](https://github.com/cachix/devenv/issues/3184): シェル進入のたびに git-hooks が全ファイルに走る）
+があるため、このリポジトリは 2.2.2 に留めている。
+
+**対処**: `stop` はファイルが消えていてもプロセス自体を探して止める
+（`scripts/devenv/services.sh`）。状況を見るだけなら `dev-status`。
+
+```bash
+dev-status   # 何が動いていて、devenv から見えているか（止めない）
+stop         # 迷子のデーモンごと停止。止め切れなければ非ゼロで落ちる
+```
+
+- `dev-web` / `dev-mobile` は起動前に迷子のデーモンだけ掃除する（健全なデーモンには触らない）。
+- **別 runtime のデーモン**（別プロジェクト / 古い devenv の置き土産）は `dev-status` が報告するだけで触らない。手動で止めるなら PID を確認してから。
+- **devenv を 2.3 以降へ上げたら、この掃除は不要になる**（`services.sh` の reap 部分を落としてよい）。
+
 ---
 
 ## サービス構成

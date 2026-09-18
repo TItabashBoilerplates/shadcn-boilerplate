@@ -570,6 +570,27 @@ CI は `nix profile add nixpkgs#devenv` で毎回最新を入れるため影響�
 - 公式ドキュメントは**常に最新版の表記**。古い CLI を使う可能性があるなら、
   ドキュメントのコピペではなく**手元の版で実際に読まれたか**を確認する。
 
+### 事故: `devenv tasks run` が稼働中デーモンの manager ファイルを消す（devenv 2.2.2）
+
+**症状**: `stop` が `✅ All services stopped.` と表示するのにプロセスが生き残る。
+`dev-web` のたびに storybook が増殖する（`:6006` / `:6007` / `:6008`）。
+
+**原因**: devenv 2.2.2 の `devenv tasks run` は、終了時に**自分のものではない**
+`<runtime>/processes/native-manager.pid` と `native.sock` まで削除する。読み取り専用の task
+（`format-check:functions`）1 回でも再現する。以後 `devenv processes down` は
+"No process manager is running" で exit 1 になるが、旧 `app:stop` が
+`2>/dev/null || true` で握りつぶしていたため、失敗が成功として表示されていた。
+
+**修正**: 停止処理を `scripts/devenv/services.sh` に出し、(a) manager ファイルが無くても
+プロセスを直接探して止める、(b) 止め切れなければ非ゼロで落ちる、(c) `stop` script を
+`devenv tasks run` 経由にしない（その呼び出し自体がバグを踏むため）、の 3 点にした。
+`frontend/policy/devenv-services.policy.test.ts` が挙動を固定している。
+
+**教訓**: **プロセスを止めるコマンドで `|| true` を書かない。** 止まっていないのに
+「止まった」と表示する状態は、ポート衝突・二重起動・古いコードでの動作確認という形で
+あとから高くつく。上流バグの回避を入れたら、**いつ外せるか（= どのバージョンで直ったか）**も
+一緒に書き残す。
+
 ## 関連ドキュメント
 
 - 公式: [Using devenv in GitHub Actions](https://devenv.sh/integrations/github-actions/)
