@@ -1,6 +1,11 @@
 version: 2
 updates:
   # Frontend dependencies
+  #
+  # groups は「まとめたい」からではなく、open PR 数を上限内に保つために要る。
+  # open-pull-requests-limit に張り付くと Dependabot は新規 PR を一切出さなくなり、
+  # しかもそれを知らせない（2026-01〜09 に実際に 8 ヶ月間更新が止まった）。
+  # versioning が連動していて 1 件ずつ出ると詰まるものは、必ずここで束ねる。
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
@@ -11,6 +16,12 @@ updates:
         patterns:
           - "react*"
           - "@types/react*"
+      expo:
+        patterns:
+          - "expo"
+          - "expo-*"
+          - "@expo/*"
+          - "eslint-config-expo"
       next:
         patterns:
           - "next*"
@@ -21,6 +32,9 @@ updates:
       supabase:
         patterns:
           - "@supabase/*"
+      lucide:
+        patterns:
+          - "lucide-*"
 
   # Drizzle dependencies
   - package-ecosystem: "npm"
