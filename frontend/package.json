@@ -44,7 +44,7 @@
     "@storybook/addon-docs": "10.5.7",
     "@storybook/addon-themes": "10.5.7",
     "@storybook/react": "10.5.7",
-    "@storybook/react-native-web-vite": "10.5.7",
+    "@storybook/react-native-web-vite": "10.6.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/react": "^16.3.2",
