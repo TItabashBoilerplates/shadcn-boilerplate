@@ -24,7 +24,7 @@
     "@react-navigation/native": "^7.3.14",
     "@workspace/tokens": "workspace:*",
     "expo-symbols": "~57.0.1",
-    "nativewind": "5.0.0-preview.4",
+    "nativewind": "5.0.0-rc.0",
     "react-native-css": "^3.0.7",
     "react-native-reanimated": "4.5.1"
   },
