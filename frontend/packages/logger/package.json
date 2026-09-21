@@ -9,7 +9,7 @@
     "./client": "./client/index.ts"
   },
   "dependencies": {
-    "pino": "^9.6.0",
+    "pino": "^10.3.1",
     "loglevel": "^1.9.2"
   },
   "devDependencies": {
