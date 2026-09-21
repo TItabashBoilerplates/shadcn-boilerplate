@@ -74,7 +74,7 @@ jobs:
       # uv venv は `.devenv/state/venv` だが、CI では `setup:install-backend` task が
       # `uv sync --frozen` で毎回再生成するため cache 不要。
       - name: Cache node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             frontend/node_modules
@@ -144,7 +144,7 @@ jobs:
         with:
           name: devenv
       - name: Cache node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             frontend/node_modules
@@ -215,7 +215,7 @@ jobs:
           name: devenv
       # Drizzle のマイグレーションを流すのに drizzle/node_modules が要る
       - name: Cache node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             frontend/node_modules
@@ -280,7 +280,7 @@ jobs:
         with:
           name: devenv
       - name: Cache node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             frontend/node_modules
@@ -332,7 +332,7 @@ jobs:
         with:
           name: devenv
       - name: Cache node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             frontend/node_modules
