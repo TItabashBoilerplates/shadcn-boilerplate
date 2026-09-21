@@ -105,7 +105,7 @@ jobs:
           purge-prefixes: nix-${{ runner.os }}-
           purge-created: 0
           purge-primary-key: never
-      - uses: cachix/cachix-action@v16
+      - uses: cachix/cachix-action@v17
         with:
           name: devenv
       # node_modules は不要（このジョブが使うのは supabase CLI だけで、

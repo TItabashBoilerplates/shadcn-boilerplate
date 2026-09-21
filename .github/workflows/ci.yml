@@ -67,7 +67,7 @@ jobs:
       # devenv 公式 cachix を読み取り substituter として併用。
       # 初回（cache-nix-action が cold な状態）でも devenv 共通の依存物は
       # ここから引いてこられるので、build from source を回避できる。
-      - uses: cachix/cachix-action@v16
+      - uses: cachix/cachix-action@v17
         with:
           name: devenv
       # node_modules は /nix/store 外に出るので別 cache。
@@ -140,7 +140,7 @@ jobs:
           purge-prefixes: nix-${{ runner.os }}-
           purge-created: 0
           purge-primary-key: never
-      - uses: cachix/cachix-action@v16
+      - uses: cachix/cachix-action@v17
         with:
           name: devenv
       - name: Cache node_modules
@@ -210,7 +210,7 @@ jobs:
           purge-prefixes: nix-${{ runner.os }}-
           purge-created: 0
           purge-primary-key: never
-      - uses: cachix/cachix-action@v16
+      - uses: cachix/cachix-action@v17
         with:
           name: devenv
       # Drizzle のマイグレーションを流すのに drizzle/node_modules が要る
@@ -276,7 +276,7 @@ jobs:
           purge-prefixes: nix-${{ runner.os }}-
           purge-created: 0
           purge-primary-key: never
-      - uses: cachix/cachix-action@v16
+      - uses: cachix/cachix-action@v17
         with:
           name: devenv
       - name: Cache node_modules
@@ -328,7 +328,7 @@ jobs:
           purge-prefixes: nix-${{ runner.os }}-
           purge-created: 0
           purge-primary-key: never
-      - uses: cachix/cachix-action@v16
+      - uses: cachix/cachix-action@v17
         with:
           name: devenv
       - name: Cache node_modules
