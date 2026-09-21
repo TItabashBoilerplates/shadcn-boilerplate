@@ -19,7 +19,7 @@
   "devDependencies": {
     "@hey-api/openapi-ts": "0.89.2",
     "@types/bun": "latest",
-    "@types/node": "^22.0.0",
+    "@types/node": "^26.6.1",
     "@workspace/tsc": "workspace:*"
   },
   "peerDependencies": {
