@@ -113,30 +113,6 @@ variable "vercel_team_id" {
   default     = ""
 }
 
-variable "vercel_web_root_directory" {
-  description = "web（Next.js）project の Root Directory。"
-  type        = string
-  default     = "frontend/apps/web"
-}
-
-variable "vercel_backend_project" {
-  description = <<-EOT
-    backend（FastAPI コンテナ）の Vercel project 名。web（app_name）と衝突しない別名にする。
-    空にすると "<app_name>-api" になる。
-  EOT
-  type        = string
-  default     = ""
-}
-
-variable "vercel_backend_root_directory" {
-  description = <<-EOT
-    backend project の Root Directory。backend-py/vercel.json の services が
-    apps/<app>/Dockerfile.vercel を指すため、uv workspace ルートを指定する。
-  EOT
-  type        = string
-  default     = "backend-py"
-}
-
 variable "vercel_production_branch" {
   description = "production デプロイを起動する branch。"
   type        = string
@@ -146,7 +122,10 @@ variable "vercel_production_branch" {
 variable "backend_urls" {
   description = <<-EOT
     環境ごとの backend 公開 URL（キー: dev / staging / production）。
-    未指定の環境は NEXT_PUBLIC_BACKEND_PY_URL / EXPO_PUBLIC_BACKEND_PY_URL を配線しない。
+    backend は web と同じ Vercel project の service なので、値は**アプリの公開ドメイン**
+    （例: https://myapp.vercel.app。FastAPI は /api/* で受ける）。
+    Vercel の外にいる消費者（mobile / desktop）向けに Doppler の NEXT_PUBLIC_BACKEND_PY_URL /
+    EXPO_PUBLIC_BACKEND_PY_URL へ配る。未指定の環境は配線しない。
     ⚠️ preview の URL（<project>-git-<branch>-<slug>.vercel.app）は team slug に依存し
        Terraform からは確定できないため、必要なら明示指定する。
   EOT

@@ -51,7 +51,7 @@ from pathlib import Path
 import pytest
 
 # backend-py/apps/api/tests/ から 3 つ上が uv workspace ルート
-# ( = Vercel backend project の Root Directory )
+# ( = services.api の root。ビルドコンテキストも Dockerfile のあるここになる )
 WORKSPACE_ROOT = Path(__file__).resolve().parents[3]
 # vercel.json はリポジトリルートに 1 つだけ。service の root もリポジトリルート基準
 REPO_ROOT = WORKSPACE_ROOT.parent

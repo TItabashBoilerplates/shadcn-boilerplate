@@ -33,6 +33,14 @@ backend-py/
     └── core/src/core/              # 共有: logging.py / exceptions.py / supabase_client.py
 ```
 
+## Routing（Vercel の Services）
+
+**新しいルーターは `APIRouter(prefix="/api/...")` の下に作る。** api は web と同じ Vercel project の
+service で、リポジトリルートの `vercel.json` の rewrite が `/api/*`（と `/healthcheck` / `/openapi.json`）
+だけを api に送り、残りは web に送る。`/api` の外に生やしたルートはローカルでは動くのに
+**本番では web に吸われて 404** になる（`apps/api/tests/test_vercel_routing.py` が検査）。
+詳細は `.claude/skills/vercel-deploy/`。
+
 ## Responsibility Separation
 
 - **Controllers**: HTTP layer only, no business logic

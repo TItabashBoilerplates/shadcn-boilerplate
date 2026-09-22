@@ -3,7 +3,7 @@
 `backend-py` のような **コンテナで動くサービス**を Vercel に載せるときの落とし穴。
 frontend（Next.js）のデプロイ手順は `SKILL.md` 側で、ここは**コンテナ固有**。
 
-対象: `backend-py/vercel.json` の `services` + `backend-py/` 直下の Dockerfile。
+対象: リポジトリルートの `vercel.json` の `services.api` + `backend-py/` 直下の Dockerfile。
 
 **このファイルは「ビルドは通ったのに起動しない / 500 になる」側の正本。**
 配置・ファイル名・ビルドコンテキスト・モノレポで複数サービスを出す方法は
@@ -47,7 +47,7 @@ ERROR: [Errno 13] error while attempting to bind on address ('0.0.0.0', 80): per
 1. `Dockerfile.vercel` の `ENV PORT=8080` / `EXPOSE 8080`。
 2. **Vercel project の環境変数 `PORT` も 8080 にする**。片方だけだと
    Vercel は 80 へ流し、コンテナは 8080 で待つ（= 500 のまま）。
-   → `scripts/infra/vercel.sh` の `push_container_port` が Dockerfile の値を読んで自動投入する。
+   → `scripts/infra/vercel.sh` の `push_container_port` / `vercel-deploy` / Terraform が Dockerfile の値を読んで自動投入する。
 
 > root で動かして 80 のままにする選択もあるが、非 root は落としたくないので
 > **本リポジトリは 8080 に寄せる**。
@@ -164,7 +164,7 @@ curl -N -H "Authorization: Bearer $VERCEL_TOKEN" \
 
 | # | 確認 |
 |---|---|
-| 1 | Dockerfile を **workspace ルート直下に blessed 名で**作り（[services-container.md](services-container.md)）、`vercel.json` の `services` と `rewrites` に足したか |
+| 1 | Dockerfile を **workspace ルート直下に blessed 名で**作り（[services-container.md](services-container.md)）、ルートの `vercel.json` の `services` と `rewrites`（catch-all より前）に足したか |
 | 2 | `services.<app>.runtime = "container"` を明示したか（無いと runtime 自動検出で entrypoint を `module:app` と誤解する） |
 | 3 | `0.0.0.0` で listen しているか（`127.0.0.1` はトラフィックを受けられない） |
 | 4 | ポートを `$PORT` から読んでいるか。非 root なら **1024 以上**か |
@@ -188,7 +188,7 @@ curl -N -H "Authorization: Bearer $VERCEL_TOKEN" \
 | 課金 | Vercel Functions の Active CPU 課金（I/O 待ち中は課金されない） |
 | 非対応 | **Secure Compute / Static IP はコンテナでは未対応**（IP 許可制の外部連携は要検討） |
 | 権限 | Services / Container Images は **Permissions Required** 機能。アカウント側で有効か確認 |
-| ビルド | Root Directory = `backend-py`、`services.<app>.root = "."`、`entrypoint` は `root` からの相対 |
+| ビルド | project の Root Directory = 空（リポジトリルート）、`services.api.root = "backend-py"`、`entrypoint` は `root` からの相対。コンテキストは Dockerfile のある `backend-py/` |
 
 ---
 

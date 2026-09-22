@@ -34,13 +34,12 @@ def _rewrites() -> list[dict[str, Any]]:
 
 def _service_for(path: str) -> str | None:
     """Return the service of the first rewrite whose source matches (first wins)."""
-    for rule in _rewrites():
-        if re.fullmatch(str(rule["source"]), path):
-            destination = rule.get("destination")
-            if isinstance(destination, dict):
-                return str(destination.get("service"))
-            return None
-    return None
+    hit = next(
+        (rule for rule in _rewrites() if re.fullmatch(str(rule["source"]), path)),
+        None,
+    )
+    destination = (hit or {}).get("destination")
+    return str(destination["service"]) if isinstance(destination, dict) else None
 
 
 def _concrete(path: str) -> str:
@@ -58,9 +57,7 @@ def _routes() -> list[str]:
 
     from api.app import app
 
-    return sorted(
-        {route.path for route in app.routes if isinstance(route, APIRoute)}
-    )
+    return sorted({route.path for route in app.routes if isinstance(route, APIRoute)})
 
 
 def test_routes_are_collected() -> None:

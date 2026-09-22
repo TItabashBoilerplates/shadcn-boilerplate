@@ -41,13 +41,15 @@ supabase_instance_size   = "micro"
 # 個人アカウントなら空文字のまま。
 vercel_team_id = ""
 
-# backend の Vercel project 名（省略すると "<app_name>-api"）。
-# vercel_backend_project = "myapp-api"
+# Vercel project は 1 つ（名前 = app_name）。web と backend-py はリポジトリルートの
+# vercel.json の services として同じ project・同じドメインに載る。
 
-# backend の公開 URL。preview の URL は team slug 依存で Terraform からは確定できないため、
-# 必要な環境だけ実 URL を明示する（未指定の環境は BACKEND_PY_URL を配線しない）。
+# backend の公開 URL = アプリの公開ドメイン（FastAPI は /api/* で受ける）。
+# mobile / desktop 向けに Doppler へ配る。web は同一オリジン + service binding なので使わない。
+# preview の URL は team slug 依存で Terraform からは確定できないため、
+# 必要な環境だけ実 URL を明示する（未指定の環境は配線しない）。
 backend_urls = {
-  production = "https://myapp-api.vercel.app"
+  production = "https://myapp.vercel.app"
 }
 
 # ── Doppler ───────────────────────────────────────────────────────────────

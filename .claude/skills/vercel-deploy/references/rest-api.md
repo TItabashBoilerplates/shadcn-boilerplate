@@ -29,6 +29,18 @@ curl -fsS "https://api.vercel.com/v9/projects?teamId=$VERCEL_TEAM_ID" \
 
 ## project 作成の body
 
+メインの project（ルートの `vercel.json` の services）は `framework` / `rootDirectory` を **null**:
+
+```json
+{
+  "name": "myapp",
+  "framework": null,
+  "gitRepository": { "type": "github", "repo": "owner/repo" }
+}
+```
+
+独立した別 project のアプリ（framework モード）:
+
 ```json
 {
   "name": "myapp-lp",
@@ -47,8 +59,9 @@ curl -fsS "https://api.vercel.com/v9/projects?teamId=$VERCEL_TEAM_ID" \
 | `gitRepository.repo` | `"owner/repo"` 形式 |
 | `buildCommand` / `installCommand` | nullable・最大 256 文字。`null` = 自動検出 |
 
-> 本リポジトリでは build/install は **`<app>/vercel.json` 側**に書く（`cd ../..` でルートへ戻す）。
-> API 側では指定しない — 2 か所に散らすと drift する。
+> 本リポジトリでは build/install は **`vercel.json` 側**に書く（メインの project はルートの
+> `vercel.json` の各 service、別 project は `<app>/vercel.json`。どちらも `cd ../..` で
+> bun workspace ルートへ戻す）。API 側では指定しない — 2 か所に散らすと drift する。
 
 ## env 作成の body
 

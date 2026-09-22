@@ -22,8 +22,18 @@ locals {
   # production は Supabase project 本体。それ以外は persistent branch として作る。
   branch_environments = { for k, v in local.environments : k => v if k != "production" }
 
-  vercel_backend_project = var.vercel_backend_project != "" ? var.vercel_backend_project : "${var.app_name}-api"
-  doppler_project        = var.doppler_project != "" ? var.doppler_project : var.app_name
+  doppler_project = var.doppler_project != "" ? var.doppler_project : var.app_name
+
+  # backend_urls を指定していない環境（mobile / desktop 向けの URL が Doppler に入らない）。
+  unwired_backend_environments = [for k in keys(local.environments) : k if lookup(var.backend_urls, k, "") == ""]
+
+  # コンテナの listen ポートは Dockerfile の `ENV PORT=` が正本（Vercel の env `PORT` を同じ値にする）。
+  # コメント行にも "PORT=" が書かれているので、コメントを落としてから拾う。
+  container_dockerfile = "${path.root}/../backend-py/Dockerfile.vercel"
+  container_port = tonumber(one(distinct(flatten([
+    for line in split("\n", file(local.container_dockerfile)) :
+    regexall("\\bPORT=([0-9]+)", line) if !startswith(trimspace(line), "#")
+  ]))))
 }
 
 module "github" {
@@ -62,10 +72,9 @@ module "supabase" {
 module "vercel" {
   source = "./modules/vercel"
 
-  web_project_name       = var.app_name
-  web_root_directory     = var.vercel_web_root_directory
-  backend_project_name   = local.vercel_backend_project
-  backend_root_directory = var.vercel_backend_root_directory
+  # web と backend-py は同じ project の services（リポジトリルートの vercel.json が正本）。
+  project_name   = var.app_name
+  container_port = local.container_port
 
   github_repo       = "${var.github_owner}/${var.github_repository}"
   production_branch = var.vercel_production_branch
@@ -77,7 +86,6 @@ module "vercel" {
   # 注入キー名を自分で決めるので「新体系/旧体系でキー名が揺れる」問題も起きない。
   supabase_urls             = module.supabase.api_urls
   supabase_publishable_keys = module.supabase.publishable_keys
-  backend_urls              = var.backend_urls
 }
 
 module "doppler" {
@@ -89,7 +97,7 @@ module "doppler" {
 
   manage_generated_secrets = var.manage_generated_secrets
 
-  # Vercel の外にいる消費者（Expo mobile / Drizzle migration）向けの生成値だけを配る。
+  # Vercel の外にいる消費者（Expo mobile / desktop / Drizzle migration）向けの生成値だけを配る。
   # Vercel 上の web / backend へは module.vercel が直接 env を書くので Doppler を経由しない。
   migrate_postgres_urls     = module.supabase.migrate_postgres_urls
   migrate_postgres_url_envs = module.supabase.migrate_postgres_url_envs

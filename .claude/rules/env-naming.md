@@ -57,7 +57,7 @@ sync 全体が予約値違反で失敗する**（一部の secret だけ届か�
 
 | 実行環境 | Supabase の値の入手経路 | エージェントがやること |
 |---|---|---|
-| **Vercel（web / backend）** | **Vercel Marketplace の Supabase 連携（Settings > Integrations > Supabase > *Connect Account*）が、接続済み Vercel project の Environment Variables に自動注入する** | **何もしない**（Doppler にも `.env` にも書かない） |
+| **Vercel（web / backend。同じ project の services）** | **Vercel Marketplace の Supabase 連携（Settings > Integrations > Supabase > *Connect Account*）が、接続済み Vercel project の Environment Variables に自動注入する** | **何もしない**（Doppler にも `.env` にも書かない） |
 | **Supabase Edge Functions** | Supabase platform が **default secrets** として自動提供（`SUPABASE_URL` / `SUPABASE_DB_URL` / `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` / `SUPABASE_JWKS` / 旧 `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY`） | **何もしない**（`Deno.env.get()` で読むだけ） |
 | **ローカル開発** | `env/{backend,frontend}/.env.local`（**ファイル管理・非機密のローカル既定値**） | 既存ファイルを編集。**Doppler 対象外なので prefix 制約もかからない** |
 

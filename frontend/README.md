@@ -439,78 +439,46 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 
 This monorepo is optimized for deployment on Vercel with Turborepo integration.
 
-#### Configuration Files
+#### 構成（1 project + Services）
 
-**`apps/web/vercel.json`** - Vercel configuration for the web app:
+web（Next.js）と backend-py（FastAPI コンテナ）は **1 つの Vercel project** に
+[Services](https://vercel.com/docs/services) として載る。設定の正本は
+**リポジトリルートの `vercel.json`**（`frontend/apps/web/vercel.json` は無い）。
 
-```json
+```jsonc
+// /vercel.json（抜粋）
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "nextjs",
-  "buildCommand": "cd ../.. && turbo build --filter=@workspace/web",
-  "installCommand": "cd ../.. && bun install",
-  "outputDirectory": ".next",
-  "devCommand": "bun run dev"
+  "services": {
+    "web": {
+      "root": "frontend/apps/web",
+      "framework": "nextjs",
+      "installCommand": "cd ../.. && bun install",
+      "buildCommand": "cd ../.. && turbo build --filter=@workspace/web",
+      "bindings": [{ "type": "service", "service": "api", "format": "url", "env": "BACKEND_PY_URL" }]
+    },
+    "api": { "runtime": "container", "root": "backend-py", "entrypoint": "Dockerfile.vercel" }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": { "service": "api" } },
+    { "source": "/(.*)",     "destination": { "service": "web" } }
+  ]
 }
 ```
 
-Key features:
-- **Monorepo build**: Uses Turbo to build only the web app
-- **Bun package manager**: Installs dependencies with Bun
-- **Security headers**: Adds X-Content-Type-Options, X-Frame-Options, etc.
-- **Function timeouts**: Configures max duration for API routes
+- **project 設定**: Framework Preset / Root Directory / Build・Install コマンドは**すべて空**
+  （`infra-bootstrap` / Terraform / `vercel-deploy` が揃える）。
+- **`/api/*` は backend 行き**。web に `app/api/**` の Route Handler を置かない
+  （`src/shared/config/vercel-routing.test.ts` が検査）。
+- **backend の呼び方**: サーバー側は service binding の `BACKEND_PY_URL`、ブラウザ側は相対 URL
+  （`@workspace/api-client` の `resolveBaseUrl`）。Vercel の env に `NEXT_PUBLIC_BACKEND_PY_URL` を入れない。
+- **env**: Supabase の値は Vercel Marketplace の Supabase 連携が注入する。runtime secret は Doppler → Vercel 連携。
 
-> **Note on `devCommand`**: `vercel.json` の `"devCommand": "bun run dev"` は **Vercel 環境専用フック**（Vercel ビルド環境には devenv が存在しないため）。ローカル開発では devenv の `dev-web` script を使用すること。Vercel 側からこのフックが呼ばれるのは `vercel dev` 等の限定的なケースのみで、通常のデプロイ (`buildCommand`) には影響しない。
+#### デプロイ
 
-#### Vercel Project Settings
-
-When creating a new Vercel project, configure the following:
-
-1. **Framework Preset**: Next.js
-2. **Root Directory**: `frontend/apps/web`
-3. **Build Command**: (automatically detected from vercel.json)
-4. **Install Command**: (automatically detected from vercel.json)
-5. **Output Directory**: (automatically detected from vercel.json)
-6. **Node.js Version**: 20.x or later (recommended: 22.x)
-
-#### Environment Variables
-
-Set the following environment variables in Vercel project settings:
-
-**Required**:
-- `NEXT_PUBLIC_SUPABASE_URL` - Your Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Your Supabase anonymous key
-
-**Optional**:
-- `NEXT_PUBLIC_API_URL` - Backend API URL (if using separate backend)
-
-#### Deployment Workflow
-
-1. **Connect Repository**: Link your Git repository to Vercel
-2. **Configure Settings**: Set Root Directory to `frontend/apps/web`
-3. **Add Environment Variables**: Configure Supabase credentials
-4. **Deploy**: Push to main branch or trigger manual deployment
-
-**Automatic Deployments**:
-- **Production**: Deployments from `main` branch
-- **Preview**: Deployments from `develop` or `staging` branches
-- **Ignored**: Branches starting with `internal-*`
-
-#### Vercel CLI Deployment
-
-`vercel` は devenv script として提供済み（実体は `bunx vercel`）なので、グローバルインストールは不要。
-
-```bash
-# Login to Vercel
-vercel login
-
-# Deploy to preview
-cd frontend/apps/web
-vercel
-
-# Deploy to production
-vercel --prod
-```
+通常は `git push`（`main` = Production / `develop`・`staging` = Preview）。手で出すときは
+`vercel` を直接叩かず **`vercel-deploy`** を使う（`--dry-run` で services の検査と計画だけ）。
+手順と落とし穴は [`.claude/skills/vercel-deploy/`](../.claude/skills/vercel-deploy/SKILL.md) と
+[`docs/deployment/README.md`](../docs/deployment/README.md)。
 
 #### Monorepo Considerations
 
@@ -524,7 +492,7 @@ vercel --prod
 1. **Test Locally**: Run `build-frontend` before pushing
 2. **Check Types**: Run `type-check-frontend` to catch type errors
 3. **Lint Code**: Run `lint-frontend` to ensure code quality
-4. **Full CI Gate**: Run `ci-check` (= `devenv test`) to verify all projects
+4. **Full CI Gate**: Run `ci-check` to verify all projects
 5. **Preview Deployments**: Test changes in preview environments before merging
 6. **Environment Variables**: Never commit secrets, use Vercel environment variables
 

@@ -4,7 +4,19 @@
  * @module shared/api/backend
  */
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_PY_URL || 'http://localhost:4040'
+/**
+ * backend-py のベース URL。
+ *
+ * このモジュールは **サーバー側専用**（Server Component / Server Action）なので、
+ * Vercel の service binding が注入する `BACKEND_PY_URL`（絶対 URL・deployment 対応・
+ * 内部通信）を最優先で使う。リポジトリルートの `vercel.json` で web → api の binding を
+ * 宣言している。ローカル開発など binding が無い環境は `NEXT_PUBLIC_BACKEND_PY_URL` に
+ * フォールバックする。
+ *
+ * ⚠️ サーバー側の fetch は相対 URL を解決できないので、ここは必ず絶対 URL にすること。
+ */
+const BACKEND_URL =
+  process.env.BACKEND_PY_URL || process.env.NEXT_PUBLIC_BACKEND_PY_URL || 'http://localhost:4040'
 
 /**
  * バックエンドAPIレスポンスの型

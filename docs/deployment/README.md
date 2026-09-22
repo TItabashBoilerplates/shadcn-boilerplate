@@ -4,11 +4,12 @@ Vercel（Web + FastAPI backend）/ Supabase（DB・Edge Functions・config）を
 ネイティブ Git 連携**で `git push` デプロイし、外部プロジェクトの初期構築を
 `infra-bootstrap`（scriptable な部分）＋一度きりの手動 dashboard 設定で行うための手順。
 
-> **backend も Vercel（Services のコンテナサービス）**: backend-py は uv workspace
-> （apps/api, apps/mcp, packages/core）。**Dockerfile は workspace ルートの
-> `backend-py/` 直下に blessed 名で置き**、`backend-py/vercel.json` の `services` から
-> entrypoint として参照する。web(Next.js) とは **別の Vercel project**（Root Directory = `backend-py`）で、
-> デプロイは `vercel-deploy backend-py`。
+> **Vercel project は 1 つ（Services）**: web(Next.js) と backend-py（uv workspace の FastAPI コンテナ）は
+> **リポジトリルートの `vercel.json` の `services`** として同じ project・同じドメインに載る
+> （project 側の Framework / Root Directory / Build コマンドはすべて空）。backend は `/api/*`
+> （+ `/healthcheck` / `/openapi.json`）で受け、web のサーバー側からは service binding の
+> `BACKEND_PY_URL` で呼ぶ。**Dockerfile は workspace ルートの `backend-py/` 直下に blessed 名で置き**、
+> `services.api` の entrypoint として参照する。手動デプロイは `vercel-deploy`（引数なし）。
 > entrypoint に使える名前は `Dockerfile.vercel` / `Containerfile.vercel` / `Dockerfile` /
 > `Containerfile` の 4 つだけで（接尾辞つきは不可）、**ビルドコンテキストは Dockerfile の
 > あるディレクトリに固定**（`root` では変えられない）。結果として
@@ -50,15 +51,15 @@ Vercel（Web + FastAPI backend）/ Supabase（DB・Edge Functions・config）を
         ┌──────────────────────────────┬───────────────────────┬──────────────────────────┐
         ▼                              ▼                       ▼                          ▼
   Vercel GitHub App webhook        Supabase ネイティブ      .github/workflows/migrate.yml
-  ├─ web project (turbo build)     GitHub Integration       └─ db:migrate-deploy (Drizzle)
-  └─ backend project              config同期 + Functions       dev/stg=自動
-     (Dockerfile.vercel コンテナ)  + Storage buckets            production=承認ゲート
+  1 project（/vercel.json）        GitHub Integration       └─ db:migrate-deploy (Drizzle)
+  ├─ service web (turbo build)     config同期 + Functions       dev/stg=自動
+  └─ service api (Dockerfile.vercel) + Storage buckets          production=承認ゲート
         └────────────────── Doppler native sync (secrets) ─────────────────┘
 ```
 
 **branch → env マッピング**
 
-| branch | profile / ENV | Doppler config | Vercel (web / backend) | Supabase（1 project + branch） |
+| branch | profile / ENV | Doppler config | Vercel（1 project） | Supabase（1 project + branch） |
 |---|---|---|---|---|
 | `develop` | dev | `dev` | Preview | persistent branch `develop` |
 | `staging` | staging | `stg` | Preview | persistent branch `staging` |
@@ -85,19 +86,19 @@ CLI では代替できない前提づくり。
    ⚠️ **制約**: container Services では **Static IP / Secure Compute が非対応**。backend の egress 固定 IP を要求する
    外部サービス（IP 許可リスト等）がある場合は要注意（Supabase 接続は固定 IP 不要なので通常は問題なし）。
 2. **各 PaaS の GitHub 連携を dashboard で認可**（対象は単一 repo `owner/repo`）:
-   - **Vercel**: GitHub App を install（repo を許可）。web / backend の 2 project がこの repo を監視する。
+   - **Vercel**: GitHub App を install（repo を許可）。1 project（web + api の services）がこの repo を監視する。
    - **Supabase**: **1 project**（独立所有）の *Project Settings > Integrations > Authorize GitHub* で Branching を有効化。
      - **Working directory** = `.`（`supabase/` が repo ルート直下のため）
      - **"Deploy to production"** を有効（production branch = `main`）
      - staging/develop の persistent branch は Phase 1 の `infra-bootstrap`(supabase) が作成する。
      - ⚠️ persistent branch は long-lived＝常時 compute 課金（Micro 約 $0.0134/h, Spend Cap 対象外）。
        develop を常時必要としないなら PR時のみの preview 運用も検討。
-   - **Vercel ⇄ Supabase（Marketplace Connect Account）**: **web / backend の両 Vercel project** で
+   - **Vercel ⇄ Supabase（Marketplace Connect Account）**: **アプリの Vercel project** で
      *Settings > Integrations > Browse Marketplace > Supabase > **Connect Account*** から、
      **上で作った独立 Supabase を接続**する（Native の「新規作成」ではなく **Connect**。
      `vercel integration add supabase` でも可）。**外部で作った Supabase を Connect した場合も env vars は
      同期される**（[Vercel Marketplace: Supabase](https://vercel.com/marketplace/supabase)）。
-     **backend も Vercel project（Services）なので同じ経路で賄える** → Supabase の値を Doppler で配る
+     **backend も同じ project の service なので、project の env がそのまま届く** → Supabase の値を Doppler で配る
      必要は無い（`.claude/rules/env-naming.md`）。
      - 注入される変数（公式・確定）: `POSTGRES_URL` / `POSTGRES_PRISMA_URL` / `POSTGRES_URL_NON_POOLING` /
        `POSTGRES_USER` / `POSTGRES_HOST` / `POSTGRES_PASSWORD` / `POSTGRES_DATABASE` / `SUPABASE_URL` /
@@ -108,7 +109,7 @@ CLI では代替できない前提づくり。
      - 旧 `anon` / `service_role` 名で入るのは **Marketplace 以前の旧 Integration**。混同しないこと。
        万一ズレた場合のみ **Vercel 側で別名の env var を追加**して合わせる（Doppler には戻さない）。
 3. **API トークン発行**（値はチャット / コミットに出さない）:
-   - `VERCEL_TOKEN`（Vercel Full Access。web / backend 両 project の作成・env 設定・domain 取得に使う）
+   - `VERCEL_TOKEN`（Vercel Full Access。project の作成・env 設定・domain 取得に使う）
    - `SUPABASE_ACCESS_TOKEN`（Supabase PAT）/ `SUPABASE_DB_PASSWORD`（単一 project の DB パスワード）
    - `GH_TOKEN`（または `gh auth login` 済み）
    - これらを **Doppler の bootstrap 用 config** に投入（doppler MCP / dashboard）。
@@ -146,15 +147,15 @@ infra-bootstrap supabase github # 一部だけ再実行も可
 |---|---|
 | `doppler` | project + config(dev/stg/prd) の存在保証 |
 | `supabase` | **1 project 作成**（ref を `.outputs`）＋ **persistent branch(staging/develop)** を Management API で作成 |
-| `vercel` | **web + backend の 2 project** 作成 + repo 接続 + rootDirectory（web=`frontend/apps/web` / backend=`backend-py`）+ **静的な**非機密 env（REST API, upsert） |
+| `vercel` | **1 project** 作成 + repo 接続 + Root Directory / framework を空（null）に保証 + `PORT`（Dockerfile から）+ **静的な**非機密 env（REST API, upsert） |
 | `github` | environment(dev/staging/production) + **production 承認ゲート** + env secret の同期状況チェック |
-| `wire` | **Vercel 外の消費者向けの生成値を Doppler に格納**（migration 用 `MIGRATE_POSTGRES_URL` / mobile 用 `EXPO_PUBLIC_*`）＋ backend(Vercel) endpoint を Vercel(web) にも直接 set。Supabase の値は Marketplace 任せで扱わない |
+| `wire` | **Vercel 外の消費者向けの生成値を Doppler に格納**（migration 用 `MIGRATE_POSTGRES_URL` / mobile 用 `EXPO_PUBLIC_*` / mobile・desktop 用の backend URL）。Supabase の値は Marketplace 任せで扱わない |
 
 > 出力された `scripts/infra/.outputs`（project ref / URL。非機密）は wire の入力に使う。
 
 ### 生成値の自動配線（手動管理しない）
 
-**所有/配線モデル（ユーザー決定）**: Supabase は独立所有。**web / backend はどちらも Vercel project**（backend は Vercel Services のコンテナ）なので、**両方に Marketplace「Connect Account」を張れば Supabase env は Vercel 側へ自動注入**される。したがって **`wire` は Supabase の値を一切扱わない**。`wire` が Doppler に入れるのは「**Vercel の外にいる消費者**が必要とする値」だけ（外部 API キーは対象外＝ユーザーが Doppler に直接投入）。
+**所有/配線モデル（ユーザー決定）**: Supabase は独立所有。**web / backend は同じ 1 つの Vercel project の services**（backend はコンテナ）なので、**その project に Marketplace「Connect Account」を張れば Supabase env は両 service へ自動注入**される。したがって **`wire` は Supabase の値を一切扱わない**。`wire` が Doppler に入れるのは「**Vercel の外にいる消費者**が必要とする値」だけ（外部 API キーは対象外＝ユーザーが Doppler に直接投入）。
 
 > ⚠️ **`SUPABASE_` / `VERCEL_` / `GITHUB_` prefix のキーは Doppler に登録禁止**（各 PF の予約名前空間 →
 > sync が予約値違反で落ちる）。詳細は `.claude/rules/env-naming.md`。
@@ -168,10 +169,10 @@ infra-bootstrap supabase github # 一部だけ再実行も可
 > （`.claude/rules/env-naming.md` §2）。migration は session pooler でなければ
 > prepared statement が使えず落ちる**別の値**なので、キー名で区別する。
 | `EXPO_PUBLIC_SUPABASE_URL` / `..._PUBLISHABLE_KEY` | project本体=`api-keys`＋`https://<ref>.supabase.co` / branch=`branches get -o env` | mobile(EAS) |
-| `NEXT_PUBLIC_BACKEND_PY_URL` / `EXPO_PUBLIC_BACKEND_PY_URL` | backend(Vercel) project の公開ドメイン（本番=project domain、preview=`<project>-git-<branch>-<slug>.vercel.app`） | web / mobile |
+| `NEXT_PUBLIC_BACKEND_PY_URL` / `EXPO_PUBLIC_BACKEND_PY_URL` | アプリの Vercel project の公開ドメイン（backend は同じドメインの `/api/*`。本番=project domain、preview=`<project>-git-<branch>-<slug>.vercel.app`） | mobile / desktop（**Vercel 上の web は使わない**） |
 
 配布経路:
-- **Vercel(web) / Vercel(backend) の Supabase env** … **Marketplace「Connect Account」が自動注入**
+- **Vercel（web / api service）の Supabase env** … **Marketplace「Connect Account」が自動注入**
   （`SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SECRET_KEY` / `NEXT_PUBLIC_SUPABASE_*` /
   `POSTGRES_*`）。**Doppler にも `wire` にも持たせない**（二重管理の禁止）。
   - ⚠️ 注入されるキー名は新体系（publishable/secret）／旧体系（anon/service_role）で揺れる。
@@ -179,7 +180,7 @@ infra-bootstrap supabase github # 一部だけ再実行も可
     （web: `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`、
     backend: `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY`）と一致させる。ズレていれば
     **Vercel 側で別名を追加**して合わせる（Doppler には戻さない）。
-- **Vercel(web) の backend endpoint** … Marketplace の管轄外なので `wire` が `NEXT_PUBLIC_BACKEND_PY_URL` を直接 set。
+- **Vercel 上の web → backend** … **env では配らない**。ブラウザ側は同一オリジンの相対 URL、サーバー側はルートの `vercel.json` の service binding が注入する `BACKEND_PY_URL`。Vercel に `NEXT_PUBLIC_BACKEND_PY_URL` を入れると preview の web が別環境の api を叩くので**入れない**。
 - **migration(GitHub Actions)** … Doppler→GitHub ネイティブ sync で GitHub Environment secrets に届いた `MIGRATE_POSTGRES_URL` を job env で受け取る（Actions 内で doppler CLI は使わない）。
   - ⚠️ **接続先は pooler の session mode（`*.pooler.supabase.com:5432`）でなければならない。**
     GitHub-hosted runner は **IPv4 のみ**で、Supabase の直結エンドポイント（`db.<ref>.supabase.co`）は
@@ -246,12 +247,13 @@ git push origin main       # → prd:  各 PaaS 反映 + migrate は GitHub で�
 
 ### アプリを 1 つ後から Vercel へ足す / 手で本番へ出す
 
-`infra-bootstrap` は web + backend の 2 project を固定で作る初期構築用。その後で
-`frontend/apps/<name>` を増やしたときや、git push を伴わずに本番へ出したいときは
-**`vercel-deploy`** を使う（`config.env` は不要）。
+`infra-bootstrap` はメインの 1 project を作る初期構築用。git push を伴わずに本番へ出したいときや、
+独立した別 project のアプリ（LP 等）を足したいときは **`vercel-deploy`** を使う（`config.env` は不要）。
 
 ```bash
-vercel-deploy frontend/apps/lp --dry-run   # 計画だけ（Vercel へ 1 件も送らない）
+vercel-deploy --dry-run                    # メインの project: services の検査と計画だけ
+vercel-deploy                              # メインの project（web + api）を本番デプロイ
+vercel-deploy frontend/apps/lp --dry-run   # 別 project のアプリ: 計画だけ（Vercel へ 1 件も送らない）
 vercel-deploy frontend/apps/lp             # project 作成（GitHub 連携 + rootDirectory）→ env → デプロイ
 vercel-deploy frontend/apps/lp --no-deploy # project と env だけ。以降の配信は git push に任せる
 ```
@@ -303,10 +305,12 @@ gh run watch   # 承認待ち → GitHub 上で approve すると適用が進む
 - [ ] `infra-bootstrap` を2回流して重複作成が無い（冪等）。secret 値がログに出ない。
 - [ ] Supabase MCP（read-only）で **1 project + persistent branch(staging/develop)** を確認。`.outputs` に ref。
 - [ ] `gh api repos/<owner>/<repo>/environments/production` に required reviewers。
-- [ ] `develop` にダミー commit → Vercel Preview（web + backend）が green。backend の `/healthcheck` が 200。
+- [ ] `develop` にダミー commit → Vercel Preview（web + api）が green。同じドメインの `/healthcheck` が 200。
       **「READY」で終わらせない**（コンテナは起動に失敗しても deployment は READY になる）。
-      `curl -sS -o /dev/null -w '%{http_code}\n' https://<backend-domain>/healthcheck` で実際に叩く。
-- [ ] backend project の env に `PORT`（= Dockerfile の値。既定 8080）が入っている。
+      `curl -sS -o /dev/null -w '%{http_code}\n' https://<domain>/healthcheck` で実際に叩く。
+- [ ] Vercel project の Root Directory / Framework が空で、env に `PORT`（= Dockerfile の値。既定 8080）が入っている。
+      `NEXT_PUBLIC_BACKEND_PY_URL` は入っていない。
+- [ ] 旧構成から移行した場合、旧 backend project を削除した（同じ repo を監視して無駄にビルドが走る）。
 - [ ] `drizzle/schema` 変更を `main` に push → `migrate.yml` が production で**承認待ち**。
 - [ ] 各 PaaS に Doppler 由来 env が反映（Supabase は `supabase secrets list`）。
 - [ ] 既存 CI（`ci.yml`）が非回帰で green。
@@ -318,10 +322,11 @@ gh run watch   # 承認待ち → GitHub 上で approve すると適用が進む
 | 事象 | 対応 |
 |---|---|
 | Vercel preview env が CI でハング | CLI bug #15763。本構成は **REST API** で投入済み（`vercel.sh`）。手動時も API を使う。 |
-| backend project が Dockerfile を検出しない / runtime が違う | ① `services.<app>` に **`"runtime": "container"`** があるか（無いと runtime 自動検出で entrypoint を module:app と誤解する）。② entrypoint の basename が **`Dockerfile.vercel` / `Containerfile.vercel` / `Dockerfile` / `Containerfile`** のいずれかか（接尾辞つきは拒否）。③ その Dockerfile が **`backend-py/` 直下**にあるか（ビルドコンテキストは Dockerfile のあるディレクトリに固定。サブディレクトリに置くと `uv.lock` が見えず落ちる）。④ service を指す **top-level rewrite** があるか（無いと成功のまま 404）。⑤ container Services（Permissions Required 機能）がアカウントで有効か。→ ①〜④は `test-backend-py` と `vercel-deploy backend-py` が事前に検査する。詳細は `docs/_research/2026-08-22-vercel-services-container-build-context.md` |
+| api service が Dockerfile を検出しない / runtime が違う | ① `services.<app>` に **`"runtime": "container"`** があるか（無いと runtime 自動検出で entrypoint を module:app と誤解する）。② entrypoint の basename が **`Dockerfile.vercel` / `Containerfile.vercel` / `Dockerfile` / `Containerfile`** のいずれかか（接尾辞つきは拒否）。③ その Dockerfile が **`backend-py/` 直下**にあるか（ビルドコンテキストは Dockerfile のあるディレクトリに固定。サブディレクトリに置くと `uv.lock` が見えず落ちる）。④ service を指す **top-level rewrite** があるか（無いと成功のまま 404）。⑤ container Services（Permissions Required 機能）がアカウントで有効か。⑥ project の Root Directory が空か（残っているとルートの `vercel.json` が読まれない）。→ ①〜④は `test-backend-py` と `vercel-deploy` が事前に検査する。詳細は `docs/_research/2026-08-22-vercel-services-container-build-context.md` |
 | backend が 500 / `INTERNAL_FUNCTION_INVOCATION_FAILED`（デプロイは READY） | **コンテナが起動する前に死んでいる**。①非 root コンテナが特権ポート（Vercel 既定の 80）を bind できない ②`CMD` が `$PATH` 解決に依存して exec に失敗、の 2 つが定番。**どちらもローカルの `docker run` では再現しない**。本リポジトリは `PORT=8080` + `CMD ["/app/.venv/bin/api"]` で回避済みで、`test_vercel_container_contract.py` が CI で検査する。再現手順と切り分けは `.claude/skills/vercel-deploy/references/containers.md`。 |
-| backend が 502 / タイムアウト | サーバが `0.0.0.0:$PORT` で listen しているか、**Vercel project の env `PORT` がコンテナの値（8080）と一致**しているかを確認（`infra-bootstrap vercel` / `vercel-deploy backend-py` が自動投入する）。Doppler→Vercel(backend) で外部 API キーが、Marketplace 連携で `SUPABASE_URL` / `POSTGRES_URL` が届いているかも確認。 |
+| backend が 502 / タイムアウト | サーバが `0.0.0.0:$PORT` で listen しているか、**Vercel project の env `PORT` がコンテナの値（8080）と一致**しているかを確認（`infra-bootstrap vercel` / `vercel-deploy` / Terraform が自動投入する）。Doppler→Vercel で外部 API キーが、Marketplace 連携で `SUPABASE_URL` / `POSTGRES_URL` が届いているかも確認。 |
 | ランタイムログが空で原因が分からない | パスに projectId が要る: `GET /v1/projects/{projectId}/deployments/{deploymentId}/runtime-logs`。**空 = 正常ではない**（起動前に死んだサイン）。dashboard の Project > Logs が最短。 |
+| FastAPI のルートが本番だけ 404（web の HTML が返る） | `/api` の外にルートがある、または rewrites の catch-all が上にある。ルーターは `APIRouter(prefix="/api/...")`（`test_vercel_routing.py` が検査） |
 | `wire` が backend の preview URL を取れない | team/personal の slug 取得に失敗している可能性。`VERCEL_TEAM_ID` を確認（個人アカウントは空）。best-effort のため warn のみで継続する。 |
 | persistent branch 作成 API が失敗 | project の GitHub Integration(Branching) が dashboard で有効か確認（Phase 0）。CLI の git 紐付けフラグは `supabase branches create --help` で確認、確実なのは Management API の `git_branch`。 |
 | branch の DB 接続が分からない | Dashboard の *Connect > Session pooler*（`*.pooler.supabase.com:5432`）を使う。`supabase --experimental branches get <branch> -o env` は **pooler の host を返さない**（直結 = IPv6 のみ。supabase/cli#4012）ので、CI 用の値としてそのまま使わない。 |

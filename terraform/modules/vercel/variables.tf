@@ -1,25 +1,10 @@
-variable "web_project_name" {
-  description = "web（Next.js）の Vercel project 名。"
-  type        = string
-}
-
-variable "web_root_directory" {
-  description = "web project の Root Directory。"
-  type        = string
-}
-
-variable "backend_project_name" {
-  description = "backend（FastAPI コンテナ）の Vercel project 名。"
-  type        = string
-}
-
-variable "backend_root_directory" {
-  description = "backend project の Root Directory。"
+variable "project_name" {
+  description = "Vercel project 名（web と backend-py の services を 1 つに載せる）。"
   type        = string
 }
 
 variable "github_repo" {
-  description = "owner/repo 形式。両 project がこの repo を監視する。"
+  description = "owner/repo 形式。project がこの repo を監視する。"
   type        = string
 }
 
@@ -48,8 +33,12 @@ variable "supabase_publishable_keys" {
   sensitive   = true
 }
 
-variable "backend_urls" {
-  description = "環境名 → backend の公開 URL。未指定の環境は配線しない。"
-  type        = map(string)
-  default     = {}
+variable "container_port" {
+  description = "コンテナ service の listen ポート（Dockerfile の ENV PORT と同じ値。1024 以上）。"
+  type        = number
+
+  validation {
+    condition     = var.container_port >= 1024
+    error_message = "非 root コンテナは 1024 未満を bind できない。Dockerfile の ENV PORT を確認すること。"
+  }
 }
