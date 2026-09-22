@@ -1331,11 +1331,11 @@ in
       description = "Terraform validate（構文・型・参照の静的検証、cached）";
     };
 
-    # frontend/apps/<name> を Vercel project 化（GitHub 連携 + rootDirectory）してデプロイする。
-    # infra-bootstrap（web + backend を固定で作る一括プロビジョニング）とは別で、
-    # **アプリを 1 つ後から足す / 手で本番へ出す**ための ad-hoc 経路。config.env は不要。
-    #   vercel-deploy                          # frontend/apps/web を本番デプロイ
-    #   vercel-deploy frontend/apps/lp         # 任意のアプリ
+    # Vercel project を用意（GitHub 連携 + Root Directory）してデプロイする。
+    # infra-bootstrap（メインの project を作る一括プロビジョニング）とは別で、
+    # **手で本番へ出す / アプリを後から足す**ための ad-hoc 経路。config.env は不要。
+    #   vercel-deploy                          # メインの project（ルートの vercel.json の services = web + api）
+    #   vercel-deploy frontend/apps/lp         # 独立した別 project のアプリ
     #   vercel-deploy frontend/apps/lp --no-deploy   # project + env だけ（配信は git push）
     # token は VERCEL_TOKEN → `vercel login` 済みの CLI 認証情報、の順で解決する。
     # 手順の詳細・つまずきどころは .claude/skills/vercel-deploy/SKILL.md。
@@ -1986,7 +1986,7 @@ in
   # OCI コンテナイメージ（`devenv container build backend` で生成 = Nix/nix2container で
   # イメージを直接ビルド。**Dockerfile は生成しない**）。
   # Vercel の本番デプロイには使わない: Vercel は git-push でサービスを **自前ビルド**する方式で
-  # （`backend-py/vercel.json` の service = `backend-py/Dockerfile.vercel` をビルド）、ビルド済み
+  # （ルートの `vercel.json` の service `api` = `backend-py/Dockerfile.vercel` をビルド）、ビルド済み
   # イメージを参照する vercel.json フィールドが無いため、Nix イメージを流し込む経路が無い。
   # このイメージはローカルでの OCI 検証や他レジストリ（GHCR / fly.io 等）配布用に残している。
   # backendExec を let-binding で共有することで profile に依存せず参照できる。

@@ -1,0 +1,92 @@
+{
+	"$schema": "https://openapi.vercel.sh/vercel.json",
+	"services": {
+		"web": {
+			"root": "frontend/apps/web",
+			"framework": "nextjs",
+			"installCommand": "cd ../.. && bun install",
+			"buildCommand": "cd ../.. && turbo build --filter=@workspace/web",
+			"outputDirectory": ".next",
+			"devCommand": "bun run dev",
+			"ignoreCommand": "git diff --quiet HEAD^ HEAD ../../",
+			"functions": {
+				"app/**/*.tsx": {
+					"maxDuration": 10
+				},
+				"app/**/route.ts": {
+					"maxDuration": 30
+				}
+			},
+			"bindings": [
+				{
+					"type": "service",
+					"service": "api",
+					"format": "url",
+					"env": "BACKEND_PY_URL"
+				}
+			]
+		},
+		"api": {
+			"runtime": "container",
+			"root": "backend-py",
+			"entrypoint": "Dockerfile.vercel",
+			"ignoreCommand": "git diff --quiet HEAD^ HEAD ."
+		}
+	},
+	"rewrites": [
+		{
+			"source": "/healthcheck",
+			"destination": {
+				"service": "api"
+			}
+		},
+		{
+			"source": "/openapi.json",
+			"destination": {
+				"service": "api"
+			}
+		},
+		{
+			"source": "/api/(.*)",
+			"destination": {
+				"service": "api"
+			}
+		},
+		{
+			"source": "/(.*)",
+			"destination": {
+				"service": "web"
+			}
+		}
+	],
+	"headers": [
+		{
+			"source": "/(.*)",
+			"headers": [
+				{
+					"key": "X-Content-Type-Options",
+					"value": "nosniff"
+				},
+				{
+					"key": "X-Frame-Options",
+					"value": "DENY"
+				},
+				{
+					"key": "X-XSS-Protection",
+					"value": "1; mode=block"
+				},
+				{
+					"key": "Referrer-Policy",
+					"value": "strict-origin-when-cross-origin"
+				}
+			]
+		}
+	],
+	"git": {
+		"deploymentEnabled": {
+			"main": true,
+			"develop": true,
+			"staging": true
+		}
+	}
+}

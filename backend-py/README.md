@@ -268,21 +268,43 @@ import 時に作ると、DB を触らない経路（OpenAPI 生成・テスト�
 
 ### Vercel (Production — Services のコンテナサービス)
 
-**Dockerfile は `backend-py/Dockerfile.vercel`（uv workspace ルート）に 1 つだけ置く。**
-`backend-py/vercel.json` の [`services`](https://vercel.com/docs/functions/container-images) から
-entrypoint として参照し、`rewrites` でパスを振り分ける。
+**web（Next.js）と同じ 1 つの Vercel project に、[Services](https://vercel.com/docs/services) として載せる。**
+設定の正本は**リポジトリルートの `vercel.json`**（project 側の Framework / Root Directory /
+Build コマンドはすべて空）。Dockerfile は `backend-py/Dockerfile.vercel`（uv workspace ルート）に置き、
+`services.api` の entrypoint として参照する。
 
 ```jsonc
-// backend-py/vercel.json
+// /vercel.json（抜粋）
 {
   "services": {
-    // runtime: "container" で Docker イメージとしてビルド（公式 Services 仕様。これが無いと
-    // Vercel が runtime を自動検出し、entrypoint を Dockerfile ではなく module:app と誤解する）。
-    "api": { "runtime": "container", "root": ".", "entrypoint": "Dockerfile.vercel" }
+    "web": { "root": "frontend/apps/web", "framework": "nextjs", /* ... */
+             "bindings": [{ "type": "service", "service": "api", "format": "url", "env": "BACKEND_PY_URL" }] },
+    // runtime: "container" で Docker イメージとしてビルド（これが無いと Vercel が runtime を
+    // 自動検出し、entrypoint を Dockerfile ではなく module:app と誤解する）。
+    "api": { "runtime": "container", "root": "backend-py", "entrypoint": "Dockerfile.vercel" }
   },
-  "rewrites": [{ "source": "/(.*)", "destination": { "service": "api" } }]
+  "rewrites": [
+    { "source": "/healthcheck",  "destination": { "service": "api" } },
+    { "source": "/openapi.json", "destination": { "service": "api" } },
+    { "source": "/api/(.*)",     "destination": { "service": "api" } },
+    { "source": "/(.*)",         "destination": { "service": "web" } }
+  ]
 }
 ```
+
+**FastAPI の新しいルーターは必ず `APIRouter(prefix="/api/...")` の下に作る。** rewrite は先勝ちで、
+末尾の `/(.*)` は web 行き。`/users` のように `/api` の外へ生やしたルートは、ローカル（別ポートで
+直接叩く）では動くのに**本番では web に吸われて 404** になる。Vercel は接頭辞を外さないので、
+`/api/users` はそのまま `/api/users` として FastAPI に届く。
+`apps/api/tests/test_vercel_routing.py` が全ルートを検査している。
+
+呼び出し側の URL:
+
+| 経路 | 使う URL |
+|---|---|
+| web のサーバー側（Server Component / Server Action） | service binding が注入する `BACKEND_PY_URL`（内部通信。preview では同じ preview の api に向く） |
+| web のブラウザ側 | 相対 URL（同一オリジン） |
+| mobile / desktop / ローカル開発 | `NEXT_PUBLIC_BACKEND_PY_URL` / `EXPO_PUBLIC_BACKEND_PY_URL`（= アプリの公開ドメイン） |
 
 > **重要（この 3 点を外すと、ローカルでは何も起きないまま本番のビルドだけが落ちる）**
 >
@@ -297,12 +319,13 @@ entrypoint として参照し、`rewrites` でパスを振り分ける。
 >    `.vercelignore` でも変えられない。一方 uv 公式は workspace のビルドに
 >    **全 member の `pyproject.toml`** を要求する（無いと `uv.lock` の鮮度を検証できない）。
 >    したがって Dockerfile は **workspace ルートに置くしかない**。
-> 3. Vercel project の **Root Directory は `backend-py`**（`scripts/infra/vercel.sh` が設定する）。
+> 3. Vercel project の **Root Directory はリポジトリルート（空）**。`backend-py` を指すのは
+>    `services.api.root` で、project 設定ではない（`scripts/infra/vercel.sh` / Terraform が空に揃える）。
 >
 > 実測と出典は
 > [`docs/_research/2026-08-22-vercel-services-container-build-context.md`](../docs/_research/2026-08-22-vercel-services-container-build-context.md)。
 > これらは `apps/api/tests/test_vercel_container_config.py` が CI で検査し、
-> `vercel-deploy backend-py` が **Vercel へ 1 件も送る前に**同じ検査で落とす（どちらも消さないこと）。
+> `vercel-deploy` が **Vercel へ 1 件も送る前に**同じ検査で落とす（どちらも消さないこと）。
 
 コンテナ（apps/api）のポイント:
 
@@ -354,25 +377,29 @@ blessed 名が 4 つあるので、**1 つの workspace から最大 4 コンテ
    - `0.0.0.0:$PORT` で listen する（`127.0.0.1` は受けられない）
    - 非 root で動かすなら `ENV PORT` は **1024 以上**（api と同じ 8080 でよい）
    - `CMD` は **絶対パス + exec 形式**（`["/app/.venv/bin/<script>"]`）
-2. `backend-py/vercel.json` に service と rewrite を足す。**rewrite は必須**
-   （service は既定で非公開なので、無いとデプロイは成功しても 404）。
+2. リポジトリルートの `vercel.json` に service と rewrite を足す。**rewrite は必須**
+   （service は既定で非公開なので、無いとデプロイは成功しても 404）。rewrite は先勝ちなので
+   **末尾の `/(.*)` → web より前**に置く。
 
    ```jsonc
    {
      "services": {
-       "api":  { "runtime": "container", "root": ".", "entrypoint": "Dockerfile.vercel" },
-       "mcp":  { "runtime": "container", "root": ".", "entrypoint": "Containerfile.vercel" }
+       "web": { /* ... */ },
+       "api": { "runtime": "container", "root": "backend-py", "entrypoint": "Dockerfile.vercel" },
+       "mcp": { "runtime": "container", "root": "backend-py", "entrypoint": "Containerfile.vercel" }
      },
      "rewrites": [
-       { "source": "/mcp/(.*)", "destination": { "service": "mcp" } },
-       { "source": "/(.*)",     "destination": { "service": "api" } }
+       { "source": "/mcp(.*)",  "destination": { "service": "mcp" } },
+       { "source": "/api/(.*)", "destination": { "service": "api" } },
+       /* ... */
+       { "source": "/(.*)",     "destination": { "service": "web" } }
      ]
    }
    ```
 
 3. `test-backend-py` を通す。`test_vercel_container_config.py`（名前・配置・rewrite）と
    `test_vercel_container_contract.py`（ポート・CMD）が新しい Dockerfile も自動で検査する。
-4. `vercel-deploy backend-py` でデプロイ。provisioning（Root Directory）は変更不要。
+4. push すれば同じ project のデプロイに乗る（手で出すなら `vercel-deploy`）。provisioning は変更不要。
 
 **ポートを api と別の値にしない。** Vercel project の env `PORT` は 1 つしか無く、
 `scripts/infra/vercel.sh` / `vercel-deploy` は entrypoint の Dockerfile から読んだ値を投入する

@@ -1,4 +1,4 @@
-# Vercel Services × コンテナ（backend-py をモノレポのまま出す）
+# Vercel Services × コンテナ（web と backend-py を 1 project に載せる）
 
 > 「backend をデプロイして」「FastAPI を Vercel に出して」「Dockerfile が検出されない」
 > 「ビルドで `uv.lock` が見つからない」「entrypoint が拒否される」「service が 404」
@@ -7,42 +7,75 @@
 **このファイルはビルド（配置・名前・コンテキスト）の正本。**
 「ビルドは通ったのに起動しない / 500 になる」は [containers.md](containers.md) を読む。
 
-Next.js（`frontend/apps/web`）の話ではない。**`vercel.json` の `services` に
-`runtime: "container"` を書いて Dockerfile からコンテナを建てる**構成のガイド。
+**リポジトリルートの `vercel.json` の `services` に web（Next.js）と
+api（`runtime: "container"` で Dockerfile から建てる FastAPI）を並べ、1 つの Vercel project・
+同じドメインで出す**構成のガイド。project 側の Framework / Root Directory / Build コマンドは空。
 
 ---
 
 ## 0. まず結論
 
 ```bash
-vercel-deploy backend-py            # これで通る（--dry-run で計画だけ確認できる）
+vercel-deploy --dry-run             # services の検査と計画（Vercel へ 1 件も送らない）
+vercel-deploy                       # メインの project を本番デプロイ
 ```
 
-`vercel-deploy` は `<app>/vercel.json` を見て **framework モード / container モード**を
-自動判別する。container モードでは、下記の前提を **Vercel へ 1 件も送る前に**検査して落とす。
+`vercel-deploy`（引数なし）はルートの `vercel.json` の services を、下記の前提も含めて
+**Vercel へ 1 件も送る前に**検査して落とす。
 
 ```
-backend-py/                        ← Vercel project の Root Directory
-├── vercel.json
-├── Dockerfile.vercel              → service "api"
-├── .dockerignore                  ← ★ Dockerfile と同じディレクトリでないと読まれない
-├── uv.lock / pyproject.toml
-├── apps/{api,mcp}/
-└── packages/core/
+<repo>/                            ← Vercel project の Root Directory（= 空 / リポジトリルート）
+├── vercel.json                    ← services / rewrites / headers / git の正本
+├── frontend/apps/web/             → service "web"（root。install/build は cd ../.. で frontend/ へ）
+└── backend-py/                    → service "api" の root
+    ├── Dockerfile.vercel          ← entrypoint（ビルドコンテキスト = backend-py/）
+    ├── .dockerignore              ← ★ Dockerfile と同じディレクトリでないと読まれない
+    ├── uv.lock / pyproject.toml
+    ├── apps/{api,mcp}/
+    └── packages/core/
 ```
 
 ```jsonc
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "services": {
-    "api": { "runtime": "container", "root": ".", "entrypoint": "Dockerfile.vercel" }
+    "web": { "root": "frontend/apps/web", "framework": "nextjs", /* install / build / functions */
+             "bindings": [{ "type": "service", "service": "api", "format": "url", "env": "BACKEND_PY_URL" }] },
+    "api": { "runtime": "container", "root": "backend-py", "entrypoint": "Dockerfile.vercel" }
   },
-  "rewrites": [{ "source": "/(.*)", "destination": { "service": "api" } }]
+  "rewrites": [
+    { "source": "/healthcheck",  "destination": { "service": "api" } },
+    { "source": "/openapi.json", "destination": { "service": "api" } },
+    { "source": "/api/(.*)",     "destination": { "service": "api" } },
+    { "source": "/(.*)",         "destination": { "service": "web" } }
+  ]
 }
 ```
 
-`backend-py/apps/api/tests/test_vercel_container_config.py` が同じ不変条件を CI で検査する。
-**この検査を消さない**（どれも壊れてもローカルでは一切顕在化しない）。
+CI の検査（**消さない**。どれも壊れてもローカルでは一切顕在化しない）:
+
+| テスト | 見ているもの |
+|---|---|
+| `backend-py/apps/api/tests/test_vercel_container_config.py` | blessed 名・配置・ビルドコンテキスト・rewrite |
+| `backend-py/apps/api/tests/test_vercel_container_contract.py` | ポート・CMD |
+| `backend-py/apps/api/tests/test_vercel_routing.py` | FastAPI の全ルートが公開ドメインから api に届く |
+| `frontend/apps/web/src/shared/config/vercel-routing.test.ts` | catch-all の位置・web に届くパス・binding・`app/api` の不在 |
+
+---
+
+## 0.5 ルーティングと service 間通信
+
+- **rewrite は先勝ち**（[Services routing](https://vercel.com/docs/services/routing)）。catch-all
+  `/(.*)` → web は**必ず末尾**。
+- **Vercel は接頭辞を外さない**。`/api/users` は `/api/users` のまま FastAPI に届くので、
+  FastAPI 側は `APIRouter(prefix="/api/...")` で受ける。`/api` の外に生やしたルートは web に
+  吸われて 404。
+- web に `app/api/**` の Route Handler を置くと、同じく FastAPI に吸われる。
+- **web のサーバー側 → api は service binding**（`BACKEND_PY_URL`）。絶対 URL が runtime に注入され、
+  preview では同じ preview の api に向く。公開経路を通らないので CORS も firewall も挟まらない。
+  binding は **runtime 専用**でビルド時には解決しない → ブラウザ側は同一オリジンの相対 URL を使う。
+- mobile / desktop など Vercel の外からは、アプリの公開ドメイン（`NEXT_PUBLIC_BACKEND_PY_URL` /
+  `EXPO_PUBLIC_BACKEND_PY_URL`。Doppler）で `/api/*` を叩く。
 
 ---
 
@@ -77,7 +110,8 @@ const contextDir = path.dirname(dockerfilePath);
 ```
 
 **上書き手段が無い。** `services.<name>.root` でも Root Directory でも `.vercelignore` でも
-`builds` でも変えられない。
+`builds` でも変えられない。逆に言えば、**project の Root Directory をリポジトリルートにしても
+コンテキストは `backend-py/` のまま**なので、1 project 構成でも Dockerfile は動かさなくてよい。
 
 > build args だけは通る（`buildArgsFromEnv(meta?.buildEnv)` で project の build env を
 > `--build-arg` として転送）。ただし**サービス単位ではない**ので、
@@ -113,10 +147,11 @@ blessed 名が 4 つ = **1 ディレクトリにつき最大 4 サービス**。
 **アプリごとに別イメージ**にする価値はここにある（`uv sync --package <app>` の絞り込みが効き、
 片方の重い依存が、もう片方のイメージに入らない）。
 
-追加するときは **service と rewrite を必ずセットで**足す。`rewrites` が無い service は
-**既定で非公開**なので、デプロイは成功したまま 404 になる。
+追加するときは **service と rewrite を必ずセットで**足す（ルートの `vercel.json`。rewrite は
+catch-all より前）。`rewrites` が無い service は **既定で非公開**なので、デプロイは成功したまま 404 になる。
+**`PORT` は project に 1 つしか無い**ので、全コンテナを同じポート（8080）で listen させる。
 
-5 つ目が必要になったら、別ディレクトリ（別 workspace）か別 project。
+5 つ目が必要になったら、別ディレクトリ（別 workspace）に Dockerfile を置く。
 **代償があるので勝手に決めずユーザーに確認する。**
 
 ### 採らない案: 1 イメージ + サービスごとの `command`
@@ -149,15 +184,19 @@ Container Images の Services 例は `runtime` を省いているが、**明示�
 
 ---
 
-## 5. `vercel-deploy` の container モードが framework モードと違うところ
+## 5. `vercel-deploy`（services モード）が検査・投入するもの
 
-| 観点 | framework | container |
-|---|---|---|
-| `vercel.json` の検査 | `installCommand` が `cd ../..` でルートへ戻っているか | blessed 名 / Dockerfile の実在 / コンテキストに `uv.lock` / rewrite の有無 |
-| ローカル確認 | `build-frontend` | `test-backend-py`（container ビルドでは frontend の成果物は 1 バイトも使われない） |
-| 本番 URL の env | `NEXT_PUBLIC_APP_URL` | **`none`**（backend project に `NEXT_PUBLIC_*` を入れても読まれない） |
-| framework preset | package.json から判定 | 常に `none` |
-| project 名 | `[APP_NAME-]<dir>` | `VERCEL_BACKEND_PROJECT` があればそれ（bootstrap と重複した project を作らないため） |
+| 観点 | 内容 |
+|---|---|
+| framework service | `root` の実在 / `installCommand` の `cd <dir>` 先に `bun.lock` がある |
+| container service | blessed 名 / Dockerfile の実在 / コンテキストに `uv.lock` / `.dockerignore` |
+| 共通 | service を指す rewrite がある / rewrites の末尾が catch-all |
+| ローカル確認 | `build-frontend` + `test-backend-py` |
+| project | 名前 = `APP_NAME`（bootstrap と同じ）/ Root Directory・framework = null |
+| env | `NEXT_PUBLIC_APP_URL`（実測した本番 URL）/ `PORT`（Dockerfile の `ENV PORT`） |
+
+`vercel-deploy frontend/apps/web` / `vercel-deploy backend-py` のように **service を単独 project で
+出すことはできない**（止まる）。
 
 イメージ自体はローカル確認では焼かれない。Vercel と同条件で焼くなら:
 
@@ -175,11 +214,12 @@ docker build -f backend-py/Dockerfile.vercel backend-py    # コンテキスト 
 | entrypoint が拒否される | basename が blessed 名でない（1.1） |
 | Dockerfile が使われず Python runtime として解釈される | `runtime: "container"` が無い（§3） |
 | デプロイは成功するのに 404 | **rewrite が無い**。service は既定で非公開 |
+| FastAPI のルートだけ 404（web の HTML が返る） | `/api` の外にルートがある / catch-all が上にある（§0.5） |
 | デプロイは成功するのに 502 / タイムアウト | `$PORT` で listen していない・`127.0.0.1` にバインドしている・**Vercel project の env `PORT` と Dockerfile の値がズレている**（§4） |
 | デプロイは成功するのに 500 / `INTERNAL_FUNCTION_INVOCATION_FAILED`（ログが空） | **起動前に死んでいる**。特権ポート bind か CMD の `$PATH` 依存（§4）。切り分けは [containers.md](containers.md) |
 | ローカルの `.venv` がイメージに入る / ビルドが遅い | `.dockerignore` がコンテキスト外にある（§0 の図） |
 | 2 つ目の service を足したらビルドが片方しか走らない | 2 つの service が同じ entrypoint を指している |
-| `services` が効かない | Root Directory 直下に `vercel.json` があるか。`services` 使用時は `buildCommand` 等の build/runtime 系キーを**トップレベルに置けない**（service 内へ移す） |
+| `services` が効かない | project の **Root Directory が空か**（残っているとルートの `vercel.json` が読まれない）。`services` 使用時は `buildCommand` / `framework` / `functions` 等を**トップレベルに置けない**（service 内へ移す） |
 
 ---
 
@@ -188,7 +228,8 @@ docker build -f backend-py/Dockerfile.vercel backend-py    # コンテキスト 
 - `vercel/vercel` `packages/fs-detectors/src/services/resolve-v2.ts` — `CONTAINER_ENTRYPOINT_CANDIDATES`
 - `vercel/vercel` `packages/container/src/index.ts` — `contextDir = path.dirname(dockerfilePath)` / `buildArgsFromEnv`
 - [Container Images](https://vercel.com/docs/functions/container-images) — 許容名（2 つ）/ `entrypoint` / PORT / SIGTERM / scale down / Secure Compute 非対応
-- [Services](https://vercel.com/docs/services) — 既定で非公開・rewrites で公開・`runtime: "container"`・トップレベルキーの制約
+- [Services](https://vercel.com/docs/services) — 1 project に複数 service・既定で非公開・rewrites で公開・`runtime: "container"`・トップレベルキーの制約
+- [Services routing](https://vercel.com/docs/services/routing) — rewrite の先勝ち・接頭辞は外さない・bindings
 - [Service configuration reference](https://vercel.com/docs/services/config-reference)
 - `https://openapi.vercel.sh/vercel.json` — `services` の JSON Schema（`additionalProperties: false`）
 - [uv: Using uv in Docker](https://docs.astral.sh/uv/guides/integration/docker/) — workspace は全 member の pyproject が要る / `--frozen` → `--locked`

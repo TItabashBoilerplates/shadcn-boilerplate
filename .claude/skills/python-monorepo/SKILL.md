@@ -438,15 +438,20 @@ Vercel と uv の要求が噛み合った結果として選択肢が 1 つしか
 | `Containerfile` | 4 つ目 |
 
 ```jsonc
-// backend-py/vercel.json （runtime:"container" で Docker ビルドを明示。無いと runtime 自動検出になる）
+// /vercel.json（リポジトリルート。web と同じ Vercel project の services）
+// runtime:"container" で Docker ビルドを明示。無いと runtime 自動検出になる
 {
   "services": {
-    "api": { "runtime": "container", "root": ".", "entrypoint": "Dockerfile.vercel" }
-    // アプリ追加時: "mcp": { "runtime": "container", "root": ".", "entrypoint": "Containerfile.vercel" }
+    "web": { "root": "frontend/apps/web", "framework": "nextjs" /* ... */ },
+    "api": { "runtime": "container", "root": "backend-py", "entrypoint": "Dockerfile.vercel" }
+    // アプリ追加時: "mcp": { "runtime": "container", "root": "backend-py", "entrypoint": "Containerfile.vercel" }
   },
   "rewrites": [
-    // service は既定で非公開。rewrite が無いとデプロイは成功したまま 404 になる
-    { "source": "/(.*)", "destination": { "service": "api" } }
+    // service は既定で非公開。rewrite が無いとデプロイは成功したまま 404 になる。先勝ち
+    { "source": "/healthcheck",  "destination": { "service": "api" } },
+    { "source": "/openapi.json", "destination": { "service": "api" } },
+    { "source": "/api/(.*)",     "destination": { "service": "api" } },
+    { "source": "/(.*)",         "destination": { "service": "web" } }   // catch-all は末尾
   ]
 }
 ```
@@ -456,10 +461,12 @@ Vercel と uv の要求が噛み合った結果として選択肢が 1 つしか
 **アプリごとに別イメージなので、片方の重い依存がもう片方のイメージに入らない。**
 2 段階 sync は 1 回目 `--frozen --no-install-workspace` / 2 回目 `--locked`（uv 公式）。
 
-**Vercel の backend project は Root Directory を `backend-py/`** に設定する。
-デプロイは `vercel-deploy backend-py`（container モードを自動判別し、上記の前提を
-Vercel へ送る前に検査する）。名前と配置は `apps/api/tests/test_vercel_container_config.py` が
-CI で固定している。詳細は `backend-py/README.md` /
+**Vercel project は web と共通の 1 つで、Root Directory は空（リポジトリルート）**。
+ビルドコンテキストは Dockerfile の場所で決まるので `backend-py/` のまま。
+**FastAPI のルーターは `APIRouter(prefix="/api/...")` の下に作る**（`/api` の外は web に吸われて 404。
+`apps/api/tests/test_vercel_routing.py` が検査）。
+デプロイは `vercel-deploy`（引数なし。上記の前提を Vercel へ送る前に検査する）。
+名前と配置は `apps/api/tests/test_vercel_container_config.py` が CI で固定している。詳細は `backend-py/README.md` /
 `.claude/skills/vercel-deploy/references/services-container.md` /
 `docs/_research/2026-08-22-vercel-services-container-build-context.md`。
 

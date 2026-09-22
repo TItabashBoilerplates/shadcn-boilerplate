@@ -155,7 +155,7 @@ devenv tasks run -P staging deploy:supabase   # link → config push → buckets
 
 | 対象 | 契機 | 担当 |
 |---|---|---|
-| Vercel（web / backend） | push | **Vercel の git 連携**（`vercel_project.git_repository` が接続済み。追加作業なし） |
+| Vercel（1 project。web + api の services） | push | **Vercel の git 連携**（`vercel_project.git_repository` が接続済み。追加作業なし） |
 | Drizzle マイグレーション | push（`drizzle/**`） | `.github/workflows/migrate.yml` |
 | Supabase config / functions / buckets | push（`supabase/**`） | `.github/workflows/deploy-supabase.yml` |
 
@@ -294,7 +294,7 @@ tf-output myapp
 ```bash
 tf-init myapp
 terraform import -var-file=apps/myapp.tfvars 'module.supabase.supabase_project.this' <project-ref>
-terraform import -var-file=apps/myapp.tfvars 'module.vercel.vercel_project.web'      <project-id>
+terraform import -var-file=apps/myapp.tfvars 'module.vercel.vercel_project.app'      <project-id>
 ```
 
 > ⚠️ `supabase_branch` の import は **persistent かどうかを判定できない**（provider の既知の制約）。

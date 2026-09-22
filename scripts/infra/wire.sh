@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # サービス間で「生成される値」を取得し、Doppler の各 config(dev/stg/prd) に格納する。
-# 以降は Doppler ネイティブ連携が Vercel(backend) / Supabase(edge) 等へ fan-out し、
+# 以降は Doppler ネイティブ連携が GitHub Actions 等へ fan-out し、
 # migration(GitHub Actions) は Doppler から読む。= 生成値を手動管理しない。
 #
 # アーキテクチャ（ユーザー決定）:
-#   - Supabase は独立所有。**web / backend とも Vercel project** なので、両方に Marketplace の
-#     「Connect Account」を張れば Supabase env（SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY /
+#   - Supabase は独立所有。**web / backend は同じ 1 つの Vercel project の services** なので、
+#     その project に Marketplace の「Connect Account」を張れば Supabase env（SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY /
 #     SUPABASE_SECRET_KEY / NEXT_PUBLIC_SUPABASE_* / POSTGRES_*）は Vercel 側へ自動注入される。
 #     → **Supabase の値は Doppler にも Vercel にも入れない**（PF 任せ。二重管理の禁止）。
 #       加えて `SUPABASE_` prefix は Doppler に登録すると sync が予約値違反で壊れる
@@ -17,9 +17,11 @@
 #            アプリ実行時用（transaction pooler）で、Doppler に同名を置くと二重管理になる。
 #            migration は session pooler でなければ prepared statement が使えず落ちる別物。
 #     いずれも予約 prefix に当たらない名前なので sync できる。
-#   - backend も Vercel project（Dockerfile.vercel コンテナ）。その公開ドメインを取得して
-#     web/mobile に配る（NEXT_PUBLIC_BACKEND_PY_URL / EXPO_PUBLIC_BACKEND_PY_URL）。
-#     これは Marketplace の管轄外なので Doppler + Vercel(web) 直接 set の両方で配る。
+#   - backend は web と同じ project の service（Dockerfile.vercel コンテナ。/api/* で受ける）。
+#     その公開ドメイン（= アプリのドメイン）を **Vercel の外にいる消費者**（mobile / desktop）に
+#     配る（NEXT_PUBLIC_BACKEND_PY_URL / EXPO_PUBLIC_BACKEND_PY_URL → Doppler）。
+#     ⚠️ Vercel には入れない。web のブラウザ側は同一オリジン（相対 URL）、サーバー側は
+#        service binding（BACKEND_PY_URL）で届く。入れると preview の web が本番の api を叩く。
 #
 # ⚠️ 外部 API キー（OpenAI 等）は対象外（ユーザーが Doppler に直接投入）。ここで扱うのは
 #    「プロビジョニングの結果生成される値」だけ。値は stdin 渡しで stdout/ログに出さない。
@@ -123,10 +125,11 @@ resolve_supabase() {
 }
 
 # backend(Vercel) の各環境公開ドメイン（best-effort）→ "https://<domain>"
+# web と同じ project の service なので、アプリのドメインがそのまま backend の URL になる。
 resolve_backend_domain() {
   local env="$1" url
-  url="$(vercel_backend_url "$VERCEL_BACKEND_PROJECT" "$env")" || true
-  [ -n "$url" ] || { warn "[$env] backend(Vercel) domain 取得できず（project/team slug/token を確認）"; return 1; }
+  url="$(vercel_app_url "$APP_NAME" "$env")" || true
+  [ -n "$url" ] || { warn "[$env] Vercel の公開ドメイン取得できず（project/team slug/token を確認）"; return 1; }
   printf '%s' "$url"
 }
 
@@ -135,8 +138,8 @@ main() {
   load_config; load_outputs
   supabase_cli_auth                 # SUPABASE_ACCESS_TOKEN → supabase CLI 用の env に橋渡し
   require_env SUPABASE_DB_PASSWORD        # production の pooler 接続文字列の組み立てに使う
-  require_env VERCEL_TOKEN              # backend(Vercel) の公開ドメイン取得 / web への endpoint set
-  : "${DOPPLER_PROJECT:?}"; : "${APP_NAME:?}"; : "${VERCEL_BACKEND_PROJECT:?}"
+  require_env VERCEL_TOKEN              # Vercel project の公開ドメイン取得
+  : "${DOPPLER_PROJECT:?}"; : "${APP_NAME:?}"
 
   local env slug backend
   for env in $INFRA_ENVS; do
@@ -144,7 +147,7 @@ main() {
     printf '\n'; log "── 配線(→Doppler[%s]): %s ──" "$slug" "$env"
 
     # Vercel の外にいる消費者ぶんだけ Doppler に置く。
-    # web / backend（ともに Vercel project）の Supabase env は Marketplace 連携が注入するので触らない。
+    # web / backend（同じ Vercel project）の Supabase env は Marketplace 連携が注入するので触らない。
     if resolve_supabase "$env"; then
       # Drizzle migration(GitHub Actions) 用。**session pooler(IPv4, :5432)** であることが必須。
       doppler_put "$slug" "MIGRATE_POSTGRES_URL" "$SB_DBURL"
@@ -152,18 +155,17 @@ main() {
       doppler_put "$slug" "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY" "$SB_PUB"
     fi
 
-    # backend endpoint → Doppler（+ Vercel(web) に直接も set。Marketplace は Supabase だけ面倒を見る）
+    # backend endpoint → Doppler（mobile / desktop 用。Vercel 上の web は同一オリジン + binding）
     if backend="$(resolve_backend_domain "$env")"; then
       doppler_put "$slug" "NEXT_PUBLIC_BACKEND_PY_URL" "$backend"
       doppler_put "$slug" "EXPO_PUBLIC_BACKEND_PY_URL" "$backend"
-      vercel_env_set "${APP_NAME:?}" "NEXT_PUBLIC_BACKEND_PY_URL" "$backend" "$env"
     fi
   done
 
   printf '\n'
-  ok "生成値の配線完了（→ Doppler、backend endpoint は Vercel(web) にも直接）。"
+  ok "生成値の配線完了（→ Doppler）。"
   warn "Vercel(web/backend) の Supabase env は Marketplace『Connect Account』が注入する（runbook Phase 0/2）。"
-  warn "→ 両 project で Connect 済みか、注入キー名がアプリの参照名と一致するかを Vercel の画面で確認すること。"
+  warn "→ project で Connect 済みか、注入キー名がアプリの参照名と一致するかを Vercel の画面で確認すること。"
 }
 
 main "$@"

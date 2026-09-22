@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Vercel REST API の共通ヘルパ（vercel.sh / wire.sh が source する）。
+# Vercel REST API の共通ヘルパ（vercel.sh / wire.sh / vercel_deploy.sh が source する）。
 # lib.sh を先に source しておくこと（log/ok/warn/git_branch_for を使う）。
 # 認証は VERCEL_TOKEN（Bearer）。team スコープは VERCEL_TEAM_ID（任意・config.env のファイル値）。
 # ※ Doppler のキー名は vercel CLI が読む VERCEL_TOKEN に揃えてある
@@ -160,10 +160,12 @@ vercel_account_slug() {
   fi
 }
 
-# vercel_backend_url PROJECT ENVNAME → "https://<domain>"（取得できなければ空文字）。
+# vercel_app_url PROJECT ENVNAME → "https://<domain>"（取得できなければ空文字）。
+#   web と backend-py は同じ project の services なので、これが backend の公開 URL でもある
+#   （FastAPI は /api/* で受ける）。
 #   production → project の本番ドメイン（API で取得、無ければ <project>.vercel.app）。
 #   preview    → ブランチ別の安定エイリアス <project>-git-<branch>-<slug>.vercel.app。
-vercel_backend_url() {
+vercel_app_url() {
   local project="$1" env="$2" domain=""
   if [ "$env" = "production" ]; then
     domain="$(vapi GET "/v9/projects/${project}/domains?target=production&limit=1" 2>/dev/null \
@@ -188,9 +190,11 @@ vercel_backend_url() {
 #    両者がズレると Vercel は 80 へ流し、コンテナは 8080 で待ち続ける。
 #
 # 値は Dockerfile の `ENV ... PORT=<n>` から読む（2 か所に数字を書かない = drift しない）。
-# Dockerfile の場所は `<app>/vercel.json` の services から引く（パスをここに書かない）。
+# Dockerfile の場所はリポジトリルートの `vercel.json` の services から引く（パスをここに書かない）。
+# PORT は project に 1 つしか無いので、container service はすべて同じポートで listen する前提。
 
-# container_entrypoint_path APP_ABS_DIR → 最初の container service の Dockerfile 絶対パス
+# container_entrypoint_path ROOT_ABS_DIR → 最初の container service の Dockerfile 絶対パス
+#   ROOT_ABS_DIR は vercel.json のあるディレクトリ（service の root はそこからの相対）。
 container_entrypoint_path() {
   local app_dir="$1" f="$1/vercel.json" rel
   [ -f "$f" ] || return 1
@@ -202,7 +206,7 @@ container_entrypoint_path() {
   printf '%s/%s' "$app_dir" "$rel"
 }
 
-# push_container_port PROJECT APP_ABS_DIR
+# push_container_port PROJECT ROOT_ABS_DIR
 push_container_port() {
   local project="$1" app_dir="$2" dockerfile port
   dockerfile="$(container_entrypoint_path "$app_dir")" \

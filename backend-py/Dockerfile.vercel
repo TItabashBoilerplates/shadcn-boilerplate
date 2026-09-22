@@ -22,14 +22,16 @@
 # つまりコンテキスト = workspace ルートが必須。両者を満たす置き方は 1 つしかない:
 # **この Dockerfile を workspace ルート（backend-py/）に、blessed 名で置く。**
 #
-#   "services": { "api": { "runtime": "container", "root": ".", "entrypoint": "Dockerfile.vercel" } }
+#   // リポジトリルートの vercel.json（web と同じ Vercel project の services）
+#   "api": { "runtime": "container", "root": "backend-py", "entrypoint": "Dockerfile.vercel" }
 #
-# Vercel project の Root Directory は `backend-py`。したがってコンテキスト = backend-py/ となり、
+# Vercel project の Root Directory はリポジトリルートで、service の root が `backend-py`。
+# コンテキストは Dockerfile の場所で決まるので backend-py/ となり、
 # 以下の COPY / bind mount のパスはすべて backend-py/ 基準で書いてある。
 #
 # ── モノレポで 2 つ目以降のアプリを出すときの名前の割り当て ─────────────────────
 # blessed 名が 4 つあるので、**1 ディレクトリにつき最大 4 つのコンテナサービス**を置ける。
-# 名前からアプリが読み取れないため、対応表をここと README と vercel.json のテストで固定する:
+# 名前からアプリが読み取れないため、対応表をここと README とルートの vercel.json のテストで固定する:
 #
 #   backend-py/Dockerfile.vercel      → service "api"   (apps/api / FastAPI)   ← このファイル
 #   backend-py/Containerfile.vercel   → 2 つ目のアプリ（未使用）

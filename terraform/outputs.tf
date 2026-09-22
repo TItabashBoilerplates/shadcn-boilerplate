@@ -13,14 +13,9 @@ output "supabase_api_urls" {
   value       = module.supabase.api_urls
 }
 
-output "vercel_web_project_id" {
-  description = "Vercel web project の ID。"
-  value       = module.vercel.web_project_id
-}
-
-output "vercel_backend_project_id" {
-  description = "Vercel backend project の ID。"
-  value       = module.vercel.backend_project_id
+output "vercel_project_id" {
+  description = "Vercel project の ID（web と backend-py の services を載せる 1 project）。"
+  value       = module.vercel.project_id
 }
 
 output "github_environments" {
@@ -40,8 +35,8 @@ output "doppler_configs" {
 output "manual_followups" {
   description = "Terraform では埋められず、人が対応する必要がある項目。"
   value = compact([
-    length(module.vercel.unwired_backend_environments) > 0
-    ? "backend_urls 未指定の環境: ${join(", ", module.vercel.unwired_backend_environments)}（NEXT_PUBLIC_BACKEND_PY_URL / EXPO_PUBLIC_BACKEND_PY_URL が未配線）"
+    length(local.unwired_backend_environments) > 0
+    ? "backend_urls 未指定の環境: ${join(", ", local.unwired_backend_environments)}（mobile / desktop 向けの NEXT_PUBLIC_BACKEND_PY_URL / EXPO_PUBLIC_BACKEND_PY_URL が Doppler に未配線）"
     : "",
 
     !module.doppler.github_sync_enabled

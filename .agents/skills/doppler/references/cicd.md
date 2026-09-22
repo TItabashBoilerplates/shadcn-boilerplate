@@ -1,16 +1,16 @@
-# Doppler × CI/CD（Vercel(web/backend) / Supabase / GitHub Actions）
+# Doppler × CI/CD（Vercel / Supabase / GitHub Actions）
 
 このプロジェクトのデプロイは **各プラットフォームが GitHub 連携で直接ビルド/デプロイ**する
 （アプリのデプロイを GitHub Actions では行わない。Actions は Drizzle migration のみ）。
-シークレットは **Doppler のネイティブ連携（sync）で各配布先へ直接届ける**。Vercel（web / backend の
-2 project）/ Supabase / **GitHub Actions** いずれも Doppler 公式ネイティブ連携がある。
+シークレットは **Doppler のネイティブ連携（sync）で各配布先へ直接届ける**。Vercel（web と backend を
+services として載せた 1 project）/ Supabase / **GitHub Actions** いずれも Doppler 公式ネイティブ連携がある。
 **どの配布先でも、実行時に doppler CLI を叩かない**（値は既に環境変数として届いている）。
 
 目次:
 1. 全体像
 2. config ↔ 環境の対応
-3. Vercel web（ネイティブ連携）
-4. Vercel backend（ネイティブ連携）
+3. Vercel（ネイティブ連携。web と backend は同じ project）
+4. （欠番: 旧「Vercel backend」。backend は web と同じ project に統合した）
 5. Supabase（ネイティブ連携）
 6. GitHub Actions（ネイティブ sync → `${{ secrets.* }}`）
 7. サービストークン運用
@@ -23,10 +23,10 @@
             │  config: dev / stg / prd                              │
             └───┬─────────────┬──────────────┬─────────────────────┘
    native sync  │             │              │  native sync      │ native sync
-                ▼             ▼              ▼                    ▼
-         Vercel web     Vercel backend    Supabase        GitHub Actions
-         (env vars)    (env vars/コンテナ) (Functions secrets)  (Environment secrets)
-                ▲             ▲              ▲
+                ▼                            ▼                    ▼
+      Vercel（web + api）  Supabase        GitHub Actions
+      (env vars)          (Functions secrets)  (Environment secrets)
+                ▲                            ▲
                 └──── GitHub 連携で push → 各プラットフォームがビルド/デプロイ ────┘
 ```
 
@@ -37,42 +37,38 @@
 
 ## 2. config ↔ 環境の対応
 
-| Doppler config | Vercel web | Vercel backend | Supabase | devenv profile |
-|---|---|---|---|---|
-| `prd` | Production | Production | 本番 project | `-P production` |
-| `stg` | Preview | Preview | staging project | `-P staging` |
-| `dev` | Development | Development | dev project | `-P dev` |
+| Doppler config | Vercel（web + api） | Supabase | devenv profile |
+|---|---|---|---|
+| `prd` | Production | 本番 project | `-P production` |
+| `stg` | Preview | staging project | `-P staging` |
+| `dev` | Development | dev project | `-P dev` |
 
-Vercel は環境ごとに**別々の連携**が必要（Development / Preview / Production）。web / backend は
-別 project なので、それぞれに対して連携を作る。
+Vercel は環境ごとに**別々の連携**が必要（Development / Preview / Production）。web と backend は
+リポジトリルートの `vercel.json` の services として**同じ project** に載るので、連携は 1 project 分でよい
+（project の env は web と api の両方の service に届く）。
 
-## 3. Vercel web（ネイティブ連携）
+## 3. Vercel（ネイティブ連携）
 
 ダッシュボード操作（ユーザー）:
-1. Doppler の対象 project → **Integrations** → **Vercel** → 認可し、**web project** を選ぶ。
+1. Doppler の対象 project → **Integrations** → **Vercel** → 認可し、**アプリの Vercel project**
+   （web と backend-py の services を載せた 1 project）を選ぶ。
 2. **環境ごとに連携を作成**: `prd`→Production / `stg`→Preview / `dev`→Development。
 3. sync 対象の Doppler config と Vercel 環境を選択。Doppler は Vercel 同期を既定で
    **Sensitive** として扱う。
 
 以降、Doppler の値を更新すると Vercel の env vars に反映され（webhook で再デプロイも可）、
-Vercel の GitHub 連携ビルドがその値を使う。`NEXT_PUBLIC_*` のような**非機密**は引き続き
-`env/frontend/.env.<ENV>`（リポジトリ）で管理してもよい（責務分離）。
-**web の Supabase env は Marketplace「Connect Account」が注入する**ので Doppler では扱わない
-（`SUPABASE_` prefix は登録禁止。`.claude/rules/env-naming.md`）。
+web（Next.js）のビルドと api（FastAPI コンテナ）のランタイムの両方がその値を使う（コード変更不要）。
+`NEXT_PUBLIC_*` のような**非機密**は引き続き `env/frontend/.env.<ENV>`（リポジトリ）で管理してもよい。
 
-## 4. Vercel backend（ネイティブ連携）
-
-FastAPI backend も Vercel project（`backend-py/Dockerfile.vercel` のコンテナ）。web と同じ
-Vercel ネイティブ連携を **backend project** に向けて作る:
-
-1. Doppler の対象 project → **Integrations** → **Vercel** → 認可し、**backend project** を選ぶ。
-2. **環境ごとに連携を作成**: `prd`→Production / `stg`→Preview / `dev`→Development。
-3. sync 対象の Doppler config を選択。
-
-選択した config の secrets（外部 API キー等）が backend コンテナの env vars に継続 sync され、
-Vercel の GitHub 連携ビルド/ランタイムが使う（コード変更不要）。
-**Supabase 接続情報（`SUPABASE_*` / `POSTGRES_*`）は Marketplace 連携が注入する**ので
-Doppler には置かない（`.claude/rules/env-naming.md`）。
+- **Supabase の env（`SUPABASE_*` / `NEXT_PUBLIC_SUPABASE_*` / `POSTGRES_*`）は Marketplace
+  「Connect Account」が注入する**ので Doppler では扱わない（`SUPABASE_` prefix は登録禁止。
+  `.claude/rules/env-naming.md`）。
+- **`NEXT_PUBLIC_BACKEND_PY_URL` を Vercel に届けない**。Doppler の `dev` / `stg` / `prd` には
+  mobile / desktop 用に入っているが、Vercel 上の web はブラウザ側が同一オリジン（相対 URL）、
+  サーバー側が service binding（`BACKEND_PY_URL`）で backend に届く。Vercel に入ると preview の
+  web が別環境の api を叩く。Vercel 連携は config 単位で sync するので、連携を張ったら
+  **Vercel の env 一覧に `NEXT_PUBLIC_BACKEND_PY_URL` が無いこと**を必ず確認する（届いてしまう場合は
+  mobile / desktop 用の値を Vercel 連携の対象外の config に分けるか、ユーザーに判断をあおぐ）。
 
 ## 5. Supabase（ネイティブ連携）
 

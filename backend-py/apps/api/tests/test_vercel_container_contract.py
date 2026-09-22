@@ -51,8 +51,11 @@ from pathlib import Path
 import pytest
 
 # backend-py/apps/api/tests/ から 3 つ上が uv workspace ルート
-# ( = Vercel backend project の Root Directory )
+# ( = services.api の root。ビルドコンテキストも Dockerfile のあるここになる )
 WORKSPACE_ROOT = Path(__file__).resolve().parents[3]
+# vercel.json はリポジトリルートに 1 つだけ。service の root もリポジトリルート基準
+REPO_ROOT = WORKSPACE_ROOT.parent
+VERCEL_JSON = REPO_ROOT / "vercel.json"
 
 # 1024 未満は特権ポート。非 root では CAP_NET_BIND_SERVICE 無しに bind できない。
 FIRST_UNPRIVILEGED_PORT = 1024
@@ -106,9 +109,9 @@ def _vercel_dockerfiles() -> list[Path]:
     vercel.json を唯一の情報源にする. glob で場所を決め打ちすると, Dockerfile を
     移したときにテストが 0 件で無言に空回りする (実際に起きた).
     """
-    config = json.loads((WORKSPACE_ROOT / "vercel.json").read_text(encoding="utf-8"))
+    config = json.loads(VERCEL_JSON.read_text(encoding="utf-8"))
     return sorted(
-        WORKSPACE_ROOT / service.get("root", ".") / service["entrypoint"]
+        REPO_ROOT / service.get("root", ".") / service["entrypoint"]
         for service in config.get("services", {}).values()
         if service.get("runtime") == "container" or "entrypoint" in service
     )
@@ -117,7 +120,7 @@ def _vercel_dockerfiles() -> list[Path]:
 def test_vercel_dockerfiles_exist():
     """検査対象が 0 件なら, このテストは無言で空回りしている."""
     assert _vercel_dockerfiles(), (
-        f"vercel.json に container service が無い: {WORKSPACE_ROOT}"
+        f"vercel.json に container service が無い: {VERCEL_JSON}"
     )
 
 
@@ -176,12 +179,16 @@ def test_entrypoint_uses_an_absolute_path(dockerfile):
 
 def test_vercel_json_entrypoints_point_at_real_dockerfiles():
     """vercel.json の service が実在しない Dockerfile を指していないこと."""
-    config = json.loads((WORKSPACE_ROOT / "vercel.json").read_text(encoding="utf-8"))
-    services = config.get("services", {})
-    assert services, "vercel.json に services が無い"
+    config = json.loads(VERCEL_JSON.read_text(encoding="utf-8"))
+    services = {
+        name: service
+        for name, service in config.get("services", {}).items()
+        if service.get("runtime") == "container"
+    }
+    assert services, "vercel.json に container service が無い"
 
     for name, service in services.items():
-        entrypoint = WORKSPACE_ROOT / service.get("root", ".") / service["entrypoint"]
+        entrypoint = REPO_ROOT / service.get("root", ".") / service["entrypoint"]
         assert entrypoint.is_file(), (
             f"vercel.json の service '{name}' が指す {entrypoint} が存在しない"
         )

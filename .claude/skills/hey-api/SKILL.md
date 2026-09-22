@@ -119,11 +119,13 @@ export default defineConfig({
 
 ```typescript
 import { createClient } from './generated/client'
+import { resolveBaseUrl } from './runtime-config'
 
 export function createBackendClient(options?: { accessToken?: string }) {
-  const client = createClient({
-    baseUrl: process.env.NEXT_PUBLIC_BACKEND_PY_URL ?? 'http://127.0.0.1:4040',
-  })
+  // baseUrl は src/runtime-config.ts の resolveBaseUrl が正本:
+  //   NEXT_PUBLIC_BACKEND_PY_URL（mobile / desktop / ローカル）→ BACKEND_PY_URL（web のサーバー側。
+  //   Vercel の service binding）→ ''（web のブラウザ側。同一オリジンの /api/*）
+  const client = createClient({ baseUrl: resolveBaseUrl() })
 
   if (options?.accessToken) {
     client.interceptors.request.use((request) => {
