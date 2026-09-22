@@ -37,7 +37,7 @@ jobs:
     name: CI Check (lint + format + type-check)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: cachix/install-nix-action@v31
         with:
           # cache-nix-action 公式推奨。これがないと nix store の自動 GC で
@@ -125,7 +125,7 @@ jobs:
     name: Unit Tests (frontend + backend-py)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
@@ -195,7 +195,7 @@ jobs:
     #   pgTAP に要るのは Postgres だけ。公式の database-tests ワークフローも
     #   `supabase db start` を使う。フルスタックを起こすと数分無駄になる。
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
@@ -261,7 +261,7 @@ jobs:
     # 壊れているものを土台に回しても意味が無いので ci-check の後。
     needs: [ci-check]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
@@ -313,7 +313,7 @@ jobs:
     # ci-check が緑になってから走らせる。
     needs: [ci-check]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
