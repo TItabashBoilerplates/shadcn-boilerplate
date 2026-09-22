@@ -126,7 +126,7 @@ sync 障害は無言で起き、「一部の secret だけ届かない」とい�
 
 | 値の性質 | 保管先 | 例 |
 |---|---|---|
-| **シークレット** | **Doppler**（`doppler` MCP で投入。`.claude/rules/mcp-doppler.md`） | `SUPABASE_ACCESS_TOKEN` / `POSTGRES_URL` / 外部 API キー |
+| **シークレット** | **Doppler**（`doppler` MCP で投入。`.claude/rules/mcp-doppler.md`） | `SUPABASE_ACCESS_TOKEN` / `MIGRATE_POSTGRES_URL` / 外部 API キー |
 | **非機密の識別子（CI のデプロイ先指定）** | **GitHub Actions variable**（Terraform が書く） | `SUPABASE_PROJECT_REF` |
 | PF が自動注入するもの | 何もしない（§2） | `SUPABASE_URL` / `VERCEL_ENV` / `GITHUB_TOKEN` |
 
@@ -165,7 +165,13 @@ sync 障害は無言で起き、「一部の secret だけ届かない」とい�
 | `all/all` | `DOPPLER_TOKEN` | doppler provider | **読み替え不要** |
 | `all/all` | `EXPO_TOKEN` / `FAL_KEY` / `APPLE_*` / `PLAY_SERVICE_ACCOUNT_JSON` | 各 CLI | **読み替え不要** |
 | `<app>/bootstrap` | `SUPABASE_DB_PASSWORD` | supabase CLI（`link -p`） | Terraform へは `TF_VAR_supabase_db_password` → `tf.sh` が橋渡し |
-| `<app>/{dev,stg,prd}` | `POSTGRES_URL` / `NEXT_PUBLIC_*` / `EXPO_PUBLIC_*` / 外部 API キー | アプリ / CI | GitHub へ sync される（`GITHUB_` 禁止） |
+| `<app>/{dev,stg,prd}` | `MIGRATE_POSTGRES_URL` / `NEXT_PUBLIC_*` / `EXPO_PUBLIC_*` / 外部 API キー | アプリ / CI | GitHub へ sync される（`GITHUB_` 禁止） |
+
+> **`POSTGRES_URL` を Doppler に作らない。** prefix は予約に当たらないが、この名前は
+> **Vercel Marketplace の Supabase 連携が Vercel に注入する**（§2 の表）。Doppler に同名を置くと
+> §2 が禁じている二重管理そのものになる。GitHub Actions の migration が要るのは
+> **session pooler(:5432)** の接続文字列という別の値なので、`MIGRATE_POSTGRES_URL` という
+> 別名で持つ（Terraform / `infra-bootstrap wire` がこの名前で書く。`.claude/rules/database.md`）。
 
 **橋渡しは `scripts/infra/tf.sh` の `bridge_env` に 3 本だけ**。増やす前に「本当に 2 つのツールが
 別名で読むのか」を一次情報で確認する（同名で済むなら橋渡しは書かない）。
@@ -204,9 +210,12 @@ SB_ACCESS_TOKEN / VC_TOKEN / SB_DB_PASSWORD
 # ❌ NG: Supabase の値が要るからと Edge Functions の secrets に SUPABASE_* を set する
 # ❌ NG: 数字始まり（`1PASSWORD_TOKEN`）／ハイフン・スペース入りのキー名
 
+# ❌ NG: POSTGRES_URL を Doppler に作る（prefix は合法だが Marketplace が Vercel に注入する値と二重管理）
+#    → migration 用は MIGRATE_POSTGRES_URL（session pooler）という別名で持つ
+
 # ✅ OK: 非予約 prefix
 OPENAI_API_KEY / NEXT_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_URL
-POSTGRES_URL / DATABASE_URL / GH_TOKEN
+MIGRATE_POSTGRES_URL / DATABASE_URL / GH_TOKEN
 # ✅ OK: sync の無い config（all / bootstrap）ならフルネームで持てる
 SUPABASE_ACCESS_TOKEN / SUPABASE_DB_PASSWORD / VERCEL_TOKEN / DOPPLER_TOKEN
 ```

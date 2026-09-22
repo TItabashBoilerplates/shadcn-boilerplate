@@ -16,7 +16,7 @@ resource "doppler_project" "this" {
 # 生成値の配線（= scripts/infra/wire.sh の置き換え）
 #
 # Doppler に置くのは **Vercel の外にいる消費者**が必要とする値だけ:
-#   - Drizzle migration (GitHub Actions) → POSTGRES_URL（session pooler / IPv4）
+#   - Drizzle migration (GitHub Actions) → MIGRATE_POSTGRES_URL（session pooler / IPv4）
 #   - Expo mobile (EAS)                  → EXPO_PUBLIC_*
 # Vercel 上の web / backend へは module.vercel が直接 env を書くので Doppler を経由しない
 # （二重管理の禁止）。外部 API キー（OpenAI 等）はここでは扱わない = doppler MCP で投入する。
@@ -30,14 +30,19 @@ locals {
 
   wired_backend_envs = [for k in local.env_names : k if lookup(var.backend_urls, k, "") != ""]
 
-  # POSTGRES_URL は「session pooler の接続先を解決できた環境」だけに配る。
+  # MIGRATE_POSTGRES_URL は「session pooler の接続先を解決できた環境」だけに配る。
   # 解決できなかった環境へ直結などの誤った値を入れると CI が分かりにくい形で壊れるため、
   # module.supabase 側がキーごと落としてくる（そちらの check ブロックが警告を出す）。
-  wired_postgres_envs = [for k in local.env_names : k if contains(var.postgres_url_envs, k)]
+  #
+  # ⚠️ キー名は `POSTGRES_URL` にしない。その名前は **Vercel Marketplace の Supabase 連携が
+  #    Vercel に注入する**アプリ実行時用（transaction pooler）であり、Doppler に同名を置くと
+  #    二重管理になる（.claude/rules/env-naming.md §2/§3）。migration は session pooler を
+  #    要求する別物なので、名前でも別物だと分かるようにする。
+  wired_migrate_postgres_envs = [for k in local.env_names : k if contains(var.migrate_postgres_url_envs, k)]
 
   secret_specs = var.manage_generated_secrets ? merge(
     {
-      for pair in setproduct(local.wired_postgres_envs, ["POSTGRES_URL"]) :
+      for pair in setproduct(local.wired_migrate_postgres_envs, ["MIGRATE_POSTGRES_URL"]) :
       "${pair[0]}/${pair[1]}" => { environment = pair[0], name = pair[1] }
     },
     {
@@ -57,7 +62,7 @@ locals {
   ) : {}
 
   secret_values = merge(
-    { for k, v in var.postgres_urls : "${k}/POSTGRES_URL" => v },
+    { for k, v in var.migrate_postgres_urls : "${k}/MIGRATE_POSTGRES_URL" => v },
     { for k, v in var.supabase_urls : "${k}/EXPO_PUBLIC_SUPABASE_URL" => v },
     { for k, v in var.supabase_publishable_keys : "${k}/EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY" => v },
     { for k, v in var.backend_urls : "${k}/NEXT_PUBLIC_BACKEND_PY_URL" => v },
@@ -89,7 +94,7 @@ resource "doppler_secret" "generated" {
 # ─────────────────────────────────────────────────────────────────────────────
 # GitHub Actions への sync
 #
-# migrate.yml が ${{ secrets.POSTGRES_URL }} で解決できるよう、
+# migrate.yml が ${{ secrets.MIGRATE_POSTGRES_URL }} で解決できるよう、
 # **GitHub Environment 単位**で sync する（environment_name を指定すると
 # Repository secrets ではなく Environment secrets に入る）。
 #

@@ -19,12 +19,12 @@ variable "environments" {
 }
 
 variable "manage_generated_secrets" {
-  description = "生成値（POSTGRES_URL / EXPO_PUBLIC_*）を Doppler に書き込むか。"
+  description = "生成値（MIGRATE_POSTGRES_URL / EXPO_PUBLIC_*）を Doppler に書き込むか。"
   type        = bool
   default     = true
 }
 
-variable "postgres_urls" {
+variable "migrate_postgres_urls" {
   description = <<-EOT
     環境名 → Drizzle migration 用の接続文字列（Supavisor session pooler / IPv4）。
     解決できなかった環境はキーが無い状態で渡ってくるので、その環境には書き込まない。
@@ -33,10 +33,10 @@ variable "postgres_urls" {
   sensitive   = true
 }
 
-variable "postgres_url_envs" {
+variable "migrate_postgres_url_envs" {
   description = <<-EOT
-    POSTGRES_URL を配る対象の環境名（session pooler の接続先を解決できた環境）。
-    postgres_urls は sensitive で for_each に使えないため、判断はこの非機密リストで行う。
+    MIGRATE_POSTGRES_URL を配る対象の環境名（session pooler の接続先を解決できた環境）。
+    migrate_postgres_urls は sensitive で for_each に使えないため、判断はこの非機密リストで行う。
   EOT
   type        = list(string)
   default     = []

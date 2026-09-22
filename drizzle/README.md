@@ -195,7 +195,7 @@ IPv4 add-on を購入済みで直結を使いたい場合のみ `MIGRATE_ALLOW_D
 
 ```bash
 # 接続先だけ確認したいとき（値は表示されず host:port だけ出る）
-MIGRATE_POSTGRES_URL="$(doppler secrets get POSTGRES_URL --config prd --plain)" \
+MIGRATE_POSTGRES_URL="$(doppler secrets get MIGRATE_POSTGRES_URL --config prd --plain)" \
   bun run check-endpoint
 ```
 
@@ -204,11 +204,14 @@ MIGRATE_POSTGRES_URL="$(doppler secrets get POSTGRES_URL --config prd --plain)" 
 > ローカルから直接叩くのは **緊急時のみ**（承認ゲートと監査ログを迂回する）。接続先は
 > **`MIGRATE_POSTGRES_URL` で渡す**こと:
 > ```bash
-> MIGRATE_POSTGRES_URL="$(doppler secrets get POSTGRES_URL --config prd --plain)" \
+> MIGRATE_POSTGRES_URL="$(doppler secrets get MIGRATE_POSTGRES_URL --config prd --plain)" \
 >   ENV=production devenv tasks run db:migrate-deploy
 > ```
-> `POSTGRES_URL` のまま渡すと devenv の enterShell が `env/*/.env.local` を source して
-> ローカル値で上書きする。詳細は `.claude/rules/database.md`。
+> Doppler 側のキー名も `MIGRATE_POSTGRES_URL`。`POSTGRES_URL` は Vercel Marketplace の
+> Supabase 連携が **Vercel に**注入するアプリ実行時用の名前なので Doppler には置かない
+> （`.claude/rules/env-naming.md` §2）。環境変数名としても `POSTGRES_URL` のまま渡すと
+> devenv の enterShell が `env/*/.env.local` を source してローカル値で上書きする。
+> 詳細は `.claude/rules/database.md`。
 
 ## Type Inference
 

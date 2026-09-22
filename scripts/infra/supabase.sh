@@ -5,7 +5,7 @@
 #   - project は **1つだけ**（環境 prefix は付けない）。default branch = git の main = production。
 #   - staging/develop は persistent branch として作成し、git branch に紐付ける（git_branch）。
 #   - branch DB は production の db dump で初期化されるため空にはならない。Drizzle の追加差分は
-#     migrate.yml が各 env の POSTGRES_URL（= 各 branch の session pooler 接続先）へ適用。
+#     migrate.yml が各 env の MIGRATE_POSTGRES_URL（= 各 branch の session pooler 接続先）へ適用。
 #
 # - project 作成: `supabase projects create`（CLI、実機 v2.90 でフラグ確認済み）。
 # - branch 作成: Management API `POST /v1/projects/{ref}/branches`（body の git_branch/persistent は
@@ -106,7 +106,7 @@ main() {
   done
 
   warn "各 persistent branch の migration 接続先は **Supavisor の session pooler**（*.pooler.supabase.com:5432）。"
-  warn "'infra-bootstrap wire' が Management API から pooler host を引いて Doppler の POSTGRES_URL に格納する。"
+  warn "'infra-bootstrap wire' が Management API から pooler host を引いて Doppler の MIGRATE_POSTGRES_URL に格納する。"
   warn "手で入れる場合は Dashboard の Connect > Session pooler の文字列を使う（直結は IPv6 で GitHub Actions から届かない）。"
 }
 

@@ -172,7 +172,7 @@ variable "create_doppler_project" {
 
 variable "manage_generated_secrets" {
   description = <<-EOT
-    true にすると「プロビジョニングの結果生成される値」（POSTGRES_URL / EXPO_PUBLIC_*）を
+    true にすると「プロビジョニングの結果生成される値」（MIGRATE_POSTGRES_URL / EXPO_PUBLIC_*）を
     Terraform が Doppler に書き込む（= scripts/infra/wire.sh の置き換え）。
     ⚠️ 値が state に平文で載るため、HCP Terraform 等の暗号化 backend が前提。
     外部 API キー（OpenAI 等）はここでは扱わない（doppler MCP で投入する）。

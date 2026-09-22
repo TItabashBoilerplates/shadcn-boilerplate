@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
 /**
- * マイグレーションの接続先（`POSTGRES_URL`）が、その実行環境で本当に使えるものかを判定する。
+ * マイグレーションの接続先（`MIGRATE_POSTGRES_URL`。無ければ `POSTGRES_URL`）が、
+ * その実行環境で本当に使えるものかを判定する。
  *
  * ## なぜ要るか
  *
@@ -107,7 +108,7 @@ export function checkMigrationEndpoint(url: string | undefined, opts: CheckOptio
       kind: 'unknown',
       target: '',
       reason: '接続先が未設定です（MIGRATE_POSTGRES_URL / POSTGRES_URL のいずれも空）。',
-      hint: 'GitHub Environment に POSTGRES_URL secret が同期されているか（Doppler → GitHub の sync）を確認してください。',
+      hint: 'GitHub Environment に MIGRATE_POSTGRES_URL secret が同期されているか（Doppler → GitHub の sync）を確認してください。',
     }
   }
 
@@ -152,7 +153,7 @@ export function checkMigrationEndpoint(url: string | undefined, opts: CheckOptio
       target,
       reason:
         '直結エンドポイントは IPv6 のみ（IPv4 add-on 未購入時）で、この実行環境は IPv4 のみです。',
-      hint: `session モードの pooler（*${SHARED_POOLER_SUFFIX}:${SESSION_PORT}）を POSTGRES_URL に設定してください。IPv4 add-on を購入済みなら MIGRATE_ALLOW_DIRECT_DB=1 で直結を許可できます。`,
+      hint: `session モードの pooler（*${SHARED_POOLER_SUFFIX}:${SESSION_PORT}）を MIGRATE_POSTGRES_URL に設定してください。IPv4 add-on を購入済みなら MIGRATE_ALLOW_DIRECT_DB=1 で直結を許可できます。`,
     }
   }
 

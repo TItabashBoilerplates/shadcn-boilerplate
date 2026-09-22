@@ -113,7 +113,9 @@ locals {
     if p != null && endswith(try(p.host, ""), ".pooler.supabase.com")
   }
 
-  postgres_urls = {
+  # migration 専用の接続文字列。アプリ実行時の POSTGRES_URL（Vercel Marketplace が注入する
+  # transaction pooler)とは **別物**なので、名前も MIGRATE_ を冠して混同できないようにする。
+  migrate_postgres_urls = {
     for k, p in local.pooler_parts_resolved :
     k => "postgresql://${p.user}:${urlencode(local.db_passwords[k])}@${p.host}:5432/${p.db}"
   }
@@ -125,7 +127,7 @@ check "migration_endpoint_resolved" {
     error_message = <<-EOT
       一部の環境で Supavisor(session pooler) の接続先を解決できませんでした
       （解決済み: ${join(", ", keys(local.pooler_parts_resolved))} / 全体: ${join(", ", keys(local.env_refs))}）。
-      その環境の POSTGRES_URL は Doppler に書き込まれないため、DB Migrate ワークフローが
+      その環境の MIGRATE_POSTGRES_URL は Doppler に書き込まれないため、DB Migrate ワークフローが
       「secret が空」で停止します。branch の起動直後は pooler 設定が返らないことがあるので、
       数分おいて再度 apply してください。復旧しない場合は Dashboard の Connect →
       Session pooler の接続文字列を Doppler の該当 config に手で入れてください。

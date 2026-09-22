@@ -12,7 +12,10 @@
 #       （.claude/rules/env-naming.md）。
 #   - Doppler が要るのは **Vercel の外にいる消費者**だけ:
 #       * Expo mobile (EAS)          → EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-#       * Drizzle migration (Actions) → POSTGRES_URL（**session pooler / IPv4**。理由は下記）
+#       * Drizzle migration (Actions) → MIGRATE_POSTGRES_URL（**session pooler / IPv4**。理由は下記）
+#         ⚠️ キー名を `POSTGRES_URL` にしない。その名前は Marketplace が **Vercel に**注入する
+#            アプリ実行時用（transaction pooler）で、Doppler に同名を置くと二重管理になる。
+#            migration は session pooler でなければ prepared statement が使えず落ちる別物。
 #     いずれも予約 prefix に当たらない名前なので sync できる。
 #   - backend も Vercel project（Dockerfile.vercel コンテナ）。その公開ドメインを取得して
 #     web/mobile に配る（NEXT_PUBLIC_BACKEND_PY_URL / EXPO_PUBLIC_BACKEND_PY_URL）。
@@ -76,7 +79,7 @@ session_pooler_url() {
     *.pooler.supabase.com) ;;
     *)
       warn "pooler host が想定外です（${host}）。Dashboard の Connect > Session pooler の文字列を"
-      warn "Doppler の POSTGRES_URL に手で入れてください（直結は IPv6 で GitHub Actions から届かない）。"
+      warn "Doppler の MIGRATE_POSTGRES_URL に手で入れてください（直結は IPv6 で GitHub Actions から届かない）。"
       return 1 ;;
   esac
   printf 'postgresql://%s:%s@%s:5432/%s' "$user" "$enc_pass" "$host" "$db"
@@ -144,7 +147,7 @@ main() {
     # web / backend（ともに Vercel project）の Supabase env は Marketplace 連携が注入するので触らない。
     if resolve_supabase "$env"; then
       # Drizzle migration(GitHub Actions) 用。**session pooler(IPv4, :5432)** であることが必須。
-      doppler_put "$slug" "POSTGRES_URL" "$SB_DBURL"
+      doppler_put "$slug" "MIGRATE_POSTGRES_URL" "$SB_DBURL"
       doppler_put "$slug" "EXPO_PUBLIC_SUPABASE_URL" "$SB_URL"          # Expo mobile(EAS) 用
       doppler_put "$slug" "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY" "$SB_PUB"
     fi

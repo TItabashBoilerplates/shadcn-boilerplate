@@ -70,7 +70,7 @@ Vercel（Web + FastAPI backend）/ Supabase（DB・Edge Functions・config）を
 > **マイグレは Drizzle が source of truth（意図的）**。Supabase ネイティブ連携 / Branching が読む
 > migrations は `supabase/migrations/*.sql` のみで、Drizzle の `drizzle/migrations/`（フォルダ形式）は
 > 対象外（branch は production の db dump で初期化される）。Drizzle の追加差分は `migrate.yml` が
-> 各 env の `POSTGRES_URL`（= 各 branch の接続情報）へ適用する。
+> 各 env の `MIGRATE_POSTGRES_URL`（= 各 branch の session pooler 接続先）へ適用する。
 
 ---
 
@@ -148,7 +148,7 @@ infra-bootstrap supabase github # 一部だけ再実行も可
 | `supabase` | **1 project 作成**（ref を `.outputs`）＋ **persistent branch(staging/develop)** を Management API で作成 |
 | `vercel` | **web + backend の 2 project** 作成 + repo 接続 + rootDirectory（web=`frontend/apps/web` / backend=`backend-py`）+ **静的な**非機密 env（REST API, upsert） |
 | `github` | environment(dev/staging/production) + **production 承認ゲート** + env secret の同期状況チェック |
-| `wire` | **Vercel 外の消費者向けの生成値を Doppler に格納**（migration 用 `POSTGRES_URL` / mobile 用 `EXPO_PUBLIC_*`）＋ backend(Vercel) endpoint を Vercel(web) にも直接 set。Supabase の値は Marketplace 任せで扱わない |
+| `wire` | **Vercel 外の消費者向けの生成値を Doppler に格納**（migration 用 `MIGRATE_POSTGRES_URL` / mobile 用 `EXPO_PUBLIC_*`）＋ backend(Vercel) endpoint を Vercel(web) にも直接 set。Supabase の値は Marketplace 任せで扱わない |
 
 > 出力された `scripts/infra/.outputs`（project ref / URL。非機密）は wire の入力に使う。
 
@@ -161,7 +161,12 @@ infra-bootstrap supabase github # 一部だけ再実行も可
 
 | 生成値（Doppler に格納するキー） | 由来 | 受け取る側 |
 |---|---|---|
-| `POSTGRES_URL` | **Supavisor の session pooler**（`postgres.<ref>@<region>.pooler.supabase.com:5432`）。host は Management API の pooler 設定から取得する | Drizzle migration（GitHub Actions） |
+| `MIGRATE_POSTGRES_URL` | **Supavisor の session pooler**（`postgres.<ref>@<region>.pooler.supabase.com:5432`）。host は Management API の pooler 設定から取得する | Drizzle migration（GitHub Actions） |
+
+> ⚠️ **キー名を `POSTGRES_URL` にしない。** その名前は Marketplace が **Vercel に**注入する
+> アプリ実行時用の値（transaction pooler）で、Doppler に同名を置くと二重管理になる
+> （`.claude/rules/env-naming.md` §2）。migration は session pooler でなければ
+> prepared statement が使えず落ちる**別の値**なので、キー名で区別する。
 | `EXPO_PUBLIC_SUPABASE_URL` / `..._PUBLISHABLE_KEY` | project本体=`api-keys`＋`https://<ref>.supabase.co` / branch=`branches get -o env` | mobile(EAS) |
 | `NEXT_PUBLIC_BACKEND_PY_URL` / `EXPO_PUBLIC_BACKEND_PY_URL` | backend(Vercel) project の公開ドメイン（本番=project domain、preview=`<project>-git-<branch>-<slug>.vercel.app`） | web / mobile |
 
@@ -175,7 +180,7 @@ infra-bootstrap supabase github # 一部だけ再実行も可
     backend: `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY`）と一致させる。ズレていれば
     **Vercel 側で別名を追加**して合わせる（Doppler には戻さない）。
 - **Vercel(web) の backend endpoint** … Marketplace の管轄外なので `wire` が `NEXT_PUBLIC_BACKEND_PY_URL` を直接 set。
-- **migration(GitHub Actions)** … Doppler→GitHub ネイティブ sync で GitHub Environment secrets に届いた `POSTGRES_URL` を job env で受け取る（Actions 内で doppler CLI は使わない）。
+- **migration(GitHub Actions)** … Doppler→GitHub ネイティブ sync で GitHub Environment secrets に届いた `MIGRATE_POSTGRES_URL` を job env で受け取る（Actions 内で doppler CLI は使わない）。
   - ⚠️ **接続先は pooler の session mode（`*.pooler.supabase.com:5432`）でなければならない。**
     GitHub-hosted runner は **IPv4 のみ**で、Supabase の直結エンドポイント（`db.<ref>.supabase.co`）は
     **IPv6**（IPv4 add-on を購入した project のみ IPv4）。直結を渡すと migration の実行中に
@@ -202,14 +207,14 @@ infra-bootstrap supabase github # 一部だけ再実行も可
    - Supabase(edge): Access Token を貼り、**branch 単位**で対応（OneSignal 等 edge secret 用）。
      `SUPABASE_*` は platform の default secrets で入るため対象外。
    - Vercel(web): **任意**（web が必要とする外部 secret がある場合のみ）。
-   - **GitHub Actions**: `migrate.yml` が使う `POSTGRES_URL` を配るため、**GitHub Environment 単位で
+   - **GitHub Actions**: `migrate.yml` が使う `MIGRATE_POSTGRES_URL` を配るため、**GitHub Environment 単位で
      sync を作る**（*Doppler project > Integrations > GitHub*）。公式仕様どおり **environment を選べば
      Repository secrets ではなく Environment secrets に同期**される。config ごとに sync を 1 つずつ作成:
      `prd`→Environment `production` / `stg`→`staging` / `dev`→`dev`。
-     これにより Actions 内で doppler CLI / service token を使わずに `${{ secrets.POSTGRES_URL }}` で解決できる。
+     これにより Actions 内で doppler CLI / service token を使わずに `${{ secrets.MIGRATE_POSTGRES_URL }}` で解決できる。
      確認: `gh secret list --env production`（`infra-bootstrap github` も未同期なら warn を出す）。
 3. **外部 API キー（OpenAI/Stripe 等）を Doppler の各 config に投入**（doppler MCP。値は露出しない）。
-   ※ **`POSTGRES_URL` / `EXPO_PUBLIC_*` / backend(Vercel) endpoint は Phase 1 の `wire` が Doppler に自動投入済み**
+   ※ **`MIGRATE_POSTGRES_URL` / `EXPO_PUBLIC_*` / backend(Vercel) endpoint は Phase 1 の `wire` が Doppler に自動投入済み**
      （手動不要）。ここで入れるのは「外部から持ち込む secret」だけ。
    ※ **`SUPABASE_` / `VERCEL_` / `GITHUB_` prefix のキーは作らない**（`.claude/rules/env-naming.md`）。
 3. **env ファイルは不要**（リモートは Doppler 一本）:
@@ -284,10 +289,11 @@ gh run watch   # 承認待ち → GitHub 上で approve すると適用が進む
 - 中身は push 時と同一（`devenv tasks run -P "$ENV" db:migrate-deploy`）。job summary に
   profile / trigger / ref / actor / result が残る。
 - **接続先の解決**: Doppler → **GitHub ネイティブ sync** → GitHub Environment secrets → job env → task。
-  ⚠️ job env では `POSTGRES_URL` ではなく **`MIGRATE_POSTGRES_URL`** という名前で渡す。devenv の
-  enterShell は `set -a; . env/<svc>/.env.$ENV` を行うため、env ファイルが定義する変数は外から
-  渡した同名の値を**上書きする**（実測: ENV 未指定だと 127.0.0.1:54322 に化ける）。devenv が
-  触らない名前で輸送し、`db:migrate-deploy` task が最後に `POSTGRES_URL` へ反映する。
+  ⚠️ Doppler / GitHub Environment のキー名も job env の変数名も **`MIGRATE_POSTGRES_URL`**
+  （`POSTGRES_URL` は使わない）。Marketplace が Vercel に注入する同名の値との二重管理を避けるため、
+  かつ devenv の enterShell が `set -a; . env/<svc>/.env.$ENV` で同名変数を**上書きする**ため
+  （実測: ENV 未指定だと 127.0.0.1:54322 に化ける）。devenv が触らない名前で輸送し、
+  `db:migrate-deploy` task が最後に `POSTGRES_URL` へ反映する。
   適用前に検証ステップが解決とローカル値混入をチェックして落とす。
 
 ---
@@ -319,10 +325,10 @@ gh run watch   # 承認待ち → GitHub 上で approve すると適用が進む
 | `wire` が backend の preview URL を取れない | team/personal の slug 取得に失敗している可能性。`VERCEL_TEAM_ID` を確認（個人アカウントは空）。best-effort のため warn のみで継続する。 |
 | persistent branch 作成 API が失敗 | project の GitHub Integration(Branching) が dashboard で有効か確認（Phase 0）。CLI の git 紐付けフラグは `supabase branches create --help` で確認、確実なのは Management API の `git_branch`。 |
 | branch の DB 接続が分からない | Dashboard の *Connect > Session pooler*（`*.pooler.supabase.com:5432`）を使う。`supabase --experimental branches get <branch> -o env` は **pooler の host を返さない**（直結 = IPv6 のみ。supabase/cli#4012）ので、CI 用の値としてそのまま使わない。 |
-| migration が `ENETUNREACH` / `connect ETIMEDOUT` で落ちる | 接続先が直結（IPv6）になっている。GitHub の runner は IPv4 のみ。Doppler の `POSTGRES_URL` を session pooler（`*.pooler.supabase.com:5432`）に差し替える（`infra-deploy` / `infra-bootstrap wire` が自動で入れる）。 |
+| migration が `ENETUNREACH` / `connect ETIMEDOUT` で落ちる | 接続先が直結（IPv6）になっている。GitHub の runner は IPv4 のみ。Doppler の `MIGRATE_POSTGRES_URL` を session pooler（`*.pooler.supabase.com:5432`）に差し替える（`infra-deploy` / `infra-bootstrap wire` が自動で入れる）。 |
 | migration が TLS / SSL 関連で落ちる | project の *Enforce SSL* が有効な場合は接続文字列に `?sslmode=require` を付ける（postgres-js は URL の `sslmode` を解釈する。既定は非 TLS）。 |
 | migration が prepared statement 関連のエラーで落ちる | 接続先が transaction pooler（`:6543`）。同じホストの **5432**（session mode）に変える。 |
-| `POSTGRES_URL` secret が空のまま | pooler 設定を取得できず、誤った値を書き込まないよう **意図的にスキップ**している（terraform の `check` が警告を出す）。branch 起動直後なら数分後に再 apply。復旧しなければ Dashboard の *Connect > Session pooler* の文字列を Doppler の該当 config に手入力する。 |
+| `MIGRATE_POSTGRES_URL` secret が空のまま | pooler 設定を取得できず、誤った値を書き込まないよう **意図的にスキップ**している（terraform の `check` が警告を出す）。branch 起動直後なら数分後に再 apply。復旧しなければ Dashboard の *Connect > Session pooler* の文字列を Doppler の該当 config に手入力する。 |
 | persistent branch のコスト | long-lived は常時 compute 課金（Spend Cap 対象外）。develop を PR 時のみ preview にすればコスト減。 |
 | Doppler フラグ綴り差 | `doppler ... create --help`(v3.75 で確認済み) と一致しているか確認。 |
 | 本番ローンチ後 | `.claude/rules/mcp-doppler.md` の手順で Doppler を `本番(protected)` フェーズへ切替（prd 書込を service token スコープで封鎖）。 |

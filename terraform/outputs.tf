@@ -45,7 +45,7 @@ output "manual_followups" {
     : "",
 
     !module.doppler.github_sync_enabled
-    ? "doppler_github_integration_id が未指定（Doppler → GitHub Actions の sync 未作成 = migrate.yml の POSTGRES_URL が届かない）"
+    ? "doppler_github_integration_id が未指定（Doppler → GitHub Actions の sync 未作成 = migrate.yml の MIGRATE_POSTGRES_URL が届かない）"
     : "",
 
     length(var.production_reviewers) == 0

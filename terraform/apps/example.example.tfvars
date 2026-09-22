@@ -55,5 +55,5 @@ backend_urls = {
 # doppler_project = "myapp"
 
 # Doppler ⇄ GitHub の integration は dashboard でしか作れないため、作成済みの ID を渡す。
-# 空のままだと migrate.yml 用の POSTGRES_URL が GitHub Environment に届かない。
+# 空のままだと migrate.yml 用の MIGRATE_POSTGRES_URL が GitHub Environment に届かない。
 doppler_github_integration_id = ""

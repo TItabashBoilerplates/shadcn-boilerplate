@@ -56,12 +56,17 @@ jobs:
       # 上の environment: で選ばれた env スコープの secret がここで解決される。
       # → Actions 内で doppler CLI を叩く必要は無い（service token も不要）。
       #
-      # ⚠️ 変数名が `POSTGRES_URL` **ではない**のは意図的。devenv の enterShell は
-      # `set -a; . env/<svc>/.env.$ENV` を行うため、その env ファイルが定義する変数は
-      # **外から渡した同名の値を上書きする**（実測: ENV 未指定だと 127.0.0.1:54322 に化ける）。
-      # `MIGRATE_POSTGRES_URL` は devenv も env ファイルも定義しない名前なので確実に伝わり、
-      # db:migrate-deploy task が最後に POSTGRES_URL へ反映する。
-      MIGRATE_POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+      # ⚠️ Doppler / GitHub 側のキー名も `POSTGRES_URL` **ではなく** `MIGRATE_POSTGRES_URL`。
+      # 理由は 2 つある:
+      #   1. `POSTGRES_URL` は **Vercel Marketplace の Supabase 連携が Vercel に注入する名前**
+      #      （.claude/rules/env-naming.md §2）。同じ名前を Doppler にも置くと二重管理になる。
+      #      しかも用途が違う: アプリ実行時は transaction pooler(:6543)、migration は
+      #      session pooler(:5432) でなければならない（prepared statement 非対応のため）。
+      #   2. devenv の enterShell は `set -a; . env/<svc>/.env.$ENV` を行うため、その env ファイルが
+      #      定義する変数は **外から渡した同名の値を上書きする**（実測: ENV 未指定だと
+      #      127.0.0.1:54322 に化ける）。`MIGRATE_POSTGRES_URL` は devenv も env ファイルも
+      #      定義しない名前なので確実に伝わり、db:migrate-deploy task が最後に POSTGRES_URL へ反映する。
+      MIGRATE_POSTGRES_URL: ${{ secrets.MIGRATE_POSTGRES_URL }}
       # 値は GitHub Secrets から来るので、devenv の Doppler ロードは行わない（doppler CLI 不使用）。
       DOPPLER_SKIP: "1"
       # ENV は Doppler config / env ファイルの選択に使われる。上記の輸送用変数があるので接続先の
@@ -114,11 +119,11 @@ jobs:
       #
       # 判定は drizzle/scripts/migration-endpoint.ts に集約（単体テストで固定）。db:migrate-deploy
       # task も同じ検査を通るが、原因が分かるよう専用 step として先に出す。
-      # ⚠️ POSTGRES_URL は DB パスワードを含むので **絶対に出力しない**。host:port だけ表示する。
+      # ⚠️ MIGRATE_POSTGRES_URL は DB パスワードを含むので **絶対に出力しない**。host:port だけ表示する。
       - name: Verify remote credentials resolved
         run: |
           if [ -z "${MIGRATE_POSTGRES_URL:-}" ]; then
-            echo "::error::MIGRATE_POSTGRES_URL が空です。GitHub Environment '${ENV}' に POSTGRES_URL secret が同期されているか確認してください（Doppler > Integrations > GitHub で該当 config → 該当 Environment の sync を作成）。"
+            echo "::error::MIGRATE_POSTGRES_URL が空です。GitHub Environment '${ENV}' に MIGRATE_POSTGRES_URL secret が同期されているか確認してください（Doppler の該当 config に MIGRATE_POSTGRES_URL があるか → Doppler > Integrations > GitHub で該当 config → 該当 Environment の sync を作成）。"
             exit 1
           fi
           echo "ENV=${ENV}"

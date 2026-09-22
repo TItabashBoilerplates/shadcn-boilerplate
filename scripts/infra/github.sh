@@ -55,7 +55,7 @@ ensure_environment() {
   fi
 }
 
-# env スコープ secret（POSTGRES_URL 等）が同期済みかを確認する（作成はしない）。
+# env スコープ secret（MIGRATE_POSTGRES_URL 等）が同期済みかを確認する（作成はしない）。
 # 値の配布は **Doppler → GitHub のネイティブ sync**（dashboard, runbook Phase 2）の責務。
 # ここで service token を発行しないのは、Actions 内で doppler CLI を使わない設計のため
 # （workflow は `${{ secrets.* }}` を job env に渡すだけ）。
@@ -65,10 +65,11 @@ check_env_secrets() {
   ghenv="$(gh_env_name "$env")"
   slug="$(doppler_config_for "$env")"   # dev|stg|prd
 
-  if gh secret list --env "$ghenv" --repo "$repo" 2>/dev/null | grep -q '^POSTGRES_URL'; then
-    ok "env secret POSTGRES_URL(${ghenv}) 同期済み"
+  if gh secret list --env "$ghenv" --repo "$repo" 2>/dev/null | grep -q '^MIGRATE_POSTGRES_URL'; then
+    ok "env secret MIGRATE_POSTGRES_URL(${ghenv}) 同期済み"
   else
-    warn "env secret POSTGRES_URL(${ghenv}) が未同期。Doppler > Integrations > GitHub で"
+    warn "env secret MIGRATE_POSTGRES_URL(${ghenv}) が未同期。Doppler の config '${slug}' に"
+    warn "  MIGRATE_POSTGRES_URL があるか確認し、Doppler > Integrations > GitHub で"
     warn "  config '${slug}' → Environment '${ghenv}' の sync を作成してください（runbook Phase 2）。"
   fi
 }

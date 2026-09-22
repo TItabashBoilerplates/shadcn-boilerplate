@@ -53,9 +53,10 @@ cat drizzle/migrations/<latest>/migration.sql
 gh workflow run migrate.yml --ref main -f environment=production
 
 # ローカルから直接叩く場合（緊急時のみ。承認ゲートを迂回する）:
-#   ⚠️ 接続先は **MIGRATE_POSTGRES_URL** で渡す。POSTGRES_URL のまま渡すと、devenv の
-#      enterShell が env/*/.env.local を source して 127.0.0.1:54322 に上書きしてしまう。
-MIGRATE_POSTGRES_URL="$(doppler secrets get POSTGRES_URL --config prd --plain)" \
+#   ⚠️ Doppler のキー名も環境変数名も **MIGRATE_POSTGRES_URL**（POSTGRES_URL ではない）。
+#      POSTGRES_URL のまま渡すと、devenv の enterShell が env/*/.env.local を source して
+#      127.0.0.1:54322 に上書きしてしまう。
+MIGRATE_POSTGRES_URL="$(doppler secrets get MIGRATE_POSTGRES_URL --config prd --plain)" \
   ENV=production devenv tasks run db:migrate-deploy
 ```
 
@@ -280,9 +281,13 @@ using: sql`true`
   （`.claude/rules/commands.md` 準拠）。
 - **接続先の解決経路**: Doppler → **GitHub のネイティブ sync** → GitHub Environment の secrets
   → workflow の job env → task。**Actions 内で doppler CLI は使わない**（token 不要）。
-  - ⚠️ secret は `POSTGRES_URL` ではなく **`MIGRATE_POSTGRES_URL`** という名前で job env に渡す。
-    devenv の enterShell は `set -a; . env/<svc>/.env.$ENV` を行うため、env ファイルが定義する
-    変数は外から渡した同名の値を**上書きする**（実測: ENV 未指定だと 127.0.0.1:54322 に化ける）。
+  - ⚠️ **Doppler / GitHub Environment のキー名も、job env の変数名も `MIGRATE_POSTGRES_URL`**
+    （`POSTGRES_URL` は使わない）。理由は 2 つ:
+    1. `POSTGRES_URL` は **Vercel Marketplace の Supabase 連携が Vercel に注入する**アプリ実行時用の
+       名前（`.claude/rules/env-naming.md` §2）。Doppler に同名を置くと二重管理になるうえ、
+       用途も違う（アプリは transaction pooler、migration は session pooler）。
+    2. devenv の enterShell は `set -a; . env/<svc>/.env.$ENV` を行うため、env ファイルが定義する
+       変数は外から渡した同名の値を**上書きする**（実測: ENV 未指定だと 127.0.0.1:54322 に化ける）。
     devenv が触らない名前で輸送し、task が最後に `POSTGRES_URL` へ反映する。
   - 適用前に **Verify remote credentials resolved** ステップが接続先を検査して落とす。
     task 側も同じ検査（`nr check-endpoint`）を通るのでローカル実行でも守られる
@@ -302,7 +307,7 @@ using: sql`true`
   ローカルでは再現しない**。だから接続先そのものを静的に検査する。
 - 判定は `drizzle/scripts/migration-endpoint.ts` に集約（単体テストで固定。**消さない**）。
   workflow と `db:migrate-deploy` の両方がこれを通る。
-- Doppler の `POSTGRES_URL` は `infra-deploy`（terraform）/ `infra-bootstrap wire` が
+- Doppler の `MIGRATE_POSTGRES_URL` は `infra-deploy`（terraform）/ `infra-bootstrap wire` が
   **Management API の pooler 設定から host を引いて** session mode で組み立てる
   （pooler host は ref から導出できず、`supabase branches get -o env` にも含まれない）。
 - IPv4 add-on を購入済みで直結を使いたい場合のみ `MIGRATE_ALLOW_DIRECT_DB=1` で許可する。

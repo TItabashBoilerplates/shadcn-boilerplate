@@ -165,7 +165,13 @@ CI が必要とする値の供給は、**性質で保管先が分かれる**（`
 |---|---|---|---|
 | `SUPABASE_PROJECT_REF` | **非機密**（`https://<ref>.supabase.co` として公開される） | **Terraform → GitHub Environment variable** | `vars.SUPABASE_PROJECT_REF` |
 | `SUPABASE_ACCESS_TOKEN` | **シークレット** | **Doppler → GitHub sync**（`doppler` MCP で投入） | `secrets.SUPABASE_ACCESS_TOKEN`（読み替え不要） |
-| `POSTGRES_URL` | シークレット | Doppler → GitHub sync | `secrets.POSTGRES_URL`（migrate.yml） |
+| `MIGRATE_POSTGRES_URL` | シークレット | Doppler → GitHub sync（`infra-deploy` が投入） | `secrets.MIGRATE_POSTGRES_URL`（migrate.yml） |
+
+> ⚠️ **migration の接続先を `POSTGRES_URL` という名前で Doppler に置かない。** その名前は
+> Vercel Marketplace の Supabase 連携が **Vercel に**注入するアプリ実行時用の値
+> （transaction pooler）であり、Doppler に同名を作ると二重管理になる
+> （`.claude/rules/env-naming.md` §2）。migration は **session pooler(:5432)** でなければ
+> prepared statement が使えず落ちるので、用途ごと別のキー名にしてある。
 
 > ⚠️ **`SUPABASE_ACCESS_TOKEN` は Terraform では作らない。** Supabase の access token は
 > organization 全体の Management API を叩ける強い資格情報であり、Terraform に持たせると
@@ -250,7 +256,7 @@ Branching に GitHub 連携は不要（2026-05-04 に「Git なしの Branching�
 | 3 | **Doppler ⇄ GitHub の integration 作成** | Doppler workplace 単位で一度きり（provider に resource が無い） |
 
 3 の作成後、その integration ID を `doppler_github_integration_id` に渡すと
-`migrate.yml` 用の `POSTGRES_URL` が GitHub Environment secrets に自動で届く。
+`migrate.yml` 用の `MIGRATE_POSTGRES_URL` が GitHub Environment secrets に自動で届く。
 
 **アプリを増やすときの手動作業はゼロ**（1〜3 は使い回される）。
 
