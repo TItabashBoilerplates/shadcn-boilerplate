@@ -33,7 +33,9 @@ import pytest
 
 # backend-py/apps/api/tests/ から workspace ルート backend-py/ へ
 WORKSPACE_ROOT = Path(__file__).resolve().parents[3]
-VERCEL_JSON = WORKSPACE_ROOT / "vercel.json"
+# vercel.json はリポジトリルートに 1 つだけ（web と api を同じ project の services として載せる）
+REPO_ROOT = WORKSPACE_ROOT.parent
+VERCEL_JSON = REPO_ROOT / "vercel.json"
 
 # resolve-v2.ts の CONTAINER_ENTRYPOINT_CANDIDATES と同順。
 # 公式ドキュメントに載っているのは先頭 2 つだけなので、そちらを優先して使う。
@@ -58,7 +60,7 @@ def _config() -> dict[str, Any]:
 
 def _container_services() -> list[tuple[str, dict[str, Any]]]:
     services: dict[str, dict[str, Any]] = _config().get("services", {})
-    assert services, "backend-py/vercel.json に services が無い"
+    assert services, "リポジトリルートの vercel.json に services が無い"
     return [
         (name, service)
         for name, service in services.items()
@@ -67,7 +69,7 @@ def _container_services() -> list[tuple[str, dict[str, Any]]]:
 
 
 def _dockerfile_paths() -> list[tuple[str, Path]]:
-    # entrypoint は service の root からの相対パス
+    # entrypoint は service の root（リポジトリルート基準）からの相対パス
     base = VERCEL_JSON.parent
     return [
         (name, (base / str(svc.get("root", ".")) / str(svc["entrypoint"])).resolve())
