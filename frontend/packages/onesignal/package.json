@@ -20,9 +20,9 @@
   "devDependencies": {
     "@types/react": "^19.0.0",
     "@workspace/tsc": "workspace:*",
-    "react": "^19.0.0"
+    "react": "^19.3.0"
   },
   "peerDependencies": {
-    "react": "^19.0.0"
+    "react": "^19.3.0"
   }
 }
