@@ -28,6 +28,8 @@ declare const Deno: {
 	readTextFileSync(path: string): string;
 	writeTextFileSync(path: string, data: string): void;
 	statSync(path: string): unknown;
+	mkdirSync(path: string, options: { recursive: boolean }): void;
+	errors: { NotFound: new (...args: never[]) => Error };
 };
 
 type Server = {
@@ -46,8 +48,10 @@ const fileExists = (p: string): boolean => {
 	try {
 		Deno.statSync(root + p);
 		return true;
-	} catch {
-		return false;
+	} catch (error) {
+		if (error instanceof Deno.errors.NotFound) return false;
+		console.error(`MCP config: cannot inspect ${p}`);
+		throw error;
 	}
 };
 
@@ -68,8 +72,14 @@ function toCursor(s: Server) {
 }
 function toCodex(s: Server) {
 	if (isStdio(s))
-		return clean({ command: s.command, args: s.args, env: nonEmpty(s.env) });
-	return clean({ type: "http", url: s.url, headers: nonEmpty(s.headers) });
+		return clean({
+			command: s.command,
+			args: s.args,
+			cwd: Deno.cwd(),
+			env: nonEmpty(s.env),
+		});
+	// Codex infers the transport from command/url. Claude's headers key is http_headers in Codex.
+	return clean({ url: s.url, http_headers: nonEmpty(s.headers) });
 }
 
 // ---- JSON 書き出し（mcpServers のみ差し替え、他キーは保持）----
@@ -78,8 +88,11 @@ function writeJsonMerge(path: string, mcpServers: Record<string, unknown>) {
 	if (fileExists(path)) {
 		try {
 			base = JSON.parse(read(path)) as Record<string, unknown>;
-		} catch {
-			base = {};
+		} catch (error) {
+			console.error(
+				`MCP config: cannot parse ${path}; refusing to overwrite it`,
+			);
+			throw error;
 		}
 	}
 	base.mcpServers = mcpServers;
@@ -87,8 +100,7 @@ function writeJsonMerge(path: string, mcpServers: Record<string, unknown>) {
 }
 
 // ---- TOML 書き出し（本ジェネレータが出す限定スキーマのみ対応）----
-const tomlStr = (s: string) =>
-	`"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+const tomlStr = (s: string) => JSON.stringify(s).replace(/\u007f/g, "\\u007f");
 const tomlKey = (k: string) => (/^[A-Za-z0-9_-]+$/.test(k) ? k : tomlStr(k));
 const tomlArr = (a: string[]) => `[${a.map(tomlStr).join(", ")}]`;
 const tomlInline = (o: Record<string, string>) =>
@@ -108,11 +120,11 @@ function writeCodex(
 		out += `[mcp_servers.${tomlKey(name)}]\n`;
 		if (s.command) out += `command = ${tomlStr(s.command as string)}\n`;
 		if (s.args) out += `args = ${tomlArr(s.args as string[])}\n`;
-		if (s.type) out += `type = ${tomlStr(s.type as string)}\n`;
+		if (s.cwd) out += `cwd = ${tomlStr(s.cwd as string)}\n`;
 		if (s.url) out += `url = ${tomlStr(s.url as string)}\n`;
 		if (s.env) out += `env = ${tomlInline(s.env as Record<string, string>)}\n`;
-		if (s.headers)
-			out += `headers = ${tomlInline(s.headers as Record<string, string>)}\n`;
+		if (s.http_headers)
+			out += `http_headers = ${tomlInline(s.http_headers as Record<string, string>)}\n`;
 		out += "\n";
 	}
 	Deno.writeTextFileSync(root + path, out);
@@ -126,6 +138,8 @@ const entries = Object.entries(servers);
 const map = (fn: (s: Server) => unknown) =>
 	Object.fromEntries(entries.map(([n, s]) => [n, fn(s)]));
 
+Deno.mkdirSync(`${root}.cursor`, { recursive: true });
+Deno.mkdirSync(`${root}.codex`, { recursive: true });
 writeJsonMerge(".cursor/mcp.json", map(toCursor));
 writeCodex(
 	".codex/config.toml",

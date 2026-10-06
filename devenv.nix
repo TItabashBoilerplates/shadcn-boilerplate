@@ -1758,6 +1758,7 @@ in
     "build-frontend" = { exec = ''cd "$DEVENV_ROOT/frontend" && nr build''; description = "Build frontend (Next.js)"; };
 
     # ---------- Tests ----------
+    "test-mcp-sync" = { exec = ''cd "$DEVENV_ROOT" && exec deno test --allow-read --allow-write --allow-run scripts/sync-mcp.test.ts''; description = "MCP config sync regression tests (Deno)"; };
     "test-frontend"   = { exec = ''cd "$DEVENV_ROOT/frontend" && nr test''; description = "Vitest (frontend)"; };
     # drizzle 側は Bun 標準の test runner（依存を増やさない）。接続先ガードの判定ロジックを固定する。
     "test-drizzle"    = { exec = ''cd "$DEVENV_ROOT/drizzle" && nr test''; description = "bun test (drizzle)"; };
@@ -1785,10 +1786,11 @@ in
         # Edge Functions は Supabase の起動が要らない純粋な Deno テストなので
         # ここに含める（pgTAP は DB が要るので test-db に分けてある）。
         test-functions
+        test-mcp-sync
         echo "✅ All unit tests passed."
         echo "💡 Run 'test-db' for pgTAP DB tests, 'e2e' for Maestro UI/E2E."
       '';
-      description = "Run all unit tests (frontend + drizzle + backend-py + edge functions)";
+      description = "Run all unit tests (frontend + drizzle + backend-py + edge functions + MCP sync)";
     };
     # ---------- Maestro UI / E2E ----------
     # 環境の切り替えは runner が Maestro 公式の 2 つの仕組みで行う:

@@ -31,6 +31,25 @@
 `disable-model-invocation: true` の Skill はユーザーの明示依頼時だけ使う。Claude の `allowed-tools`、`model`、`effort`、`context: fork`、`hooks` は Codex の実行権限やモデル設定には変換されない。
 Hooks は自動移植されない。MCP は既存の `mcp-sync` で `.mcp.json` から生成する。`.codex/config.toml` は生成物なので手動編集しない。
 
+### MCP 設定の生成と確認
+
+初回 clone / worktree 作成後、checkout を移動した後、または `.mcp.json` を変更した後に、
+リポジトリルートで `devenv shell -- mcp-sync`（devenv shell 内なら `mcp-sync`）を実行する。
+`.codex/config.toml` と `.cursor/mcp.json` が生成される。Codex の HTTP ヘッダーは
+`http_headers` に変換し、stdio の `cwd` は生成時の checkout に固定する。
+Codex 設定は全体を再生成するため、個人のモデルなどの設定はユーザー設定側に置く。
+
+Codex は **trusted project のみ**プロジェクト設定を読み込む。生成後に同じ checkout で
+`codex mcp list`、個別に `codex mcp get <name>` で読み込みを確認する。
+アプリでは MCP サーバー設定の Restart、CLI ではセッションを起動し直して反映する。
+stdio の実行ファイルが PATH にある環境で起動する（CLI は devenv shell 内が確実）。
+OAuth が必要なら `codex mcp login <name>` またはアプリの Authenticate を使う。
+一覧に表示されることは接続成功を意味しない。`/mcp` で接続状態も確認する。
+`supabase-prod` の `<PROJECT_REF>` は派生プロジェクトで正本に設定する。
+
+回帰テストは `devenv shell -- test-mcp-sync`。公式仕様と確認したバージョンは
+[`2026-10-06-codex-mcp-config.md`](../_research/2026-10-06-codex-mcp-config.md) に記録している。
+
 ## GPT-6 Astra での進め方
 
 - ユーザー指示と既に得た承認を、Skill の一般的なガイドラインより優先する。通常の可逆な実装判断は進め、結果を変える未決定事項は確認する。`PROJECT.md` の未決定事項を勝手に埋めたり、明示された承認条件を省いたりしない。
