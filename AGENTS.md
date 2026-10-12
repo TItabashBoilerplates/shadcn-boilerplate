@@ -115,6 +115,7 @@ desktop-wire-signing               # Apple 署名/公証 + updater 鍵を Dopple
 | `mcp-doppler.md` | Doppler は `doppler` MCP のみ。フェーズは `PROJECT.md` の `doppler_phase`。値をチャット / ログに出さない | 常時 |
 | `env-naming.md` | キー名は読むツールの名前に揃える。sync 付き config で `GITHUB_` 禁止。Supabase の env は Doppler に置かない | 常時 |
 | `auth.md` | モバイルがあるならメール + パスワード必須（OTP のみ禁止）。メール再設定 / パスワード忘れ / 変更 / 削除の導線は指示を待たず実装 | 常時 |
+| `llm-agent-control.md` | LLM の出力・判断を正規表現 / 文字列パースで扱わない。判断は Structured Output、行動はツール呼び出し、ループ終了は構造で決める | 常時 |
 | `list-pagination.md` | 増えうる一覧は最初からページング。全件取得禁止。UI パターンは自分で選ぶ（迷ったら「もっと見る」） | 常時 |
 | `render-optimization.md` | FSD スライス単位でステート局所化。Zustand はセレクター。invalidation はピンポイント | paths |
 | `page-navigation.md` | `loading.tsx` + Suspense でストリーミング。遷移はリンク | paths |

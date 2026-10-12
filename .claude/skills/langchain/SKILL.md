@@ -11,6 +11,12 @@ description: LangChain/LangGraph/LangSmith ガイダンス。エージェント�
 > トークン使用量とコストの記録は後付けできない（過去のイベントは作れない）ため、実装とセットで入れる。
 > エージェントは 1 リクエストで何十回もモデルを呼ぶので、`trace_id` を束縛した callback での一元記録が要る。
 
+> **絶対禁止（`.claude/rules/llm-agent-control.md`）**: LLM の出力を正規表現・文字列パース
+> （`re.search` / `split` / `"FINAL ANSWER" in text` / `JSON.parse(text.slice(...))`）で解釈して
+> 分岐・ループ・ツール選択を決めない。意図判定をキーワード照合で代替しない。**それをやると LLM を使う意味が無くなる。**
+> 判断は `with_structured_output` / `response_format` の型付きフィールド、行動はツール呼び出し、
+> ループの継続・終了は tool call の有無・状態のフィールド・`Command` で決める。
+
 ## 技術スタック概要
 
 | コンポーネント    | 用途                                   | パッケージ                      |
@@ -118,6 +124,22 @@ graph = create_react_agent(
     tools=tools,
     response_format=AnalysisResult,
 )
+```
+
+### 禁止: 出力を文字列で読んで制御する
+
+```python
+# ❌ 自由文を正規表現で読み、分岐・ループを決める（LLM を使う意味が消える。無言で壊れる）
+text = llm.invoke(messages).content
+if re.search(r"Action:\s*search", text): ...
+while "FINAL ANSWER" not in text: ...
+
+# ✅ 型付きのフィールドで受け取り、その値で分岐する
+class Decision(BaseModel):
+    next_step: Literal["search", "answer", "escalate"]
+    reason: str
+
+decision = llm.with_structured_output(Decision).invoke(messages)
 ```
 
 > **ストリーミング時の注意**: `with_structured_output` でストリーミングする場合は **Pydantic ではなく TypedDict を使用**する必要があります。詳細は [structured-output-streaming.md](structured-output-streaming.md) を参照。
