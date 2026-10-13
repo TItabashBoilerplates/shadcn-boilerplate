@@ -34,6 +34,9 @@ import {
 	openStorybook,
 } from "./harness.mjs";
 
+/** ストーリーが描画されるまで待つ上限。超えても空なら「描画されない」と判定する */
+const RENDER_TIMEOUT_MS = 5_000;
+
 function parseArgs(argv) {
 	const opts = { url: null, filter: null, concurrency: 4 };
 	for (let i = 0; i < argv.length; i++) {
@@ -74,13 +77,19 @@ async function checkStory(context, baseUrl, story) {
 			waitUntil: "networkidle",
 			timeout: 30_000,
 		});
-		// Storybook は描画完了を DOM に出さないので、レンダリング 1 巡ぶん待つ
-		await page.waitForTimeout(150);
-
-		const empty = await page.evaluate(() => {
-			const root = document.querySelector("#storybook-root");
-			return !root || root.children.length === 0;
-		});
+		// Storybook は描画完了を DOM に出さないので、root に子が付くまで待つ。
+		// 固定時間（以前は 150ms）だと並列実行時に描画が間に合わず、無関係な
+		// ストーリーがランダムに「空」と判定された（実測で 300ms 超もある）。
+		// 待ち切っても空なら失敗にする（描画されないストーリーは見逃さない）。
+		const empty = await page.evaluate(async (timeoutMs) => {
+			const deadline = Date.now() + timeoutMs;
+			while (Date.now() < deadline) {
+				const root = document.querySelector("#storybook-root");
+				if (root && root.children.length > 0) return false;
+				await new Promise((resolve) => setTimeout(resolve, 50));
+			}
+			return true;
+		}, RENDER_TIMEOUT_MS);
 
 		return { story, empty, errors };
 	} catch (error) {
