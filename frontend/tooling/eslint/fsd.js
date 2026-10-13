@@ -10,110 +10,91 @@ import boundaries from 'eslint-plugin-boundaries'
 
 const FSD_ELEMENTS = [
   // Next.js App Router (at project root) - treated as top-level entry point
-  { type: 'nextjs-app', pattern: 'app/**/*', mode: 'full' },
+  { type: 'nextjs-app', pattern: 'app/**/*', partialMatch: false },
   // FSD layers (inside src/)
-  { type: 'fsd-app', pattern: 'src/app/**/*', mode: 'full' },
+  { type: 'fsd-app', pattern: 'src/app/**/*', partialMatch: false },
   {
     type: 'views',
     pattern: 'src/views/*',
-    mode: 'folder',
     capture: ['slice'],
   },
   {
     type: 'widgets',
     pattern: 'src/widgets/*',
-    mode: 'folder',
     capture: ['slice'],
   },
   // @x cross-imports for features (must be before features to match first)
   {
     type: 'features-cross-import',
     pattern: 'src/features/*/@x/*',
-    mode: 'full',
+    partialMatch: false,
     capture: ['sourceSlice', 'targetSlice'],
   },
   {
     type: 'features',
     pattern: 'src/features/*',
-    mode: 'folder',
     capture: ['slice'],
   },
   // @x cross-imports for entities (must be before entities to match first)
   {
     type: 'entities-cross-import',
     pattern: 'src/entities/*/@x/*',
-    mode: 'full',
+    partialMatch: false,
     capture: ['sourceSlice', 'targetSlice'],
   },
   {
     type: 'entities',
     pattern: 'src/entities/*',
-    mode: 'folder',
     capture: ['slice'],
   },
   {
     type: 'shared',
     pattern: 'src/shared/*',
-    mode: 'folder',
     capture: ['segment'],
   },
   // Workspace packages (always allowed)
   { type: 'workspace', pattern: '@workspace/**' },
 ]
 
-const LAYER_RULES = [
+/** `from` / `to` に書く要素セレクタ（eslint-plugin-boundaries v7 のオブジェクト形式） */
+const el = (type) => ({ element: { type } })
+
+/** 下位レイヤーへの依存だけを許可する */
+const layer = (from, allowed) => ({
+  from: el(from),
+  allow: { to: allowed.map(el) },
+})
+
+const SLICED_LAYERS = ['views', 'widgets', 'features', 'entities']
+
+const LAYER_POLICIES = [
   // Next.js App Router can import from all FSD layers
-  {
-    from: 'nextjs-app',
-    allow: ['fsd-app', 'views', 'widgets', 'features', 'entities', 'shared', 'workspace'],
-  },
+  layer('nextjs-app', [
+    'fsd-app',
+    'views',
+    'widgets',
+    'features',
+    'entities',
+    'shared',
+    'workspace',
+  ]),
   // FSD app layer can import from itself and all lower layers
-  {
-    from: 'fsd-app',
-    allow: ['fsd-app', 'views', 'widgets', 'features', 'entities', 'shared', 'workspace'],
-  },
-  {
-    from: 'views',
-    allow: ['widgets', 'features', 'entities', 'shared', 'workspace'],
-  },
-  {
-    from: 'widgets',
-    allow: ['features', 'entities', 'shared', 'workspace'],
-  },
-  {
-    from: 'features',
-    allow: ['entities', 'shared', 'workspace'],
-  },
-  {
-    from: 'entities',
-    allow: ['shared', 'workspace'],
-  },
+  layer('fsd-app', ['fsd-app', 'views', 'widgets', 'features', 'entities', 'shared', 'workspace']),
+  layer('views', ['widgets', 'features', 'entities', 'shared', 'workspace']),
+  layer('widgets', ['features', 'entities', 'shared', 'workspace']),
+  layer('features', ['entities', 'shared', 'workspace']),
+  layer('entities', ['shared', 'workspace']),
   // Shared layer can import from any segment within shared (and workspace)
-  {
-    from: 'shared',
-    allow: ['shared', 'workspace'],
-  },
+  layer('shared', ['shared', 'workspace']),
   // Allow same-slice imports (intra-slice) for sliced layers
-  {
-    from: ['views', 'widgets', 'features', 'entities'],
-    // biome-ignore lint/suspicious/noTemplateCurlyInString: eslint-plugin-boundaries syntax
-    allow: [['views', { slice: '${from.slice}' }]],
-  },
-  {
-    from: ['views', 'widgets', 'features', 'entities'],
-    // biome-ignore lint/suspicious/noTemplateCurlyInString: eslint-plugin-boundaries syntax
-    allow: [['widgets', { slice: '${from.slice}' }]],
-  },
-  {
-    from: ['views', 'widgets', 'features', 'entities'],
-    // biome-ignore lint/suspicious/noTemplateCurlyInString: eslint-plugin-boundaries syntax
-    allow: [['features', { slice: '${from.slice}' }]],
-  },
-  {
-    from: ['views', 'widgets', 'features', 'entities'],
-    // biome-ignore lint/suspicious/noTemplateCurlyInString: eslint-plugin-boundaries syntax
-    allow: [['entities', { slice: '${from.slice}' }]],
-  },
+  ...SLICED_LAYERS.map((type) => ({
+    from: { element: { type: SLICED_LAYERS } },
+    allow: {
+      to: {
+        element: { type, captured: { slice: '{{ from.element.captured.slice }}' } },
+      },
+    },
+  })),
 ]
 
 /**
@@ -129,14 +110,14 @@ export const fsdConfig = {
     'boundaries/elements': FSD_ELEMENTS,
   },
   rules: {
-    'boundaries/element-types': [
+    'boundaries/dependencies': [
       'error',
       {
         default: 'disallow',
-        rules: LAYER_RULES,
+        policies: LAYER_POLICIES,
       },
     ],
-    'boundaries/no-unknown': ['warn'],
+    'boundaries/no-unknown-dependencies': ['warn'],
   },
 }
 

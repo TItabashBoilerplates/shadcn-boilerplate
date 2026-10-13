@@ -11,30 +11,30 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "lint:fsd": "eslint . --max-warnings 0 --rule 'boundaries/element-types: error'"
+    "lint:fsd": "eslint . --max-warnings 0 --rule 'boundaries/dependencies: error'"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.9.0",
-    "@tauri-apps/plugin-process": "^2.3.1",
-    "@tauri-apps/plugin-updater": "^2.11.0",
+    "@tauri-apps/api": "^2.12.3",
+    "@tauri-apps/plugin-process": "^2.4.0",
+    "@tauri-apps/plugin-updater": "^2.13.3",
     "@workspace/tokens": "workspace:*",
     "@workspace/ui": "workspace:*",
-    "lucide-react": "^1.28.0",
+    "lucide-react": "^1.56.0",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
-    "@tauri-apps/cli": "^2.11.4",
-    "@types/react": "^19.2.4",
-    "@types/react-dom": "^19.2.3",
-    "@typescript-eslint/parser": "^8.65.0",
-    "@vitejs/plugin-react": "^5.1.4",
+    "@tauri-apps/cli": "^2.12.2",
+    "@types/react": "~19.2.18",
+    "@types/react-dom": "~19.2.7",
+    "@typescript-eslint/parser": "^8.71.2",
+    "@vitejs/plugin-react": "^6.1.2",
     "@workspace/eslint-config": "workspace:*",
     "@workspace/tsc": "workspace:*",
     "eslint": "^9",
-    "eslint-import-resolver-typescript": "^3.10.1",
+    "eslint-import-resolver-typescript": "^4.4.5",
     "tailwindcss": "^4.3.3",
-    "vite": "7.3.1"
+    "vite": "8.3.4"
   }
 }

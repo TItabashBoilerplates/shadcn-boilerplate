@@ -59,24 +59,25 @@ describe('"use server" ファイルの export', () => {
     expect(serverActionFiles.length).toBeGreaterThan(0)
   })
 
-  it.each(
-    serverActionFiles.map((file) => [relative(SRC_ROOT, file), file])
-  )('%s は async 関数以外を export していない', (_label, file) => {
-    const code = stripComments(readFileSync(file, 'utf8'))
+  it.each(serverActionFiles.map((file) => [relative(SRC_ROOT, file), file]))(
+    '%s は async 関数以外を export していない',
+    (_label, file) => {
+      const code = stripComments(readFileSync(file, 'utf8'))
 
-    // `export const` / `export let` / `export var` は値の export になるため不可
-    const valueExports = code.match(/^\s*export\s+(?:const|let|var)\s+\w+/gm) ?? []
+      // `export const` / `export let` / `export var` は値の export になるため不可
+      const valueExports = code.match(/^\s*export\s+(?:const|let|var)\s+\w+/gm) ?? []
 
-    // `export function` は async でなければ不可（`export async function` のみ許可）
-    const syncFunctionExports = code.match(/^\s*export\s+function\s+\w+/gm) ?? []
+      // `export function` は async でなければ不可（`export async function` のみ許可）
+      const syncFunctionExports = code.match(/^\s*export\s+function\s+\w+/gm) ?? []
 
-    // `export { X }` の再 export も、何を出しているか静的に追えないため不可
-    const namedReExports = code.match(/^\s*export\s*\{[^}]*\}/gm) ?? []
+      // `export { X }` の再 export も、何を出しているか静的に追えないため不可
+      const namedReExports = code.match(/^\s*export\s*\{[^}]*\}/gm) ?? []
 
-    expect(
-      [...valueExports, ...syncFunctionExports, ...namedReExports],
-      `"use server" ファイルは async 関数のみ export できる。` +
-        `定数や型は model/ など別モジュールへ移すこと`
-    ).toEqual([])
-  })
+      expect(
+        [...valueExports, ...syncFunctionExports, ...namedReExports],
+        `"use server" ファイルは async 関数のみ export できる。` +
+          `定数や型は model/ など別モジュールへ移すこと`
+      ).toEqual([])
+    }
+  )
 })

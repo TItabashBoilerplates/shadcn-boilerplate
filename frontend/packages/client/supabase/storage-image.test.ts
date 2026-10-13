@@ -62,14 +62,12 @@ describe('snapImageWidth', () => {
     }
   })
 
-  it.each([
-    0,
-    -1,
-    Number.NaN,
-    Number.POSITIVE_INFINITY,
-  ])('不正な幅は実装バグなので throw する: %s', (width) => {
-    expect(() => snapImageWidth(width)).toThrow(/width/i)
-  })
+  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])(
+    '不正な幅は実装バグなので throw する: %s',
+    (width) => {
+      expect(() => snapImageWidth(width)).toThrow(/width/i)
+    }
+  )
 })
 
 describe('normalizeImageTransform', () => {
@@ -104,13 +102,12 @@ describe('normalizeImageTransform', () => {
     })
   })
 
-  it.each([
-    Number.NaN,
-    Number.POSITIVE_INFINITY,
-    Number.NEGATIVE_INFINITY,
-  ])('有限数でない値は実装バグなので throw する: %s', (value) => {
-    expect(() => normalizeImageTransform({ width: value })).toThrow()
-  })
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+    '有限数でない値は実装バグなので throw する: %s',
+    (value) => {
+      expect(() => normalizeImageTransform({ width: value })).toThrow()
+    }
+  )
 })
 
 describe('buildStorageImageUrl', () => {
@@ -226,14 +223,12 @@ describe('isStorageObjectUrl', () => {
     expect(isStorageObjectUrl(url)).toBe(true)
   })
 
-  it.each([
-    'https://example.com/a.png',
-    '/local/a.png',
-    'avatars/a.png',
-    '',
-  ])('Storage 以外の URL は false: %s', (url) => {
-    expect(isStorageObjectUrl(url)).toBe(false)
-  })
+  it.each(['https://example.com/a.png', '/local/a.png', 'avatars/a.png', ''])(
+    'Storage 以外の URL は false: %s',
+    (url) => {
+      expect(isStorageObjectUrl(url)).toBe(false)
+    }
+  )
 })
 
 describe('toStorageImageUrl', () => {

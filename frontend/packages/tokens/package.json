@@ -17,7 +17,7 @@
     "type-check": "workspace-tsc --noEmit"
   },
   "devDependencies": {
-    "@types/node": "^22.0.0",
+    "@types/node": "^24.19.2",
     "@workspace/tsc": "workspace:*"
   }
 }

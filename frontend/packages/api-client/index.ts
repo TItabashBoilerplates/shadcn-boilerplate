@@ -33,9 +33,8 @@
 
 // Client configuration
 //
-// Hey API はクライアント実装を `src/generated/client/` へ**バンドル出力**するため、
-// ランタイムの `@hey-api/client-fetch` から `client` を取り出すことはできない
-// （同パッケージは `client` を named export していない）。
+// Hey API はクライアント実装を `src/generated/client/` へ**バンドル出力**する
+// （openapi-ts 0.73 以降。npm の `@hey-api/client-fetch` は deprecated で、依存に入れない）。
 // 生成物の `client.gen.ts` が `createClient()` 済みのインスタンスを持っているので、
 // Public API はそちらを再 export する。
 export { client } from './src/generated/client.gen'

@@ -4,6 +4,18 @@ export type ClientOptions = {
     baseUrl: 'http://127.0.0.1:4040' | (string & {});
 };
 
+/**
+ * HealthCheckResponse
+ *
+ * Response payload for the health check endpoint.
+ */
+export type HealthCheckResponse = {
+    /**
+     * Message
+     */
+    message: string;
+};
+
 export type HealthcheckHealthcheckGetData = {
     body?: never;
     path?: never;
@@ -13,13 +25,9 @@ export type HealthcheckHealthcheckGetData = {
 
 export type HealthcheckHealthcheckGetResponses = {
     /**
-     * Response Healthcheck Healthcheck Get
-     *
      * Successful Response
      */
-    200: {
-        [key: string]: string;
-    };
+    200: HealthCheckResponse;
 };
 
 export type HealthcheckHealthcheckGetResponse = HealthcheckHealthcheckGetResponses[keyof HealthcheckHealthcheckGetResponses];

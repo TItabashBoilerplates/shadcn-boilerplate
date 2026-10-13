@@ -9,11 +9,11 @@
     "./client": "./client/index.ts"
   },
   "dependencies": {
-    "pino": "^9.6.0",
+    "pino": "^10.4.0",
     "loglevel": "^1.9.2"
   },
   "devDependencies": {
-    "pino-pretty": "^13.0.0"
+    "pino-pretty": "^13.2.0"
   },
   "peerDependencies": {
     "react": "^19"
