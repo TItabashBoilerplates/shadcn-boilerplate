@@ -16,13 +16,13 @@ let
   # バージョンを上げるときは:
   #   curl -sS https://releases.hashicorp.com/terraform/<V>/terraform_<V>_SHA256SUMS
   #   で hex を取り、SRI（sha256-<base64>）に変換して下表を差し替える。
-  terraformVersion = "1.15.8";
+  terraformVersion = "1.16.5";
 
   terraformDist = {
-    "x86_64-linux" = { platform = "linux_amd64"; hash = "sha256-0lzntpAgE62QXbPS6rC+TNkFiH/oi4GmFxuNVQPDHz0="; };
-    "aarch64-linux" = { platform = "linux_arm64"; hash = "sha256-iJHp3O3J47iVC8avnU2K8fTPreMGL1O53EA6ifbOjJw="; };
-    "x86_64-darwin" = { platform = "darwin_amd64"; hash = "sha256-4ugS54N3EVm/dY/U5V1tybsI9j4q8sY9ISchgHoCxdw="; };
-    "aarch64-darwin" = { platform = "darwin_arm64"; hash = "sha256-8hARDFaYuU2AOnpjzbAlG1RVwVCEFHiAjiu7ND+V7Wg="; };
+    "x86_64-linux" = { platform = "linux_amd64"; hash = "sha256-K8L8//AzJlyeAsoDUfAXlOsSL2KpsqSaMpS55J6qteQ="; };
+    "aarch64-linux" = { platform = "linux_arm64"; hash = "sha256-YaULAEhe5IEM8gWB7wgPxU001mbhdcWNmhBQHGXBzN4="; };
+    "x86_64-darwin" = { platform = "darwin_amd64"; hash = "sha256-mAkVjkgc8tOoQz5ZF585e47bUXI5dxG9mPa7Mu3K9Ts="; };
+    "aarch64-darwin" = { platform = "darwin_arm64"; hash = "sha256-7N72XiQZPWJ/J8ObrtoxKV8IyTjYo9R2T0QvuRbUt9w="; };
   };
 
   terraformCli =
@@ -315,7 +315,7 @@ in
 
   languages.javascript = {
     enable = true;
-    package = pkgs.nodejs_22;
+    package = pkgs.nodejs_24;
     bun.enable = true;
   };
 
@@ -323,7 +323,7 @@ in
 
   languages.python = {
     enable = true;
-    package = pkgs.python313;
+    package = pkgs.python314;
     uv.enable = true;
   };
 

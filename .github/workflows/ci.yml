@@ -37,7 +37,7 @@ jobs:
     name: CI Check (lint + format + type-check)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: cachix/install-nix-action@v31
         with:
           # cache-nix-action 公式推奨。これがないと nix store の自動 GC で
@@ -48,7 +48,7 @@ jobs:
             keep-outputs = true
             keep-env-derivations = true
       # /nix/store そのものを GHA cache に乗せる。
-      # 旧構成は `actions/cache@v4` で `.devenv/` を抱えていたが、`.devenv/profile`
+      # 旧構成は `actions/cache@v6` で `.devenv/` を抱えていたが、`.devenv/profile`
       # や `.devenv/gc/` が `/nix/store/...` への symlink を持つため、別 runner で
       # restore すると参照先実体が無く `no substituter that can build it` で失敗する。
       # cache-nix-action は `/nix/store` 自体を cache するので symlink 先の実体も揃う。
@@ -67,14 +67,14 @@ jobs:
       # devenv 公式 cachix を読み取り substituter として併用。
       # 初回（cache-nix-action が cold な状態）でも devenv 共通の依存物は
       # ここから引いてこられるので、build from source を回避できる。
-      - uses: cachix/cachix-action@v16
+      - uses: cachix/cachix-action@v17
         with:
           name: devenv
       # node_modules は /nix/store 外に出るので別 cache。
       # uv venv は `.devenv/state/venv` だが、CI では `setup:install-backend` task が
       # `uv sync --frozen` で毎回再生成するため cache 不要。
       - name: Cache node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             frontend/node_modules
@@ -125,7 +125,7 @@ jobs:
     name: Unit Tests (frontend + backend-py)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
@@ -140,11 +140,11 @@ jobs:
           purge-prefixes: nix-${{ runner.os }}-
           purge-created: 0
           purge-primary-key: never
-      - uses: cachix/cachix-action@v16
+      - uses: cachix/cachix-action@v17
         with:
           name: devenv
       - name: Cache node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             frontend/node_modules
@@ -195,7 +195,7 @@ jobs:
     #   pgTAP に要るのは Postgres だけ。公式の database-tests ワークフローも
     #   `supabase db start` を使う。フルスタックを起こすと数分無駄になる。
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
@@ -210,12 +210,12 @@ jobs:
           purge-prefixes: nix-${{ runner.os }}-
           purge-created: 0
           purge-primary-key: never
-      - uses: cachix/cachix-action@v16
+      - uses: cachix/cachix-action@v17
         with:
           name: devenv
       # Drizzle のマイグレーションを流すのに drizzle/node_modules が要る
       - name: Cache node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             frontend/node_modules
@@ -261,7 +261,7 @@ jobs:
     # 壊れているものを土台に回しても意味が無いので ci-check の後。
     needs: [ci-check]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
@@ -276,11 +276,11 @@ jobs:
           purge-prefixes: nix-${{ runner.os }}-
           purge-created: 0
           purge-primary-key: never
-      - uses: cachix/cachix-action@v16
+      - uses: cachix/cachix-action@v17
         with:
           name: devenv
       - name: Cache node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             frontend/node_modules
@@ -313,7 +313,7 @@ jobs:
     # ci-check が緑になってから走らせる。
     needs: [ci-check]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
@@ -328,11 +328,11 @@ jobs:
           purge-prefixes: nix-${{ runner.os }}-
           purge-created: 0
           purge-primary-key: never
-      - uses: cachix/cachix-action@v16
+      - uses: cachix/cachix-action@v17
         with:
           name: devenv
       - name: Cache node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             frontend/node_modules
@@ -358,7 +358,7 @@ jobs:
       # ダウンロードしてブラウザで開けばそれだけで全フローのスクショが見られる。
       - name: Upload E2E artifacts (screenshots + storyboard + report)
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: maestro-web-e2e
           path: |

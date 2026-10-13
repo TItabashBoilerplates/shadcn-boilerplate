@@ -46,8 +46,8 @@ defaults:
 - `defaults.run.shell: devenv shell bash -- -e {0}` を **workflow レベル**で設定 → 両 job の全 `run:` で enterShell hook が発火
 - `cachix/install-nix-action@v31` で Nix インストール（`extra_nix_config: keep-outputs = true; keep-env-derivations = true` 必須、後述）
 - `nix-community/cache-nix-action@v7` で **`/nix/store` 自体**を GHA cache に乗せる
-- `cachix/cachix-action@v16` (`name: devenv`) を read-only substituter として併用
-- `actions/cache@v4` で `node_modules` 系を別 cache（`/nix/store` 外）
+- `cachix/cachix-action@v17` (`name: devenv`) を read-only substituter として併用
+- `actions/cache@v6` で `node_modules` 系を別 cache（`/nix/store` 外）
 - devenv CLI は **`.github/actions/install-devenv`（composite action）で版を固定**して入れる
   （`nix profile add nixpkgs#devenv` は nixpkgs 側の版次第で `require_version` を満たさない）
 
@@ -116,8 +116,8 @@ verify task 自体は `execIfModified` キャッシュ込みで実装されて�
 | 層 | キャッシュ対象 | 効果 |
 |---|---|---|
 | `nix-community/cache-nix-action@v7` | **`/nix/store`** 全体（devenv shell の構成要素、bun / nodejs / uv / python など Nix で管理されるすべて） | shell の build / 評価結果を保持。2 回目以降の `Configuring shell` がほぼ瞬時 |
-| `cachix/cachix-action@v16` (`name: devenv`) | devenv 公式の Cachix binary cache を read-only substituter として登録 | 1 回目（cache-nix-action が cold）でも devenv 共通依存物は build from source を回避できる |
-| `actions/cache@v4` の `path: frontend/**/node_modules`, `drizzle/node_modules` | **Bun workspace の install 結果**（`/nix/store` 外） | `setup:install-frontend` task が `execIfModified` で skip された際に node_modules が空になるのを防ぐ |
+| `cachix/cachix-action@v17` (`name: devenv`) | devenv 公式の Cachix binary cache を read-only substituter として登録 | 1 回目（cache-nix-action が cold）でも devenv 共通依存物は build from source を回避できる |
+| `actions/cache@v6` の `path: frontend/**/node_modules`, `drizzle/node_modules` | **Bun workspace の install 結果**（`/nix/store` 外） | `setup:install-frontend` task が `execIfModified` で skip された際に node_modules が空になるのを防ぐ |
 
 **`.devenv/` は CI ではキャッシュしない**。`uv venv` (`UV_PROJECT_ENVIRONMENT=$DEVENV_ROOT/.devenv/state/venv`) は CI 上では `setup:install-backend` task が `uv sync --frozen` で毎回再生成するため cache 不要（数秒で済む）。task runner の execIfModified state も CI では「毎回フルチェックで OK」なので cache せず捨てる。
 
@@ -158,11 +158,11 @@ CI 上では:
 2. job B（別 runner）で `.devenv/` だけ復元される → `frontend/node_modules/` は**存在しない**
 3. enterShell hook → `setup:install-frontend` が hash 一致を見て skip → install されないまま step が進む → `vitest` / `tsc` 等が見つからずに死ぬ
 
-**根本対策（採用中）**: `actions/cache@v4` で `node_modules` 系を別 cache に切り出す。lockfile が変われば cache key も変わるので整合性も取れる。
+**根本対策（採用中）**: `actions/cache@v6` で `node_modules` 系を別 cache に切り出す。lockfile が変われば cache key も変わるので整合性も取れる。
 
 ```yaml
 - name: Cache node_modules
-  uses: actions/cache@v4
+  uses: actions/cache@v6
   with:
     path: |
       frontend/node_modules
@@ -240,7 +240,7 @@ CI 用途では、verify task を直接列挙する。
 # ❌ NG: .devenv/profile が /nix/store への symlink を持つため、
 #       別 runner で restore すると参照先実体が無く
 #       「no substituter that can build it」で失敗する。
-- uses: actions/cache@v4
+- uses: actions/cache@v6
   with:
     path: |
       .devenv
@@ -265,7 +265,7 @@ CI 用途では、verify task を直接列挙する。
     purge-prefixes: nix-${{ runner.os }}-
     purge-created: 0
     purge-primary-key: never
-- uses: actions/cache@v4
+- uses: actions/cache@v6
   with:
     path: |
       frontend/node_modules
@@ -334,7 +334,7 @@ bash には `test` / `time` / `kill` / `printf` / `read` / `true` / `false` / `l
 |---|---|
 | `devenv.nix` / `devenv.lock` / `devenv.yaml` を変更（依存物の更新） | `cache-nix-action` の `primary-key` は自動で hash が変わるので追加対応不要（`hashFiles(...)` 引数に既に含まれているため） |
 | 新しい lockfile（例: `tooling/<new>/bun.lock`）が増えた | `node_modules` cache の `hashFiles(...)` 引数に追加。さもないと依存変更が cache key に反映されず stale cache が使われ続ける |
-| 新しい install 出力ディレクトリが `/nix/store` 外にできる（例: 新しい monorepo を `tools/` 配下に追加し独自 `node_modules` ができる） | `actions/cache@v4` の `path:` リストに追加。漏らすと CI で「cache hit したのに必要なツールが見つからない」事故が起きる |
+| 新しい install 出力ディレクトリが `/nix/store` 外にできる（例: 新しい monorepo を `tools/` 配下に追加し独自 `node_modules` ができる） | `actions/cache@v6` の `path:` リストに追加。漏らすと CI で「cache hit したのに必要なツールが見つからない」事故が起きる |
 | 新しいパッケージマネージャを導入（pnpm / yarn 等） | install 出力先を確認のうえ `actions/cache` の path に追加 |
 
 ## Supabase を CI で起こす（公式手順との対応）
@@ -413,7 +413,7 @@ jobs:
   ci-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: cachix/install-nix-action@v31
         with:
           # cache-nix-action 公式推奨。必須設定。
@@ -429,11 +429,11 @@ jobs:
           purge-prefixes: nix-${{ runner.os }}-
           purge-created: 0
           purge-primary-key: never
-      - uses: cachix/cachix-action@v16
+      - uses: cachix/cachix-action@v17
         with:
           name: devenv
       - name: Cache node_modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             frontend/node_modules

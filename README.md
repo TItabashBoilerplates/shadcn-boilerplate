@@ -145,8 +145,8 @@ By adopting these environments, we can ensure efficient development and maintain
 
 | ツール | 用途 |
 |--------|------|
-| Node.js 22 | Frontend, Drizzle |
-| Python 3.13 | Backend |
+| Node.js 24 | Frontend, Drizzle |
+| Python 3.14 | Backend |
 | Deno | Edge Functions |
 | Bun | Frontend パッケージ管理 |
 | uv | Python パッケージ管理 |
@@ -180,10 +180,10 @@ By adopting these environments, we can ensure efficient development and maintain
 # Nix をインストール (未インストールの場合)
 curl -sSfL https://install.determinate.systems/nix | sh -s -- install
 
-# devenv をインストール（**v2.3.1 以上**。devenv.yaml の require_version が下限を強制する）
+# devenv をインストール（**v2.4.0 以上**。devenv.yaml の require_version が下限を強制する）
 #   2.2.2 以前は `devenv tasks run` が稼働中デーモンの管理ファイルを消すバグを踏む（2.3.0 で修正）。
 #   nixpkgs 側の版は古いことがあるので、リリースを直接指定して入れる。
-nix profile add --accept-flake-config github:cachix/devenv/v2.3.1
+nix profile add --accept-flake-config github:cachix/devenv/v2.4.0
 # すでに古い devenv が入っているなら: nix profile upgrade devenv
 
 # direnv をインストール

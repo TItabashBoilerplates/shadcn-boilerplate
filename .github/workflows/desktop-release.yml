@@ -65,7 +65,7 @@ jobs:
       release: ${{ steps.gate.outputs.release }}
       version: ${{ steps.gate.outputs.version }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: oven-sh/setup-bun@v2
 
@@ -111,7 +111,7 @@ jobs:
       # 断片 JSON の置き場は step 側で $RUNNER_TEMP から組む（job レベルの env では
       # `runner` コンテキストが使えず、workflow ごと無効になる）
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: oven-sh/setup-bun@v2
 
@@ -215,7 +215,7 @@ jobs:
             "$BUNDLE_DIR/${{ matrix.updater_subdir }}"
 
       - name: Keep updater manifest fragment
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: updater-manifest-${{ matrix.platform }}
           path: ${{ runner.temp }}/updater-manifest-${{ matrix.platform }}.json
@@ -233,11 +233,11 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: oven-sh/setup-bun@v2
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: updater-manifest-*
           merge-multiple: true
