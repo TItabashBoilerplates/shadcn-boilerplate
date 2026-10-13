@@ -27,7 +27,7 @@ description: モバイル（Expo / React Native）と「スマホ幅で見られ
 
 | 項目 | 現状 |
 |---|---|
-| Expo / RN | **Expo SDK 57 / React Native 0.86**（`app.json` は `android.edgeToEdgeEnabled: true`） |
+| Expo / RN | **Expo SDK 57 / React Native 0.86**（Android は常に edge-to-edge。`android.edgeToEdgeEnabled` は廃止済みなので書かない） |
 | Reanimated | **4.5.x**（`react-native-keyboard-controller` の peer `>=3.0.0` を満たす） |
 | キーボード制御 | **`react-native-keyboard-controller` は未導入**。`views/auth/ui/AuthScreen.tsx` が **RN 標準の `KeyboardAvoidingView`** を使っている（= Android edge-to-edge 下で構造的に壊れる構成） |
 | セーフエリア | `@workspace/native-ui` の `SafeAreaView`（`react-native-safe-area-context` の直接 import は禁止 → `.claude/skills/gluestack/`） |

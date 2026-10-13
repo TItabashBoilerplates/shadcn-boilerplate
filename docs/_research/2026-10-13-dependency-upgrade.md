@@ -50,7 +50,8 @@
 - Tauri: `devenv shell -P desktop` で `cargo check --locked` 成功。更新前から `Cargo.lock` に updater / process
   plugin が載っておらず、`generate_context!` が展開する `::serde_json` の依存が欠けていた（既存の不具合）ので
   `serde_json` を `Cargo.toml` に追加した
-- `bunx expo-doctor`: 21 中 20 通過。残る 1 件（`android.edgeToEdgeEnabled` がスキーマに無い）は SDK 57 共通の既存指摘で今回の変更とは無関係
+- `bunx expo-doctor`: 21 中 21 通過（更新前から残っていた `android.edgeToEdgeEnabled` のスキーマ違反は、
+  SDK 57 で廃止された設定なので `app.json` から削除した）
 
 ## 4. 注意（次回の更新で踏むもの）
 
