@@ -8,7 +8,7 @@
 backend-py/
 ├── pyproject.toml          # workspace root（members 定義 + 共通 tooling）
 ├── uv.lock                 # 単一ルート lockfile（全 member の依存を解決）
-├── .python-version         # 3.13
+├── .python-version         # 3.14
 ├── apps/
 │   ├── api/                # FastAPI + Supabase auth サーバ
 │   └── mcp/                # MCP server skeleton（未実装の雛形）
@@ -183,7 +183,7 @@ LLM / ベクトル検索 / WebRTC など重い依存は最初から積まない�
 ### Ruff
 
 - Line length: 88
-- Target: Python 3.13
+- Target: Python 3.14
 - Max complexity: 3 (McCabe)
 - Docstrings: Google
 - 設定は workspace root `pyproject.toml` で一元管理（全 member に適用）
@@ -332,7 +332,7 @@ Build コマンドはすべて空）。Dockerfile は `backend-py/Dockerfile.ver
 | 項目 | 内容 |
 |------|------|
 | ポート | サーバは `$PORT` で listen（`api.main` が読む。ローカルは 4040 fallback）。**本番は 8080 固定**: Vercel の既定は 80 だがコンテナは非 root で動くため特権ポートを bind できない。**Vercel project の env `PORT` も 8080**（`scripts/infra/vercel.sh` が Dockerfile から読んで自動投入） |
-| ビルド | uv 公式 multi-stage（cache mount / `--no-editable` / bytecode プリコンパイル）。Python 3.13 |
+| ビルド | uv 公式 multi-stage（cache mount / `--no-editable` / bytecode プリコンパイル）。Python 3.14 |
 | 分離 | `uv sync --package api` で api + `core` だけを入れる（`apps/mcp` は含めない） |
 | 起動 | `CMD ["/app/.venv/bin/api"]`（`[project.scripts] api = "api.main:main"`）。**絶対パス必須** — Vercel の起動 wrapper でイメージの `ENV PATH` が失われ、`CMD ["api"]` は `exec: "api": executable file not found in $PATH` で無言に死ぬ |
 | shutdown | scale-in 時は SIGTERM + 30s grace。uvicorn が graceful shutdown |
@@ -450,7 +450,7 @@ FastAPI が自動生成する:
 
 実装はまだ無く、`apps/mcp/src/mcp_server/__init__.py` のみ存在する雛形。devenv の `backend-mcp` process は opt-in (`start.enable = false`) で登録されており、`devenv up backend-mcp` で placeholder メッセージを print するだけ。
 
-実装着手時の手順は `apps/mcp/README.md` を参照。`mcp[cli]` SDK の `FastMCP` を使う想定。
+実装着手時の手順は `apps/mcp/README.md` を参照。`mcp[cli]` SDK（v2）の `MCPServer` を使う想定。
 
 ## Troubleshooting
 

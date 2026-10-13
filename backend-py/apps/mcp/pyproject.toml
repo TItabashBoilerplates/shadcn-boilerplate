@@ -2,7 +2,7 @@
 name = "mcp-server"
 version = "0.1.0"
 description = "MCP server skeleton (not yet implemented)"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
     "mcp[cli]",
     "core",

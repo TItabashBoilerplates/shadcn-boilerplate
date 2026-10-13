@@ -61,7 +61,7 @@ async def _resource_not_found_handler(
 async def _configuration_error_handler(
     _request: Request, exc: ConfigurationError
 ) -> JSONResponse:
-    logger.exception("Configuration error", exc_info=exc)
+    logger.error("Configuration error", exc_info=exc)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "Server configuration error"},

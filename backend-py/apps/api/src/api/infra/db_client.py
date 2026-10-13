@@ -27,6 +27,8 @@ of the stack (PostgREST, Auth, Storage, migrations) cannot use:
   connection" per warm instance. Note that transaction mode does not support
   prepared statements; psycopg2 does not use server-side prepares, so nothing
   has to be turned off today — a driver swap (psycopg3 / asyncpg) would need it.
+  SQLAlchemy 2.1 made psycopg 3 the default for a bare `postgresql://` URL, so
+  the driver is pinned explicitly (`_with_psycopg2_driver`).
 
 Sources:
 - https://supabase.com/docs/guides/platform/compute-and-disk (connection limits)
@@ -46,7 +48,8 @@ from typing import Annotated, Any
 from urllib.parse import urlparse
 
 from fastapi import Depends
-from sqlalchemy import Engine
+from sqlalchemy import Engine, make_url
+from sqlalchemy.engine import URL
 from sqlmodel import Session, create_engine
 
 from core.exceptions import ConfigurationError
@@ -118,6 +121,14 @@ def _is_transaction_pooler(postgres_url: str) -> bool:
         return False
 
 
+def _with_psycopg2_driver(postgres_url: str) -> URL:
+    """Keep psycopg2 when the URL names no driver (2.1 would pick psycopg 3)."""
+    url = make_url(postgres_url)
+    if url.drivername == "postgresql":
+        return url.set(drivername="postgresql+psycopg2")
+    return url
+
+
 def resolve_pool_options(postgres_url: str) -> dict[str, Any]:
     """Pool settings for this URL under the project's Supabase plan."""
     if _is_transaction_pooler(postgres_url):
@@ -162,7 +173,9 @@ def get_engine() -> Engine:
     pool_options = resolve_pool_options(postgres_url)
     logger.info("Creating database engine", **pool_options)
 
-    return create_engine(postgres_url, echo=sql_echo, **pool_options)
+    return create_engine(
+        _with_psycopg2_driver(postgres_url), echo=sql_echo, **pool_options
+    )
 
 
 def reset_engine() -> None:

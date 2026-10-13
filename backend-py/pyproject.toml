@@ -2,7 +2,7 @@
 name = "backend-py-workspace"
 version = "0.0.0"
 description = "uv workspace root for backend-py (api + mcp + shared packages)"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 
 [tool.uv]
 package = false
@@ -33,7 +33,7 @@ dev = [
 # ---------- ruff ----------
 [tool.ruff]
 line-length = 88
-target-version = "py313"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -47,6 +47,7 @@ ignore = [
     "B008",
     "COM812", # conflicts with formatter
     "TC",     # flake8-type-checking: pydantic/SQLModel evaluate annotations at runtime
+    "CPY001", # per-file copyright headers: the repository-level LICENSE covers the code
 ]
 unfixable = [
     "F401",   # unused import
@@ -90,7 +91,7 @@ max-complexity = 3
 
 # ---------- mypy ----------
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.14"
 explicit_package_bases = true
 mypy_path = "apps/api/src:packages/core/src:apps/mcp/src"
 exclude = [

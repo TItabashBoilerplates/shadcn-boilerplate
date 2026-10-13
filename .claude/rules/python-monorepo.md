@@ -49,7 +49,7 @@ backend-py/
 [project]
 name = "backend-py-workspace"
 version = "0.0.0"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 
 [tool.uv]
 package = false                       # root 自体は配布物にしない
@@ -67,7 +67,7 @@ api  = { workspace = true }
 dev = ["ruff", "mypy", "pytest", "pytest-asyncio", "pytest-mock", "httpx", "..."]
 
 [tool.ruff]
-target-version = "py313"
+target-version = "py314"
 # ...
 [tool.mypy]
 mypy_path = "apps/<svc1>/src:packages/<lib1>/src:..."  # 各 member の src を列挙
@@ -85,7 +85,7 @@ addopts = "-ra -q --import-mode=importlib"            # importlib モード必�
 [project]
 name = "<member-name>"               # 公式 PyPI パッケージと衝突しないこと（後述）
 version = "0.1.0"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
     "<runtime-deps>",
     "core",                          # workspace dep は `[tool.uv.sources]` で解決される

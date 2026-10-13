@@ -17,7 +17,7 @@ description: Python uv workspace モノレポ（backend-py）ガイダンス。a
 backend-py/
 ├── pyproject.toml                  # workspace root（package = false）
 ├── uv.lock                         # 単一ルート lockfile
-├── .python-version                 # 3.13
+├── .python-version                 # 3.14
 ├── pyrightconfig.json
 ├── vercel.json                     # Vercel services: アプリ→Dockerfile の対応 + rewrites
 ├── Dockerfile.vercel               # api コンテナ（★ workspace ルート直下。§9 参照）
@@ -124,7 +124,7 @@ albatross
 実態確認:
 
 ```bash
-$ cat .devenv/state/venv/lib/python3.13/site-packages/_editable_impl_api.pth
+$ cat .devenv/state/venv/lib/python3.14/site-packages/_editable_impl_api.pth
 /Users/.../backend-py/apps/api/src
 ```
 
@@ -153,7 +153,7 @@ mkdir -p backend-py/apps/worker/tests
 [project]
 name = "worker"
 version = "0.1.0"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
     "fastapi",
     "uvicorn[standard]",
@@ -229,7 +229,7 @@ in {
 [project]
 name = "llm"
 version = "0.1.0"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = ["langchain", "langchain-anthropic", "core"]
 
 [build-system]
