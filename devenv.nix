@@ -233,7 +233,7 @@ let
     in {
       exec = ''
         set -e
-        # ⚠️ devenv 2.3.1 は `supabase:start` が失敗しても `devenv up -d` を成功として返す。
+        # ⚠️ devenv は `supabase:start` が失敗しても `devenv up -d` を成功として返す（2.3.1 / 2.4.0 で確認）。
         #    backend が居ないと思ったら `dev-status` / `devenv processes list` を見て、
         #    stopped なら `supabase-start` を単体で叩くとエラーが読める（.claude/skills/debugging/）。
         echo "🚀 Ensuring backend + storybook are running (detached)..."
@@ -2010,21 +2010,8 @@ in
   # 全プロジェクトの verify は `ci-check` で行う (役割分担)。
   #
   # ⚠️ **全ファイルに hook を掛けたいときは `devenv tasks run devenv:git-hooks:run`** を使う。
-  #    下の一行で `devenv:git-hooks:run` を task グラフから切り離してあるので、
-  #    `devenv shell` / `devenv test` では走らない（明示的に呼んだときだけ走る）。
-  #
-  # なぜ切り離すか（devenv 2.3.1 の既知バグ #3184）:
-  #   shell 進入は root = `devenv:enterShell` を RunMode::All で回すため、
-  #   本来 `devenv:enterTest` に紐づいているだけの **全ファイル実行まで巻き込まれ**、
-  #   毎回 15 秒前後かかる（upstream で未修正。devenv/src/devenv/mod.rs の
-  #   run_enter_shell_tasks + devenv-tasks の RunMode::All で確認）。
-  #   全ファイル実行は verify（`ci-check`）の仕事で、hook の役割は
-  #   「コミット時に変更ファイルだけ見る」ことなので、グラフから外しても失うものは無い。
-  #   **upstream で #3184 が直ったらこの 1 行は消してよい。**
-  tasks."devenv:git-hooks:run" = {
-    before = lib.mkForce [ ];
-    after = lib.mkForce [ ];
-  };
+  #    `devenv shell` / direnv の進入では走らない（devenv 2.4.0 で #3184 が直り、shell 進入が
+  #    `devenv:enterTest` 側の task を巻き込まなくなった。2.3.1 までは task グラフから外す回避策が要った）。
 
   git-hooks.hooks = {
     # ----- JS/TS/JSON: Biome (frontend + drizzle 共通) -----

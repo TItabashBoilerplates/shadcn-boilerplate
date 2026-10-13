@@ -591,15 +591,15 @@ Error:   × Failed to get dev environment from derivation
 あとから高くつく。上流バグの回避を入れたら、**いつ外せるか（= どのバージョンで直ったか）**も
 一緒に書き残す（今回はそれに従って、2.3.1 へ上げた時点で回避策を削除した）。
 
-### devenv 2.3.1 で踏む 2 つの罠（回避済み・消さないこと）
+### devenv 2.3.1 で踏んだ 2 つの罠（2.4.0 で 1 つ解消）
 
 | 罠 | 何が起きるか | このリポジトリでの対処 |
 |---|---|---|
-| **#3184**: shell 進入で git-hooks が全ファイルに走る | `devenv shell` / direnv のたびに 15 秒前後かかり、生成物まで書き換わる | `devenv.nix` で `tasks."devenv:git-hooks:run"` の `before` / `after` を `lib.mkForce [ ]` にして task グラフから外す。全ファイル実行は `devenv tasks run devenv:git-hooks:run` を明示的に叩く（upstream で直ったら削除してよい） |
-| `supabase:start` の失敗が `devenv up -d` に伝わらない | `dev-web` が成功扱いで進み、backend と Supabase だけ居ない | `devenv processes list` で stopped を確認 → `supabase-start` を単体実行してエラーを読む（`.claude/skills/debugging/`） |
+| **#3184**: shell 進入で git-hooks が全ファイルに走る | `devenv shell` / direnv のたびに 15 秒前後かかり、生成物まで書き換わる | **devenv 2.4.0 で修正済み**。task グラフから外す回避策は 2.4.0 へ上げた時点で削除した。全ファイル実行は `devenv tasks run devenv:git-hooks:run` を明示的に叩く |
+| `supabase:start` の失敗が `devenv up -d` に伝わらない（**2.4.0 でも未修正**。`supabase:start` を強制失敗させて exit 0 を実測） | `dev-web` が成功扱いで進み、backend と Supabase だけ居ない | `devenv processes list` で stopped を確認 → `supabase-start` を単体実行してエラーを読む（`.claude/skills/debugging/`） |
 
 **バージョンは混在させない。** 2.2.2 がこのリポジトリで 1 度でも動くと、2.3 系のデーモンの
-manager ファイルまで消える。`devenv.yaml` の `require_version: ">=2.3.1"` が手元の CLI を、
+manager ファイルまで消える。`devenv.yaml` の `require_version`（現在 `">=2.4.0"`）が手元の CLI を、
 `.github/actions/install-devenv` が CI の CLI を、それぞれ固定する。
 
 ## 関連ドキュメント

@@ -147,10 +147,10 @@ ci-check  (= devenv tasks run ci:check)
 そもそも hook (biome/ruff/ruff-format/mypy/denofmt/denolint) の検査内容は verify task と**完全に重複**しており、二重に回す意味がない。
 
 **全ファイルに hook を掛けたいときは `devenv tasks run devenv:git-hooks:run` を直接叩く。**
-`devenv test` では走らない: devenv 2.3.1 は shell 進入（root = `devenv:enterShell` / `RunMode::All`）で
-`devenv:enterTest` 側の全ファイル実行まで巻き込み、**シェルに入るたびに 15 秒前後かかって生成物も
-書き換わる**（upstream の [#3184](https://github.com/cachix/devenv/issues/3184)、未修正）。
-そのため `devenv.nix` で `devenv:git-hooks:run` を task グラフから外してある。
+shell 進入（`devenv shell` / direnv）では走らない。devenv 2.3.1 までは shell 進入が
+`devenv:enterTest` 側の全ファイル実行まで巻き込み、シェルに入るたびに 15 秒前後かかって生成物も
+書き換わっていた（upstream の [#3184](https://github.com/cachix/devenv/issues/3184)）。**2.4.0 で修正済み**
+なので、`devenv.nix` に置いていた回避策（task グラフからの切り離し）は削除した。
 
 > **使い分け**: 日常の auto-fix は `lint` / `format` script (シンプル sequential、execIfModified なし → 副作用ループ回避)。CI 相当の verify は**ローカル・CI とも `ci-check`**。
 

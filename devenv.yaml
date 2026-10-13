@@ -2,6 +2,9 @@ inputs:
   devenv:
     # CLI（.github/actions/install-devenv / 手元の nix profile）と**同じリリース**を指す。
     # 版がずれると「CLI は新しいのにモジュールが古い」状態になり、警告だけ出て挙動が変わる。
+    # shell 進入時に「devenv 2.4.0 is newer than devenv input (2.3.1)」と出るのは上流の取り違え。
+    # v2.4.0 タグの src/modules/latest-version が 2.3.1 のまま（main 側で後から 2.4.0 に更新）で、
+    # lock は正しく v2.4.0 を指している。`devenv update` しても消えないので気にしなくてよい。
     url: git+https://github.com/cachix/devenv?dir=src/modules&ref=refs/tags/v2.4.0&rev=b904dcb51fe48c30db250038241507f60752f222
   git-hooks:
     url: git+https://github.com/cachix/git-hooks.nix
