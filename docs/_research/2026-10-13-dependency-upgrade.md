@@ -47,6 +47,9 @@
 - `build-storybook` + `storybook-smoke`: 171 ストーリーすべて描画
   - smoke の固定 `waitForTimeout(150)` は**旧ビルドでも 150ms を超えるストーリーがある**（実測 max 322ms）ためフレーキーだった。「root に子が付くまで最大 5 秒待つ」に変更
 - `expo export --platform ios`（Hermes / `--no-bytecode` の両方）成功、NativeWind のスタイル表が JS に出力されていることを確認
+- Tauri: `devenv shell -P desktop` で `cargo check --locked` 成功。更新前から `Cargo.lock` に updater / process
+  plugin が載っておらず、`generate_context!` が展開する `::serde_json` の依存が欠けていた（既存の不具合）ので
+  `serde_json` を `Cargo.toml` に追加した
 - `bunx expo-doctor`: 21 中 20 通過。残る 1 件（`android.edgeToEdgeEnabled` がスキーマに無い）は SDK 57 共通の既存指摘で今回の変更とは無関係
 
 ## 4. 注意（次回の更新で踏むもの）
