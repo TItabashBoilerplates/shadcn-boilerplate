@@ -20,7 +20,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from fastapi.routing import APIRoute
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 VERCEL_JSON = REPO_ROOT / "vercel.json"
@@ -48,6 +47,12 @@ def _concrete(path: str) -> str:
 
 
 def _routes() -> list[str]:
+    """Paths the app publishes, read from its OpenAPI schema.
+
+    FastAPI 0.14x keeps an included router as one lazy (private) route entry, so
+    ``app.routes`` no longer lists the endpoints themselves. The schema is the
+    public view of the same set.
+    """
     os.environ.setdefault(
         "POSTGRES_URL",
         "postgresql://postgres:postgres@localhost:54322/postgres",
@@ -57,7 +62,7 @@ def _routes() -> list[str]:
 
     from api.app import app
 
-    return sorted({route.path for route in app.routes if isinstance(route, APIRoute)})
+    return sorted(app.openapi()["paths"])
 
 
 def test_routes_are_collected() -> None:
