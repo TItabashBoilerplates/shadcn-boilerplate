@@ -4,11 +4,11 @@ terraform {
   required_providers {
     supabase = {
       source  = "supabase/supabase"
-      version = "~> 1.10"
+      version = "~> 1.11"
     }
     vercel = {
       source  = "vercel/vercel"
-      version = "~> 5.7"
+      version = "~> 5.21"
     }
     github = {
       source  = "integrations/github"
@@ -16,7 +16,7 @@ terraform {
     }
     doppler = {
       source  = "DopplerHQ/doppler"
-      version = "~> 1.21"
+      version = "~> 1.22"
     }
   }
 

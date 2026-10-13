@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.11/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
   "extends": "//",
   "vcs": {
     "enabled": true,
@@ -34,25 +34,25 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "a11y": {
-        "recommended": true
+        "preset": "recommended"
       },
       "complexity": {
-        "recommended": true
+        "preset": "recommended"
       },
       "correctness": {
-        "recommended": true
+        "preset": "recommended"
       },
       "performance": {
-        "recommended": true,
+        "preset": "recommended",
         "noImgElement": "error"
       },
       "security": {
-        "recommended": true
+        "preset": "recommended"
       },
       "style": {
-        "recommended": true,
+        "preset": "recommended",
         "useImportType": "error",
         "noRestrictedImports": {
           "level": "error",
@@ -64,7 +64,7 @@
         }
       },
       "suspicious": {
-        "recommended": true,
+        "preset": "recommended",
         "noExplicitAny": "warn"
       }
     }
@@ -116,6 +116,16 @@
         "rules": {
           "correctness": {
             "useExhaustiveDependencies": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/public/**/*.svg"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noSvgWithoutTitle": "off"
           }
         }
       }

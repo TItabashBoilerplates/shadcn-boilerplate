@@ -74,7 +74,7 @@ stop
 
 ログは `.devenv/state/` 配下に保存されるが、レイアウトは manager 実装により変わり得るため、インタラクティブ確認には `devenv up`（フォアグラウンド + TUI）を使うのが確実。
 
-### devenv のバージョンは 2.3.1 以上に揃える（混在させない）
+### devenv のバージョンは 2.4.0 以上に揃える（混在させない）
 
 **devenv 2.2.2 には、`devenv tasks run` が終了時に稼働中デーモンの
 `<runtime>/processes/native-manager.pid` と `native.sock` を消すバグがある。**
@@ -83,14 +83,14 @@ stop
 別のデーモンを立てるので、storybook が起動のたびに増える。
 
 上流は **2.3.0 で修正済み**で、このリポジトリは `devenv.yaml` の `require_version` で
-**2.3.1 以上**を要求している。注意点は 1 つだけ:
+**2.4.0 以上**（モジュールの版と同じ）を要求している。注意点は 1 つだけ:
 
 > **このマシンの devenv を 1 つも 2.2.2 のまま残さない。**
 > 2.2.2 がこのリポジトリで 1 回でも動くと、2.3 系が立てたデーモンのファイルまで消され、
 > 2.3 からも見つけられなくなる。古い devenv MCP を掴んでいる既存セッションは再起動する。
 
 ```bash
-devenv version                 # 2.3.1 以上であること
+devenv version                 # 2.4.0 以上であること
 nix profile upgrade devenv     # 古ければ上げる
 dev-status                     # 何が動いていて、devenv から見えているか（止めない）
 stop                           # 停止。止め切れなければ非ゼロで落ちる（黙って成功しない）
@@ -99,9 +99,9 @@ stop                           # 停止。止め切れなければ非ゼロで�
 `dev-status` が「別 runtime のデーモン」を報告することがある。別プロジェクト（または
 古い devenv の置き土産）の可能性があるので、`stop` は触らない。止めるなら PID を確認してから。
 
-### 「dev-web は成功したのに backend が居ない」（devenv 2.3.1 の挙動）
+### 「dev-web は成功したのに backend が居ない」（devenv 2.3.1 / 2.4.0 の挙動）
 
-**2.3.1 は `supabase:start` が失敗しても `devenv up -d` を成功として返す。**
+**devenv は `supabase:start` が失敗しても `devenv up -d` を成功として返す**（2.3.1 で確認、2.4.0 でも再現）。
 `dev-web` は何も言わずに dev server を立ち上げるので、Supabase と backend だけが居ない状態になる。
 
 ```bash

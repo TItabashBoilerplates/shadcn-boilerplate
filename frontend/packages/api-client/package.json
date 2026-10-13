@@ -13,13 +13,10 @@
     "generate": "bun run scripts/generate.ts",
     "type-check": "workspace-tsc --noEmit"
   },
-  "dependencies": {
-    "@hey-api/client-fetch": "^0.9.0"
-  },
   "devDependencies": {
-    "@hey-api/openapi-ts": "0.89.2",
+    "@hey-api/openapi-ts": "0.99.0",
     "@types/bun": "latest",
-    "@types/node": "^22.0.0",
+    "@types/node": "^24.19.2",
     "@workspace/tsc": "workspace:*"
   },
   "peerDependencies": {

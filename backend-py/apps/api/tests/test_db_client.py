@@ -48,6 +48,16 @@ def test_engine_reads_postgres_url_on_first_use(db_client, monkeypatch):
     assert db_client.get_engine() is engine
 
 
+def test_engine_pins_the_psycopg2_driver(db_client, monkeypatch):
+    # SQLAlchemy 2.1 maps a bare `postgresql://` to psycopg 3, which uses
+    # server-side prepared statements that Supavisor's transaction mode (6543)
+    # rejects. The URL the Vercel integration injects has no driver suffix, so
+    # the engine must choose psycopg2 itself.
+    monkeypatch.setenv("POSTGRES_URL", LOCAL_URL)
+
+    assert db_client.get_engine().url.drivername == "postgresql+psycopg2"
+
+
 def test_reset_engine_rereads_the_environment(db_client, monkeypatch):
     monkeypatch.setenv("POSTGRES_URL", LOCAL_URL)
     first = db_client.get_engine()

@@ -5,16 +5,14 @@ const backendUrl =
 
 export default defineConfig({
   input: `${backendUrl}/openapi.json`,
-  output: {
-    path: './src/generated',
-    format: 'biome',
-  },
+  // 生成物は biome.json の ignore 対象なので整形（postProcess）は掛けない
+  output: './src/generated',
   plugins: [
     '@hey-api/typescript',
     '@hey-api/sdk',
     {
       name: '@hey-api/client-fetch',
-      runtimeConfigPath: '../runtime-config',
+      runtimeConfigPath: './src/runtime-config',
     },
     {
       name: '@tanstack/react-query',

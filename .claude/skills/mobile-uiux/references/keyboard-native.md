@@ -34,8 +34,10 @@
 2. `keyboardDidShow`（完了後）に依存している
 3. `LayoutAnimation` のタイミングが Android で不安定
 
-Expo は SDK 54 以降すべてのプロジェクトで edge-to-edge を既定にしており、本リポジトリも
-`app.json` に `android.edgeToEdgeEnabled: true` を持つ。**つまり現在の構成はこの影響下にある。**
+Expo は SDK 54 以降すべてのプロジェクトで edge-to-edge を既定にしており、SDK 57 では
+`android.edgeToEdgeEnabled` の設定自体が廃止された（`@expo/prebuild-config` の `withEdgeToEdge` は
+「no longer available - Android 16 makes edge-to-edge mandatory」と警告するだけで値を使わない。
+`expo-doctor` はスキーマ違反として落とす）。**つまり本リポジトリは常にこの影響下にある。**
 Expo 公式も edge-to-edge の案内で「`KeyboardAvoidingView` か — **ideally**
 `react-native-keyboard-controller`」と書いている。
 

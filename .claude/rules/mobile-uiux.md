@@ -55,8 +55,8 @@ import { KeyboardAvoidingView, KeyboardAwareScrollView } from 'react-native-keyb
 **理由（推測ではなく仕様上の事実）**:
 
 1. **Android 15（targetSdk 35）以降、edge-to-edge が強制**され、**Android 16 では opt-out できない**
-   （Expo は SDK 54 以降すべてのプロジェクトで既定。本リポジトリも `app.json` に
-   `android.edgeToEdgeEnabled: true`）。
+   （Expo は SDK 54 以降すべてのプロジェクトで既定。SDK 57 では `android.edgeToEdgeEnabled` の
+   設定自体が廃止され、常に edge-to-edge になる）。
 2. edge-to-edge では **`android:windowSoftInputMode=adjustResize` がウィンドウをリサイズしなくなる**。
    OS は代わりに `WindowInsets` をアプリへ渡し、**レイアウトの責務をアプリ側に移す**。
 3. RN 標準の `KeyboardAvoidingView` は **`keyboardDidShow`（＝アニメーション完了後に発火）**に依存し、

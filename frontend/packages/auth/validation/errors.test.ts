@@ -27,22 +27,19 @@ describe('resolveAuthError', () => {
     expect(resolveAuthError({ code, message: 'ignored' })?.messageKey).toBe(key)
   })
 
-  it.each([
-    'over_email_send_rate_limit',
-    'over_request_rate_limit',
-    'over_sms_send_rate_limit',
-  ])('レート制限系は rateLimited に集約する: %s', (code) => {
-    expect(resolveAuthError({ code, message: '' })?.messageKey).toBe('rateLimited')
-  })
+  it.each(['over_email_send_rate_limit', 'over_request_rate_limit', 'over_sms_send_rate_limit'])(
+    'レート制限系は rateLimited に集約する: %s',
+    (code) => {
+      expect(resolveAuthError({ code, message: '' })?.messageKey).toBe('rateLimited')
+    }
+  )
 
-  it.each([
-    'session_expired',
-    'session_not_found',
-    'flow_state_expired',
-    'flow_state_not_found',
-  ])('セッション切れ系は sessionExpired に集約する: %s', (code) => {
-    expect(resolveAuthError({ code, message: '' })?.messageKey).toBe('sessionExpired')
-  })
+  it.each(['session_expired', 'session_not_found', 'flow_state_expired', 'flow_state_not_found'])(
+    'セッション切れ系は sessionExpired に集約する: %s',
+    (code) => {
+      expect(resolveAuthError({ code, message: '' })?.messageKey).toBe('sessionExpired')
+    }
+  )
 
   it('未知のコードは unexpected にフォールバックする（握りつぶさない）', () => {
     const resolved = resolveAuthError({ code: 'something_new_from_gotrue', message: 'boom' })

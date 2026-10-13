@@ -19,16 +19,18 @@ devenv up backend-mcp
 
 実装着手時は以下を行う:
 
-1. `apps/mcp/src/mcp_server/main.py` を新規作成し `FastMCP` ベースのサーバを実装。
+1. `apps/mcp/src/mcp_server/main.py` を新規作成し `MCPServer`（mcp SDK v2。v1 の `FastMCP`）ベースのサーバを実装。
    ```python
-   from mcp.server.fastmcp import FastMCP
+   from mcp.server.mcpserver import MCPServer
 
-   mcp = FastMCP("backend-mcp")
+   mcp = MCPServer("backend-mcp")
+
 
    @mcp.tool()
    def example_tool(query: str) -> str:
        """サンプルツール."""
        return f"query: {query}"
+
 
    def main() -> None:
        mcp.run(transport="streamable-http")

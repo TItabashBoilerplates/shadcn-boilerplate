@@ -9,6 +9,6 @@
 		"apps/mcp/src"
 	],
 	"extraPaths": ["apps/api/src", "packages/core/src", "apps/mcp/src"],
-	"pythonVersion": "3.13",
+	"pythonVersion": "3.14",
 	"reportMissingImports": "warning"
 }

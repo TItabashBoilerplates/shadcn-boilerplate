@@ -12,15 +12,16 @@ import { DESKTOP_DOWNLOAD_PLATFORMS, desktopDownloadUrl } from './downloadLinks'
 const SUPABASE_URL = 'https://example.supabase.co'
 
 describe('desktopDownloadUrl', () => {
-  it.each([
-    ...DESKTOP_DOWNLOAD_PLATFORMS,
-  ])('%s: release-paths.mjs（アップロード側の正本）と同じ URL + ?download を組み立てる', (platform) => {
-    const objectPath = latestObjectPath(platform)
-    const fileName = objectPath.split('/').at(-1) ?? ''
-    expect(desktopDownloadUrl(platform, SUPABASE_URL)).toBe(
-      `${publicReleaseUrl(SUPABASE_URL, objectPath)}?download=${encodeURIComponent(fileName)}`
-    )
-  })
+  it.each([...DESKTOP_DOWNLOAD_PLATFORMS])(
+    '%s: release-paths.mjs（アップロード側の正本）と同じ URL + ?download を組み立てる',
+    (platform) => {
+      const objectPath = latestObjectPath(platform)
+      const fileName = objectPath.split('/').at(-1) ?? ''
+      expect(desktopDownloadUrl(platform, SUPABASE_URL)).toBe(
+        `${publicReleaseUrl(SUPABASE_URL, objectPath)}?download=${encodeURIComponent(fileName)}`
+      )
+    }
+  )
 
   it('プラットフォーム一覧が正本のキー集合と一致する（片方だけ増やす事故を防ぐ）', () => {
     expect([...DESKTOP_DOWNLOAD_PLATFORMS].sort()).toEqual(
