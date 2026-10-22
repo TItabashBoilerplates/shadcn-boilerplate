@@ -69,7 +69,9 @@
   "overrides": {
     "nativewind": "5.0.0-rc.0",
     "react-native-css": "3.1.0-rc.0",
-    "lightningcss": "1.30.1"
+    "lightningcss": "1.30.1",
+    "handlebars": "4.7.10",
+    "js-yaml": "4.3.2"
   },
   "engines": {
     "node": ">=22.18.0",
