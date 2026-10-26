@@ -1,6 +1,65 @@
 { pkgs, config, lib, ... }:
 
 let
+  # Bun 1.4.4 fixes CVE-2026-111497 and GHSA-cf8x-9m69-3gg3.
+  # SHA-256 digests from the official GitHub release assets.
+  bunVersion = "1.4.4";
+  bunDist = {
+    "aarch64-darwin" = { platform = "darwin-aarch64"; hash = "c240d7f0ccb90c263a849fcdb09b7ee62630d921348ed6aafda86b9d577bc510"; };
+    "x86_64-darwin" = { platform = "darwin-x64-baseline"; hash = "d4a155adfbfd09155eb3ba05c9e3a544f39297d7a68616d3c7759f67ab5c47dc"; };
+    "aarch64-linux" = { platform = "linux-aarch64"; hash = "baa6bb36f51d6e58561e02bbea825038a9df454f673d6d776e8bbf86f8c7850e"; };
+    "x86_64-linux" = { platform = "linux-x64-baseline"; hash = "e0446eb55995772eb9894bebae9a6be368d985a8b9271ee124486f9946eedd76"; };
+  };
+  bunRuntime = pkgs.bun.overrideAttrs (old:
+    let dist = bunDist.${pkgs.stdenv.hostPlatform.system};
+    in {
+      version = bunVersion;
+      src = pkgs.fetchurl {
+        url = "https://github.com/oven-sh/bun/releases/download/bun-v${bunVersion}/bun-${dist.platform}.zip";
+        sha256 = dist.hash;
+      };
+      sourceRoot = "bun-${dist.platform}";
+      meta = old.meta // {
+        platforms = builtins.attrNames bunDist;
+        changelog = "https://bun.com/blog/bun-v${bunVersion}";
+      };
+    });
+
+  # Official security release while nixpkgs still provides Node 24.21.0.
+  # Checksums: https://nodejs.org/dist/v24.22.1/SHASUMS256.txt
+  nodeVersion = "24.22.1";
+  nodeDist = {
+    "aarch64-darwin" = { platform = "darwin-arm64"; hash = "654ba79de6155647e22321932b45f2a1ccb705976cc337c9b8e278beb085a628"; };
+    "x86_64-darwin" = { platform = "darwin-x64"; hash = "65e450f90a6eaacd5000f611861c4ce65fadc87f813795dc4ed0c0e5f2fca2d4"; };
+    "aarch64-linux" = { platform = "linux-arm64"; hash = "dbabf7a1cbf947e6059ffad2c27b80041db97dea1e553b62afdee7f13fca336e"; };
+    "x86_64-linux" = { platform = "linux-x64"; hash = "6c172a9ab6718f7b801fb5a7bd486af2ee5e32758086a04b84fcce2aa77095e6"; };
+  };
+  nodeRuntime =
+    let dist = nodeDist.${pkgs.stdenv.hostPlatform.system};
+    in pkgs.stdenvNoCC.mkDerivation {
+      pname = "nodejs";
+      version = nodeVersion;
+      src = pkgs.fetchurl {
+        url = "https://nodejs.org/dist/v${nodeVersion}/node-v${nodeVersion}-${dist.platform}.tar.xz";
+        sha256 = dist.hash;
+      };
+      nativeBuildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.autoPatchelfHook ];
+      buildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [ pkgs.stdenv.cc.cc.lib ];
+      dontBuild = true;
+      installPhase = ''
+        runHook preInstall
+        mkdir -p "$out"
+        cp -R bin include lib share "$out/"
+        runHook postInstall
+      '';
+      meta = {
+        description = "Node.js official security release (CVE-2026-111497)";
+        homepage = "https://nodejs.org";
+        license = lib.licenses.mit;
+        mainProgram = "node";
+      };
+    };
+
   # ===== Terraform（HashiCorp 公式配布バイナリ）=====
   #
   # `pkgs.terraform` を使わない理由: Terraform 1.6 以降は BUSL のため nixpkgs が
@@ -315,8 +374,13 @@ in
 
   languages.javascript = {
     enable = true;
-    package = pkgs.nodejs_24;
+    # CVE-2026-111497 (Node2Shell) and the October 2026 security release.
+    # Fail evaluation if the runtime pin drops below the security baseline.
+    package = assert lib.assertMsg (lib.versionAtLeast nodeRuntime.version "24.22.1")
+      "Node.js >=24.22.1 required (CVE-2026-111497)";
+      nodeRuntime;
     bun.enable = true;
+    bun.package = bunRuntime;
   };
 
   languages.typescript.enable = true;
@@ -1149,9 +1213,28 @@ in
     # そもそも hook (biome/ruff/ruff-format/mypy/denofmt/denolint) の検査内容は
     # 配下の verify task と完全に重複しており、`devenv test` で二重に回す意味がない。
     # → `ci-check` script は `devenv tasks run ci:check` を直接叩く（CI と同一経路）。
+    # Advisory data changes independently of lockfiles: never cache this task.
+    "security:audit-frontend" = {
+      exec = ''
+        cd "$DEVENV_ROOT/frontend"
+        bun audit
+      '';
+    };
+    "security:audit-drizzle" = {
+      exec = ''
+        cd "$DEVENV_ROOT/drizzle"
+        bun audit
+      '';
+    };
+    "security:audit" = {
+      after = [ "security:audit-frontend" "security:audit-drizzle" ];
+      exec = ''echo "Security audits passed"'';
+    };
+
     "ci:check" = {
       exec = ''echo "✅ All CI checks passed"'';
       after = [
+        "security:audit"
         "lint-ci:frontend"
         "lint-ci:drizzle"
         "lint-ci:backend-py"
@@ -1186,6 +1269,25 @@ in
   # devenv shell に入った状態（または direnv 経由）で、コマンド名で直接実行できる。
   # 例: `frontend`, `lint-frontend`, `test-db`
   scripts = {
+    "security-audit" = {
+      exec = ''exec devenv tasks run security:audit'';
+      description = "Audit frontend and Drizzle lockfiles against current advisories";
+    };
+    "security-fix" = {
+      exec = ''
+        set -euo pipefail
+        status=0
+        for project in frontend drizzle; do
+          if (cd "$DEVENV_ROOT/$project" && bun audit fix); then
+            echo "$project: security fixes applied"
+          else
+            status=1
+          fi
+        done
+        exit "$status"
+      '';
+      description = "Apply security fixes within dependency ranges; review resulting lockfiles";
+    };
     # ---------- Init（初回セットアップ・対話）----------
     # 開発開始前に一度だけ実行する初期化コマンド。外部サービスの対話認証（Doppler login 等）を
     # 含むため、自動 bootstrap（setup:* task）ではなくこの明示コマンドで行う。
