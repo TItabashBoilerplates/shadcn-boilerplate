@@ -39,7 +39,8 @@ sync 全体が予約値違反で失敗する**（一部の secret だけ届か�
 > **`GITHUB_` だけは実質どこでも避ける。** GitHub Actions の secrets / variables が全面的に
 > 予約しており、`dev` / `stg` / `prd` は必ず GitHub へ sync するため。
 > 逆に **`SUPABASE_` / `VERCEL_` は、Supabase / Vercel への sync を張っていない config では
-> 使ってよい**（本リポジトリは両方とも sync を使わず、Terraform が直接 env を書く）。
+> 使ってよい**（`SUPABASE_` は sync を張っていない。Vercel へは Doppler ネイティブ連携を使う設計
+> なので §1.1 の型の規則が掛かる。`.claude/skills/doppler/references/cicd.md`）。
 
 ### 併せて守る命名制約（同じ理由で sync が壊れる）
 
@@ -47,6 +48,25 @@ sync 全体が予約値違反で失敗する**（一部の secret だけ届か�
 - **Vercel の予約名は使わない**: `AWS_SECRET_KEY` / `AWS_EXECUTION_ENV` / `AWS_LAMBDA_*` / `NOW_REGION` /
   `TZ` / `LAMBDA_TASK_ROOT` / `LAMBDA_RUNTIME_DIR`（Doppler の Vercel 連携も同一リストを reserved として
   拒否する。[Vercel: Reserved environment variables](https://vercel.com/docs/environment-variables/reserved-environment-variables)）。
+
+### 1.1 Doppler → Vercel 同期: 公開変数は Unmasked + 同期は Dynamic（MANDATORY）
+
+- Vercel は `NEXT_PUBLIC_` 等の公開 prefix の変数を **Secret 型にできない**。Secret で送ると Vercel が拒否し、
+  **Doppler がその同期全体を無効化する**。無効化の通知は出ないので、気づかないまま止まり続ける。
+- Doppler 公式の推奨は、同期の変数タイプを **Dynamic** にし、公開変数を Doppler 側で **Unmasked** にすること。
+  Dynamic は Unmasked を Config 型、Masked / Restricted を Secret 型で送る。**秘密と公開値は同じ config に
+  置いてよい**。専用 config に分けたり Vercel に直接置いたりしない（出典: https://docs.doppler.com/docs/vercel）。
+- 公開値の追加・修正: `doppler secrets set NEXT_PUBLIC_X --visibility unmasked`（値はチャット / ログに出さず、
+  パイプで渡す。エージェントの書き込みは `mcp-doppler.md` に従う）。
+- 追加したら同期が `synced` のままか必ず確認する。`GET /v3/integrations` の `integrations[].syncs[]`
+  （`enabled` / `status`）。
+- **無効化された同期の復旧**: 再有効化の API は無いが、**削除して作り直せば戻る**。Vercel 側の変数は消さない。
+  - 削除: `DELETE /v3/configs/config/syncs/sync?project=&config=&sync=<slug>&delete_from_target=false`
+  - 作成: `POST /v3/configs/config/syncs`
+    `{"project","config","integration","data":{"target_id":"production","team_id","project_id","variable_type":"dynamic"}}`
+  - `team_id` / `project_id` は `GET /v3/integrations/integration/options?integration=<slug>` の `teamProjects` から取る。
+  - トークンは `doppler configure get token --plain` を変数に入れて渡し、出力に出さない。
+- 「再有効化できないから Vercel へ直接設定する」と案内しない（`research.md`「『できない』と結論する前に」）。
 
 ---
 
