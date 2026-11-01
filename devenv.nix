@@ -649,6 +649,87 @@ in
       };
     };
 
+    # ===== xr: visionOS / Android XR の開発 toolchain（opt-in） =====
+    #
+    # **`android` profile とは併用しない**: あちらは Nix 管理の SDK + JDK 17、こちらは
+    # **手元の Android Studio SDK（~/Library/Android/sdk）+ JDK 21**。`languages.java` が衝突する。
+    # Nix の SDK は read-only で数 GB になるため、XR は既存の SDK / Xcode を使う軽量構成にしている。
+    #
+    #   devenv shell -P xr -- check-env     # JDK / Xcode / visionOS SDK / adb / emulator の有無
+    #   devenv shell -P xr -- xr-emu <AVD>  # Android エミュレータ起動（引数なしで AVD 一覧）
+    #   devenv shell -P xr -- xr-log        # adb logcat
+    #   devenv shell -P xr -- vision-sims   # visionOS シミュレータ一覧
+    #
+    # 無い物（Xcode / Android SDK）は **スキップ表示で exit 0**（無いのは異常ではなく未導入）。
+    xr.module = { pkgs, lib, ... }: {
+      languages.java = {
+        enable = true;
+        jdk.package = pkgs.jdk21;
+      };
+
+      # macOS では Nix の Apple SDK ではなくシステムの Xcode を使う（visionOS SDK は Nix に無い）。
+      apple.sdk = lib.mkIf pkgs.stdenv.isDarwin null;
+
+      packages = [ pkgs.scrcpy ];
+
+      enterShell = ''
+        if [ -z "''${DEVELOPER_DIR:-}" ] && [ -d /Applications/Xcode.app/Contents/Developer ]; then
+          export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+        fi
+
+        export ANDROID_HOME="''${ANDROID_HOME:-$HOME/Library/Android/sdk}"
+        if [ -d "$ANDROID_HOME" ]; then
+          export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+        else
+          unset ANDROID_HOME
+        fi
+      '';
+
+      scripts = {
+        xr-emu.exec = ''
+          if ! command -v emulator >/dev/null 2>&1; then
+            echo "Android Emulator が無いのでスキップします"; exit 0
+          fi
+          if [ -z "''${1:-}" ]; then
+            echo "使い方: xr-emu <AVD名>"; emulator -list-avds; exit 0
+          fi
+          emulator -avd "$@"
+        '';
+
+        xr-log.exec = ''
+          if ! command -v adb >/dev/null 2>&1; then
+            echo "adb が無いのでスキップします"; exit 0
+          fi
+          adb logcat "$@"
+        '';
+
+        vision-sims.exec = ''
+          if command -v xcrun >/dev/null 2>&1 && xcrun simctl help >/dev/null 2>&1; then
+            xcrun simctl list devices visionOS
+          else
+            echo "Xcode が無いのでスキップします"
+          fi
+        '';
+
+        check-env.exec = ''
+          java -version 2>&1 | head -1
+          if command -v xcodebuild >/dev/null 2>&1; then
+            xcodebuild -version 2>/dev/null | head -1 || echo "- Xcode: 未設定（スキップ）"
+          else
+            echo "- xcodebuild: 未インストール（スキップ）"
+          fi
+          if xcrun --sdk xros --show-sdk-path >/dev/null 2>&1; then
+            echo "visionOS SDK: OK"
+          else
+            echo "- visionOS SDK: なし（スキップ）"
+          fi
+          if command -v adb >/dev/null 2>&1; then adb version | head -1; else echo "- adb: 未インストール（スキップ）"; fi
+          if command -v emulator >/dev/null 2>&1; then emulator -version 2>/dev/null | head -1; else echo "- emulator: 未インストール（スキップ）"; fi
+          exit 0
+        '';
+      };
+    };
+
     # ===== desktop: Tauri v2（apps/desktop）のネイティブビルド toolchain =====
     #
     # **opt-in profile にしている理由**: Linux で Tauri をビルドするには WebKitGTK と
