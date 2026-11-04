@@ -114,7 +114,7 @@ where platform = 'ios';
 
 | 順 | 手段 | 条件 |
 |---|---|---|
-| 1 | **OTA（EAS Update）で直す** | JS / スタイル / 画像の問題なら。`expo-updates` を導入している場合 |
+| 1 | **OTA（EAS Update）で直す** | JS / スタイル / 画像の問題なら。`mobile-update`（[`ota-runbook.md`](ota-runbook.md)） |
 | 2 | **patch を上げて出し直し、`latest_version` だけ更新** | ブロックせずに更新を促せる |
 | 3 | **Android: Play Console の Recovery tools / `apprecovery` API** | **コード変更不要**で特定 versionCode 範囲に更新プロンプトを出せる。ブロッキングではないが、閉じてもコールドリスタートのたびに再表示される。Play App Signing + AAB が前提 |
 | 4 | `minimum_version` を上げる | 上記で対処できず、**古い版を動かし続けるほうが危険**なとき |

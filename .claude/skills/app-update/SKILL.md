@@ -252,7 +252,9 @@ iOS に同等の仕組みは無い。
 
 ## 8. OTA（EAS Update）との役割分担
 
-**本リポジトリは `expo-updates` を導入していない**（`package.json` に無い）。導入する場合:
+**本リポジトリは `expo-updates` を導入済み**（`runtimeVersion: appVersion` / channel は `eas.json`。
+配信は `mobile-update`、手順は `docs/mobile/ota-runbook.md`）。`updates.url` / `projectId` は
+`eas update:configure` で埋めるまで無く、その間 OTA は無効（埋め込みバンドルで動く）。使い分け:
 
 | 直したいもの | 手段 |
 |---|---|
@@ -263,9 +265,10 @@ iOS に同等の仕組みは無い。
 > OTA で直せるものを強制すると、審査リスクとユーザーの離脱だけが増える。
 
 `runtimeVersion` policy は `appVersion` / `nativeVersion` / `fingerprint` の 3 つ。
-本リポジトリは `appVersionSource: "remote"` + `autoIncrement` なので、
-**`nativeVersion` は相性が悪い**（ビルドごとに runtimeVersion が変わり、OTA の配信先が毎回分断される）。
-`fingerprint` か `appVersion` を選ぶこと。
+本リポジトリは **`appVersion`**（公式推奨）を採用している。`appVersionSource: "remote"` +
+`autoIncrement` なので `nativeVersion` は相性が悪い（ビルドごとに runtimeVersion が変わり、
+OTA の配信先が毎回分断される）。`appVersion` は**リリース時に `version` を上げ忘れると
+非互換な更新が旧バイナリへ配られる**ので、上げ忘れを運用で防ぐこと（`ota-runbook.md`）。
 
 App Store 2.5.2 は「バンドル外から**機能を追加・変更するコード**をダウンロード・実行してはならない」
 と規定している。EAS Update の運用はこの条文と隣り合わせなので、OTA を入れるなら

@@ -1540,6 +1540,11 @@ in
       description = "Android を build → Play 内部テスト（既定 expo.dev / --local でローカルビルド）";
     };
 
+    "mobile-update" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/update.sh" "$@"'';
+      description = "JS/アセットを OTA（EAS Update）で配信: mobile-update <production|staging|dev> -m \"msg\"";
+    };
+
     "screenshots-mobile" = {
       exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/screenshots.sh" "$@"'';
       description = "ストア掲載用スクショを simulator/emulator で撮影→検証（--upload で送信）";
