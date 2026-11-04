@@ -90,6 +90,7 @@ ENV=production devenv tasks run -P production db:migrate-deploy   # 緊急時の
 vercel-deploy [app]                # → .claude/skills/vercel-deploy/
 mobile-release-ios / -android      # 「アップロードまで」。配布・審査提出は store-status / store-testflight /
                                    #   store-submit-ios / store-release-play → .claude/skills/mobile-release/
+mobile-update <env> -m "msg"       # JS/アセットを OTA 配信（EAS Update）→ docs/mobile/ota-runbook.md
 store-push-* / store-create-*      # 掲載情報・課金商品（必ず先に --dry-run）→ .claude/skills/store-screenshots/
 
 # Desktop（Tauri: frontend/apps/desktop）
