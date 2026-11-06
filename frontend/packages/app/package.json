@@ -12,7 +12,9 @@
     "./hooks/*": "./hooks/*.ts"
   },
   "scripts": {
-    "type-check": "workspace-tsc --noEmit"
+    "type-check": "workspace-tsc --noEmit",
+    "lint:ci": "oxlint --no-error-on-unmatched-pattern .",
+    "lint": "oxlint --no-error-on-unmatched-pattern --fix ."
   },
   "dependencies": {
     "@workspace/auth": "workspace:*",

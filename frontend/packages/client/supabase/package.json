@@ -12,7 +12,9 @@
     "./storage-object": "./storage-object.ts"
   },
   "scripts": {
-    "type-check": "workspace-tsc --noEmit"
+    "type-check": "workspace-tsc --noEmit",
+    "lint:ci": "oxlint --no-error-on-unmatched-pattern .",
+    "lint": "oxlint --no-error-on-unmatched-pattern --fix ."
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

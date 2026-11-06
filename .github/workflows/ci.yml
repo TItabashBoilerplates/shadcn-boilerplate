@@ -96,6 +96,13 @@ jobs:
           # 古いツリーが延々と再利用され続ける。
           # exact key のみにすれば miss 時は空 → 下の Sync step が本物の install を行う。
       # 版は .github/actions/install-devenv が固定する（devenv.yaml の require_version と対）。
+      - name: Cache Turbo task results
+        uses: actions/cache@v6
+        with:
+          path: frontend/.turbo
+          key: turbo-${{ runner.os }}-${{ github.job }}-${{ hashFiles('frontend/bun.lock', 'frontend/turbo.json', 'devenv.nix', 'devenv.lock') }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ github.job }}-${{ hashFiles('frontend/bun.lock', 'frontend/turbo.json', 'devenv.nix', 'devenv.lock') }}-
       - uses: ./.github/actions/install-devenv
       # ⚠️ この step は消さないこと（install を確実に走らせる唯一の場所）。
       #
@@ -166,6 +173,13 @@ jobs:
           # 古いツリーが延々と再利用され続ける。
           # exact key のみにすれば miss 時は空 → 下の Sync step が本物の install を行う。
       # 版は .github/actions/install-devenv が固定する（devenv.yaml の require_version と対）。
+      - name: Cache Turbo task results
+        uses: actions/cache@v6
+        with:
+          path: frontend/.turbo
+          key: turbo-${{ runner.os }}-${{ github.job }}-${{ hashFiles('frontend/bun.lock', 'frontend/turbo.json', 'devenv.nix', 'devenv.lock') }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ github.job }}-${{ hashFiles('frontend/bun.lock', 'frontend/turbo.json', 'devenv.nix', 'devenv.lock') }}-
       - uses: ./.github/actions/install-devenv
       # ci-check job と同じ理由（execIfModified による install の skip）。
       - name: Sync JS dependencies (install into a lockfile-matched tree)

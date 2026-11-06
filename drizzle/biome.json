@@ -34,7 +34,7 @@
       },
       "style": {
         "recommended": true,
-        "useImportType": "error"
+        "useImportType": "off"
       },
       "suspicious": {
         "recommended": true,

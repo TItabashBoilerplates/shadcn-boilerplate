@@ -23,12 +23,12 @@ user_id_var: ContextVar[str | None] = ContextVar("user_id", default=None)
 def get_log_level() -> int:
     """Get log level from environment variable."""
     level_name = os.getenv("LOG_LEVEL", "INFO").upper()
-    return getattr(logging, level_name, logging.INFO)
+    return logging.getLevelNamesMapping().get(level_name, logging.INFO)
 
 
 def is_development() -> bool:
     """Determine if running in development environment."""
-    return sys.stderr.isatty() or os.getenv("LOG_FORMAT", "pretty") == "pretty"
+    return bool(sys.stderr.isatty()) or os.getenv("LOG_FORMAT", "pretty") == "pretty"
 
 
 def add_request_context(
@@ -112,7 +112,7 @@ def get_logger(name: str | None = None) -> structlog.stdlib.BoundLogger:
     Returns:
         A structlog BoundLogger instance.
     """
-    return structlog.get_logger(name)  # type: ignore[no-any-return]
+    return structlog.stdlib.get_logger(name)
 
 
 def set_request_context(request_id: str, user_id: str | None = None) -> None:

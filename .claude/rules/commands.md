@@ -39,6 +39,10 @@ scripts は devenv shell（direnv 自動アクティベート含む）下で PAT
 | **Services (frontend apps)** | `dev-web`, `dev-mobile`, `dev-all`, または `devenv up <names...>` |
 | **Services (devenv 外)** | `frontend` (turbo dev), `mobile-ios`, `mobile-android`, `mobile-web` (Expo TUI) |
 
+### Python テストの worker 選択
+
+`test-backend-py` は pytest-xdist による2 worker が既定。AI エージェントは実行ごとに CPU・RAM と外側の並列数を見て `-n N` または `-n auto --maxprocesses N` を指定できる。小規模テストでは worker 起動が処理時間を上回ることも記録する。`-n 0` はデバッグ用。並列優先はユーザー指定。
+
 ## Required Tasks（pipeline / 依存付き）
 
 | Operation | Command |
@@ -64,7 +68,7 @@ cd frontend && bun run tsc --noEmit
 cd frontend && bun run vitest
 cd backend-py && uv run ruff check
 cd backend-py && uv run ruff format
-cd backend-py && uv run mypy
+cd backend-py && uv run ty check
 cd backend-py && uv run pytest
 cd drizzle && bun run biome check
 npx tsc --noEmit
@@ -107,14 +111,15 @@ Direct command execution is allowed ONLY for:
 
 | Hook | 対象 |
 |---|---|
-| `biome` | JS/TS/JSON (lint + format、auto-fix、`pass_filenames=true` で変更ファイルのみ) |
+| `biome` | JS/TS/JSON の format・import assist と未移行 lint（非変更モード） |
+| `oxlint` | JS/TS の主 lint・FSD（非変更モード） |
 | `ruff` | Python lint (`pass_filenames=true`) |
 | `ruff-format` | Python format |
-| `mypy` | Python type check |
+| `ty` | Python type check（production src 全体） |
 | `denofmt` | Edge Functions format (supabase/functions/ 配下) |
 | `denolint` | Edge Functions lint |
 
-`prek` (Rust 実装) が pre-commit を駆動。**コミット 1 回 < 200ms** が普通。
+`prek` (Rust 実装) が pre-commit を駆動。所要時間は検査対象とキャッシュ状態による。性能比較は `docs/_research/2026-11-06-toolchain-performance.md` を参照。
 
 ### 段階 2: CI / 手動 verify (ci-check)
 
@@ -123,9 +128,9 @@ Direct command execution is allowed ONLY for:
 ```
 ci-check  (= devenv tasks run ci:check)
 └── ci:check
-    ├── lint-ci:frontend / drizzle / backend-py / functions / fsd  (execIfModified)
+    ├── lint-ci:frontend / drizzle / scripts / backend-py / functions  (execIfModified)
     ├── format-check:frontend / drizzle / backend-py / functions    (execIfModified)
-    └── type-check:frontend / mobile / backend-py / functions       (execIfModified)
+    └── type-check:frontend / drizzle / backend-py / functions       (execIfModified)
 ```
 
 - `execIfModified` で **mtime + content hash** チェック → 変更なしならスキップ
@@ -205,14 +210,17 @@ devenv shell -- bash -c 'type <新しい script 名> >/dev/null && echo OK'
 #### backend-py の `uv run` は `--all-packages` 必須（import 解決が要るツール）
 
 `backend-py` は uv の **virtual workspace**（root が `package = false`）。素の `uv run` は root の
-dependency-groups（mypy/ruff/pytest）しか同期せず、member (`apps/api`, `packages/core`) の依存
-= fastapi / pydantic / starlette / structlog を入れない。すると **mypy から third-party が全部 `Any` に見え**、
-strict の `disallow_subclassing_any` / `disallow_untyped_decorators` が誤爆する
-（`Class cannot subclass "BaseModel" (has type "Any")` 等）。
+dependency-groups（ty/ruff/pytest）しか同期せず、member (`apps/api`, `packages/core`) の依存
+= fastapi / pydantic / starlette / structlog を入れない。すると ty が外部型を解決できず、
+正しい依存環境を前提にした検査ができない。
+
+移行前の mypy では third-party が全部 `Any` に見え、strict の
+`disallow_subclassing_any` / `disallow_untyped_decorators` が誤爆した
+（`Class cannot subclass "BaseModel" (has type "Any")` 等）。ty でも全 member の依存を同期する原則は同じ。
 
 ```bash
 # ✅ import 解決が要るツールは --all-packages
-uv run --all-packages mypy apps packages
+uv run --all-packages ty check
 uv run --all-packages pytest
 
 # ✅ ruff は import 解決不要なので素の uv run でよい

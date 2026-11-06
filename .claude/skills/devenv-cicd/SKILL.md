@@ -21,7 +21,7 @@ description: GitHub Actions × devenv 2.0 による CI/CD ガイダンス。`.gi
 
 | パターン | 使い道 | enterShell hook |
 |---|---|---|
-| `run: devenv test` | フルチェック（git hooks 含む） | 発火 |
+| `run: devenv test` | upstream の一般例（本リポジトリでは使用禁止） | 発火 |
 | `run: devenv shell <single-cmd>` | 単一コマンド実行 | 発火 |
 | `shell: devenv shell bash -- -e {0}` + `run: \|` | 複数行スクリプト | 発火 |
 
@@ -53,18 +53,14 @@ defaults:
 
 #### `ci-check` job（lint + format + type-check）
 
-verify task のみを **直接列挙** して `devenv tasks run ...` で実行する。
+検査一覧は `devenv.nix` の `ci:check` に集約し、CI は同じ入口を呼ぶ。
 
 ```yaml
 - name: Run verify tasks
-  run: |
-    devenv tasks run \
-      lint-ci:frontend lint-ci:drizzle lint-ci:backend-py lint-ci:functions lint-ci:fsd \
-      format-check:frontend format-check:drizzle format-check:backend-py format-check:functions \
-      type-check:frontend type-check:mobile type-check:backend-py type-check:functions
+  run: ci-check
 ```
 
-**`devenv test` (= `ci:check` aggregator) は使わない**。理由は次節。
+`devenv test` は process phase を巻き込むため使わない。
 
 #### `test` job（unit tests）
 

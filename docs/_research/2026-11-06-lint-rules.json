@@ -1,0 +1,1440 @@
+{
+	"web": {
+		"rules": {
+			"react/display-name": [2],
+			"react/jsx-key": [2],
+			"react/jsx-no-comment-textnodes": [2],
+			"react/jsx-no-duplicate-props": [2],
+			"react/jsx-no-target-blank": [0],
+			"react/jsx-no-undef": [2],
+			"react/jsx-uses-react": [2],
+			"react/jsx-uses-vars": [2],
+			"react/no-children-prop": [2],
+			"react/no-danger-with-children": [2],
+			"react/no-deprecated": [2],
+			"react/no-direct-mutation-state": [2],
+			"react/no-find-dom-node": [2],
+			"react/no-is-mounted": [2],
+			"react/no-render-return-value": [2],
+			"react/no-string-refs": [2],
+			"react/no-unescaped-entities": [2],
+			"react/no-unknown-property": [0],
+			"react/no-unsafe": [0],
+			"react/prop-types": [0],
+			"react/react-in-jsx-scope": [0],
+			"react/require-render-return": [2],
+			"react-hooks/rules-of-hooks": [2],
+			"react-hooks/exhaustive-deps": [1],
+			"react-hooks/static-components": [2],
+			"react-hooks/use-memo": [2],
+			"react-hooks/preserve-manual-memoization": [2],
+			"react-hooks/incompatible-library": [1],
+			"react-hooks/immutability": [2],
+			"react-hooks/globals": [2],
+			"react-hooks/refs": [2],
+			"react-hooks/set-state-in-effect": [2],
+			"react-hooks/error-boundaries": [2],
+			"react-hooks/purity": [2],
+			"react-hooks/set-state-in-render": [2],
+			"react-hooks/unsupported-syntax": [1],
+			"react-hooks/config": [2],
+			"react-hooks/gating": [2],
+			"@next/next/google-font-display": [1],
+			"@next/next/google-font-preconnect": [1],
+			"@next/next/next-script-for-ga": [1],
+			"@next/next/no-async-client-component": [1],
+			"@next/next/no-before-interactive-script-outside-document": [1],
+			"@next/next/no-css-tags": [1],
+			"@next/next/no-head-element": [1],
+			"@next/next/no-html-link-for-pages": [2],
+			"@next/next/no-img-element": [1],
+			"@next/next/no-location-assign-relative-destination": [1],
+			"@next/next/no-page-custom-font": [1],
+			"@next/next/no-styled-jsx-in-document": [1],
+			"@next/next/no-sync-scripts": [2],
+			"@next/next/no-title-in-document-head": [1],
+			"@next/next/no-typos": [1],
+			"@next/next/no-unwanted-polyfillio": [1],
+			"@next/next/inline-script-id": [2],
+			"@next/next/no-assign-module-variable": [2],
+			"@next/next/no-document-import-in-page": [2],
+			"@next/next/no-duplicate-head": [2],
+			"@next/next/no-head-import-in-document": [2],
+			"@next/next/no-script-component-in-head": [2],
+			"import/no-anonymous-default-export": [1],
+			"jsx-a11y/alt-text": [
+				1,
+				{
+					"elements": ["img"],
+					"img": ["Image"]
+				}
+			],
+			"jsx-a11y/aria-props": [1],
+			"jsx-a11y/aria-proptypes": [1],
+			"jsx-a11y/aria-unsupported-elements": [1],
+			"jsx-a11y/role-has-required-aria-props": [1],
+			"jsx-a11y/role-supports-aria-props": [1],
+			"boundaries/dependencies": [
+				2,
+				{
+					"default": "disallow",
+					"policies": [
+						{
+							"from": {
+								"element": {
+									"type": "nextjs-app"
+								}
+							},
+							"allow": {
+								"to": [
+									{
+										"element": {
+											"type": "fsd-app"
+										}
+									},
+									{
+										"element": {
+											"type": "views"
+										}
+									},
+									{
+										"element": {
+											"type": "widgets"
+										}
+									},
+									{
+										"element": {
+											"type": "features"
+										}
+									},
+									{
+										"element": {
+											"type": "entities"
+										}
+									},
+									{
+										"element": {
+											"type": "shared"
+										}
+									},
+									{
+										"element": {
+											"type": "workspace"
+										}
+									}
+								]
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": "fsd-app"
+								}
+							},
+							"allow": {
+								"to": [
+									{
+										"element": {
+											"type": "fsd-app"
+										}
+									},
+									{
+										"element": {
+											"type": "views"
+										}
+									},
+									{
+										"element": {
+											"type": "widgets"
+										}
+									},
+									{
+										"element": {
+											"type": "features"
+										}
+									},
+									{
+										"element": {
+											"type": "entities"
+										}
+									},
+									{
+										"element": {
+											"type": "shared"
+										}
+									},
+									{
+										"element": {
+											"type": "workspace"
+										}
+									}
+								]
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": "views"
+								}
+							},
+							"allow": {
+								"to": [
+									{
+										"element": {
+											"type": "widgets"
+										}
+									},
+									{
+										"element": {
+											"type": "features"
+										}
+									},
+									{
+										"element": {
+											"type": "entities"
+										}
+									},
+									{
+										"element": {
+											"type": "shared"
+										}
+									},
+									{
+										"element": {
+											"type": "workspace"
+										}
+									}
+								]
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": "widgets"
+								}
+							},
+							"allow": {
+								"to": [
+									{
+										"element": {
+											"type": "features"
+										}
+									},
+									{
+										"element": {
+											"type": "entities"
+										}
+									},
+									{
+										"element": {
+											"type": "shared"
+										}
+									},
+									{
+										"element": {
+											"type": "workspace"
+										}
+									}
+								]
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": "features"
+								}
+							},
+							"allow": {
+								"to": [
+									{
+										"element": {
+											"type": "entities"
+										}
+									},
+									{
+										"element": {
+											"type": "shared"
+										}
+									},
+									{
+										"element": {
+											"type": "workspace"
+										}
+									}
+								]
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": "entities"
+								}
+							},
+							"allow": {
+								"to": [
+									{
+										"element": {
+											"type": "shared"
+										}
+									},
+									{
+										"element": {
+											"type": "workspace"
+										}
+									}
+								]
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": "shared"
+								}
+							},
+							"allow": {
+								"to": [
+									{
+										"element": {
+											"type": "shared"
+										}
+									},
+									{
+										"element": {
+											"type": "workspace"
+										}
+									}
+								]
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": ["views", "widgets", "features", "entities"]
+								}
+							},
+							"allow": {
+								"to": {
+									"element": {
+										"type": "views",
+										"captured": {
+											"slice": "{{ from.element.captured.slice }}"
+										}
+									}
+								}
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": ["views", "widgets", "features", "entities"]
+								}
+							},
+							"allow": {
+								"to": {
+									"element": {
+										"type": "widgets",
+										"captured": {
+											"slice": "{{ from.element.captured.slice }}"
+										}
+									}
+								}
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": ["views", "widgets", "features", "entities"]
+								}
+							},
+							"allow": {
+								"to": {
+									"element": {
+										"type": "features",
+										"captured": {
+											"slice": "{{ from.element.captured.slice }}"
+										}
+									}
+								}
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": ["views", "widgets", "features", "entities"]
+								}
+							},
+							"allow": {
+								"to": {
+									"element": {
+										"type": "entities",
+										"captured": {
+											"slice": "{{ from.element.captured.slice }}"
+										}
+									}
+								}
+							}
+						}
+					]
+				}
+			],
+			"boundaries/no-unknown-dependencies": [1]
+		},
+		"settings": {
+			"react": {
+				"version": "detect"
+			},
+			"import/parsers": {
+				"@typescript-eslint/parser": [".ts", ".mts", ".cts", ".tsx", ".d.ts"]
+			},
+			"import/resolver": {
+				"/Volumes/External/Development/orca/worktrees/shadcn-boilerplate/nerite/frontend/node_modules/eslint-import-resolver-node/index.js": {
+					"extensions": [".js", ".jsx", ".ts", ".tsx"]
+				},
+				"/Volumes/External/Development/orca/worktrees/shadcn-boilerplate/nerite/frontend/node_modules/eslint-config-next/node_modules/eslint-import-resolver-typescript/lib/index.cjs": {
+					"alwaysTryTypes": true
+				}
+			},
+			"boundaries/include": ["src/**/*", "app/**/*"],
+			"boundaries/elements": [
+				{
+					"type": "nextjs-app",
+					"pattern": "app/**/*",
+					"partialMatch": false
+				},
+				{
+					"type": "fsd-app",
+					"pattern": "src/app/**/*",
+					"partialMatch": false
+				},
+				{
+					"type": "views",
+					"pattern": "src/views/*",
+					"capture": ["slice"]
+				},
+				{
+					"type": "widgets",
+					"pattern": "src/widgets/*",
+					"capture": ["slice"]
+				},
+				{
+					"type": "features-cross-import",
+					"pattern": "src/features/*/@x/*",
+					"partialMatch": false,
+					"capture": ["sourceSlice", "targetSlice"]
+				},
+				{
+					"type": "features",
+					"pattern": "src/features/*",
+					"capture": ["slice"]
+				},
+				{
+					"type": "entities-cross-import",
+					"pattern": "src/entities/*/@x/*",
+					"partialMatch": false,
+					"capture": ["sourceSlice", "targetSlice"]
+				},
+				{
+					"type": "entities",
+					"pattern": "src/entities/*",
+					"capture": ["slice"]
+				},
+				{
+					"type": "shared",
+					"pattern": "src/shared/*",
+					"capture": ["segment"]
+				},
+				{
+					"type": "workspace",
+					"pattern": "@workspace/**"
+				}
+			]
+		}
+	},
+	"mobile": {
+		"rules": {
+			"import/no-unresolved": [2],
+			"import/named": [0],
+			"import/namespace": [2],
+			"import/default": [0],
+			"import/export": [2],
+			"import/no-named-as-default": [1],
+			"import/no-named-as-default-member": [1],
+			"import/no-duplicates": [1],
+			"eqeqeq": [1, "smart"],
+			"no-dupe-args": [2],
+			"no-dupe-class-members": [0],
+			"no-dupe-keys": [2],
+			"no-duplicate-case": [2],
+			"no-empty-character-class": [1],
+			"no-empty-pattern": [
+				1,
+				{
+					"allowObjectPatternsAsParameters": false
+				}
+			],
+			"no-extend-native": [
+				1,
+				{
+					"exceptions": []
+				}
+			],
+			"no-extra-bind": [1],
+			"no-redeclare": [
+				0,
+				{
+					"builtinGlobals": true
+				}
+			],
+			"no-undef": [
+				0,
+				{
+					"typeof": false
+				}
+			],
+			"no-unreachable": [1],
+			"no-unsafe-negation": [
+				1,
+				{
+					"enforceForOrderingRelations": false
+				}
+			],
+			"no-unused-expressions": [
+				1,
+				{
+					"allowShortCircuit": true,
+					"allowTernary": false,
+					"allowTaggedTemplates": false,
+					"enforceForJSX": true,
+					"ignoreDirectives": false
+				}
+			],
+			"no-unused-labels": [1],
+			"no-unused-vars": [
+				0,
+				{
+					"vars": "all",
+					"args": "none",
+					"ignoreRestSiblings": true,
+					"caughtErrors": "all",
+					"caughtErrorsIgnorePattern": "^_"
+				}
+			],
+			"no-with": [1],
+			"unicode-bom": [1, "never"],
+			"use-isnan": [
+				2,
+				{
+					"enforceForIndexOf": false,
+					"enforceForSwitchCase": true
+				}
+			],
+			"valid-typeof": [
+				2,
+				{
+					"requireStringLiterals": false
+				}
+			],
+			"import/first": [1],
+			"no-var": [2],
+			"@typescript-eslint/array-type": [
+				1,
+				{
+					"default": "array"
+				}
+			],
+			"@typescript-eslint/no-empty-object-type": [1],
+			"@typescript-eslint/no-wrapper-object-types": [1],
+			"@typescript-eslint/consistent-type-assertions": [
+				1,
+				{
+					"assertionStyle": "as",
+					"objectLiteralTypeAssertions": "allow"
+				}
+			],
+			"@typescript-eslint/no-extra-non-null-assertion": [1],
+			"@typescript-eslint/no-dupe-class-members": [2],
+			"@typescript-eslint/no-redeclare": [1],
+			"@typescript-eslint/no-unused-vars": [
+				1,
+				{
+					"vars": "all",
+					"args": "none",
+					"ignoreRestSiblings": true,
+					"caughtErrors": "all"
+				}
+			],
+			"no-useless-constructor": [0],
+			"@typescript-eslint/no-useless-constructor": [1],
+			"@typescript-eslint/no-require-imports": [
+				1,
+				{
+					"allow": [
+						"\\.(aac|aiff|avif|bmp|caf|db|gif|heic|html|jpeg|jpg|json|m4a|m4v|mov|mp3|mp4|mpeg|mpg|otf|pdf|png|psd|svg|ttf|wav|webm|webp|xml|yaml|yml|zip)$"
+					]
+				}
+			],
+			"react/display-name": [2],
+			"react/jsx-key": [2],
+			"react/jsx-no-comment-textnodes": [2],
+			"react/jsx-no-duplicate-props": [2],
+			"react/jsx-no-target-blank": [0],
+			"react/jsx-no-undef": [2],
+			"react/jsx-uses-react": [2],
+			"react/jsx-uses-vars": [2],
+			"react/no-children-prop": [2],
+			"react/no-danger-with-children": [2],
+			"react/no-deprecated": [2],
+			"react/no-direct-mutation-state": [2],
+			"react/no-find-dom-node": [2],
+			"react/no-is-mounted": [2],
+			"react/no-render-return-value": [2],
+			"react/no-string-refs": [2],
+			"react/no-unescaped-entities": [2],
+			"react/no-unknown-property": [1],
+			"react/no-unsafe": [0],
+			"react/prop-types": [0],
+			"react/react-in-jsx-scope": [0],
+			"react/require-render-return": [2],
+			"react-hooks/rules-of-hooks": [2],
+			"react-hooks/exhaustive-deps": [1],
+			"react-hooks/static-components": [2],
+			"react-hooks/use-memo": [2],
+			"react-hooks/preserve-manual-memoization": [2],
+			"react-hooks/incompatible-library": [1],
+			"react-hooks/immutability": [2],
+			"react-hooks/globals": [2],
+			"react-hooks/refs": [2],
+			"react-hooks/set-state-in-effect": [2],
+			"react-hooks/error-boundaries": [2],
+			"react-hooks/purity": [2],
+			"react-hooks/set-state-in-render": [2],
+			"react-hooks/unsupported-syntax": [1],
+			"react-hooks/config": [2],
+			"react-hooks/gating": [2],
+			"react/no-this-in-sfc": [1],
+			"expo/use-dom-exports": [2],
+			"expo/no-env-var-destructuring": [2],
+			"expo/no-dynamic-env-var": [2],
+			"boundaries/dependencies": [
+				2,
+				{
+					"default": "disallow",
+					"policies": [
+						{
+							"from": {
+								"element": {
+									"type": "nextjs-app"
+								}
+							},
+							"allow": {
+								"to": [
+									{
+										"element": {
+											"type": "fsd-app"
+										}
+									},
+									{
+										"element": {
+											"type": "views"
+										}
+									},
+									{
+										"element": {
+											"type": "widgets"
+										}
+									},
+									{
+										"element": {
+											"type": "features"
+										}
+									},
+									{
+										"element": {
+											"type": "entities"
+										}
+									},
+									{
+										"element": {
+											"type": "shared"
+										}
+									},
+									{
+										"element": {
+											"type": "workspace"
+										}
+									}
+								]
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": "fsd-app"
+								}
+							},
+							"allow": {
+								"to": [
+									{
+										"element": {
+											"type": "fsd-app"
+										}
+									},
+									{
+										"element": {
+											"type": "views"
+										}
+									},
+									{
+										"element": {
+											"type": "widgets"
+										}
+									},
+									{
+										"element": {
+											"type": "features"
+										}
+									},
+									{
+										"element": {
+											"type": "entities"
+										}
+									},
+									{
+										"element": {
+											"type": "shared"
+										}
+									},
+									{
+										"element": {
+											"type": "workspace"
+										}
+									}
+								]
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": "views"
+								}
+							},
+							"allow": {
+								"to": [
+									{
+										"element": {
+											"type": "widgets"
+										}
+									},
+									{
+										"element": {
+											"type": "features"
+										}
+									},
+									{
+										"element": {
+											"type": "entities"
+										}
+									},
+									{
+										"element": {
+											"type": "shared"
+										}
+									},
+									{
+										"element": {
+											"type": "workspace"
+										}
+									}
+								]
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": "widgets"
+								}
+							},
+							"allow": {
+								"to": [
+									{
+										"element": {
+											"type": "features"
+										}
+									},
+									{
+										"element": {
+											"type": "entities"
+										}
+									},
+									{
+										"element": {
+											"type": "shared"
+										}
+									},
+									{
+										"element": {
+											"type": "workspace"
+										}
+									}
+								]
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": "features"
+								}
+							},
+							"allow": {
+								"to": [
+									{
+										"element": {
+											"type": "entities"
+										}
+									},
+									{
+										"element": {
+											"type": "shared"
+										}
+									},
+									{
+										"element": {
+											"type": "workspace"
+										}
+									}
+								]
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": "entities"
+								}
+							},
+							"allow": {
+								"to": [
+									{
+										"element": {
+											"type": "shared"
+										}
+									},
+									{
+										"element": {
+											"type": "workspace"
+										}
+									}
+								]
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": "shared"
+								}
+							},
+							"allow": {
+								"to": [
+									{
+										"element": {
+											"type": "shared"
+										}
+									},
+									{
+										"element": {
+											"type": "workspace"
+										}
+									}
+								]
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": ["views", "widgets", "features", "entities"]
+								}
+							},
+							"allow": {
+								"to": {
+									"element": {
+										"type": "views",
+										"captured": {
+											"slice": "{{ from.element.captured.slice }}"
+										}
+									}
+								}
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": ["views", "widgets", "features", "entities"]
+								}
+							},
+							"allow": {
+								"to": {
+									"element": {
+										"type": "widgets",
+										"captured": {
+											"slice": "{{ from.element.captured.slice }}"
+										}
+									}
+								}
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": ["views", "widgets", "features", "entities"]
+								}
+							},
+							"allow": {
+								"to": {
+									"element": {
+										"type": "features",
+										"captured": {
+											"slice": "{{ from.element.captured.slice }}"
+										}
+									}
+								}
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": ["views", "widgets", "features", "entities"]
+								}
+							},
+							"allow": {
+								"to": {
+									"element": {
+										"type": "entities",
+										"captured": {
+											"slice": "{{ from.element.captured.slice }}"
+										}
+									}
+								}
+							}
+						}
+					]
+				}
+			],
+			"boundaries/no-unknown-dependencies": [1]
+		},
+		"settings": {
+			"import/ignore": ["node_modules[\\\\/]+@?react-native"],
+			"import/extensions": [
+				".android.cjs",
+				".android.mjs",
+				".android.js",
+				".android.jsx",
+				".android.ts",
+				".android.tsx",
+				".android.d.ts",
+				".ios.cjs",
+				".ios.mjs",
+				".ios.js",
+				".ios.jsx",
+				".ios.ts",
+				".ios.tsx",
+				".ios.d.ts",
+				".web.cjs",
+				".web.mjs",
+				".web.js",
+				".web.jsx",
+				".web.ts",
+				".web.tsx",
+				".web.d.ts",
+				".native.cjs",
+				".native.mjs",
+				".native.js",
+				".native.jsx",
+				".native.ts",
+				".native.tsx",
+				".native.d.ts",
+				".cjs",
+				".mjs",
+				".js",
+				".jsx",
+				".ts",
+				".tsx",
+				".d.ts"
+			],
+			"import/resolver": {
+				"node": {
+					"extensions": [
+						".android.cjs",
+						".android.mjs",
+						".android.js",
+						".android.jsx",
+						".android.ts",
+						".android.tsx",
+						".android.d.ts",
+						".ios.cjs",
+						".ios.mjs",
+						".ios.js",
+						".ios.jsx",
+						".ios.ts",
+						".ios.tsx",
+						".ios.d.ts",
+						".web.cjs",
+						".web.mjs",
+						".web.js",
+						".web.jsx",
+						".web.ts",
+						".web.tsx",
+						".web.d.ts",
+						".native.cjs",
+						".native.mjs",
+						".native.js",
+						".native.jsx",
+						".native.ts",
+						".native.tsx",
+						".native.d.ts",
+						".cjs",
+						".mjs",
+						".js",
+						".jsx",
+						".ts",
+						".tsx",
+						".d.ts"
+					]
+				},
+				"typescript": true
+			},
+			"import/external-module-folders": ["node_modules", "node_modules/@types"],
+			"import/parsers": {
+				"@typescript-eslint/parser": [".ts", ".tsx", ".d.ts"]
+			},
+			"react": {
+				"version": "detect"
+			},
+			"boundaries/include": ["src/**/*", "app/**/*"],
+			"boundaries/elements": [
+				{
+					"type": "nextjs-app",
+					"pattern": "app/**/*",
+					"partialMatch": false
+				},
+				{
+					"type": "fsd-app",
+					"pattern": "src/app/**/*",
+					"partialMatch": false
+				},
+				{
+					"type": "views",
+					"pattern": "src/views/*",
+					"capture": ["slice"]
+				},
+				{
+					"type": "widgets",
+					"pattern": "src/widgets/*",
+					"capture": ["slice"]
+				},
+				{
+					"type": "features-cross-import",
+					"pattern": "src/features/*/@x/*",
+					"partialMatch": false,
+					"capture": ["sourceSlice", "targetSlice"]
+				},
+				{
+					"type": "features",
+					"pattern": "src/features/*",
+					"capture": ["slice"]
+				},
+				{
+					"type": "entities-cross-import",
+					"pattern": "src/entities/*/@x/*",
+					"partialMatch": false,
+					"capture": ["sourceSlice", "targetSlice"]
+				},
+				{
+					"type": "entities",
+					"pattern": "src/entities/*",
+					"capture": ["slice"]
+				},
+				{
+					"type": "shared",
+					"pattern": "src/shared/*",
+					"capture": ["segment"]
+				},
+				{
+					"type": "workspace",
+					"pattern": "@workspace/**"
+				}
+			]
+		}
+	},
+	"desktop": {
+		"rules": {
+			"boundaries/dependencies": [
+				2,
+				{
+					"default": "disallow",
+					"policies": [
+						{
+							"from": {
+								"element": {
+									"type": "nextjs-app"
+								}
+							},
+							"allow": {
+								"to": [
+									{
+										"element": {
+											"type": "fsd-app"
+										}
+									},
+									{
+										"element": {
+											"type": "views"
+										}
+									},
+									{
+										"element": {
+											"type": "widgets"
+										}
+									},
+									{
+										"element": {
+											"type": "features"
+										}
+									},
+									{
+										"element": {
+											"type": "entities"
+										}
+									},
+									{
+										"element": {
+											"type": "shared"
+										}
+									},
+									{
+										"element": {
+											"type": "workspace"
+										}
+									}
+								]
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": "fsd-app"
+								}
+							},
+							"allow": {
+								"to": [
+									{
+										"element": {
+											"type": "fsd-app"
+										}
+									},
+									{
+										"element": {
+											"type": "views"
+										}
+									},
+									{
+										"element": {
+											"type": "widgets"
+										}
+									},
+									{
+										"element": {
+											"type": "features"
+										}
+									},
+									{
+										"element": {
+											"type": "entities"
+										}
+									},
+									{
+										"element": {
+											"type": "shared"
+										}
+									},
+									{
+										"element": {
+											"type": "workspace"
+										}
+									}
+								]
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": "views"
+								}
+							},
+							"allow": {
+								"to": [
+									{
+										"element": {
+											"type": "widgets"
+										}
+									},
+									{
+										"element": {
+											"type": "features"
+										}
+									},
+									{
+										"element": {
+											"type": "entities"
+										}
+									},
+									{
+										"element": {
+											"type": "shared"
+										}
+									},
+									{
+										"element": {
+											"type": "workspace"
+										}
+									}
+								]
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": "widgets"
+								}
+							},
+							"allow": {
+								"to": [
+									{
+										"element": {
+											"type": "features"
+										}
+									},
+									{
+										"element": {
+											"type": "entities"
+										}
+									},
+									{
+										"element": {
+											"type": "shared"
+										}
+									},
+									{
+										"element": {
+											"type": "workspace"
+										}
+									}
+								]
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": "features"
+								}
+							},
+							"allow": {
+								"to": [
+									{
+										"element": {
+											"type": "entities"
+										}
+									},
+									{
+										"element": {
+											"type": "shared"
+										}
+									},
+									{
+										"element": {
+											"type": "workspace"
+										}
+									}
+								]
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": "entities"
+								}
+							},
+							"allow": {
+								"to": [
+									{
+										"element": {
+											"type": "shared"
+										}
+									},
+									{
+										"element": {
+											"type": "workspace"
+										}
+									}
+								]
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": "shared"
+								}
+							},
+							"allow": {
+								"to": [
+									{
+										"element": {
+											"type": "shared"
+										}
+									},
+									{
+										"element": {
+											"type": "workspace"
+										}
+									}
+								]
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": ["views", "widgets", "features", "entities"]
+								}
+							},
+							"allow": {
+								"to": {
+									"element": {
+										"type": "views",
+										"captured": {
+											"slice": "{{ from.element.captured.slice }}"
+										}
+									}
+								}
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": ["views", "widgets", "features", "entities"]
+								}
+							},
+							"allow": {
+								"to": {
+									"element": {
+										"type": "widgets",
+										"captured": {
+											"slice": "{{ from.element.captured.slice }}"
+										}
+									}
+								}
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": ["views", "widgets", "features", "entities"]
+								}
+							},
+							"allow": {
+								"to": {
+									"element": {
+										"type": "features",
+										"captured": {
+											"slice": "{{ from.element.captured.slice }}"
+										}
+									}
+								}
+							}
+						},
+						{
+							"from": {
+								"element": {
+									"type": ["views", "widgets", "features", "entities"]
+								}
+							},
+							"allow": {
+								"to": {
+									"element": {
+										"type": "entities",
+										"captured": {
+											"slice": "{{ from.element.captured.slice }}"
+										}
+									}
+								}
+							}
+						}
+					]
+				}
+			],
+			"boundaries/no-unknown-dependencies": [1]
+		},
+		"settings": {
+			"import/resolver": {
+				"typescript": {
+					"alwaysTryTypes": true,
+					"project": "./tsconfig.json"
+				},
+				"node": {
+					"extensions": [".js", ".jsx", ".ts", ".tsx"]
+				}
+			},
+			"boundaries/include": ["src/**/*", "app/**/*"],
+			"boundaries/elements": [
+				{
+					"type": "nextjs-app",
+					"pattern": "app/**/*",
+					"partialMatch": false
+				},
+				{
+					"type": "fsd-app",
+					"pattern": "src/app/**/*",
+					"partialMatch": false
+				},
+				{
+					"type": "views",
+					"pattern": "src/views/*",
+					"capture": ["slice"]
+				},
+				{
+					"type": "widgets",
+					"pattern": "src/widgets/*",
+					"capture": ["slice"]
+				},
+				{
+					"type": "features-cross-import",
+					"pattern": "src/features/*/@x/*",
+					"partialMatch": false,
+					"capture": ["sourceSlice", "targetSlice"]
+				},
+				{
+					"type": "features",
+					"pattern": "src/features/*",
+					"capture": ["slice"]
+				},
+				{
+					"type": "entities-cross-import",
+					"pattern": "src/entities/*/@x/*",
+					"partialMatch": false,
+					"capture": ["sourceSlice", "targetSlice"]
+				},
+				{
+					"type": "entities",
+					"pattern": "src/entities/*",
+					"capture": ["slice"]
+				},
+				{
+					"type": "shared",
+					"pattern": "src/shared/*",
+					"capture": ["segment"]
+				},
+				{
+					"type": "workspace",
+					"pattern": "@workspace/**"
+				}
+			]
+		}
+	}
+}

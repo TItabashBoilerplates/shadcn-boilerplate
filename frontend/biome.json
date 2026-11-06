@@ -46,22 +46,15 @@
       },
       "performance": {
         "preset": "recommended",
-        "noImgElement": "error"
+        "noImgElement": "off"
       },
       "security": {
         "preset": "recommended"
       },
       "style": {
         "preset": "recommended",
-        "useImportType": "error",
-        "noRestrictedImports": {
-          "level": "error",
-          "options": {
-            "paths": {
-              "@workspace/ui/components": "Use individual component imports (e.g., @workspace/ui/components/button) instead of barrel imports."
-            }
-          }
-        }
+        "useImportType": "off",
+        "noRestrictedImports": "off"
       },
       "suspicious": {
         "preset": "recommended",

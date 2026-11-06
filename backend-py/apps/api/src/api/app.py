@@ -4,7 +4,7 @@ Wires up structured logging, the request-logging middleware, domain-level
 exception handlers, and the aggregated controller router.
 """
 
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, status
@@ -23,7 +23,7 @@ logger = get_logger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
     """Initialize cross-cutting concerns (logging) at startup."""
     configure_logging()
     logger.info("Application startup complete")

@@ -14,7 +14,9 @@
   },
   "scripts": {
     "build": "bun run scripts/generate-css.ts",
-    "type-check": "workspace-tsc --noEmit"
+    "type-check": "workspace-tsc --noEmit",
+    "lint:ci": "oxlint --no-error-on-unmatched-pattern .",
+    "lint": "oxlint --no-error-on-unmatched-pattern --fix ."
   },
   "devDependencies": {
     "@types/node": "^24.19.2",

@@ -8,5 +8,9 @@
   },
   "exports": {
     "./resolve": "./resolve.mjs"
+  },
+  "scripts": {
+    "lint:ci": "oxlint --no-error-on-unmatched-pattern .",
+    "lint": "oxlint --no-error-on-unmatched-pattern --fix ."
   }
 }

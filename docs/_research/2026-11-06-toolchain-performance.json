@@ -1,0 +1,761 @@
+{
+	"before": {
+		"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+		"machine": "arm64",
+		"runs": 5,
+		"cases": {
+			"frontend-lint": {
+				"command": ["bun", "run", "lint:ci"],
+				"cwd": "frontend",
+				"samples": [
+					{
+						"seconds": 0.1183464580681175,
+						"peak_rss_bytes": 78462976,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.09951037494465709,
+						"peak_rss_bytes": 78462976,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.10219116695225239,
+						"peak_rss_bytes": 78643200,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.10714458301663399,
+						"peak_rss_bytes": 78053376,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.12253066687844694,
+						"peak_rss_bytes": 78610432,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 0.10714458301663399
+			},
+			"fsd": {
+				"command": [
+					"bash",
+					"-ec",
+					"for app in web mobile desktop; do (cd \"frontend/apps/$app\" && bun run lint:fsd); done"
+				],
+				"cwd": ".",
+				"samples": [
+					{
+						"seconds": 3.239502416923642,
+						"peak_rss_bytes": 671793152,
+						"exit_code": 0
+					},
+					{
+						"seconds": 3.2048862918745726,
+						"peak_rss_bytes": 669270016,
+						"exit_code": 0
+					},
+					{
+						"seconds": 3.399936707923189,
+						"peak_rss_bytes": 658751488,
+						"exit_code": 0
+					},
+					{
+						"seconds": 3.2477673329412937,
+						"peak_rss_bytes": 660946944,
+						"exit_code": 0
+					},
+					{
+						"seconds": 3.122082334011793,
+						"peak_rss_bytes": 664879104,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 3.239502416923642
+			},
+			"typescript": {
+				"command": ["bun", "run", "type-check", "--force"],
+				"cwd": "frontend",
+				"samples": [
+					{
+						"seconds": 0.9871975420974195,
+						"peak_rss_bytes": 469303296,
+						"exit_code": 0
+					},
+					{
+						"seconds": 1.0432168329134583,
+						"peak_rss_bytes": 468828160,
+						"exit_code": 0
+					},
+					{
+						"seconds": 1.0379243330098689,
+						"peak_rss_bytes": 483901440,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.9932481669820845,
+						"peak_rss_bytes": 468844544,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.9923185410443693,
+						"peak_rss_bytes": 467746816,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 0.9932481669820845
+			},
+			"python-types": {
+				"command": ["uv", "run", "--all-packages", "mypy", "apps", "packages"],
+				"cwd": "backend-py",
+				"samples": [
+					{
+						"seconds": 0.19836020888760686,
+						"peak_rss_bytes": 79839232,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.18307675002142787,
+						"peak_rss_bytes": 79724544,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.1793584581464529,
+						"peak_rss_bytes": 79659008,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.17811358300969005,
+						"peak_rss_bytes": 79855616,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.17694670893251896,
+						"peak_rss_bytes": 79724544,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 0.1793584581464529
+			},
+			"frontend-tests": {
+				"command": ["bun", "run", "test"],
+				"cwd": "frontend",
+				"samples": [
+					{
+						"seconds": 2.8715609170030802,
+						"peak_rss_bytes": 204177408,
+						"exit_code": 0
+					},
+					{
+						"seconds": 3.0630305828526616,
+						"peak_rss_bytes": 201687040,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.6134525418747216,
+						"peak_rss_bytes": 201113600,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.6673741661943495,
+						"peak_rss_bytes": 200196096,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.59364499989897,
+						"peak_rss_bytes": 205815808,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 2.6673741661943495
+			}
+		}
+	},
+	"after": {
+		"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+		"machine": "arm64",
+		"runs": 5,
+		"cases": {
+			"frontend-lint": {
+				"command": ["bun", "run", "lint:ci"],
+				"cwd": "frontend",
+				"samples": [
+					{
+						"seconds": 2.1069401670247316,
+						"peak_rss_bytes": 72925184,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.2265522500965744,
+						"peak_rss_bytes": 72646656,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.22402599989436567,
+						"peak_rss_bytes": 72679424,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.229073666036129,
+						"peak_rss_bytes": 73334784,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.23571525001898408,
+						"peak_rss_bytes": 72581120,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 0.23571525001898408
+			},
+			"frontend-lint-uncached": {
+				"command": ["env", "TURBO_FORCE=true", "bun", "run", "lint:ci"],
+				"cwd": "frontend",
+				"samples": [
+					{
+						"seconds": 2.0558676249347627,
+						"peak_rss_bytes": 72777728,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.2213062921073288,
+						"peak_rss_bytes": 72925184,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.3379117911681533,
+						"peak_rss_bytes": 72925184,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.110465249978006,
+						"peak_rss_bytes": 72630272,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.031066915951669,
+						"peak_rss_bytes": 72515584,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 2.110465249978006
+			},
+			"fsd": {
+				"command": [
+					"bash",
+					"-ec",
+					"for app in web mobile desktop; do (cd \"frontend/apps/$app\" && bun run lint:fsd); done"
+				],
+				"cwd": ".",
+				"samples": [
+					{
+						"seconds": 3.625231666956097,
+						"peak_rss_bytes": 395706368,
+						"exit_code": 0
+					},
+					{
+						"seconds": 3.5853117499500513,
+						"peak_rss_bytes": 380272640,
+						"exit_code": 0
+					},
+					{
+						"seconds": 3.7633876248728484,
+						"peak_rss_bytes": 433504256,
+						"exit_code": 0
+					},
+					{
+						"seconds": 4.139126166002825,
+						"peak_rss_bytes": 386269184,
+						"exit_code": 0
+					},
+					{
+						"seconds": 3.7613941659219563,
+						"peak_rss_bytes": 397475840,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 3.7613941659219563
+			},
+			"typescript": {
+				"command": ["bun", "run", "type-check", "--force"],
+				"cwd": "frontend",
+				"samples": [
+					{
+						"seconds": 0.7012738750781864,
+						"peak_rss_bytes": 155549696,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.6955832501407713,
+						"peak_rss_bytes": 155713536,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.6844886250328273,
+						"peak_rss_bytes": 156418048,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.6696635419502854,
+						"peak_rss_bytes": 156172288,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.6962604587897658,
+						"peak_rss_bytes": 155435008,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 0.6955832501407713
+			},
+			"python-types": {
+				"command": ["uv", "run", "--all-packages", "ty", "check"],
+				"cwd": "backend-py",
+				"samples": [
+					{
+						"seconds": 0.11307812505401671,
+						"peak_rss_bytes": 133709824,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.11498183314688504,
+						"peak_rss_bytes": 133513216,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.11609695805236697,
+						"peak_rss_bytes": 132284416,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.11357116606086493,
+						"peak_rss_bytes": 135806976,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.11832091701216996,
+						"peak_rss_bytes": 136871936,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 0.11498183314688504
+			},
+			"frontend-tests": {
+				"command": ["bun", "run", "test"],
+				"cwd": "frontend",
+				"samples": [
+					{
+						"seconds": 2.2574982079677284,
+						"peak_rss_bytes": 200491008,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.116023665992543,
+						"peak_rss_bytes": 207634432,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.0728205000050366,
+						"peak_rss_bytes": 200835072,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.0120690420735627,
+						"peak_rss_bytes": 200835072,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.014359625056386,
+						"peak_rss_bytes": 206749696,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 2.0728205000050366
+			}
+		}
+	},
+	"typescript7-cold": {
+		"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+		"machine": "arm64",
+		"runs": 5,
+		"cases": {
+			"typescript-cold": {
+				"command": [
+					"node",
+					"scripts/toolchain/typecheck-benchmark.mjs",
+					"/tmp/nerite-toolchain/typescript7/tsc"
+				],
+				"cwd": ".",
+				"samples": [
+					{
+						"seconds": 1.3624057089909911,
+						"peak_rss_bytes": 502628352,
+						"exit_code": 0
+					},
+					{
+						"seconds": 1.3501982919406146,
+						"peak_rss_bytes": 503889920,
+						"exit_code": 0
+					},
+					{
+						"seconds": 1.3890913750510663,
+						"peak_rss_bytes": 505544704,
+						"exit_code": 0
+					},
+					{
+						"seconds": 1.4202672080136836,
+						"peak_rss_bytes": 501612544,
+						"exit_code": 0
+					},
+					{
+						"seconds": 1.3529669579584152,
+						"peak_rss_bytes": 516882432,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 1.3624057089909911
+			}
+		}
+	},
+	"typescript71-cold": {
+		"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+		"machine": "arm64",
+		"runs": 5,
+		"cases": {
+			"typescript-cold": {
+				"command": [
+					"node",
+					"scripts/toolchain/typecheck-benchmark.mjs",
+					"/tmp/nerite-toolchain/ts71/node_modules/@typescript/typescript-darwin-arm64/lib/tsc"
+				],
+				"cwd": ".",
+				"samples": [
+					{
+						"seconds": 1.30396783282049,
+						"peak_rss_bytes": 337625088,
+						"exit_code": 0
+					},
+					{
+						"seconds": 1.3599815831985325,
+						"peak_rss_bytes": 340574208,
+						"exit_code": 0
+					},
+					{
+						"seconds": 1.3123872079886496,
+						"peak_rss_bytes": 337494016,
+						"exit_code": 0
+					},
+					{
+						"seconds": 1.3839877089485526,
+						"peak_rss_bytes": 343490560,
+						"exit_code": 0
+					},
+					{
+						"seconds": 1.4505667500197887,
+						"peak_rss_bytes": 337510400,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 1.3599815831985325
+			}
+		}
+	},
+	"tsrs-cold": {
+		"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+		"machine": "arm64",
+		"runs": 5,
+		"cases": {
+			"typescript-cold": {
+				"command": [
+					"node",
+					"scripts/toolchain/typecheck-benchmark.mjs",
+					"tsrs"
+				],
+				"cwd": ".",
+				"samples": [
+					{
+						"seconds": 0.5691234162077308,
+						"peak_rss_bytes": 162070528,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.5968055420089513,
+						"peak_rss_bytes": 162971648,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.6868851250037551,
+						"peak_rss_bytes": 163004416,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.5764640418346971,
+						"peak_rss_bytes": 162054144,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.7170346251223236,
+						"peak_rss_bytes": 162152448,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 0.5968055420089513
+			}
+		}
+	},
+	"tsrs-fast-cold": {
+		"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+		"machine": "arm64",
+		"runs": 5,
+		"cases": {
+			"typescript-cold": {
+				"command": [
+					"node",
+					"scripts/toolchain/typecheck-benchmark.mjs",
+					"tsrs",
+					"--fast"
+				],
+				"cwd": ".",
+				"samples": [
+					{
+						"seconds": 0.5419883339200169,
+						"peak_rss_bytes": 178487296,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.5920834578573704,
+						"peak_rss_bytes": 178798592,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.6181645840406418,
+						"peak_rss_bytes": 178438144,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.6591155829373747,
+						"peak_rss_bytes": 177700864,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.5880038749892265,
+						"peak_rss_bytes": 178356224,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 0.5920834578573704
+			}
+		}
+	},
+	"pytest": {
+		"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+		"machine": "arm64",
+		"runs": 5,
+		"cases": {
+			"python-tests-serial": {
+				"command": ["uv", "run", "--all-packages", "pytest", "-n0"],
+				"cwd": "backend-py",
+				"samples": [
+					{
+						"seconds": 1.9781836669426411,
+						"peak_rss_bytes": 134578176,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.091515874955803,
+						"peak_rss_bytes": 134676480,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.0027877918910235,
+						"peak_rss_bytes": 134578176,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.2422794168815017,
+						"peak_rss_bytes": 135315456,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.086384041933343,
+						"peak_rss_bytes": 135036928,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 2.086384041933343
+			},
+			"python-tests-2": {
+				"command": ["uv", "run", "--all-packages", "pytest", "-n2"],
+				"cwd": "backend-py",
+				"samples": [
+					{
+						"seconds": 3.391010707942769,
+						"peak_rss_bytes": 138166272,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.605918874964118,
+						"peak_rss_bytes": 135479296,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.998363707913086,
+						"peak_rss_bytes": 137232384,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.721796792000532,
+						"peak_rss_bytes": 135741440,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.8732967919204384,
+						"peak_rss_bytes": 136314880,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 2.8732967919204384
+			},
+			"python-tests-4": {
+				"command": ["uv", "run", "--all-packages", "pytest", "-n4"],
+				"cwd": "backend-py",
+				"samples": [
+					{
+						"seconds": 3.164344915887341,
+						"peak_rss_bytes": 138297344,
+						"exit_code": 0
+					},
+					{
+						"seconds": 3.0783707501832396,
+						"peak_rss_bytes": 131121152,
+						"exit_code": 0
+					},
+					{
+						"seconds": 3.6564971250481904,
+						"peak_rss_bytes": 130875392,
+						"exit_code": 0
+					},
+					{
+						"seconds": 3.8820527920033783,
+						"peak_rss_bytes": 137183232,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.84116341592744,
+						"peak_rss_bytes": 135708672,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 3.164344915887341
+			}
+		}
+	},
+	"pytest-auto": {
+		"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+		"machine": "arm64",
+		"runs": 1,
+		"cases": {
+			"python-tests-auto": {
+				"command": ["uv", "run", "--all-packages", "pytest", "-n", "auto"],
+				"cwd": "backend-py",
+				"samples": [
+					{
+						"seconds": 3.360619458835572,
+						"peak_rss_bytes": 127827968,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 3.360619458835572
+			}
+		}
+	},
+	"frontend-quality": {
+		"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+		"machine": "arm64",
+		"runs": 5,
+		"cases": {
+			"frontend-quality-uncached": {
+				"command": [
+					"env",
+					"TURBO_FORCE=true",
+					"bash",
+					"-ec",
+					"bun run lint:ci && bun run format-check"
+				],
+				"cwd": "frontend",
+				"samples": [
+					{
+						"seconds": 2.4832161660306156,
+						"peak_rss_bytes": 77889536,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.32789995893836,
+						"peak_rss_bytes": 77905920,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.365553417010233,
+						"peak_rss_bytes": 77840384,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.5678939998615533,
+						"peak_rss_bytes": 77561856,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.600180249894038,
+						"peak_rss_bytes": 77807616,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 2.4832161660306156
+			}
+		}
+	},
+	"frontend-quality-contended": {
+		"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+		"machine": "arm64",
+		"runs": 5,
+		"cases": {
+			"frontend-quality-uncached": {
+				"command": [
+					"env",
+					"TURBO_FORCE=true",
+					"bash",
+					"-ec",
+					"bun run lint:ci && bun run format-check"
+				],
+				"cwd": "frontend",
+				"samples": [
+					{
+						"seconds": 6.945047124987468,
+						"peak_rss_bytes": 77299712,
+						"exit_code": 0
+					},
+					{
+						"seconds": 6.8298510001040995,
+						"peak_rss_bytes": 77496320,
+						"exit_code": 0
+					},
+					{
+						"seconds": 6.8352954590227455,
+						"peak_rss_bytes": 76972032,
+						"exit_code": 0
+					},
+					{
+						"seconds": 7.15893404209055,
+						"peak_rss_bytes": 77627392,
+						"exit_code": 0
+					},
+					{
+						"seconds": 7.098012583795935,
+						"peak_rss_bytes": 77905920,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 6.945047124987468
+			}
+		}
+	}
+}

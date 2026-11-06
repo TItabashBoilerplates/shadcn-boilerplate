@@ -42,7 +42,7 @@ backend-py/
 - **ORM**: SQLModel (Sync)
 - **Database**: PostgreSQL (Supabase)
 - **Package Manager**: uv workspace（単一ルート venv + lockfile）
-- **Code Quality**: Ruff (lint+format), MyPy (strict), pytest
+- **Code Quality**: Ruff (lint+format), ty (type checking), pytest
 
 ## Directory Layout（apps/api）
 
@@ -140,7 +140,7 @@ format-backend-py            # Ruff format (auto-fix)
 format-backend-py-check      # Ruff format check
 
 # Type Checking
-type-check-backend-py        # MyPy (strict mode、apps + packages 全体)
+type-check-backend-py        # ty（全 member の production src）
 
 # Testing
 test-backend-py              # pytest（workspace 全体: apps/api/tests + packages/core/tests）
@@ -188,14 +188,20 @@ LLM / ベクトル検索 / WebRTC など重い依存は最初から積まない�
 - Docstrings: Google
 - 設定は workspace root `pyproject.toml` で一元管理（全 member に適用）
 
-### MyPy
+### ty
 
-- Strict mode 有効
-- `mypy_path = apps/api/src:packages/core/src:apps/mcp/src`
-- `**/tests/` は exclude
+- 型検査の設定は workspace root の `[tool.ty]` に集約する。
+- `apps/api/src`、`apps/mcp/src`、`packages/core/src` を検査し、テストは既存どおり対象外。
+- `uv run --all-packages` で全 member の依存を解決する。型注釈の必須化は Ruff と分担する。
+- `dynamic-function-decorator-return`、`missing-type-argument`、`unsound-return-statement` も検査する。
 
 ### pytest
 
+- `pytest-xdist==3.8.0` を導入し、`test-backend-py` は既定2 worker で実行する。現在の58テストでは直列の中央値2.086秒に対し2 worker は2.873秒、4 worker は3.164秒だったが、ユーザー決定により並列を優先し、計測した並列候補で最速の2 worker を採用した。
+- AI エージェントはタスクの規模、CPU・空きメモリ、外側のタスク並列数に応じて worker 数を選ぶ。`test-backend-py -n4` や `test-backend-py -n auto --maxprocesses=4` の標準引数で調整し、独自の自動選択機構は追加しない。
+- `test-backend-py -n0` は worker を使わないデバッグ用。通常の検証では並列実行を選ぶ。
+- `-n auto` は利用可能 CPU に応じて worker を起動する。少数のテストでは各 worker の起動・collection が増えて遅くなる場合があるため、worker 数は計測して決める。
+- 現在のテストはプロセス内の環境変数・logger・engine cache を変更し、設定ファイルを読み取る。実 DB への接続や固定ポートの待受は行わない。将来外部資源を追加する場合は `worker_id` / `testrun_uid` で分離する。
 - 起点: `apps/api/tests/`, `packages/core/tests/`
 - import 方式: `--import-mode=importlib`（pytest 公式推奨）+ editable install
   - `pythonpath` 設定は持たない。`uv sync --all-packages` の editable install が `apps/api/src` と `packages/core/src` を sys.path に載せるため、追加 path 設定は不要。
@@ -466,8 +472,7 @@ uv run --package api python -c "from api.infra.db_client import engine; print(en
 ### Type Check Failures
 
 ```bash
-cd backend-py
-uv run mypy apps packages --show-error-codes
+type-check-backend-py
 ```
 
 ### Import Errors
@@ -485,7 +490,7 @@ uv run --package api python -c "import api.app, core.logging, core.supabase_clie
 - [FastAPI Documentation](https://fastapi.tiangolo.com)
 - [SQLModel Documentation](https://sqlmodel.tiangolo.com)
 - [Ruff Documentation](https://docs.astral.sh/ruff/)
-- [MyPy Documentation](https://mypy.readthedocs.io)
+- [ty Documentation](https://docs.astral.sh/ty/)
 - [pytest Documentation](https://docs.pytest.org)
 - [uv Workspaces Documentation](https://docs.astral.sh/uv/concepts/projects/workspaces/)
 - [Model Context Protocol (Python SDK)](https://github.com/modelcontextprotocol/python-sdk)

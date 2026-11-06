@@ -55,6 +55,13 @@
     "build-storybook": {
       "dependsOn": ["^build"],
       "outputs": ["storybook-static/**"]
+    },
+    "lint:ci": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/../.oxlintrc.json",
+        "$TURBO_ROOT$/tooling/eslint/**"
+      ]
     }
   },
   "globalEnv": [
@@ -63,7 +70,8 @@
     "NEXT_PUBLIC_BACKEND_PY_URL",
     "EXPO_PUBLIC_SUPABASE_URL",
     "EXPO_PUBLIC_SUPABASE_ANON_KEY",
-    "BACKEND_URL"
+    "BACKEND_URL",
+    "TURBO_TOOLCHAIN_HASH"
   ],
   "boundaries": {
     "tags": {

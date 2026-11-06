@@ -4,14 +4,16 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./index.js",
     "./fsd": "./fsd.js",
-    "./next": "./base.js"
+    "./oxlint": "./oxlint.js",
+    "./compat": "./compat.mjs"
   },
   "dependencies": {
-    "@eslint/eslintrc": "^3",
     "@typescript-eslint/parser": "^8.71.2",
-    "eslint-config-next": "^16.4.1",
     "eslint-plugin-boundaries": "^7.2.0"
+  },
+  "scripts": {
+    "lint:ci": "oxlint --no-error-on-unmatched-pattern .",
+    "lint": "oxlint --no-error-on-unmatched-pattern --fix ."
   }
 }

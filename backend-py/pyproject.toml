@@ -19,10 +19,11 @@ mcp-server = { workspace = true }
 dev = [
     # Linting & Formatting & Type Checking
     "ruff",
-    "mypy",
+    "ty==0.0.98",
 
     # Testing
     "pytest",
+    "pytest-xdist==3.8.0",
     "pytest-cov",
     "pytest-asyncio",
     "pytest-mock",
@@ -89,19 +90,19 @@ docstring-code-format = true
 [tool.ruff.lint.mccabe]
 max-complexity = 3
 
-# ---------- mypy ----------
-[tool.mypy]
-python_version = "3.14"
-explicit_package_bases = true
-mypy_path = "apps/api/src:packages/core/src:apps/mcp/src"
-exclude = [
-    '^\.venv/',
-    '/tests/',
-]
-strict = true
-ignore_missing_imports = true
-install_types = true
-non_interactive = true
+# ---------- ty ----------
+[tool.ty.environment]
+python-version = "3.14"
+root = ["apps/api/src", "apps/mcp/src", "packages/core/src"]
+
+[tool.ty.src]
+include = ["apps/api/src", "apps/mcp/src", "packages/core/src"]
+
+[tool.ty.rules]
+dynamic-function-decorator-return = "error"
+missing-type-argument = "error"
+possibly-unresolved-reference = "warn"
+unsound-return-statement = "error"
 
 # ---------- pytest ----------
 # src-layout + editable install (uv sync --all-packages) の組み合わせで動くため、
@@ -116,5 +117,6 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 # coverage は default 外し: 複数 src ルートに対応するため CLI で明示する運用。
 # 例: uv run pytest --cov=apps/api/src/api --cov=packages/core/src/core --cov-report=term-missing
-addopts = "-ra -q --import-mode=importlib"
+# Parallel execution is the user-selected default; CLI -n overrides the worker count.
+addopts = "-ra -q --import-mode=importlib -n2"
 asyncio_mode = "auto"

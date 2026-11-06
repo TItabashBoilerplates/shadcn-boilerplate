@@ -28,13 +28,17 @@
 
 ```bash
 # Lint / Format / Type-check (scripts on PATH)
-lint-frontend           # Biome lint (auto-fix)
-format-frontend         # Biome format (auto-fix)
-type-check-frontend     # tsc --noEmit
-lint-fsd                # FSD boundary check (web + mobile, ESLint)
+lint-frontend           # Oxlint (auto-fix)
+format-frontend         # Biome format + import assist (auto-fix)
+type-check-frontend     # tsrs --noEmit (全 workspace)
+lint-fsd                # FSD boundary check (web + mobile + desktop)
 
 # Test
 test-frontend           # Vitest
 ```
 
 正典: `/.claude/rules/commands.md`
+
+JS/TS lint は Oxlint への統一を目標とする。移行中の未対応規則は
+`docs/designs/rust-toolchain-migration.md` の移行表・検証結果を確認する。
+Biome はフォーマットと import 整理を担当し、lint の重複実行は行わない。

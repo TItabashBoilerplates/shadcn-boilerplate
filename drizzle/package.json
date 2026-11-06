@@ -13,10 +13,10 @@
     "migrate:pre": "bun run migrate.ts pre-migration",
     "migrate:post": "bun run migrate.ts post-migration",
     "test": "bun test",
-    "lint": "biome check --write .",
-    "lint:ci": "biome check .",
-    "format": "biome format --write .",
-    "format-check": "biome format ."
+    "lint": "oxlint --fix . && biome lint --write .",
+    "lint:ci": "oxlint . && biome lint .",
+    "format": "biome check --linter-enabled=false --write .",
+    "format-check": "biome check --linter-enabled=false ."
   },
   "dependencies": {
     "drizzle-orm": "^0.45.4",
@@ -30,6 +30,7 @@
     "@biomejs/biome": "2.5.15",
     "@types/bun": "^1.4.3",
     "bun-types": "^1.4.3",
-    "drizzle-kit": "^0.31.11"
+    "drizzle-kit": "^0.31.11",
+    "oxlint": "1.91.0"
   }
 }

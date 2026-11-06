@@ -1,6 +1,13 @@
 { pkgs, config, lib, ... }:
 
 let
+  qualityConfigInputs = [
+    "devenv.nix" "biome.json" ".oxlintrc.json"
+    "frontend/bun.lock" "drizzle/bun.lock" "backend-py/uv.lock"
+    "frontend/tooling/**/*.js" "frontend/tooling/**/*.mjs" "frontend/tooling/**/*.json"
+    "frontend/apps/*/oxlint.config.mjs"
+    "scripts/toolchain/*.mjs"
+  ];
   # Bun 1.4.4 fixes CVE-2026-111497 and GHSA-cf8x-9m69-3gg3.
   # SHA-256 digests from the official GitHub release assets.
   bunVersion = "1.4.4";
@@ -382,6 +389,12 @@ in
     bun.enable = true;
     bun.package = bunRuntime;
   };
+
+  # Turbo cannot hash files outside frontend through globalDependencies.
+  # Hash the devenv runtime pins and root lint policy into every frontend task.
+  env.TURBO_TOOLCHAIN_HASH = builtins.hashString "sha256" (
+    builtins.readFile ./devenv.nix + builtins.readFile ./devenv.lock + builtins.readFile ./.oxlintrc.json
+  );
 
   languages.typescript.enable = true;
 
@@ -1075,29 +1088,44 @@ in
     # auto-fix 系には execIfModified を付けない (issue #2497 fork bomb 回避)。
 
     # ----- Lint (CI mode = no auto-fix) -----
+    "lint-ci:scripts" = {
+      exec = ''cd "$DEVENV_ROOT" && node frontend/node_modules/oxlint/bin/oxlint -c .oxlintrc.json scripts'';
+      execIfModified = qualityConfigInputs ++ [ "scripts/**/*.mjs" "scripts/**/*.js" "scripts/**/*.ts" ];
+    };
+    "lint-ci:toolchain-python" = {
+      exec = ''cd "$DEVENV_ROOT/backend-py" && uv run --all-packages ruff check --isolated "$DEVENV_ROOT/scripts/toolchain" && uv run --all-packages ruff format --isolated --check "$DEVENV_ROOT/scripts/toolchain"'';
+      execIfModified = qualityConfigInputs ++ [ "scripts/toolchain/*.py" ];
+    };
+    "format-check:scripts" = {
+      exec = ''cd "$DEVENV_ROOT" && node frontend/node_modules/@biomejs/biome/bin/biome check --no-errors-on-unmatched scripts'';
+      execIfModified = qualityConfigInputs ++ [ "scripts/**/*.mjs" "scripts/**/*.js" "scripts/**/*.ts" ];
+    };
     "lint-ci:frontend" = {
       exec = ''cd "$DEVENV_ROOT/frontend" && nr lint:ci'';
-      execIfModified = [
+      execIfModified = qualityConfigInputs ++ [
         "frontend/**/*.ts"
         "frontend/**/*.tsx"
         "frontend/**/*.js"
         "frontend/**/*.jsx"
+        "frontend/**/*.mjs"
         "frontend/**/*.json"
         "frontend/biome.json"
       ];
     };
     "lint-ci:drizzle" = {
       exec = ''cd "$DEVENV_ROOT/drizzle" && nr lint:ci'';
-      execIfModified = [
+      execIfModified = qualityConfigInputs ++ [
         "drizzle/**/*.ts"
         "drizzle/biome.json"
       ];
     };
     "lint-ci:backend-py" = {
       exec = ''cd "$DEVENV_ROOT/backend-py" && uv run ruff check apps packages'';
-      execIfModified = [
+      execIfModified = qualityConfigInputs ++ [
         "backend-py/apps/*/src/**/*.py"
+        "backend-py/apps/*/tests/**/*.py"
         "backend-py/packages/*/src/**/*.py"
+        "backend-py/packages/*/tests/**/*.py"
         "backend-py/pyproject.toml"
         "backend-py/apps/*/pyproject.toml"
         "backend-py/packages/*/pyproject.toml"
@@ -1105,7 +1133,7 @@ in
     };
     "lint-ci:functions" = {
       exec = ''deno lint "$DEVENV_ROOT/supabase/functions/"'';
-      execIfModified = [
+      execIfModified = qualityConfigInputs ++ [
         "supabase/functions/**/*.ts"
         "supabase/functions/**/deno.json"
       ];
@@ -1122,7 +1150,7 @@ in
         cd "$DEVENV_ROOT/frontend/apps/mobile" && nr lint:fsd
         cd "$DEVENV_ROOT/frontend/apps/desktop" && nr lint:fsd
       '';
-      execIfModified = [
+      execIfModified = qualityConfigInputs ++ [
         "frontend/apps/web/**/*.ts"
         "frontend/apps/web/**/*.tsx"
         "frontend/apps/mobile/**/*.ts"
@@ -1138,27 +1166,30 @@ in
     # ----- Format check (no auto-fix) -----
     "format-check:frontend" = {
       exec = ''cd "$DEVENV_ROOT/frontend" && nr format-check'';
-      execIfModified = [
+      execIfModified = qualityConfigInputs ++ [
         "frontend/**/*.ts"
         "frontend/**/*.tsx"
         "frontend/**/*.js"
         "frontend/**/*.jsx"
+        "frontend/**/*.mjs"
         "frontend/**/*.json"
         "frontend/biome.json"
       ];
     };
     "format-check:drizzle" = {
       exec = ''cd "$DEVENV_ROOT/drizzle" && nr format-check'';
-      execIfModified = [
+      execIfModified = qualityConfigInputs ++ [
         "drizzle/**/*.ts"
         "drizzle/biome.json"
       ];
     };
     "format-check:backend-py" = {
       exec = ''cd "$DEVENV_ROOT/backend-py" && uv run ruff format --check apps packages'';
-      execIfModified = [
+      execIfModified = qualityConfigInputs ++ [
         "backend-py/apps/*/src/**/*.py"
+        "backend-py/apps/*/tests/**/*.py"
         "backend-py/packages/*/src/**/*.py"
+        "backend-py/packages/*/tests/**/*.py"
         "backend-py/pyproject.toml"
         "backend-py/apps/*/pyproject.toml"
         "backend-py/packages/*/pyproject.toml"
@@ -1166,7 +1197,7 @@ in
     };
     "format-check:functions" = {
       exec = ''deno fmt --check "$DEVENV_ROOT/supabase/functions/"'';
-      execIfModified = [
+      execIfModified = qualityConfigInputs ++ [
         "supabase/functions/**/*.ts"
         "supabase/functions/**/deno.json"
       ];
@@ -1174,29 +1205,30 @@ in
     # IaC（terraform/）。TF_BIN で OpenTofu にも切り替えられる（既定は terraform）。
     "format-check:terraform" = {
       exec = ''cd "$DEVENV_ROOT/terraform" && ''${TF_BIN:-terraform} fmt -check -recursive'';
-      execIfModified = [
+      execIfModified = qualityConfigInputs ++ [
         "terraform/**/*.tf"
         "terraform/**/*.tfvars"
       ];
     };
 
     # ----- Type check -----
+    "type-check:all" = {
+      after = [ "type-check:frontend" "type-check:drizzle" "type-check:backend-py" "type-check:functions" "type-check:terraform" ];
+      exec = ''echo "All type checks passed"'';
+    };
     "type-check:frontend" = {
       exec = ''cd "$DEVENV_ROOT/frontend" && nr type-check'';
-      execIfModified = [
+      execIfModified = qualityConfigInputs ++ [
         "frontend/**/*.ts"
         "frontend/**/*.tsx"
         "frontend/**/tsconfig*.json"
         "frontend/**/package.json"
       ];
     };
-    # `nlx tsc` は node_modules/.bin/tsc を引くが、**TS6 と TS7 が同じ bin 名を要求するため
-    # どちらが勝つかがインストール順に依存する**（= ある日静かに TS6 に戻る）。
-    # `nr type-check` は workspace-tsc 経由で TS7 を明示的に解決する
-    # （解決ロジックと 7.1 移行手順は frontend/tooling/tsc/resolve.mjs）。
+    # Individual entry point; ci:check uses the full frontend graph once.
     "type-check:mobile" = {
       exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && nr type-check'';
-      execIfModified = [
+      execIfModified = qualityConfigInputs ++ [
         "frontend/apps/mobile/**/*.ts"
         "frontend/apps/mobile/**/*.tsx"
         "frontend/apps/mobile/tsconfig*.json"
@@ -1208,25 +1240,20 @@ in
     # ⚠️ この task が無かったせいで drizzle の型エラー 5 件が長期間検出されていなかった。
     "type-check:drizzle" = {
       exec = ''cd "$DEVENV_ROOT/drizzle" && "$DEVENV_ROOT/frontend/node_modules/.bin/workspace-tsc" --noEmit'';
-      execIfModified = [
+      execIfModified = qualityConfigInputs ++ [
         "drizzle/**/*.ts"
         "drizzle/tsconfig.json"
         "drizzle/package.json"
       ];
     };
-    # `--all-packages` 必須。backend-py は uv の **virtual workspace** (root は package = false) なので、
-    # 素の `uv run` は root の dependency-groups (mypy/ruff/pytest) しか同期せず、
-    # member (apps/api, packages/core) の依存 = fastapi / pydantic / starlette / structlog を入れない。
-    # すると mypy から見て third-party が全部 `Any` になり、strict の disallow_subclassing_any /
-    # disallow_untyped_decorators が誤爆する（"Class cannot subclass BaseModel (has type Any)" 等）。
-    # `devenv test` は UV_PROJECT_ENVIRONMENT を .devenv/state/venv から **.devenv/test-state/venv** に
-    # 切り替えるため、setup:install-backend が同期した venv は使われない。よって「shell 起動時に
-    # 同期済みだから素の uv run でよい」は成立しない。→ import 解決が要るツールは --all-packages を付ける。
+    # ty needs all workspace member dependencies for accurate import resolution.
     "type-check:backend-py" = {
-      exec = ''cd "$DEVENV_ROOT/backend-py" && uv run --all-packages mypy apps packages'';
-      execIfModified = [
+      exec = ''cd "$DEVENV_ROOT/backend-py" && uv run --all-packages ty check'';
+      execIfModified = qualityConfigInputs ++ [
         "backend-py/apps/*/src/**/*.py"
+        "backend-py/apps/*/tests/**/*.py"
         "backend-py/packages/*/src/**/*.py"
+        "backend-py/packages/*/tests/**/*.py"
         "backend-py/pyproject.toml"
         "backend-py/apps/*/pyproject.toml"
         "backend-py/packages/*/pyproject.toml"
@@ -1256,7 +1283,7 @@ in
           exit 1
         fi
       '';
-      execIfModified = [
+      execIfModified = qualityConfigInputs ++ [
         "supabase/functions/**/*.ts"
         "supabase/functions/**/deno.json"
       ];
@@ -1269,7 +1296,7 @@ in
         ''${TF_BIN:-terraform} init -backend=false -input=false >/dev/null
         exec ''${TF_BIN:-terraform} validate
       '';
-      execIfModified = [
+      execIfModified = qualityConfigInputs ++ [
         "terraform/**/*.tf"
         "terraform/.terraform.lock.hcl"
       ];
@@ -1320,19 +1347,33 @@ in
         "lint-ci:drizzle"
         "lint-ci:backend-py"
         "lint-ci:functions"
-        "lint-ci:fsd"
+        "lint-ci:scripts"
+        "lint-ci:toolchain-python"
         "format-check:frontend"
+        "format-check:scripts"
         "format-check:drizzle"
         "format-check:backend-py"
         "format-check:functions"
         "format-check:terraform"
-        "type-check:frontend"
-        "type-check:mobile"
-        "type-check:drizzle"
-        "type-check:backend-py"
-        "type-check:functions"
-        "type-check:terraform"
+        "type-check:all"
       ];
+    };
+
+    "tests:frontend".exec = "test-frontend";
+    "tests:drizzle".exec = "test-drizzle";
+    "tests:backend".exec = "test-backend-py";
+    "tests:functions".exec = "test-functions";
+    "tests:mcp".exec = "test-mcp-sync";
+    "tests:toolchain" = {
+      exec = "test-toolchain-types && test-toolchain-python && toolchain-lint test";
+      execIfModified = qualityConfigInputs ++ [
+        "scripts/toolchain/*.py" "backend-py/pyproject.toml"
+        "frontend/apps/*/tsconfig*.json" "frontend/biome.json" "drizzle/biome.json"
+      ];
+    };
+    "tests:unit" = {
+      after = [ "tests:frontend" "tests:drizzle" "tests:backend" "tests:functions" "tests:mcp" "tests:toolchain" ];
+      exec = ''echo "All unit tests passed"'';
     };
 
     # ---------- Stop ----------
@@ -1350,6 +1391,23 @@ in
   # devenv shell に入った状態（または direnv 経由）で、コマンド名で直接実行できる。
   # 例: `frontend`, `lint-frontend`, `test-db`
   scripts = {
+    "test-toolchain-python" = {
+      exec = ''cd "$DEVENV_ROOT/backend-py" && exec uv run --all-packages python "$DEVENV_ROOT/scripts/toolchain/ty.test.py"'';
+      description = "ty and Ruff diagnostic regression checks";
+    };
+
+    "test-toolchain-types" = {
+      exec = ''exec node "$DEVENV_ROOT/scripts/toolchain/typecheck.test.mjs"'';
+      description = "Compiler diagnostics and incremental invalidation regression checks";
+    };
+    "toolchain-lint" = {
+      exec = ''exec node "$DEVENV_ROOT/scripts/toolchain/lint-check.mjs" "$@"'';
+      description = "Oxlint migration inventory and regression checks";
+    };
+    "bench-toolchain" = {
+      exec = ''exec python "$DEVENV_ROOT/scripts/toolchain/benchmark.py" "$@"'';
+      description = "Measure toolchain wall time, memory and exit status";
+    };
     "security-audit" = {
       exec = ''exec devenv tasks run security:audit'';
       description = "Audit frontend and Drizzle lockfiles against current advisories";
@@ -1861,13 +1919,13 @@ in
 
     # ---------- Lint ----------
     # auto-fix 系: scripts に直接処理 (シンプル sequential、execIfModified なし → 副作用ループ回避)
-    "lint-frontend"     = { exec = ''cd "$DEVENV_ROOT/frontend" && nr lint''; description = "Biome lint (frontend, auto-fix)"; };
-    "lint-drizzle"      = { exec = ''cd "$DEVENV_ROOT/drizzle" && nr lint''; description = "Biome lint (drizzle, auto-fix)"; };
+    "lint-frontend"     = { exec = ''cd "$DEVENV_ROOT/frontend" && nr lint''; description = "Oxlint + compatibility lint (frontend, auto-fix)"; };
+    "lint-drizzle"      = { exec = ''cd "$DEVENV_ROOT/drizzle" && nr lint''; description = "Oxlint + compatibility lint (drizzle, auto-fix)"; };
     "lint-backend-py"   = { exec = ''cd "$DEVENV_ROOT/backend-py" && uv run ruff check --fix apps packages''; description = "Ruff lint (backend-py workspace, auto-fix)"; };
 
     # CI 系: tasks (lint-ci:*) の wrapper → execIfModified キャッシュが効く
-    "lint-frontend-ci"   = { exec = ''exec devenv tasks run lint-ci:frontend''; description = "Biome lint (frontend, CI, cached)"; };
-    "lint-drizzle-ci"    = { exec = ''exec devenv tasks run lint-ci:drizzle''; description = "Biome lint (drizzle, CI, cached)"; };
+    "lint-frontend-ci"   = { exec = ''exec devenv tasks run lint-ci:frontend''; description = "Oxlint + compatibility lint (frontend, CI, cached)"; };
+    "lint-drizzle-ci"    = { exec = ''exec devenv tasks run lint-ci:drizzle''; description = "Oxlint + compatibility lint (drizzle, CI, cached)"; };
     "lint-backend-py-ci" = { exec = ''exec devenv tasks run lint-ci:backend-py''; description = "Ruff lint (backend-py, CI, cached)"; };
     "lint-fsd"           = { exec = ''exec devenv tasks run lint-ci:fsd''; description = "FSD boundary check (cached)"; };
     "lint-functions"     = { exec = ''exec devenv tasks run lint-ci:functions''; description = "Deno lint (edge functions, cached)"; };
@@ -1885,6 +1943,15 @@ in
     };
 
     # ---------- Format ----------
+    "format-scripts" = {
+      exec = ''
+        cd "$DEVENV_ROOT"
+        node frontend/node_modules/@biomejs/biome/bin/biome check --write --no-errors-on-unmatched scripts .oxlintrc.json "$@"
+        cd "$DEVENV_ROOT/backend-py"
+        uv run --all-packages ruff format --isolated "$DEVENV_ROOT/scripts/toolchain"
+      '';
+      description = "Format repository scripts and toolchain configuration";
+    };
     # auto-fix 系: scripts に直接処理
     "format-frontend"   = { exec = ''cd "$DEVENV_ROOT/frontend" && nr format''; description = "Biome format (frontend, auto-fix)"; };
     "format-drizzle"    = { exec = ''cd "$DEVENV_ROOT/drizzle" && nr format''; description = "Biome format (drizzle, auto-fix)"; };
@@ -1901,6 +1968,7 @@ in
       exec = ''
         set -e
         echo "✨ Format all (auto-fix)..."
+        format-scripts
         format-frontend
         format-drizzle
         format-backend-py
@@ -1921,12 +1989,12 @@ in
     "type-check-frontend"   = { exec = ''exec devenv tasks run type-check:frontend''; description = "TS type check (frontend, cached)"; };
     "type-check-mobile"     = { exec = ''exec devenv tasks run type-check:mobile''; description = "TS type check (mobile, cached)"; };
     "type-check-drizzle"    = { exec = ''exec devenv tasks run type-check:drizzle''; description = "TS type check (drizzle, cached)"; };
-    "type-check-backend-py" = { exec = ''exec devenv tasks run type-check:backend-py''; description = "MyPy type check (backend-py, cached)"; };
+    "type-check-backend-py" = { exec = ''exec devenv tasks run type-check:backend-py''; description = "ty type check (backend-py, cached)"; };
     "check-functions"       = { exec = ''exec devenv tasks run type-check:functions''; description = "Deno check (edge functions, cached)"; };
 
     # 集約: namespace match で並列 + キャッシュ
     "type-check" = {
-      exec = ''exec devenv tasks run type-check'';
+      exec = ''exec devenv tasks run type-check:all'';
       description = "Type check all subprojects (parallel + cached)";
     };
 
@@ -1952,7 +2020,7 @@ in
     "test-drizzle"    = { exec = ''cd "$DEVENV_ROOT/drizzle" && nr test''; description = "bun test (drizzle)"; };
     # pytest は member (api/core) とその依存を import するので `--all-packages` 必須
     # (type-check:backend-py のコメント参照)。ruff は import 解決不要なので素の uv run でよい。
-    "test-backend-py" = { exec = ''cd "$DEVENV_ROOT/backend-py" && uv run --all-packages pytest''; description = "pytest (backend-py workspace)"; };
+    "test-backend-py" = { exec = ''cd "$DEVENV_ROOT/backend-py" && uv run --all-packages pytest "$@"''; description = "pytest-xdist (backend-py workspace)"; };
     # pgTAP。Supabase 公式の CI 手順（supabase db start → supabase test db）と同じもの。
     # Refs: https://supabase.com/docs/guides/deployment/ci/testing
     "test-db"         = { exec = ''supabase test db --local''; description = "pgTAP DB tests"; };
@@ -1965,20 +2033,8 @@ in
     # 引数なしの builtin `test` が exit 1 を返してジョブが落ちるため、`unit-test`
     # に名前を変えてある。
     "unit-test" = {
-      exec = ''
-        set -e
-        echo "🧪 Running all unit tests..."
-        test-frontend
-        test-drizzle
-        test-backend-py
-        # Edge Functions は Supabase の起動が要らない純粋な Deno テストなので
-        # ここに含める（pgTAP は DB が要るので test-db に分けてある）。
-        test-functions
-        test-mcp-sync
-        echo "✅ All unit tests passed."
-        echo "💡 Run 'test-db' for pgTAP DB tests, 'e2e' for Maestro UI/E2E."
-      '';
-      description = "Run all unit tests (frontend + drizzle + backend-py + edge functions + MCP sync)";
+      exec = ''exec devenv tasks run tests:unit'';
+      description = "Run unit tests and toolchain regression checks in parallel";
     };
     # ---------- Maestro UI / E2E ----------
     # 環境の切り替えは runner が Maestro 公式の 2 つの仕組みで行う:
@@ -2216,7 +2272,15 @@ in
       enable = true;
       # --no-errors-on-unmatched: biome.json で除外されたファイル
       # (skills-lock.json 等) のみが渡されたケースで exit 1 になるのを抑止。
-      entry = lib.mkForce "${pkgs.biome}/bin/biome check --no-errors-on-unmatched";
+      entry = lib.mkForce ''${pkgs.bash}/bin/bash -c 'exec node "$(git rev-parse --show-toplevel)/frontend/node_modules/@biomejs/biome/bin/biome" check --no-errors-on-unmatched "$@"' --'';
+    };
+
+    workspace-oxlint = {
+      enable = true;
+      name = "Oxlint";
+      files = "^(frontend/|drizzle/|scripts/|\\.oxlintrc\\.json$)";
+      types_or = [ "javascript" "jsx" "ts" "tsx" "json" ];
+      entry = lib.mkForce ''${pkgs.bash}/bin/bash -c 'exec node "$(git rev-parse --show-toplevel)/scripts/toolchain/lint-check.mjs" hook "$@"' --'';
     };
 
     # ----- Python: Ruff (lint) -----
@@ -2235,28 +2299,13 @@ in
       files = "^backend-py/(apps|packages)/[^/]+/src/.*\\.py$";
     };
 
-    # ----- Python: Mypy (type check) -----
-    # 型エラーの早期検出を優先しコミット時にもフルチェック相当を回す。
-    # ファイル単位の false positive (import 整合性が一時的に崩れた中間状態) は許容し、
-    # 引っかかったら fix → re-commit で対応する。
-    # プロジェクト単位の最終確認は `type-check:backend-py` task (devenv test 経由) で重ねて行う。
-    # tests/ は pytest で動的型チェック相当を行うため mypy 対象外（pyproject.toml の exclude
-    # は CLI 個別ファイル渡しでは効かないので、ここでも明示除外する）。
-    #
-    # ビルトインの mypy フックは project root から `mypy` を直接呼ぶため、
-    # backend-py の uv venv (workspace 共有) にインストールされたパッケージを解決できず
-    # import-not-found が大量に出る。
-    # `cd backend-py && uv run mypy apps packages` の形に上書きすることで venv 内の
-    # mypy + 全依存を見つけられるようにする。pass_filenames=false でファイル列を
-    # 受け取らずワークスペース全体で実行 (= type-check:backend-py task と同じ挙動)。
-    mypy = {
+    # ty uses the workspace environment and checks all production source roots.
+    ty = {
       enable = true;
+      name = "ty";
       files = "^backend-py/(apps|packages)/[^/]+/src/.*\\.py$";
       pass_filenames = false;
-      # `--all-packages`: virtual workspace の member 依存 (fastapi/pydantic/…) まで同期させる。
-      # 素の `uv run` だと third-party が Any になり strict mypy が誤爆する
-      # (詳細は task "type-check:backend-py" のコメント参照)。
-      entry = lib.mkForce ''${pkgs.bash}/bin/bash -c 'cd "$(git rev-parse --show-toplevel)/backend-py" && uv run --all-packages mypy apps packages' '';
+      entry = lib.mkForce ''${pkgs.bash}/bin/bash -c 'cd "$(git rev-parse --show-toplevel)/backend-py" && uv run --all-packages ty check' '';
     };
 
     # ----- Edge Functions: Deno format -----

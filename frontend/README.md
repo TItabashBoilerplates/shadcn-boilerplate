@@ -15,7 +15,7 @@ This frontend follows **Feature-Sliced Design (FSD)**, an architectural methodol
 - **Build System**: Turbo (monorepo management)
 - **State Management**: Zustand
 - **Internationalization**: next-intl
-- **Code Quality**: Biome (linting & formatting)
+- **Code Quality**: Oxlint (lint), Biome (format + import assist), tsrs (type check)
 
 ## Project Structure
 
@@ -210,14 +210,14 @@ dev-web                # 軽量 + Next.js (web)
 dev-mobile             # 軽量 + Expo Metro (mobile, non-interactive)
 dev-all                # 全部入り (web + mobile + backend + storybook)
 build-frontend         # Next.js production build
-type-check-frontend    # TypeScript type check
+type-check-frontend    # tsrs type check (全 workspace)
 
 # Code Quality
-lint-frontend          # Biome lint (auto-fix)
-lint-frontend-ci       # Biome lint (CI, no fix)
-format-frontend        # Biome format (auto-fix)
-format-frontend-check  # Biome format check
-lint-fsd               # FSD boundary check (web + mobile, ESLint)
+lint-frontend          # Oxlint (auto-fix)
+lint-frontend-ci       # Oxlint (CI, no fix)
+format-frontend        # Biome format + import assist (auto-fix)
+format-frontend-check  # Biome format + import assist check
+lint-fsd               # FSD boundary check (web + mobile + desktop)
 
 # UI Components (devenv shell 内で nlx 経由)
 nlx shadcn@latest add <name>          # shadcn/ui (Web)
@@ -330,6 +330,12 @@ export function DateDisplay({ utcDate }: DateDisplayProps) {
 
 ## Code Style
 
+### Lint
+
+JS/TS lint は Oxlint への統一を目標とし、FSD 境界・framework 固有ルールも移行する。
+未対応規則と検証結果は [移行設計](../docs/designs/rust-toolchain-migration.md) で管理する。
+Biome はフォーマットと import 整理を担当する。
+
 ### Biome Configuration
 
 - **Indentation**: 2 spaces
@@ -340,6 +346,7 @@ export function DateDisplay({ utcDate }: DateDisplayProps) {
 
 ### TypeScript
 
+- **Type checker**: tsrs（devenv の `type-check-frontend` から実行）
 - **Strict mode**: Enabled
 - **Path aliases**:
   - `@/*` → `apps/web/src/*` or `apps/mobile/*`
@@ -350,6 +357,8 @@ export function DateDisplay({ utcDate }: DateDisplayProps) {
 ## Testing
 
 This project uses **Vitest** for unit testing. すべて devenv の **scripts** (PATH 直結) で実行する。
+既定は Node 環境。DOM が必要なテストだけ `@vitest-environment jsdom` を指定する。
+DOM matcher は必要なテスト内で読み込み、全テストへ共通登録しない。
 
 ```bash
 test-frontend              # Run Vitest (一回のみ)
