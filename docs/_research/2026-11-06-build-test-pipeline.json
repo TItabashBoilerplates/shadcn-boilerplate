@@ -1,0 +1,664 @@
+{
+	"date": "2026-11-06",
+	"environment": {
+		"cpu": "Apple M5 Max",
+		"memory_gib": 64,
+		"node": "24.22.1",
+		"bun": "1.4.4",
+		"turbo": "2.11.7",
+		"vitest": "5.0.4"
+	},
+	"method": "Timed commands run inside an initialized devenv shell; initial shell/Nix setup excluded. Warmup excluded, 5 repetitions for contracts/Vitest, 3 for forced builds/Storybook. Compiler cold/unchanged/single-source-change scenarios are one reference run each. Concurrent agent heavy work avoided, external Node/Bun/FSEvents/du activity not controlled.",
+	"before": {
+		"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+		"machine": "arm64",
+		"runs": 5,
+		"cases": {
+			"frontend-build": {
+				"command": ["bun", "run", "build"],
+				"cwd": "frontend",
+				"samples": [
+					{
+						"seconds": 0.14561629202216864,
+						"peak_rss_bytes": 81805312,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.13266691681928933,
+						"peak_rss_bytes": 81821696,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.1488839581143111,
+						"peak_rss_bytes": 83361792,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.13162429188378155,
+						"peak_rss_bytes": 81526784,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.13777054194360971,
+						"peak_rss_bytes": 83263488,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 0.13777054194360971
+			},
+			"frontend-tests": {
+				"command": ["bun", "run", "test"],
+				"cwd": "frontend",
+				"samples": [
+					{
+						"seconds": 2.203284583054483,
+						"peak_rss_bytes": 200851456,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.1722263330593705,
+						"peak_rss_bytes": 199639040,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.235004583140835,
+						"peak_rss_bytes": 200310784,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.110432374989614,
+						"peak_rss_bytes": 201736192,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.3223849169444293,
+						"peak_rss_bytes": 200130560,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 2.203284583054483
+			},
+			"toolchain-serial": {
+				"command": [
+					"bash",
+					"-ec",
+					"test-toolchain-types && test-toolchain-python && toolchain-lint test"
+				],
+				"cwd": ".",
+				"samples": [
+					{
+						"seconds": 13.262260750168934,
+						"peak_rss_bytes": 228229120,
+						"exit_code": 0
+					},
+					{
+						"seconds": 10.910011917119846,
+						"peak_rss_bytes": 220889088,
+						"exit_code": 0
+					},
+					{
+						"seconds": 10.656628667144105,
+						"peak_rss_bytes": 220676096,
+						"exit_code": 0
+					},
+					{
+						"seconds": 10.820358666824177,
+						"peak_rss_bytes": 227180544,
+						"exit_code": 0
+					},
+					{
+						"seconds": 11.876636459026486,
+						"peak_rss_bytes": 220463104,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 10.910011917119846
+			}
+		}
+	},
+	"contracts_parallel": {
+		"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+		"machine": "arm64",
+		"runs": 5,
+		"cases": {
+			"toolchain-parallel": {
+				"command": [
+					"bash",
+					"-ec",
+					"pids=(); test-toolchain-types & pids+=($!); test-toolchain-python & pids+=($!); toolchain-lint test & pids+=($!); status=0; for pid in \"${pids[@]}\"; do wait \"$pid\" || status=$?; done; exit \"$status\""
+				],
+				"cwd": ".",
+				"samples": [
+					{
+						"seconds": 10.118912416975945,
+						"peak_rss_bytes": 220348416,
+						"exit_code": 0
+					},
+					{
+						"seconds": 9.451360125094652,
+						"peak_rss_bytes": 219873280,
+						"exit_code": 0
+					},
+					{
+						"seconds": 9.58745833300054,
+						"peak_rss_bytes": 219299840,
+						"exit_code": 0
+					},
+					{
+						"seconds": 9.598313790978864,
+						"peak_rss_bytes": 219889664,
+						"exit_code": 0
+					},
+					{
+						"seconds": 10.38434641691856,
+						"peak_rss_bytes": 220069888,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 9.598313790978864
+			}
+		}
+	},
+	"build_pipeline": {
+		"nerite-build-before-forced": {
+			"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+			"machine": "arm64",
+			"runs": 3,
+			"cases": {
+				"frontend-build-forced": {
+					"command": ["bun", "run", "build", "--force"],
+					"cwd": "frontend",
+					"samples": [
+						{
+							"seconds": 4.760927583090961,
+							"peak_rss_bytes": 586219520,
+							"exit_code": 0
+						},
+						{
+							"seconds": 10.55742729199119,
+							"peak_rss_bytes": 575389696,
+							"exit_code": 0
+						},
+						{
+							"seconds": 5.593304666923359,
+							"peak_rss_bytes": 577880064,
+							"exit_code": 0
+						}
+					],
+					"median_seconds": 5.593304666923359
+				}
+			}
+		},
+		"nerite-build-after-forced": {
+			"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+			"machine": "arm64",
+			"runs": 3,
+			"cases": {
+				"frontend-build-forced": {
+					"command": ["bun", "run", "build", "--force"],
+					"cwd": "frontend",
+					"samples": [
+						{
+							"seconds": 4.466934542171657,
+							"peak_rss_bytes": 571965440,
+							"exit_code": 0
+						},
+						{
+							"seconds": 5.532550917007029,
+							"peak_rss_bytes": 567115776,
+							"exit_code": 0
+						},
+						{
+							"seconds": 5.691897749900818,
+							"peak_rss_bytes": 555597824,
+							"exit_code": 0
+						}
+					],
+					"median_seconds": 5.532550917007029
+				}
+			}
+		},
+		"nerite-storybook-cache-comparison": {
+			"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+			"machine": "arm64",
+			"runs": 3,
+			"cases": {
+				"storybook-build-forced": {
+					"command": ["bun", "run", "build-storybook", "--force"],
+					"cwd": "frontend",
+					"samples": [
+						{
+							"seconds": 15.828920499887317,
+							"peak_rss_bytes": 1453408256,
+							"exit_code": 0
+						},
+						{
+							"seconds": 14.540587458061054,
+							"peak_rss_bytes": 1417396224,
+							"exit_code": 0
+						},
+						{
+							"seconds": 14.514721458079293,
+							"peak_rss_bytes": 1407811584,
+							"exit_code": 0
+						}
+					],
+					"median_seconds": 14.540587458061054
+				},
+				"storybook-build": {
+					"command": ["bun", "run", "build-storybook"],
+					"cwd": "frontend",
+					"samples": [
+						{
+							"seconds": 0.16500087501481175,
+							"peak_rss_bytes": 63799296,
+							"exit_code": 0
+						},
+						{
+							"seconds": 0.16109283384867013,
+							"peak_rss_bytes": 61341696,
+							"exit_code": 0
+						},
+						{
+							"seconds": 0.19623545790091157,
+							"peak_rss_bytes": 65028096,
+							"exit_code": 0
+						}
+					],
+					"median_seconds": 0.16500087501481175
+				}
+			}
+		},
+		"nerite-build-scenarios": {
+			"compiler_cache_cold_reference": {
+				"seconds": 12.62728983303532,
+				"cached_tasks": 0,
+				"total_tasks": 3,
+				"exit_code": 0
+			},
+			"unchanged_reference": {
+				"seconds": 0.24153929203748703,
+				"cached_tasks": 3,
+				"total_tasks": 3,
+				"exit_code": 0
+			},
+			"single_file_change_reference": {
+				"seconds": 6.553278542123735,
+				"cached_tasks": 2,
+				"total_tasks": 3,
+				"exit_code": 0
+			},
+			"restored_source_reference": {
+				"seconds": 0.7634882919955999,
+				"cached_tasks": 3,
+				"total_tasks": 3,
+				"exit_code": 0
+			}
+		},
+		"nerite-storybook-restore-manifest": {
+			"file_count": 151,
+			"identical": true
+		},
+		"checks": {
+			"transit_dependency_hashes": "tokens/ui/web/mobile PASS",
+			"env_hash_scope": "72 tasks PASS; lint policy changes only lint; runtime changes all",
+			"restored_storybook_smoke": "171 PASS",
+			"generated_files_changed": false
+		},
+		"method_notes": [
+			"Forced build skips Turbo result reads; compiler filesystem cache stayed warm for before/after phases.",
+			"Compiler cache cold and one-source-change times are final-only single samples.",
+			"Storybook force/cached comparison was measured with same task config; final addition of explicit publishable-key env declarations was rebuilt/restored/smoked again.",
+			"External fseventsd and unrelated Node22 workers increased machine load.",
+			"Turbo local cache already auto-shares with primary Git worktree; no new localcache server/account.",
+			"CI producer cache path explicitly set, remote transfer performance not measured."
+		]
+	},
+	"vitest_not_adopted": {
+		"initial_candidates": {
+			"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+			"machine": "arm64",
+			"runs": 5,
+			"cases": {
+				"frontend-tests-threads4": {
+					"command": ["bun", "run", "test", "--pool=threads", "--maxWorkers=4"],
+					"cwd": "frontend",
+					"samples": [
+						{
+							"seconds": 2.129960082937032,
+							"peak_rss_bytes": 368279552,
+							"exit_code": 0
+						},
+						{
+							"seconds": 2.0267457079607993,
+							"peak_rss_bytes": 361922560,
+							"exit_code": 0
+						},
+						{
+							"seconds": 1.904007124947384,
+							"peak_rss_bytes": 386367488,
+							"exit_code": 0
+						},
+						{
+							"seconds": 1.8803462910000235,
+							"peak_rss_bytes": 363184128,
+							"exit_code": 0
+						},
+						{
+							"seconds": 1.9817508340347558,
+							"peak_rss_bytes": 362184704,
+							"exit_code": 0
+						}
+					],
+					"median_seconds": 1.9817508340347558
+				},
+				"frontend-tests-threads8": {
+					"command": ["bun", "run", "test", "--pool=threads", "--maxWorkers=8"],
+					"cwd": "frontend",
+					"samples": [
+						{
+							"seconds": 2.0201477089431137,
+							"peak_rss_bytes": 497909760,
+							"exit_code": 0
+						},
+						{
+							"seconds": 1.924048792105168,
+							"peak_rss_bytes": 513376256,
+							"exit_code": 0
+						},
+						{
+							"seconds": 2.634404042037204,
+							"peak_rss_bytes": 504479744,
+							"exit_code": 0
+						},
+						{
+							"seconds": 2.691090582869947,
+							"peak_rss_bytes": 485195776,
+							"exit_code": 0
+						},
+						{
+							"seconds": 4.523441707948223,
+							"peak_rss_bytes": 512442368,
+							"exit_code": 0
+						}
+					],
+					"median_seconds": 2.634404042037204
+				}
+			}
+		},
+		"forks": {
+			"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+			"machine": "arm64",
+			"runs": 5,
+			"cases": {
+				"frontend-tests-forks4": {
+					"command": ["bun", "run", "test", "--pool=forks", "--maxWorkers=4"],
+					"cwd": "frontend",
+					"samples": [
+						{
+							"seconds": 4.453401708044112,
+							"peak_rss_bytes": 214876160,
+							"exit_code": 0
+						},
+						{
+							"seconds": 3.3884957500267774,
+							"peak_rss_bytes": 201555968,
+							"exit_code": 0
+						},
+						{
+							"seconds": 3.6385530829429626,
+							"peak_rss_bytes": 200884224,
+							"exit_code": 0
+						},
+						{
+							"seconds": 5.171394082950428,
+							"peak_rss_bytes": 200261632,
+							"exit_code": 0
+						},
+						{
+							"seconds": 6.468385207932442,
+							"peak_rss_bytes": 212566016,
+							"exit_code": 0
+						}
+					],
+					"median_seconds": 4.453401708044112
+				}
+			}
+		},
+		"repeat_including_failure": {
+			"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+			"machine": "arm64",
+			"runs": 5,
+			"cases": {
+				"frontend-tests": {
+					"command": ["bun", "run", "test"],
+					"cwd": "frontend",
+					"samples": [
+						{
+							"seconds": 2.657054374925792,
+							"peak_rss_bytes": 211681280,
+							"exit_code": 0
+						},
+						{
+							"seconds": 2.5889362499583513,
+							"peak_rss_bytes": 199622656,
+							"exit_code": 0
+						},
+						{
+							"seconds": 2.6550708750728518,
+							"peak_rss_bytes": 200867840,
+							"exit_code": 0
+						},
+						{
+							"seconds": 2.3333291250746697,
+							"peak_rss_bytes": 200130560,
+							"exit_code": 0
+						},
+						{
+							"seconds": 2.6867567088920623,
+							"peak_rss_bytes": 211795968,
+							"exit_code": 0
+						}
+					],
+					"median_seconds": 2.6550708750728518
+				},
+				"frontend-tests-threads4": {
+					"command": ["bun", "run", "test", "--pool=threads", "--maxWorkers=4"],
+					"cwd": "frontend",
+					"samples": [
+						{
+							"seconds": 2.8177235829643905,
+							"peak_rss_bytes": 395247616,
+							"exit_code": 0
+						},
+						{
+							"seconds": 2.945284540997818,
+							"peak_rss_bytes": 382681088,
+							"exit_code": 0
+						},
+						{
+							"seconds": 2.7815037090331316,
+							"peak_rss_bytes": 385171456,
+							"exit_code": 0
+						},
+						{
+							"seconds": 3.0000093749258667,
+							"peak_rss_bytes": 383975424,
+							"exit_code": 0
+						},
+						{
+							"seconds": 12.654319249792024,
+							"peak_rss_bytes": 382779392,
+							"exit_code": 1
+						}
+					],
+					"median_seconds": 2.945284540997818
+				}
+			}
+		},
+		"decision": "No configuration change: speedup not reproducible; repeat threads4 trial includes one existing services-test timeout. Failed trial is not a successful benchmark."
+	},
+	"native_cache_verification": [
+		{
+			"label": "seed",
+			"seconds": 1.1334262499585748,
+			"exit_code": 0,
+			"expected_failure": false,
+			"status_lines": [
+				"• Running type-check:backend-py",
+				"• Running lint-ci:scripts",
+				"✓ Running lint-ci:scripts in 598ms",
+				"✓ Running type-check:backend-py in 789ms"
+			]
+		},
+		{
+			"label": "unchanged",
+			"seconds": 0.20180112519301474,
+			"exit_code": 0,
+			"expected_failure": false,
+			"status_lines": [
+				"• Running lint-ci:scripts",
+				"• Running type-check:backend-py",
+				"✓ Running type-check:backend-py in 5.69ms (cached)",
+				"✓ Running lint-ci:scripts in 11.0ms (cached)"
+			]
+		},
+		{
+			"label": "frontend-lock",
+			"seconds": 0.251494332915172,
+			"exit_code": 0,
+			"expected_failure": false,
+			"status_lines": [
+				"• Running lint-ci:scripts",
+				"• Running type-check:backend-py",
+				"✓ Running type-check:backend-py in 5.52ms (cached)",
+				"✓ Running lint-ci:scripts in 69.4ms"
+			]
+		},
+		{
+			"label": "frontend-restored",
+			"seconds": 0.26716133300215006,
+			"exit_code": 0,
+			"expected_failure": false,
+			"status_lines": [
+				"• Running type-check:backend-py",
+				"• Running lint-ci:scripts",
+				"✓ Running type-check:backend-py in 5.86ms (cached)",
+				"✓ Running lint-ci:scripts in 70.9ms"
+			]
+		},
+		{
+			"label": "python-lock",
+			"seconds": 0.45440974994562566,
+			"exit_code": 0,
+			"expected_failure": false,
+			"status_lines": [
+				"• Running type-check:backend-py",
+				"• Running lint-ci:scripts",
+				"✓ Running lint-ci:scripts in 14.7ms (cached)",
+				"✓ Running type-check:backend-py in 261ms"
+			]
+		},
+		{
+			"label": "python-restored",
+			"seconds": 0.33696766709908843,
+			"exit_code": 0,
+			"expected_failure": false,
+			"status_lines": [
+				"• Running lint-ci:scripts",
+				"• Running type-check:backend-py",
+				"✓ Running lint-ci:scripts in 15.2ms (cached)",
+				"✓ Running type-check:backend-py in 131ms"
+			]
+		},
+		{
+			"label": "python-type-error",
+			"seconds": 0.3157327501103282,
+			"exit_code": 1,
+			"expected_failure": true,
+			"status_lines": [
+				"• Running type-check:backend-py",
+				"  error[invalid-assignment]: Object of type `Literal[\"wrong\"]` is not assignable to `int`",
+				"✖ Running type-check:backend-py in 129ms (failed)",
+				"✖ Running tasks in 129ms (failed)"
+			]
+		},
+		{
+			"label": "repaired",
+			"seconds": 0.21220216597430408,
+			"exit_code": 0,
+			"expected_failure": false,
+			"status_lines": [
+				"• Running lint-ci:scripts",
+				"• Running type-check:backend-py",
+				"✓ Running type-check:backend-py in 6.09ms (cached)",
+				"✓ Running lint-ci:scripts in 11.1ms (cached)"
+			]
+		},
+		{
+			"label": "toolchain-seed",
+			"seconds": 11.943607000168413,
+			"exit_code": 0,
+			"expected_failure": false,
+			"status_lines": [
+				"• Running tests:toolchain-python",
+				"• Running tests:toolchain-types",
+				"• Running tests:toolchain-lint",
+				"✓ Running tests:toolchain-types in 1.22s",
+				"✓ Running tests:toolchain-python in 1.36s",
+				"✓ Running tests:toolchain-lint in 11.3s",
+				"• Running tests:toolchain",
+				"✓ Running tests:toolchain in 435ms"
+			]
+		},
+		{
+			"label": "toolchain-unchanged",
+			"seconds": 0.28169666579924524,
+			"exit_code": 0,
+			"expected_failure": false,
+			"status_lines": [
+				"• Running tests:toolchain-lint",
+				"• Running tests:toolchain-python",
+				"• Running tests:toolchain-types",
+				"✓ Running tests:toolchain-python in 6.72ms (cached)",
+				"✓ Running tests:toolchain-lint in 13.3ms (cached)",
+				"✓ Running tests:toolchain-types in 13.4ms (cached)",
+				"• Running tests:toolchain",
+				"✓ Running tests:toolchain in 8.55ms"
+			]
+		},
+		{
+			"label": "toolchain-python-lock",
+			"seconds": 1.2618206671904773,
+			"exit_code": 0,
+			"expected_failure": false,
+			"status_lines": [
+				"• Running tests:toolchain-python",
+				"• Running tests:toolchain-types",
+				"• Running tests:toolchain-lint",
+				"✓ Running tests:toolchain-types in 13.0ms (cached)",
+				"✓ Running tests:toolchain-lint in 13.1ms (cached)",
+				"✓ Running tests:toolchain-python in 1.05s",
+				"• Running tests:toolchain",
+				"✓ Running tests:toolchain in 10.7ms"
+			]
+		}
+	],
+	"final_checks": {
+		"ci": 1,
+		"build": 0,
+		"unit": 0
+	},
+	"final_frontend_tests": {
+		"files_passed": 47,
+		"tests_passed": 525,
+		"existing_skipped": 4,
+		"exit_code": 0
+	},
+	"limitations": [
+		"Remote GitHub Actions cache transfer performance not measured.",
+		"RSS from time is not total process-tree memory.",
+		"Full ci-check remains failed only by pre-existing19 frontend security advisories.",
+		"Added Desktop build env TAURI_ENV_DEBUG so debug and production artifacts have distinct cache inputs; both built, production restored."
+	]
+}

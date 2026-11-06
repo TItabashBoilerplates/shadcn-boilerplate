@@ -1,0 +1,261 @@
+{
+	"before": {
+		"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+		"machine": "arm64",
+		"runs": 5,
+		"cases": {
+			"python-tests-2": {
+				"command": ["uv", "run", "--all-packages", "pytest", "-n2"],
+				"cwd": "backend-py",
+				"samples": [
+					{
+						"seconds": 2.5266815000213683,
+						"peak_rss_bytes": 135610368,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.6442653329577297,
+						"peak_rss_bytes": 135577600,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.5247923750430346,
+						"peak_rss_bytes": 135512064,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.6452971659600735,
+						"peak_rss_bytes": 136265728,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.5769151670392603,
+						"peak_rss_bytes": 135446528,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 2.5769151670392603
+			}
+		}
+	},
+	"explicit": {
+		"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+		"machine": "arm64",
+		"runs": 5,
+		"cases": {
+			"python-tests-explicit-plugins": {
+				"command": [
+					"uv",
+					"run",
+					"--all-packages",
+					"pytest",
+					"-n2",
+					"--disable-plugin-autoload",
+					"-p",
+					"xdist.plugin",
+					"-p",
+					"pytest_asyncio.plugin",
+					"-p",
+					"pytest_mock",
+					"-p",
+					"pytest_cov.plugin"
+				],
+				"cwd": "backend-py",
+				"samples": [
+					{
+						"seconds": 2.455753291025758,
+						"peak_rss_bytes": 135168000,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.4071866248268634,
+						"peak_rss_bytes": 135102464,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.4449403330218047,
+						"peak_rss_bytes": 135315456,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.4320481659378856,
+						"peak_rss_bytes": 135036928,
+						"exit_code": 0
+					},
+					{
+						"seconds": 2.505043084034696,
+						"peak_rss_bytes": 135430144,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 2.4449403330218047
+			}
+		}
+	},
+	"bytecode-sync": {
+		"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+		"machine": "arm64",
+		"runs": 1,
+		"cases": {
+			"python-sync-bytecode": {
+				"command": [
+					"uv",
+					"sync",
+					"--all-packages",
+					"--all-groups",
+					"--frozen",
+					"--compile-bytecode"
+				],
+				"cwd": "backend-py",
+				"samples": [
+					{
+						"seconds": 0.42638712492771447,
+						"peak_rss_bytes": 55181312,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 0.42638712492771447
+			}
+		}
+	},
+	"bytecode-tests": {
+		"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+		"machine": "arm64",
+		"runs": 5,
+		"cases": {
+			"python-tests-2": {
+				"command": ["uv", "run", "--all-packages", "pytest", "-n2"],
+				"cwd": "backend-py",
+				"samples": [
+					{
+						"seconds": 1.6246207910589874,
+						"peak_rss_bytes": 124862464,
+						"exit_code": 0
+					},
+					{
+						"seconds": 1.6740752498153597,
+						"peak_rss_bytes": 124780544,
+						"exit_code": 0
+					},
+					{
+						"seconds": 1.6090571670792997,
+						"peak_rss_bytes": 125255680,
+						"exit_code": 0
+					},
+					{
+						"seconds": 1.631493458058685,
+						"peak_rss_bytes": 124780544,
+						"exit_code": 0
+					},
+					{
+						"seconds": 1.6167013752274215,
+						"peak_rss_bytes": 124911616,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 1.6246207910589874
+			},
+			"python-tests-explicit-plugins": {
+				"command": [
+					"uv",
+					"run",
+					"--all-packages",
+					"pytest",
+					"-n2",
+					"--disable-plugin-autoload",
+					"-p",
+					"xdist.plugin",
+					"-p",
+					"pytest_asyncio.plugin",
+					"-p",
+					"pytest_mock",
+					"-p",
+					"pytest_cov.plugin"
+				],
+				"cwd": "backend-py",
+				"samples": [
+					{
+						"seconds": 1.4340475420467556,
+						"peak_rss_bytes": 119996416,
+						"exit_code": 0
+					},
+					{
+						"seconds": 1.5047521668020636,
+						"peak_rss_bytes": 120356864,
+						"exit_code": 0
+					},
+					{
+						"seconds": 1.4428535420447588,
+						"peak_rss_bytes": 120225792,
+						"exit_code": 0
+					},
+					{
+						"seconds": 1.4424727081786841,
+						"peak_rss_bytes": 120406016,
+						"exit_code": 0
+					},
+					{
+						"seconds": 1.4508650829084218,
+						"peak_rss_bytes": 120291328,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 1.4428535420447588
+			}
+		}
+	},
+	"method": {
+		"date": "2026-11-06",
+		"cpu": "Apple M5 Max",
+		"memory_gib": 64,
+		"python": "3.14.7",
+		"uv": "0.12.22",
+		"pytest": "9.1.1",
+		"xdist": "3.8.0",
+		"bytecode_initial_state": "2401 site-packages Python source files, zero pyc files",
+		"timing": "One warmup excluded then 5 samples per pytest configuration; Docker and CI started after all performance samples. Sync bytecode case has only one recorded sample; first compilation warmup logged separately.",
+		"first_bytecode_sync_seconds": 0.56,
+		"first_bytecode_compile_files": 2401,
+		"first_bytecode_compile_milliseconds": 463,
+		"note": "uv run startup and worker startup included in wall time; same58tests,n2 throughout. OS cache warm. Non-interleaved phases and external machine load limit generalization. RSS is not whole-process-tree peak."
+	},
+	"final_workers": {
+		"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+		"machine": "arm64",
+		"runs": 5,
+		"cases": {
+			"python-tests-4": {
+				"command": ["uv", "run", "--all-packages", "pytest", "-n4"],
+				"cwd": "backend-py",
+				"samples": [
+					{
+						"seconds": 1.3244442499708384,
+						"peak_rss_bytes": 113311744,
+						"exit_code": 0
+					},
+					{
+						"seconds": 1.4566273749805987,
+						"peak_rss_bytes": 119291904,
+						"exit_code": 0
+					},
+					{
+						"seconds": 1.3668785421177745,
+						"peak_rss_bytes": 119193600,
+						"exit_code": 0
+					},
+					{
+						"seconds": 1.3340606249403208,
+						"peak_rss_bytes": 119390208,
+						"exit_code": 0
+					},
+					{
+						"seconds": 1.2951635411009192,
+						"peak_rss_bytes": 113295360,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 1.3340606249403208
+			}
+		}
+	}
+}

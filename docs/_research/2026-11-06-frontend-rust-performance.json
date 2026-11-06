@@ -1,0 +1,354 @@
+{
+	"date": "2026-11-06",
+	"environment": {
+		"cpu": "Apple M5 Max",
+		"memory_gib": 64,
+		"node": "24.22.1",
+		"bun": "1.4.4",
+		"vite": "8.3.4",
+		"storybook": "10.6.2"
+	},
+	"method": "Separate process builds, one discarded warmup then five timed runs per case; OS cache warm, no Turbo result cache. Concurrent agent builds avoided. External desktop/background load was uncontrolled; no universal speedup claim.",
+	"desktop_builds": {
+		"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+		"machine": "arm64",
+		"runs": 5,
+		"cases": {
+			"desktop-build-esbuild": {
+				"command": ["bun", "run", "build", "--minify", "esbuild"],
+				"cwd": "frontend/apps/desktop",
+				"samples": [
+					{
+						"seconds": 0.7854851661249995,
+						"peak_rss_bytes": 330252288,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.765832583187148,
+						"peak_rss_bytes": 336248832,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.6548601668328047,
+						"peak_rss_bytes": 331350016,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.7413132078945637,
+						"peak_rss_bytes": 338182144,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.6586722920183092,
+						"peak_rss_bytes": 328253440,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 0.7413132078945637
+			},
+			"desktop-build": {
+				"command": ["bun", "run", "build"],
+				"cwd": "frontend/apps/desktop",
+				"samples": [
+					{
+						"seconds": 0.6113466250244528,
+						"peak_rss_bytes": 330874880,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.7401991658844054,
+						"peak_rss_bytes": 321863680,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.6173943751491606,
+						"peak_rss_bytes": 328318976,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.6236584589350969,
+						"peak_rss_bytes": 324026368,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.7480437920894474,
+						"peak_rss_bytes": 329351168,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 0.6236584589350969
+			}
+		}
+	},
+	"initial_baseline": {
+		"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+		"machine": "arm64",
+		"runs": 5,
+		"cases": {
+			"desktop-build": {
+				"command": ["bun", "run", "build"],
+				"cwd": "frontend/apps/desktop",
+				"samples": [
+					{
+						"seconds": 0.7228321249131113,
+						"peak_rss_bytes": 333905920,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.514284250093624,
+						"peak_rss_bytes": 330399744,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.34975312487222254,
+						"peak_rss_bytes": 334987264,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.31816495792008936,
+						"peak_rss_bytes": 329449472,
+						"exit_code": 0
+					},
+					{
+						"seconds": 0.32394591602496803,
+						"peak_rss_bytes": 330940416,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 0.34975312487222254
+			},
+			"storybook-build": {
+				"command": ["bun", "run", "build-storybook"],
+				"cwd": "frontend",
+				"samples": [
+					{
+						"seconds": 4.790101291146129,
+						"peak_rss_bytes": 1573535744,
+						"exit_code": 0
+					},
+					{
+						"seconds": 4.598704708041623,
+						"peak_rss_bytes": 1642004480,
+						"exit_code": 0
+					},
+					{
+						"seconds": 4.425449833041057,
+						"peak_rss_bytes": 1561722880,
+						"exit_code": 0
+					},
+					{
+						"seconds": 5.222322084009647,
+						"peak_rss_bytes": 1611317248,
+						"exit_code": 0
+					},
+					{
+						"seconds": 5.313767999876291,
+						"peak_rss_bytes": 1593606144,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 4.790101291146129
+			}
+		}
+	},
+	"storybook_ignore_not_adopted": {
+		"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+		"machine": "arm64",
+		"runs": 5,
+		"cases": {
+			"storybook-build": {
+				"command": ["bun", "run", "build-storybook"],
+				"cwd": "frontend",
+				"samples": [
+					{
+						"seconds": 4.994935292052105,
+						"peak_rss_bytes": 1596506112,
+						"exit_code": 0
+					},
+					{
+						"seconds": 4.862589415861294,
+						"peak_rss_bytes": 1549795328,
+						"exit_code": 0
+					},
+					{
+						"seconds": 5.071817124960944,
+						"peak_rss_bytes": 1464074240,
+						"exit_code": 0
+					},
+					{
+						"seconds": 5.786336167016998,
+						"peak_rss_bytes": 1556037632,
+						"exit_code": 0
+					},
+					{
+						"seconds": 5.2418149169534445,
+						"peak_rss_bytes": 1605222400,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 5.071817124960944
+			}
+		}
+	},
+	"storybook_hook_not_adopted_noisy": {
+		"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+		"machine": "arm64",
+		"runs": 5,
+		"cases": {
+			"storybook-build": {
+				"command": ["bun", "run", "build-storybook"],
+				"cwd": "frontend",
+				"samples": [
+					{
+						"seconds": 4.847995042102411,
+						"peak_rss_bytes": 1491763200,
+						"exit_code": 0
+					},
+					{
+						"seconds": 5.114484500139952,
+						"peak_rss_bytes": 1528365056,
+						"exit_code": 0
+					},
+					{
+						"seconds": 6.245553750079125,
+						"peak_rss_bytes": 1381416960,
+						"exit_code": 0
+					},
+					{
+						"seconds": 16.116693041054532,
+						"peak_rss_bytes": 1218330624,
+						"exit_code": 0
+					},
+					{
+						"seconds": 17.889115625061095,
+						"peak_rss_bytes": 1307541504,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 6.245553750079125
+			}
+		}
+	},
+	"storybook_restored": {
+		"platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+		"machine": "arm64",
+		"runs": 5,
+		"cases": {
+			"storybook-build": {
+				"command": ["bun", "run", "build-storybook"],
+				"cwd": "frontend",
+				"samples": [
+					{
+						"seconds": 5.36675720801577,
+						"peak_rss_bytes": 1444134912,
+						"exit_code": 0
+					},
+					{
+						"seconds": 5.553380207857117,
+						"peak_rss_bytes": 1491550208,
+						"exit_code": 0
+					},
+					{
+						"seconds": 5.272317291004583,
+						"peak_rss_bytes": 1465810944,
+						"exit_code": 0
+					},
+					{
+						"seconds": 4.675721833016723,
+						"peak_rss_bytes": 1551073280,
+						"exit_code": 0
+					},
+					{
+						"seconds": 5.57678912486881,
+						"peak_rss_bytes": 1463336960,
+						"exit_code": 0
+					}
+				],
+				"median_seconds": 5.36675720801577
+			}
+		}
+	},
+	"desktop_output": {
+		"scope": "Sum JS/CSS files; gzip each file independently at level 9, mtime=0",
+		"before": {
+			"js_css_bytes": 286948,
+			"js_css_gzip_bytes": 86725,
+			"file_count": 5
+		},
+		"after": {
+			"file_count": 5,
+			"js_css_bytes": 284618,
+			"js_css_gzip_bytes": 85289
+		}
+	},
+	"desktop_dev": {
+		"method": "Exploratory browser navigations using isolated agent-browser Chrome session; Vite --force on server startup, repeated browser navigation without clearing HTTP cache. Unbundled was preloaded once; bundled first navigation includes first compile. Not a matched cold-start benchmark.",
+		"unbundled": [
+			{
+				"fcp": 172,
+				"load": 84.39999985694885,
+				"requests": 43
+			},
+			{
+				"fcp": 128,
+				"load": 88.20000004768372,
+				"requests": 43
+			},
+			{
+				"fcp": 148,
+				"load": 96.90000009536743,
+				"requests": 43
+			},
+			{
+				"fcp": 192,
+				"load": 147.29999995231628,
+				"requests": 43
+			},
+			{
+				"fcp": 128,
+				"load": 81.29999995231628,
+				"requests": 43
+			}
+		],
+		"bundled": [
+			{
+				"fcp": 168,
+				"load": 112.79999995231628,
+				"requests": 3
+			},
+			{
+				"fcp": 144,
+				"load": 109.09999990463257,
+				"requests": 3
+			},
+			{
+				"fcp": 176,
+				"load": 135.70000004768372,
+				"requests": 3
+			},
+			{
+				"fcp": 144,
+				"load": 112.90000009536743,
+				"requests": 3
+			},
+			{
+				"fcp": 132,
+				"load": 99.79999995231628,
+				"requests": 3
+			}
+		],
+		"hmr_unbundled_one_sample": {
+			"at": 1793956794871,
+			"token": 42,
+			"heading": "デスクトップアプリ HMR-check",
+			"elapsed_ms": 1618.60595703125
+		},
+		"hmr_bundled_one_sample": {
+			"at": 1793956872878,
+			"token": 42,
+			"heading": "デスクトップアプリ HMR-check",
+			"elapsed_ms": 1998.546142578125
+		},
+		"decision": "Keep default unbundled; HMR works in both, no meaningful repeated-navigation paint improvement. Interrupted first bundled HMR attempt excluded."
+	}
+}

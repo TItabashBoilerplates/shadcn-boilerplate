@@ -40,6 +40,6 @@ export default defineConfig({
     target: 'esnext',
     // 本番ビルドでソースマップを出すかは Tauri の debug ビルドかどうかで切り替える
     sourcemap: Boolean(process.env.TAURI_ENV_DEBUG),
-    minify: process.env.TAURI_ENV_DEBUG ? false : 'esbuild',
+    minify: process.env.TAURI_ENV_DEBUG ? false : 'oxc',
   },
 })

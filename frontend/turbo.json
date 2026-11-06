@@ -8,12 +8,11 @@
       "outputs": ["src/generated/**"]
     },
     "build": {
-      "dependsOn": ["^build", "generate"],
+      "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*", "!**/.env*.local"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**", ".expo/**"]
     },
     "dev": {
-      "dependsOn": ["generate"],
       "cache": false,
       "persistent": true
     },
@@ -31,11 +30,15 @@
     },
     "lint": {
       "dependsOn": ["^lint"],
+      "env": ["TURBO_LINT_POLICY_HASH"],
       "inputs": ["$TURBO_DEFAULT$", "eslint.config.*"]
     },
     "type-check": {
-      "dependsOn": ["^type-check", "generate"],
+      "dependsOn": ["transit"],
       "outputs": []
+    },
+    "transit": {
+      "dependsOn": ["^transit"]
     },
     "format": {
       "outputs": [],
@@ -52,11 +55,12 @@
       "cache": false,
       "persistent": true
     },
-    "build-storybook": {
-      "dependsOn": ["^build"],
+    "//#storybook:build": {
+      "dependsOn": ["@workspace/tokens#build"],
       "outputs": ["storybook-static/**"]
     },
     "lint:ci": {
+      "env": ["TURBO_LINT_POLICY_HASH"],
       "inputs": [
         "$TURBO_DEFAULT$",
         "$TURBO_ROOT$/../.oxlintrc.json",
@@ -66,10 +70,10 @@
   },
   "globalEnv": [
     "NEXT_PUBLIC_SUPABASE_URL",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
     "NEXT_PUBLIC_BACKEND_PY_URL",
     "EXPO_PUBLIC_SUPABASE_URL",
-    "EXPO_PUBLIC_SUPABASE_ANON_KEY",
+    "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
     "BACKEND_URL",
     "TURBO_TOOLCHAIN_HASH"
   ],

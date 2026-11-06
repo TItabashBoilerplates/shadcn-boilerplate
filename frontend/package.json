@@ -9,14 +9,14 @@
     "tooling/*"
   ],
   "scripts": {
-    "dev": "turbo dev",
-    "build": "turbo build",
-    "start": "turbo start",
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "start": "turbo run start",
     "lint": "turbo run lint && oxlint --fix policy scripts .storybook && biome lint --write .",
     "lint:ci": "turbo run lint:ci && oxlint policy scripts .storybook && biome lint .",
     "format": "biome check --linter-enabled=false --write .",
     "format-check": "biome check --linter-enabled=false .",
-    "type-check": "turbo type-check",
+    "type-check": "turbo run type-check",
     "test": "vitest run",
     "test:watch": "vitest",
     "clean": "turbo clean && rm -rf node_modules",
@@ -25,7 +25,8 @@
     "tokens:build": "bun run packages/tokens/scripts/generate-css.ts",
     "generate:types": "bun run scripts/generate-types.ts",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "turbo run storybook:build",
+    "storybook:build": "storybook build"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.5.0",

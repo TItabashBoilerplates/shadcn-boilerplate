@@ -12,6 +12,34 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CASES = {
+    "frontend-build": ("frontend", ["bun", "run", "build"]),
+    "frontend-build-forced": ("frontend", ["bun", "run", "build", "--force"]),
+    "toolchain-serial": (
+        ".",
+        [
+            "bash",
+            "-ec",
+            "test-toolchain-types && test-toolchain-python && toolchain-lint test",
+        ],
+    ),
+    "toolchain-parallel": (
+        ".",
+        [
+            "bash",
+            "-ec",
+            'pids=(); test-toolchain-types & pids+=($!); test-toolchain-python & pids+=($!); toolchain-lint test & pids+=($!); status=0; for pid in "${pids[@]}"; do wait "$pid" || status=$?; done; exit "$status"',
+        ],
+    ),
+    "desktop-build": ("frontend/apps/desktop", ["bun", "run", "build"]),
+    "desktop-build-esbuild": (
+        "frontend/apps/desktop",
+        ["bun", "run", "build", "--minify", "esbuild"],
+    ),
+    "storybook-build": ("frontend", ["bun", "run", "build-storybook"]),
+    "storybook-build-forced": (
+        "frontend",
+        ["bun", "run", "build-storybook", "--force"],
+    ),
     "frontend-quality-uncached": (
         "frontend",
         [
@@ -27,6 +55,28 @@ CASES = {
         ["uv", "run", "--all-packages", "pytest", "-n0"],
     ),
     "python-tests-2": ("backend-py", ["uv", "run", "--all-packages", "pytest", "-n2"]),
+    "python-tests-autoload": (
+        "backend-py",
+        [
+            "uv",
+            "run",
+            "--all-packages",
+            "pytest",
+            "-o",
+            "addopts=-ra -q --import-mode=importlib -n2",
+        ],
+    ),
+    "python-sync-bytecode": (
+        "backend-py",
+        [
+            "uv",
+            "sync",
+            "--all-packages",
+            "--all-groups",
+            "--frozen",
+            "--compile-bytecode",
+        ],
+    ),
     "python-tests-4": ("backend-py", ["uv", "run", "--all-packages", "pytest", "-n4"]),
     "python-tests-auto": (
         "backend-py",
@@ -48,6 +98,22 @@ CASES = {
     "typescript": ("frontend", ["bun", "run", "type-check", "--force"]),
     "python-types": ("backend-py", ["uv", "run", "--all-packages", "ty", "check"]),
     "frontend-tests": ("frontend", ["bun", "run", "test"]),
+    "frontend-tests-threads4": (
+        "frontend",
+        ["bun", "run", "test", "--pool=threads", "--maxWorkers=4"],
+    ),
+    "frontend-tests-threads8": (
+        "frontend",
+        ["bun", "run", "test", "--pool=threads", "--maxWorkers=8"],
+    ),
+    "frontend-tests-forks4": (
+        "frontend",
+        ["bun", "run", "test", "--pool=forks", "--maxWorkers=4"],
+    ),
+    "frontend-tests-forks8": (
+        "frontend",
+        ["bun", "run", "test", "--pool=forks", "--maxWorkers=8"],
+    ),
     "typescript-cold": (
         ".",
         ["node", "scripts/toolchain/typecheck-benchmark.mjs", "tsrs"],

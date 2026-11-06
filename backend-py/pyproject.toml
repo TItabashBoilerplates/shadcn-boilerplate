@@ -110,7 +110,7 @@ unsound-return-statement = "error"
 # editable install が `apps/api/src` / `packages/core/src` を sys.path に載せるので、
 # `pythonpath` を重ねて指定するのは flat-layout のワークアラウンドであり src-layout と冗長。
 [tool.pytest.ini_options]
-minversion = "7.0"
+minversion = "8.4"
 testpaths = ["apps/api/tests", "packages/core/tests"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
@@ -118,5 +118,11 @@ python_functions = ["test_*"]
 # coverage は default 外し: 複数 src ルートに対応するため CLI で明示する運用。
 # 例: uv run pytest --cov=apps/api/src/api --cov=packages/core/src/core --cov-report=term-missing
 # Parallel execution is the user-selected default; CLI -n overrides the worker count.
-addopts = "-ra -q --import-mode=importlib -n2"
+# Keep plugin loading deterministic and avoid unrelated installed plugins in each worker.
+# Coverage remains available through --cov; additional plugins must be enabled with -p.
+addopts = """
+    -ra -q --import-mode=importlib -n2
+    --disable-plugin-autoload
+    -p xdist.plugin -p pytest_asyncio.plugin -p pytest_mock -p pytest_cov.plugin
+"""
 asyncio_mode = "auto"
