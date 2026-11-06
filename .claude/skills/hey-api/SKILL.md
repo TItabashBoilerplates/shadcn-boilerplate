@@ -31,9 +31,9 @@ devenv 経由で生成。直接 `bun run` は禁止。
 # 手動生成 (devenv tasks)
 devenv tasks run model:frontend       # Hey API client + Supabase types を一括生成
 
-# dev/build 時に自動実行 (turbo の dependsOn 経由で generate:api が走る)
-dev-web                                # 軽量セット + Next.js (web)
-build-frontend                         # Next.js production build
+# Turbo の dev/build/type-check は Git 追跡済みの生成物を使う。
+# build/type-check のためだけに API/DB を起動する必要はない。
+# API 定義を変更したときだけ、上の model:frontend で明示的に再生成する。
 ```
 
 ## 使用方法

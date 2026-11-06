@@ -197,7 +197,9 @@ LLM / ベクトル検索 / WebRTC など重い依存は最初から積まない�
 
 ### pytest
 
-- `pytest-xdist==3.8.0` を導入し、`test-backend-py` は既定2 worker で実行する。現在の58テストでは直列の中央値2.086秒に対し2 worker は2.873秒、4 worker は3.164秒だったが、ユーザー決定により並列を優先し、計測した並列候補で最速の2 worker を採用した。
+- `pytest-xdist==3.8.0` を導入し、`test-backend-py` は既定2 worker で実行する。導入時は直列2.086秒に対し2 worker は2.873秒だったが、ユーザー決定により並列を優先した。追加の起動最適化では、同条件の2 worker が2.577秒→1.443秒になった（[測定条件と全サンプル](../docs/_research/2026-11-06-python-startup-performance.md)）。
+- devenv の依存同期時に `--compile-bytecode` で依存の `.pyc` を事前生成する。各テスト・型チェックでの再コンパイルは行わない。本番 Docker は以前から設定済み。
+- プラグインの自動読込は無効にし、xdist / pytest-asyncio / pytest-mock / pytest-cov を明示する。`--cov` はそのまま使える。追加するプラグインは root の `addopts` に登録し、一時的な追加は `test-backend-py -p anyio.pytest_plugin` 等で明示する。
 - AI エージェントはタスクの規模、CPU・空きメモリ、外側のタスク並列数に応じて worker 数を選ぶ。`test-backend-py -n4` や `test-backend-py -n auto --maxprocesses=4` の標準引数で調整し、独自の自動選択機構は追加しない。
 - `test-backend-py -n0` は worker を使わないデバッグ用。通常の検証では並列実行を選ぶ。
 - `-n auto` は利用可能 CPU に応じて worker を起動する。少数のテストでは各 worker の起動・collection が増えて遅くなる場合があるため、worker 数は計測して決める。

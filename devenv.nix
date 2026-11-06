@@ -2,12 +2,17 @@
 
 let
   qualityConfigInputs = [
-    "devenv.nix" "biome.json" ".oxlintrc.json"
-    "frontend/bun.lock" "drizzle/bun.lock" "backend-py/uv.lock"
+    "devenv.nix" "devenv.lock" "devenv.yaml"
+  ];
+  frontendQualityInputs = qualityConfigInputs ++ [
+    "biome.json" ".oxlintrc.json" "frontend/bun.lock" "frontend/biome.json"
+    "frontend/**/turbo.json"
     "frontend/tooling/**/*.js" "frontend/tooling/**/*.mjs" "frontend/tooling/**/*.json"
     "frontend/apps/*/oxlint.config.mjs"
-    "scripts/toolchain/*.mjs"
   ];
+  drizzleQualityInputs = frontendQualityInputs ++ [ "drizzle/bun.lock" "drizzle/biome.json" ];
+  pythonQualityInputs = qualityConfigInputs ++ [ "backend-py/uv.lock" "backend-py/pyproject.toml" ];
+  functionsQualityInputs = qualityConfigInputs ++ [ "supabase/functions/**/deno.lock" ];
   # Bun 1.4.4 fixes CVE-2026-111497 and GHSA-cf8x-9m69-3gg3.
   # SHA-256 digests from the official GitHub release assets.
   bunVersion = "1.4.4";
@@ -390,11 +395,13 @@ in
     bun.package = bunRuntime;
   };
 
-  # Turbo cannot hash files outside frontend through globalDependencies.
-  # Hash the devenv runtime pins and root lint policy into every frontend task.
-  env.TURBO_TOOLCHAIN_HASH = builtins.hashString "sha256" (
-    builtins.readFile ./devenv.nix + builtins.readFile ./devenv.lock + builtins.readFile ./.oxlintrc.json
-  );
+  # Runtime derivations change with their pins/patches, without invalidating JS
+  # builds for unrelated Python/OCI/devenv task edits. Root lint policy is scoped to lint.
+  env.TURBO_TOOLCHAIN_HASH = builtins.hashString "sha256" (builtins.toJSON {
+    node = toString nodeRuntime;
+    bun = toString bunRuntime;
+  });
+  env.TURBO_LINT_POLICY_HASH = builtins.hashString "sha256" (builtins.readFile ./.oxlintrc.json);
 
   languages.typescript.enable = true;
 
@@ -876,7 +883,7 @@ in
       exec = ''
         cd "$DEVENV_ROOT/backend-py"
         echo "📦 Installing backend-py workspace dependencies..."
-        uv sync --all-packages --all-groups --frozen || {
+        uv sync --all-packages --all-groups --frozen --compile-bytecode || {
           echo ""
           echo "⚠️  uv sync failed (lockfile may be out of sync)."
           echo "   Run 'cd backend-py && uv lock && uv sync --all-packages --all-groups' manually."
@@ -1090,19 +1097,19 @@ in
     # ----- Lint (CI mode = no auto-fix) -----
     "lint-ci:scripts" = {
       exec = ''cd "$DEVENV_ROOT" && node frontend/node_modules/oxlint/bin/oxlint -c .oxlintrc.json scripts'';
-      execIfModified = qualityConfigInputs ++ [ "scripts/**/*.mjs" "scripts/**/*.js" "scripts/**/*.ts" ];
+      execIfModified = frontendQualityInputs ++ [ "scripts/**/*.mjs" "scripts/**/*.js" "scripts/**/*.ts" ];
     };
     "lint-ci:toolchain-python" = {
       exec = ''cd "$DEVENV_ROOT/backend-py" && uv run --all-packages ruff check --isolated "$DEVENV_ROOT/scripts/toolchain" && uv run --all-packages ruff format --isolated --check "$DEVENV_ROOT/scripts/toolchain"'';
-      execIfModified = qualityConfigInputs ++ [ "scripts/toolchain/*.py" ];
+      execIfModified = pythonQualityInputs ++ [ "scripts/toolchain/*.py" ];
     };
     "format-check:scripts" = {
       exec = ''cd "$DEVENV_ROOT" && node frontend/node_modules/@biomejs/biome/bin/biome check --no-errors-on-unmatched scripts'';
-      execIfModified = qualityConfigInputs ++ [ "scripts/**/*.mjs" "scripts/**/*.js" "scripts/**/*.ts" ];
+      execIfModified = frontendQualityInputs ++ [ "scripts/**/*.mjs" "scripts/**/*.js" "scripts/**/*.ts" ];
     };
     "lint-ci:frontend" = {
       exec = ''cd "$DEVENV_ROOT/frontend" && nr lint:ci'';
-      execIfModified = qualityConfigInputs ++ [
+      execIfModified = frontendQualityInputs ++ [
         "frontend/**/*.ts"
         "frontend/**/*.tsx"
         "frontend/**/*.js"
@@ -1114,14 +1121,14 @@ in
     };
     "lint-ci:drizzle" = {
       exec = ''cd "$DEVENV_ROOT/drizzle" && nr lint:ci'';
-      execIfModified = qualityConfigInputs ++ [
+      execIfModified = drizzleQualityInputs ++ [
         "drizzle/**/*.ts"
         "drizzle/biome.json"
       ];
     };
     "lint-ci:backend-py" = {
       exec = ''cd "$DEVENV_ROOT/backend-py" && uv run ruff check apps packages'';
-      execIfModified = qualityConfigInputs ++ [
+      execIfModified = pythonQualityInputs ++ [
         "backend-py/apps/*/src/**/*.py"
         "backend-py/apps/*/tests/**/*.py"
         "backend-py/packages/*/src/**/*.py"
@@ -1133,7 +1140,7 @@ in
     };
     "lint-ci:functions" = {
       exec = ''deno lint "$DEVENV_ROOT/supabase/functions/"'';
-      execIfModified = qualityConfigInputs ++ [
+      execIfModified = functionsQualityInputs ++ [
         "supabase/functions/**/*.ts"
         "supabase/functions/**/deno.json"
       ];
@@ -1150,7 +1157,7 @@ in
         cd "$DEVENV_ROOT/frontend/apps/mobile" && nr lint:fsd
         cd "$DEVENV_ROOT/frontend/apps/desktop" && nr lint:fsd
       '';
-      execIfModified = qualityConfigInputs ++ [
+      execIfModified = frontendQualityInputs ++ [
         "frontend/apps/web/**/*.ts"
         "frontend/apps/web/**/*.tsx"
         "frontend/apps/mobile/**/*.ts"
@@ -1160,13 +1167,14 @@ in
         "frontend/apps/web/steiger.config.*"
         "frontend/apps/mobile/steiger.config.*"
         "frontend/apps/*/eslint.config.mjs"
+        "frontend/apps/*/tsconfig*.json"
       ];
     };
 
     # ----- Format check (no auto-fix) -----
     "format-check:frontend" = {
       exec = ''cd "$DEVENV_ROOT/frontend" && nr format-check'';
-      execIfModified = qualityConfigInputs ++ [
+      execIfModified = frontendQualityInputs ++ [
         "frontend/**/*.ts"
         "frontend/**/*.tsx"
         "frontend/**/*.js"
@@ -1178,14 +1186,14 @@ in
     };
     "format-check:drizzle" = {
       exec = ''cd "$DEVENV_ROOT/drizzle" && nr format-check'';
-      execIfModified = qualityConfigInputs ++ [
+      execIfModified = drizzleQualityInputs ++ [
         "drizzle/**/*.ts"
         "drizzle/biome.json"
       ];
     };
     "format-check:backend-py" = {
       exec = ''cd "$DEVENV_ROOT/backend-py" && uv run ruff format --check apps packages'';
-      execIfModified = qualityConfigInputs ++ [
+      execIfModified = pythonQualityInputs ++ [
         "backend-py/apps/*/src/**/*.py"
         "backend-py/apps/*/tests/**/*.py"
         "backend-py/packages/*/src/**/*.py"
@@ -1197,7 +1205,7 @@ in
     };
     "format-check:functions" = {
       exec = ''deno fmt --check "$DEVENV_ROOT/supabase/functions/"'';
-      execIfModified = qualityConfigInputs ++ [
+      execIfModified = functionsQualityInputs ++ [
         "supabase/functions/**/*.ts"
         "supabase/functions/**/deno.json"
       ];
@@ -1218,7 +1226,7 @@ in
     };
     "type-check:frontend" = {
       exec = ''cd "$DEVENV_ROOT/frontend" && nr type-check'';
-      execIfModified = qualityConfigInputs ++ [
+      execIfModified = frontendQualityInputs ++ [
         "frontend/**/*.ts"
         "frontend/**/*.tsx"
         "frontend/**/tsconfig*.json"
@@ -1228,7 +1236,7 @@ in
     # Individual entry point; ci:check uses the full frontend graph once.
     "type-check:mobile" = {
       exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && nr type-check'';
-      execIfModified = qualityConfigInputs ++ [
+      execIfModified = frontendQualityInputs ++ [
         "frontend/apps/mobile/**/*.ts"
         "frontend/apps/mobile/**/*.tsx"
         "frontend/apps/mobile/tsconfig*.json"
@@ -1240,7 +1248,7 @@ in
     # ⚠️ この task が無かったせいで drizzle の型エラー 5 件が長期間検出されていなかった。
     "type-check:drizzle" = {
       exec = ''cd "$DEVENV_ROOT/drizzle" && "$DEVENV_ROOT/frontend/node_modules/.bin/workspace-tsc" --noEmit'';
-      execIfModified = qualityConfigInputs ++ [
+      execIfModified = drizzleQualityInputs ++ [
         "drizzle/**/*.ts"
         "drizzle/tsconfig.json"
         "drizzle/package.json"
@@ -1249,7 +1257,7 @@ in
     # ty needs all workspace member dependencies for accurate import resolution.
     "type-check:backend-py" = {
       exec = ''cd "$DEVENV_ROOT/backend-py" && uv run --all-packages ty check'';
-      execIfModified = qualityConfigInputs ++ [
+      execIfModified = pythonQualityInputs ++ [
         "backend-py/apps/*/src/**/*.py"
         "backend-py/apps/*/tests/**/*.py"
         "backend-py/packages/*/src/**/*.py"
@@ -1283,7 +1291,7 @@ in
           exit 1
         fi
       '';
-      execIfModified = qualityConfigInputs ++ [
+      execIfModified = functionsQualityInputs ++ [
         "supabase/functions/**/*.ts"
         "supabase/functions/**/deno.json"
       ];
@@ -1364,12 +1372,27 @@ in
     "tests:backend".exec = "test-backend-py";
     "tests:functions".exec = "test-functions";
     "tests:mcp".exec = "test-mcp-sync";
-    "tests:toolchain" = {
-      exec = "test-toolchain-types && test-toolchain-python && toolchain-lint test";
-      execIfModified = qualityConfigInputs ++ [
-        "scripts/toolchain/*.py" "backend-py/pyproject.toml"
-        "frontend/apps/*/tsconfig*.json" "frontend/biome.json" "drizzle/biome.json"
+    "tests:toolchain-types" = {
+      exec = "test-toolchain-types";
+      execIfModified = frontendQualityInputs ++ [
+        "scripts/toolchain/typecheck.test.mjs" "frontend/apps/*/tsconfig*.json"
       ];
+    };
+    "tests:toolchain-python" = {
+      exec = "test-toolchain-python";
+      execIfModified = pythonQualityInputs ++ [
+        "scripts/toolchain/ty.test.py" "backend-py/packages/core/src/**/*.py"
+      ];
+    };
+    "tests:toolchain-lint" = {
+      exec = "toolchain-lint test";
+      execIfModified = drizzleQualityInputs ++ [
+        "scripts/toolchain/lint-check.mjs" "frontend/apps/*/tsconfig*.json"
+      ];
+    };
+    "tests:toolchain" = {
+      after = [ "tests:toolchain-types" "tests:toolchain-python" "tests:toolchain-lint" ];
+      exec = ''echo "All toolchain contracts passed"'';
     };
     "tests:unit" = {
       after = [ "tests:frontend" "tests:drizzle" "tests:backend" "tests:functions" "tests:mcp" "tests:toolchain" ];
@@ -1407,6 +1430,22 @@ in
     "bench-toolchain" = {
       exec = ''exec python "$DEVENV_ROOT/scripts/toolchain/benchmark.py" "$@"'';
       description = "Measure toolchain wall time, memory and exit status";
+    };
+    "uv-cache-prune" = {
+      exec = ''exec uv cache prune --ci'';
+      description = "Prune uv download artifacts before saving the CI cache";
+    };
+    "test-api-container" = {
+      exec = ''exec bash "$DEVENV_ROOT/scripts/python/test-api-container.sh"'';
+      description = "Verify API dependency cache layer and non-root container health";
+    };
+    "desktop-vite" = {
+      exec = ''cd "$DEVENV_ROOT/frontend/apps/desktop" && exec bunx --no-install vite "$@"'';
+      description = "Run Desktop Vite alone (dev, build or preview; forwards flags)";
+    };
+    "turbo-frontend" = {
+      exec = ''cd "$DEVENV_ROOT/frontend" && exec bunx --no-install turbo "$@"'';
+      description = "Run frontend Turbo with task graph, cache and profiling flags";
     };
     "security-audit" = {
       exec = ''exec devenv tasks run security:audit'';
@@ -2015,7 +2054,7 @@ in
 
     # ---------- Tests ----------
     "test-mcp-sync" = { exec = ''cd "$DEVENV_ROOT" && exec deno test --allow-read --allow-write --allow-run scripts/sync-mcp.test.ts''; description = "MCP config sync regression tests (Deno)"; };
-    "test-frontend"   = { exec = ''cd "$DEVENV_ROOT/frontend" && nr test''; description = "Vitest (frontend)"; };
+    "test-frontend"   = { exec = ''cd "$DEVENV_ROOT/frontend" && nr test "$@"''; description = "Vitest (frontend)"; };
     # drizzle 側は Bun 標準の test runner（依存を増やさない）。接続先ガードの判定ロジックを固定する。
     "test-drizzle"    = { exec = ''cd "$DEVENV_ROOT/drizzle" && nr test''; description = "bun test (drizzle)"; };
     # pytest は member (api/core) とその依存を import するので `--all-packages` 必須

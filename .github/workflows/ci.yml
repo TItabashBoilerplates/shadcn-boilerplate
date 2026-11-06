@@ -36,6 +36,9 @@ jobs:
   ci-check:
     name: CI Check (lint + format + type-check)
     runs-on: ubuntu-latest
+    env:
+      UV_CACHE_DIR: /tmp/uv-cache
+      TURBO_CACHE_DIR: ${{ github.workspace }}/frontend/.turbo/cache
     steps:
       - uses: actions/checkout@v7
       - uses: cachix/install-nix-action@v31
@@ -71,8 +74,16 @@ jobs:
         with:
           name: devenv
       # node_modules は /nix/store 外に出るので別 cache。
-      # uv venv は `.devenv/state/venv` だが、CI では `setup:install-backend` task が
-      # `uv sync --frozen` で毎回再生成するため cache 不要。
+      # uv は依存キャッシュのみ保存し、venv / .devenv は runner ごとに再生成する。
+      # uv のインストールは Nix に一本化（setup-uv は重ねない）。
+      # https://docs.astral.sh/uv/guides/integration/github/#caching
+      - name: Restore uv cache
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.UV_CACHE_DIR }}
+          key: uv-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend-py/uv.lock', 'devenv.lock') }}
+          restore-keys: |
+            uv-${{ runner.os }}-${{ runner.arch }}-
       - name: Cache node_modules
         uses: actions/cache@v6
         with:
@@ -96,13 +107,16 @@ jobs:
           # 古いツリーが延々と再利用され続ける。
           # exact key のみにすれば miss 時は空 → 下の Sync step が本物の install を行う。
       # 版は .github/actions/install-devenv が固定する（devenv.yaml の require_version と対）。
+      # Job ごとに保存し、同 commit / 過去 commit の結果は共有復元する。
+      # タスク自身の content hash が入力・環境差分を判定する。venv/node_modules は含めない。
       - name: Cache Turbo task results
         uses: actions/cache@v6
         with:
-          path: frontend/.turbo
-          key: turbo-${{ runner.os }}-${{ github.job }}-${{ hashFiles('frontend/bun.lock', 'frontend/turbo.json', 'devenv.nix', 'devenv.lock') }}-${{ github.sha }}
+          path: frontend/.turbo/cache
+          key: turbo-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('frontend/bun.lock', 'frontend/turbo.json', 'devenv.lock') }}-${{ github.sha }}-${{ github.job }}
           restore-keys: |
-            turbo-${{ runner.os }}-${{ github.job }}-${{ hashFiles('frontend/bun.lock', 'frontend/turbo.json', 'devenv.nix', 'devenv.lock') }}-
+            turbo-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('frontend/bun.lock', 'frontend/turbo.json', 'devenv.lock') }}-${{ github.sha }}-
+            turbo-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('frontend/bun.lock', 'frontend/turbo.json', 'devenv.lock') }}-
       - uses: ./.github/actions/install-devenv
       # ⚠️ この step は消さないこと（install を確実に走らせる唯一の場所）。
       #
@@ -127,10 +141,14 @@ jobs:
       # ここで列挙し直さない（列挙するとローカルと CI で drift する）。
       - name: Run verify tasks
         run: ci-check
+      - name: Minimize uv cache
+        run: uv-cache-prune
 
   test:
     name: Unit Tests (frontend + backend-py)
     runs-on: ubuntu-latest
+    env:
+      UV_CACHE_DIR: /tmp/uv-cache
     steps:
       - uses: actions/checkout@v7
       - uses: cachix/install-nix-action@v31
@@ -150,6 +168,13 @@ jobs:
       - uses: cachix/cachix-action@v17
         with:
           name: devenv
+      - name: Restore uv cache
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.UV_CACHE_DIR }}
+          key: uv-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('backend-py/uv.lock', 'devenv.lock') }}
+          restore-keys: |
+            uv-${{ runner.os }}-${{ runner.arch }}-
       - name: Cache node_modules
         uses: actions/cache@v6
         with:
@@ -173,13 +198,6 @@ jobs:
           # 古いツリーが延々と再利用され続ける。
           # exact key のみにすれば miss 時は空 → 下の Sync step が本物の install を行う。
       # 版は .github/actions/install-devenv が固定する（devenv.yaml の require_version と対）。
-      - name: Cache Turbo task results
-        uses: actions/cache@v6
-        with:
-          path: frontend/.turbo
-          key: turbo-${{ runner.os }}-${{ github.job }}-${{ hashFiles('frontend/bun.lock', 'frontend/turbo.json', 'devenv.nix', 'devenv.lock') }}-${{ github.sha }}
-          restore-keys: |
-            turbo-${{ runner.os }}-${{ github.job }}-${{ hashFiles('frontend/bun.lock', 'frontend/turbo.json', 'devenv.nix', 'devenv.lock') }}-
       - uses: ./.github/actions/install-devenv
       # ci-check job と同じ理由（execIfModified による install の skip）。
       - name: Sync JS dependencies (install into a lockfile-matched tree)
@@ -188,6 +206,8 @@ jobs:
           cd "$DEVENV_ROOT/drizzle"  && bun install --frozen-lockfile
       - name: Run unit tests
         run: unit-test
+      - name: Minimize uv cache
+        run: uv-cache-prune
 
   db-tests:
     name: DB Tests (pgTAP / supabase test db)
@@ -269,6 +289,8 @@ jobs:
   storybook-smoke:
     name: Storybook Smoke (全ストーリーが描画されるか)
     runs-on: ubuntu-latest
+    env:
+      TURBO_CACHE_DIR: ${{ github.workspace }}/frontend/.turbo/cache
     # ここが守るのは「ビルドは通るのに描画されない」という壊れ方。
     # lint / type-check / unit-test では**原理的に検知できない**ので独立ジョブにする
     # （.claude/rules/ui-testing.md / .claude/skills/storybook/SKILL.md）。
@@ -303,6 +325,16 @@ jobs:
             frontend/tooling/*/node_modules
             drizzle/node_modules
           key: v2-${{ runner.os }}-node-modules-${{ hashFiles('frontend/bun.lock', 'drizzle/bun.lock') }}
+      # Job ごとに保存し、同 commit / 過去 commit の結果は共有復元する。
+      # タスク自身の content hash が入力・環境差分を判定する。venv/node_modules は含めない。
+      - name: Cache Turbo task results
+        uses: actions/cache@v6
+        with:
+          path: frontend/.turbo/cache
+          key: turbo-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('frontend/bun.lock', 'frontend/turbo.json', 'devenv.lock') }}-${{ github.sha }}-${{ github.job }}
+          restore-keys: |
+            turbo-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('frontend/bun.lock', 'frontend/turbo.json', 'devenv.lock') }}-${{ github.sha }}-
+            turbo-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('frontend/bun.lock', 'frontend/turbo.json', 'devenv.lock') }}-
       # 版は .github/actions/install-devenv が固定する（devenv.yaml の require_version と対）。
       - uses: ./.github/actions/install-devenv
       # ci-check job と同じ理由（execIfModified による install の skip）。

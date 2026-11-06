@@ -208,6 +208,9 @@ devenv up web           # web を軽量セットと一緒に起動
 # Development
 dev-web                # 軽量 + Next.js (web)
 dev-mobile             # 軽量 + Expo Metro (mobile, non-interactive)
+desktop-vite           # Desktop Vite 単独（他サービスを起動しない）
+desktop-vite build     # Desktop production build（Oxc minifier）
+desktop-vite --experimentalBundle # Bundled Dev の比較用（既定では無効）
 dev-all                # 全部入り (web + mobile + backend + storybook)
 build-frontend         # Next.js production build
 type-check-frontend    # tsrs type check (全 workspace)
@@ -227,6 +230,14 @@ nlx gluestack-ui@latest add --use-bun # gluestack-ui (Mobile)
 devenv tasks run model:frontend       # Supabase types + API client
 devenv tasks run model:build          # All models
 ```
+
+`build-frontend` / `type-check-frontend` / Turbo の開発タスクは Git 追跡済みの生成型・SDK を使い、
+API/DB の接続確認や型生成を自動実行しない。API や DB の定義変更時は上の `model:*` を
+明示的に実行し、生成差分をレビューする。型チェックは依存元のソース変更でもキャッシュが
+失効する transit graph を使い、各 workspace を並列に検査する。
+
+`build-storybook` は Turbo の root task で、ソース・設定・依存とツールチェーンに基づき
+`storybook-static/` をキャッシュする。キャッシュから復元した場合も `storybook-smoke` で描画を確認する。
 
 正典: `/.claude/rules/commands.md`
 
