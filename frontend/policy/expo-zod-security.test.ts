@@ -6,17 +6,19 @@ import * as z from 'zod'
 const require = createRequire(import.meta.url)
 const expoRequire = createRequire(require.resolve('@expo/cli/package.json'))
 const { PluginSchema, DevToolsPluginOutputSchema } = expoRequire(
-  './build/src/start/server/DevToolsPlugin.schema.js'
+  './build/src/start/server/devtools/DevToolsPlugin.schema.js'
 ) as {
-  PluginSchema: z.ZodType
-  DevToolsPluginOutputSchema: z.ZodType
+  PluginSchema: unknown
+  DevToolsPluginOutputSchema: unknown
+}
+const { validate } = expoRequire('@expo/schema-utils') as {
+  validate: (schema: unknown, value: unknown) => void
 }
 const { createMCPDevToolsExtensionSchema } = expoRequire(
-  './build/src/start/server/createMCPDevToolsExtensionSchema.js'
+  './build/src/start/server/mcp/createMCPDevToolsExtensionSchema.js'
 ) as {
-  createMCPDevToolsExtensionSchema: (plugin: unknown) => z.ZodType
+  createMCPDevToolsExtensionSchema: (plugin: unknown, zod: typeof z) => z.ZodType
 }
-const expoZod = expoRequire('zod') as typeof z
 
 const plugin = {
   packageName: 'test-devtools',
@@ -39,12 +41,12 @@ const plugin = {
   },
 }
 
-describe('Expo CLI compatibility with the patched Zod dependency', () => {
+describe('Expo CLI plugin validation and MCP schema compatibility', () => {
   it('uses the patched Zod parser that rejects oversized collections before visiting elements', () => {
     let visited = 0
-    const schema = expoZod
+    const schema = z
       .array(
-        expoZod.unknown().transform(() => {
+        z.unknown().transform(() => {
           visited += 1
           return 'parsed'
         })
@@ -56,10 +58,9 @@ describe('Expo CLI compatibility with the patched Zod dependency', () => {
   })
 
   it('parses valid plugin metadata and rejects invalid command parameter types', () => {
-    const parsed = PluginSchema.parse(plugin)
-    expect(parsed).toEqual(plugin)
-    expect(
-      PluginSchema.safeParse({
+    expect(() => validate(PluginSchema, plugin)).not.toThrow()
+    expect(() =>
+      validate(PluginSchema, {
         ...plugin,
         cliExtensions: {
           ...plugin.cliExtensions,
@@ -67,12 +68,13 @@ describe('Expo CLI compatibility with the patched Zod dependency', () => {
             { ...plugin.cliExtensions.commands[0], parameters: [{ name: 'x', type: 'bad' }] },
           ],
         },
-      }).success
-    ).toBe(false)
+      })
+    ).toThrow()
   })
 
   it('creates a strict MCP command schema with text, number, and confirmation parameters', () => {
-    const schema = createMCPDevToolsExtensionSchema(PluginSchema.parse(plugin))
+    validate(PluginSchema, plugin)
+    const schema = createMCPDevToolsExtensionSchema(plugin, z)
     const command = { command: 'inspect', query: 'screen', limit: 5, confirm: true }
 
     expect(schema.parse(command)).toEqual(command)
@@ -100,10 +102,10 @@ describe('Expo CLI compatibility with the patched Zod dependency', () => {
       { type: 'audio', url: 'https://example.com/audio.wav' },
     ]
 
-    expect(DevToolsPluginOutputSchema.parse(output)).toEqual(output)
-    expect(DevToolsPluginOutputSchema.safeParse([{ type: 'image', url: 42 }]).success).toBe(false)
-    expect(
-      DevToolsPluginOutputSchema.safeParse([{ type: 'text', text: 'Ready', level: 'bad' }]).success
-    ).toBe(false)
+    expect(() => validate(DevToolsPluginOutputSchema, output)).not.toThrow()
+    expect(() => validate(DevToolsPluginOutputSchema, [{ type: 'image', url: 42 }])).toThrow()
+    expect(() =>
+      validate(DevToolsPluginOutputSchema, [{ type: 'text', text: 'Ready', level: 'bad' }])
+    ).toThrow()
   })
 })

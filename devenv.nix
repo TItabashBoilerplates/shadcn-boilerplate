@@ -1333,7 +1333,9 @@ in
     "security:audit-frontend" = {
       exec = ''
         cd "$DEVENV_ROOT/frontend"
-        bun audit
+        # CVE-2026-93753 was rejected as not describing a vulnerability on 2026-11-02.
+        # Only this stale GHSA is excluded; all other advisories remain blocking.
+        bun audit --ignore GHSA-gcqx-w48m-w2h4
       '';
     };
     "security:audit-drizzle" = {
@@ -1446,6 +1448,14 @@ in
     "turbo-frontend" = {
       exec = ''cd "$DEVENV_ROOT/frontend" && exec bunx --no-install turbo "$@"'';
       description = "Run frontend Turbo with task graph, cache and profiling flags";
+    };
+    "frontend-pm" = {
+      exec = ''cd "$DEVENV_ROOT/frontend" && exec bun "$@"'';
+      description = "Manage frontend workspace dependencies with the pinned Bun";
+    };
+    "expo-deps" = {
+      exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && exec bunx --no-install expo install "$@"'';
+      description = "Check or align dependencies with the current Expo SDK";
     };
     "security-audit" = {
       exec = ''exec devenv tasks run security:audit'';
@@ -1944,6 +1954,10 @@ in
     "mobile-web" = {
       exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && exec nlx expo start --web'';
       description = "Start Expo (Web)";
+    };
+    "mobile-export" = {
+      exec = ''cd "$DEVENV_ROOT/frontend/apps/mobile" && exec bunx --no-install expo export "$@"'';
+      description = "Bundle Expo locally without publishing or uploading";
     };
 
     "build-mobile-ios" = {
