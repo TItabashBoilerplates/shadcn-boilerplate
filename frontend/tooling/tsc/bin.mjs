@@ -2,25 +2,29 @@
 import { spawn } from 'node:child_process'
 import { resolveTsc } from './resolve.mjs'
 
-/**
- * 型チェック用の tsc ラッパ。`tsc` の代わりにこれを呼ぶ。
- *
- * 解決ロジックと TypeScript 7.1 への移行手順は `resolve.mjs` を参照。
- * 引数はそのまま tsc へ渡すので `workspace-tsc --noEmit -p tsconfig.json` のように使う。
- *
- * `WORKSPACE_TSC_VERBOSE=1` を付けると、どの TypeScript を使ったかを表示する
- * （「速くなっていない気がする」ときに TS6 へフォールバックしていないか確認できる）。
- */
-
+/** Every workspace and drizzle use the same pinned tsrs compiler. */
 const { packageName, version, tscPath } = resolveTsc()
 
 if (process.env.WORKSPACE_TSC_VERBOSE) {
   console.error(`[workspace-tsc] using ${packageName}@${version}`)
 }
 
+// Keep the compiler in the same process on our Unix devenv platforms.
+if (process.platform !== 'win32' && typeof process.execve === 'function') {
+  process.execve(
+    process.execPath,
+    [process.execPath, tscPath, ...process.argv.slice(2)],
+    process.env
+  )
+}
+
 const child = spawn(process.execPath, [tscPath, ...process.argv.slice(2)], {
   stdio: 'inherit',
 })
+
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.on(signal, () => child.kill(signal))
+}
 
 child.on('error', (error) => {
   console.error(`[workspace-tsc] failed to run ${tscPath}:`, error.message)
@@ -30,6 +34,7 @@ child.on('error', (error) => {
 child.on('exit', (code, signal) => {
   // シグナルで落ちた場合は同じシグナルで自分も終わる（CI が理由を取り違えないように）
   if (signal) {
+    process.removeAllListeners(signal)
     process.kill(process.pid, signal)
     return
   }

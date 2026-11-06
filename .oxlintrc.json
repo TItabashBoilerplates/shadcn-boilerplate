@@ -1,0 +1,90 @@
+{
+	"$schema": "./frontend/node_modules/oxlint/configuration_schema.json",
+	"plugins": [
+		"typescript",
+		"unicorn",
+		"oxc",
+		"react",
+		"jsx-a11y",
+		"import",
+		"nextjs"
+	],
+	"categories": {
+		"correctness": "error"
+	},
+	"env": {
+		"builtin": true,
+		"browser": true,
+		"node": true,
+		"es2024": true
+	},
+	"ignorePatterns": [
+		"**/node_modules/**",
+		"**/.next/**",
+		"**/.turbo/**",
+		"**/dist/**",
+		"**/build/**",
+		"**/coverage/**",
+		"**/storybook-static/**",
+		"**/src-tauri/**",
+		"frontend/packages/types/schema.ts",
+		"frontend/packages/api-client/src/generated/**",
+		"**/next-env.d.ts",
+		"supabase/**",
+		".agents/**",
+		".claude/**",
+		".codex/**",
+		".devenv/**"
+	],
+	"rules": {
+		"typescript/consistent-type-imports": "error",
+		"typescript/no-explicit-any": "off",
+		"no-restricted-imports": [
+			"error",
+			{
+				"paths": [
+					{
+						"name": "@workspace/ui/components",
+						"message": "Use individual component imports instead of barrel imports."
+					}
+				]
+			}
+		],
+		"jsx-a11y/prefer-tag-over-role": "off",
+		"unicorn/no-empty-file": "off",
+		"react/immutability": "off",
+		"nextjs/no-img-element": "error",
+		"react/static-components": "off",
+		"react/use-memo": "off",
+		"react/preserve-manual-memoization": "off",
+		"react/incompatible-library": "off",
+		"react/globals": "off",
+		"react/refs": "off",
+		"react/set-state-in-effect": "off",
+		"react/error-boundaries": "off",
+		"react/purity": "off",
+		"react/set-state-in-render": "off",
+		"react/unsupported-syntax": "off",
+		"react/rule-suppression": "off",
+		"react/syntax": "off",
+		"react/todo": "off",
+		"react/memo-dependencies": "off",
+		"react/invariant": "off",
+		"unicorn/no-useless-spread": "off",
+		"unicorn/no-new-array": "off"
+	},
+	"overrides": [
+		{
+			"files": ["**/*.tsx", "**/*.ts"],
+			"rules": {
+				"react/exhaustive-deps": "warn"
+			}
+		},
+		{
+			"files": ["frontend/packages/app/hooks/useSupabaseQuery.ts"],
+			"rules": {
+				"react/exhaustive-deps": "off"
+			}
+		}
+	]
+}

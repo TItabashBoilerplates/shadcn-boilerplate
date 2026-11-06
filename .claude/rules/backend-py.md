@@ -19,7 +19,7 @@ paths: backend-py/**/*.py
 
 ```
 backend-py/
-├── pyproject.toml                  # workspace root（共通 tooling: ruff/mypy/pytest）
+├── pyproject.toml                  # workspace root（共通 tooling: ruff/ty/pytest）
 ├── apps/
 │   ├── api/src/api/                # FastAPI サーバ
 │   │   ├── controller/             # HTTP request/response only
@@ -113,7 +113,7 @@ from src.infra.supabase_client import SupabaseClient
 
 - **Linting**: Ruff
 - **Line Length**: 88 characters
-- **Type Checking**: MyPy (strict mode)
+- **Type Checking**: ty（型注釈の必須化は Ruff と分担）
 - **Docstrings**: Google style
 - **Max Function Complexity**: 3 (McCabe)
 

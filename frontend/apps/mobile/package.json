@@ -8,9 +8,10 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "lint": "eslint . --max-warnings 0",
-    "lint:fsd": "eslint . --max-warnings 0 --rule 'boundaries/dependencies: error'",
-    "type-check": "workspace-tsc --noEmit"
+    "lint": "oxlint --deny-warnings --no-error-on-unmatched-pattern -c oxlint.config.mjs . --fix && eslint --no-config-lookup -c ../../tooling/eslint/compat.mjs src --max-warnings 0",
+    "lint:fsd": "oxlint --deny-warnings --no-error-on-unmatched-pattern -c oxlint.config.mjs . && eslint --no-config-lookup -c ../../tooling/eslint/compat.mjs src --max-warnings 0",
+    "type-check": "workspace-tsc --noEmit",
+    "lint:ci": "oxlint --deny-warnings --no-error-on-unmatched-pattern -c oxlint.config.mjs . && eslint --no-config-lookup -c ../../tooling/eslint/compat.mjs src --max-warnings 0"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -53,13 +54,10 @@
     "react-native-worklets": "0.10.1"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/react": "~19.2.18",
-    "@workspace/eslint-config": "workspace:*",
     "@workspace/tsc": "workspace:*",
     "eslint": "^9.39.5",
-    "eslint-config-expo": "~57.0.2",
     "onesignal-expo-plugin": "^2.7.2",
     "postcss": "^8.5.30",
     "tailwindcss": "^4.3.3"

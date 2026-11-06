@@ -63,10 +63,10 @@ devenv up backend web   # 任意組み合わせ
 stop                    # devenv プロセス + Supabase 全停止
 
 # Quality
-lint-frontend           # Biome lint (auto-fix)
-format-frontend         # Biome format (auto-fix)
-type-check-frontend     # tsc --noEmit
-lint-fsd                # FSD boundary check (web + mobile, ESLint)
+lint-frontend           # Oxlint (auto-fix)
+format-frontend         # Biome format + import assist (auto-fix)
+type-check-frontend     # tsrs --noEmit (全 workspace)
+lint-fsd                # FSD boundary check (web + mobile + desktop)
 test-frontend           # Vitest
 
 # Build
@@ -111,10 +111,11 @@ bunx shadcn@latest add form
 
 ### Frontend
 
-- **Linting & Formatting**: Biome (all-in-one toolchain, replaces ESLint + Prettier)
-- **Configuration**: `biome.json` at root with Next.js-optimized rules
+- **Linting**: Oxlint を正規経路とし、移行中の未対応規則は移行表で管理する
+- **Formatting & Import Organization**: Biome formatter + assist
+- **Configuration**: Oxlint の設定と各階層の `biome.json`。移行状況は `docs/designs/rust-toolchain-migration.md`
 - **Code Style**: 2-space indentation, 100-character line width, single quotes, semicolons as needed
-- **TypeScript**: Strict mode enabled with type-only import enforcement
+- **TypeScript**: tsrs による strict 型チェック。型専用 import は lint でも検査する
 - **Styling**: TailwindCSS 4 with CSS variables
 - **UI Components**: shadcn/ui component library with "New York" style
 - **Import Organization**: Auto-organize imports on save/format
@@ -438,7 +439,7 @@ For complete examples and detailed patterns, see `docs/rendering-strategy.md` - 
 - **変換を通すだけでは足りない。`width` / `height` は実際の表示サイズから決める**（元サイズの丸投げ禁止）。
 - **`fill` を使うなら `sizes` は必須**（無いとブラウザは 100vw と解釈し、小さな枠でも最大幅が落ちてくる）。
   `SupabaseImage` が型と実行時（`assertResponsiveSizes`）で要求する。
-- **`<img>` は使わない**（biome の `noImgElement` が error）。
+- **`<img>` は使わない**（lint の画像要素制限で検査する）。
 - 幅は `IMAGE_WIDTH_LADDER` の段に丸まる（CDN キャッシュのため）。自前で計算しない。
 - `next.config.ts` の `images.imageSizes` / `deviceSizes` はこの段と一致させる（Supabase の上限は 2500）。
 - `images.loaderFile` は使わない（全 `next/image` に効いてローカル静的画像まで壊れる）。

@@ -8,6 +8,9 @@
 		"VisualStudioExptTeam.vscodeintellicode",
 		"GitHub.copilot",
 		"GitHub.copilot-chat",
-		"eamodio.gitlens"
+		"eamodio.gitlens",
+		"oxc.oxc-vscode",
+		"astral-sh.ty",
+		"charliermarsh.ruff"
 	]
 }

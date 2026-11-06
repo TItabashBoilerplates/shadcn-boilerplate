@@ -54,6 +54,12 @@ Codex の標準探索先 `.agents/skills/claude` は `.claude/skills/` への相
 | `backend-py/` | **uv**（workspace root から `--all-packages`） |
 | `supabase/functions/` | **Deno** |
 
+## Development toolchain
+
+JS/TS の主 lint は Oxlint、TS 型チェックは tsrs、Python 型チェックは ty。Biome は format・import assist と未移行 lint、Ruff は Python lint・format を担当する。移行状況と残る互換性制約は `docs/designs/rust-toolchain-migration.md` に記録する。
+
+Python テストは pytest-xdist の並列実行が既定（初期値2 worker）。AI エージェントは CPU・RAM・外側の並列タスクを見て `test-backend-py -n 4` / `-n auto --maxprocesses 4` 等で調整する。`-n 0` はデバッグ用。小規模スイートでは直列の方が速いことがあるが、並列優先はユーザーの選択である。
+
 ## Commands（MANDATORY: devenv のみ）
 
 **すべて devenv の scripts（PATH 直結）か `devenv tasks run <name>` で実行する。** `bun run biome` /

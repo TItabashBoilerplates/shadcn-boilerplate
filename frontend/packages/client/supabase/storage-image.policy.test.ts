@@ -68,9 +68,9 @@ describe('共有コンポーネントの存在', () => {
     expect(content).toContain('assertResponsiveSizes')
   })
 
-  it('<img> 要素を biome が error で止める（next/image・SupabaseImage を迂回させない）', () => {
-    const biomeConfig = JSON.parse(readFileSync(join(FRONTEND_ROOT, 'biome.json'), 'utf-8'))
-    expect(biomeConfig.linter?.rules?.performance?.noImgElement).toBe('error')
+  it('<img> 要素を Oxlint が error で止める（next/image・SupabaseImage を迂回させない）', () => {
+    const lintConfig = JSON.parse(readFileSync(join(FRONTEND_ROOT, '../.oxlintrc.json'), 'utf-8'))
+    expect(lintConfig.rules?.['nextjs/no-img-element']).toBe('error')
   })
 
   it('web のローダーは next/image のグローバル loaderFile ではなく loader prop で使う', () => {

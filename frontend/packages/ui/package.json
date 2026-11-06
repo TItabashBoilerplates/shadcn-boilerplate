@@ -17,7 +17,9 @@
     "./postcss.config": "./postcss.config.mjs"
   },
   "scripts": {
-    "type-check": "workspace-tsc --noEmit"
+    "type-check": "workspace-tsc --noEmit",
+    "lint:ci": "oxlint --no-error-on-unmatched-pattern .",
+    "lint": "oxlint --no-error-on-unmatched-pattern --fix ."
   },
   "dependencies": {
     "@hookform/resolvers": "^5.9.1",

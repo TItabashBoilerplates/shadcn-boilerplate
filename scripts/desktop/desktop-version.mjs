@@ -51,7 +51,7 @@ export function readUpdaterEndpoint() {
 	const conf = readTauriConf();
 	const endpoints = conf.plugins?.updater?.endpoints ?? [];
 	const endpoint = endpoints[0];
-	if (!endpoint || !/^https:\/\//.test(endpoint)) {
+	if (typeof endpoint !== "string" || !endpoint.startsWith("https://")) {
 		throw new Error(
 			"tauri.conf.json の plugins.updater.endpoints が未設定です。" +
 				" `desktop-updater-keygen --supabase-url https://<ref>.supabase.co` で配線してください" +

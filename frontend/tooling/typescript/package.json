@@ -6,5 +6,9 @@
   "exports": {
     "./base.json": "./base.json",
     "./nextjs.json": "./nextjs.json"
+  },
+  "scripts": {
+    "lint:ci": "oxlint --no-error-on-unmatched-pattern .",
+    "lint": "oxlint --no-error-on-unmatched-pattern --fix ."
   }
 }
