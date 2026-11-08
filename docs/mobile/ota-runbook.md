@@ -1,5 +1,10 @@
 # OTA 更新（expo-updates / EAS Update）運用手順
 
+**EAS Update の配信操作はクラウド配信サービスを使うため、原則 CI/CD 内でのみ実行する。** ローカルからは
+以下の `mobile-update` / EAS 環境変数同期を実行しない。
+実行場所の判断は [モバイルリリースの必須ルール](../../.claude/rules/mobile-release.md) に従う。
+ストア向けの `eas build --local` はローカル実行なので利用可。EAS CLI 自体は禁止しない。
+
 JS とアセットだけの修正を、ストア審査なしでインストール済みアプリへ配る仕組み。
 判断の正本は `.claude/skills/app-update/`（§8: OTA と強制アップデートの役割分担）。
 

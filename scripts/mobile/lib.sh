@@ -5,7 +5,7 @@
 #   - **値は絶対に出さない**（キー名とファイルパスだけをログに出す）
 #   - 一時的な資格情報は `frontend/apps/mobile/credentials/`（.gitignore 済み）に置き、
 #     trap で必ず消す
-#   - ビルドは **クラウド（expo.dev / EAS）と ローカル（--local）の両方**を同じ手順で扱う
+#   - ローカル実行はローカルビルド + ストア直接提出。クラウドジョブは CI/CD 内のみ。
 set -euo pipefail
 
 MOBILE_LIB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -21,6 +21,21 @@ mlog()  { printf '\033[0;36m▶\033[0m %s\n' "$*"; }
 mok()   { printf '\033[0;32m✓\033[0m %s\n' "$*"; }
 mwarn() { printf '\033[0;33m⚠\033[0m %s\n' "$*" >&2; }
 mdie()  { printf '\033[0;31m✗\033[0m %s\n' "$*" >&2; exit 1; }
+
+# CI=true だけではクラウド実行を許可しない（CI プロバイダーの実行環境を確認）。
+mobile_is_cicd() {
+  [ "${GITHUB_ACTIONS:-}" = true ] || [ "${GITLAB_CI:-}" = true ] \
+    || [ "${BUILDKITE:-}" = true ] || [ "${TF_BUILD:-}" = True ] \
+    || [ "${EAS_BUILD:-}" = true ]
+}
+
+mobile_default_build_mode() {
+  if mobile_is_cicd; then echo cloud; else echo local; fi
+}
+
+mobile_require_cloud_runner() {
+  mobile_is_cicd || mdie "EAS クラウド実行は原則 CI/CD 内のみです。手元では --local を使ってください。"
+}
 
 # ── 設定（非機密。config.env が無くても既定値で動く）────────────────────
 mobile_load_config() {

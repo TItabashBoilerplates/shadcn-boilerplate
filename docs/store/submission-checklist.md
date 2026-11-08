@@ -132,9 +132,10 @@ store-create-play-offers        --dry-run && store-create-play-offers
 ## 5. ビルドしてアップロードする
 
 ```bash
-sync-eas-env production        # Doppler の EXPO_PUBLIC_* を EAS へ（これが無いと起動直後に落ちる）
-mobile-release-ios             # build → App Store Connect へアップロード
-mobile-release-android         # build → Play へアップロード（draft）
+# AI の実行は必ず明示的な --local（CI/CD 上でも同じ）。EAS CLI のローカル実行は可。
+# ローカルビルドは Doppler の env を直接使うので sync-eas-env は不要。
+mobile-release-ios --local      # ローカル build → Apple altool で直接アップロード
+mobile-release-android --local  # ローカル build → Play API で直接アップロード（draft）
 ```
 
 ⚠️ **ここまでではリリースは完了していない。** iOS は処理待ちで誰にも届いておらず、

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # iOS を「ビルド → App Store Connect（TestFlight）」まで通す。
 #
-#   mobile-release-ios                     # expo.dev（EAS クラウド）でビルド → 提出（~20-30分）
-#   mobile-release-ios --local             # ローカルビルド（macOS + Xcode。EAS のビルド枠を消費しない）
+#   mobile-release-ios                     # 手元はローカルビルド → Apple へ直接提出。CI/CD は EAS
+#   mobile-release-ios --local             # EAS CLI でローカルビルド → altool で直接提出（クラウドジョブなし）
+#   mobile-release-ios --cloud             # CI/CD 内のみ: EAS クラウドビルド → 提出
 #   mobile-release-ios --ipa <path|url>    # 既存の .ipa を再提出（ビルドしない）
 #   mobile-release-ios --metadata-only     # store.config.js を ASC へ同期するだけ
 #   mobile-release-ios --dry-run           # 何を実行するかだけ表示
@@ -11,9 +12,9 @@
 #   1. Doppler の secrets を注入（自分自身を `doppler run` で再実行）
 #   2. App Store Connect API キー(.p8) を実行中だけ復元（終了時に必ず削除）
 #   3. eas.json の submit プロファイルへ ASC 資格情報を注入（終了時に必ず復元）
-#   4. EXPO_PUBLIC_* を EAS の Environment Variables へ push（ビルドに焼き込む）
+#   4. cloud のみ EXPO_PUBLIC_* を EAS へ push。local は Doppler の env を直接使う
 #   5. iOS ビルド（クラウド or ローカル）→ .ipa を取得
-#   6. App Store Connect へ提出（既定 `eas submit`。`--submit-via altool` で Apple 公式 CLI）
+#   6. App Store Connect へ提出（local は Apple altool、cloud は既定 EAS Submit）
 #   7. store.config.js があれば App Store メタデータを同期
 #
 # 事前に一度だけ必要な手作業（公開 API では自動化できない）:
@@ -31,7 +32,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/mobile/lib.sh
 . "$SCRIPT_DIR/lib.sh"
 
-BUILD_MODE="cloud"
+BUILD_MODE="$(mobile_default_build_mode)"
 IPA_INPUT=""
 METADATA_ONLY=0
 # ⚠️ 既定値をここで解決しない。config.env を読むのは main の mobile_load_config で、
@@ -57,9 +58,16 @@ parse_args() {
   done
 }
 
-# 優先順位: コマンドラインの --submit-via > config.env / env の IOS_SUBMIT_VIA > eas
+# --local は設定ファイルの eas 指定より優先し、提出も必ずローカルから行う。
 resolve_submit_via() {
-  SUBMIT_VIA="${SUBMIT_VIA:-${IOS_SUBMIT_VIA:-eas}}"
+  if [ "$BUILD_MODE" = local ]; then
+    [ "$SUBMIT_VIA" != eas ] || mdie "--local では eas submit を使えません。--submit-via altool を使ってください。"
+    SUBMIT_VIA="${SUBMIT_VIA:-altool}"
+    PUSH_ENV=0
+  else
+    mobile_require_cloud_runner
+    SUBMIT_VIA="${SUBMIT_VIA:-${IOS_SUBMIT_VIA:-eas}}"
+  fi
   case "$SUBMIT_VIA" in eas|altool) : ;; *) mdie "--submit-via は eas か altool（今の値: ${SUBMIT_VIA}）" ;; esac
 }
 
@@ -165,8 +173,8 @@ submit_via_eas() {
 submit_via_altool() {
   # `--use-old-altool` は Xcode 26.x の新アップローダが正常な .ipa を ITMS-90207 と
   # 誤判定する既知バグの回避で、Apple 自身が用意した公式フラグ。
-  # EAS の submit キューが混んでいるときの逃げ道として用意している（macOS 専用）。
-  command -v xcrun >/dev/null 2>&1 || mdie "altool には macOS + Xcode が必要です（--submit-via eas を使ってください）"
+  # ローカルリリースの標準提出経路。EAS Submit のクラウドジョブを作らない。
+  command -v xcrun >/dev/null 2>&1 || mdie "altool には macOS + Xcode が必要です。クラウドへの自動切り替えはしません。"
   # altool は $HOME 側の固定パスからしか鍵を読まない（CLI で場所を渡せない）。
   local key_path="$HOME/.appstoreconnect/private_keys/AuthKey_${APPLE_API_KEY}.p8"
   if [ -f "$key_path" ]; then

@@ -93,8 +93,12 @@ devenv tasks run model:build       # 型のみ再生成
 ENV=production devenv tasks run -P production db:migrate-deploy   # 緊急時のみ
 
 # Deploy / Release（資格情報はすべて Doppler。vercel / eas を直接叩かない）
+# Mobile: AI が実行するビルド・リリースは明示的な --local のみ（CI/CD 上の AI も同じ）。
+# 引数なし / --cloud / eas submit / CI の迂回起動は禁止。クラウドは CI/CD ジョブ定義側に限定。
+# 必須ルール: .claude/rules/mobile-release.md（--local にクラウド実行を残さない）。
 vercel-deploy [app]                # → .claude/skills/vercel-deploy/
-mobile-release-ios / -android      # 「アップロードまで」。配布・審査提出は store-status / store-testflight /
+mobile-release-ios --local         # 「アップロードまで」（Android は mobile-release-android --local）。
+                                   # 配布・審査提出は store-status / store-testflight /
                                    #   store-submit-ios / store-release-play → .claude/skills/mobile-release/
 mobile-update <env> -m "msg"       # JS/アセットを OTA 配信（EAS Update）→ docs/mobile/ota-runbook.md
 store-push-* / store-create-*      # 掲載情報・課金商品（必ず先に --dry-run）→ .claude/skills/store-screenshots/
@@ -129,6 +133,7 @@ desktop-wire-signing               # Apple 署名/公証 + updater 鍵を Dopple
 | `error-handling.md` | 握りつぶし禁止。catch はログ + リスロー or Result 型。supabase-js の `{ error }` は必ず見る | 常時 |
 | `supabase-first.md` | supabase-js → Edge Functions → backend-py（LLM / エージェント / 長時間 / 複雑のみ）。Storage は private 既定 | 常時 |
 | `commands.md` | devenv コマンド必須。`devenv test` を verify に使わない。`scripts/` はルートの biome 設定 | 常時 |
+| `mobile-release.md` | AI のビルド・リリース実行は明示的な `--local` のみ。CI/CD 内でも `--cloud` 不可。クラウドジョブの迂回起動も禁止 | 常時 |
 | `auto-generated.md` | `packages/types/schema.ts` 等の生成物は編集しない。正は `drizzle/schema/` | 常時 |
 | `mcp-supabase.md` | Supabase インフラの調査・操作は `supabase` / `supabase-prod`(read-only) MCP。psql / curl / CLI 直叩き禁止 | 常時 |
 | `mcp-doppler.md` | Doppler は `doppler` MCP のみ。フェーズは `PROJECT.md` の `doppler_phase`。値をチャット / ログに出さない | 常時 |

@@ -1,22 +1,23 @@
 ---
 name: mobile-release
-description: Expo / EAS のモバイルリリースを**ユーザーに届くところまで**回すための手順。ビルドとアップロード（クラウド / --local 両対応）に加え、**アップロード後**の TestFlight 配布・App Store の審査提出・Google Play のトラック昇格と段階的公開まで扱う。「アプリをリリースして」「TestFlight に上げて」「Play に出して」「審査に出して」「ストアに公開して」「段階的に配って」「ロールアウトを止めて」「審査を取り下げて」「リリースの状況を見て」「ビルドして提出して」「EAS でビルド」「mobile-release-ios」「アップロードしたのに配布されない / TestFlight に出ない」「起動直後にクラッシュする（EXPO_PUBLIC_* が焼き込まれていない）」といった指示・症状が出たら必ず最初に起動する。資格情報の扱い、eas.json への一時注入と復元、EAS への env push、審査中の版を壊さないための状態判断、既知のビルド失敗の回避策を提供する。
+description: TestFlight / App Store / Google Play へのビルド・アップロード・配布・審査提出・段階的公開を扱う。「リリースして」「TestFlight に上げて」「Play に出して」「EAS でビルド」や mobile-release-* の実行前に使う。AI が実行できるビルド・リリースは明示的な --local のみ。CI/CD 上の AI も --cloud は使わない。EAS CLI のローカル実行は利用可。
 ---
 
-# モバイルリリース（EAS）
+# モバイルリリース
 
-**リリースを指示されたら、手で `eas build` / `eas submit` を叩く前に必ず下記 script を使うこと。**
-資格情報の復元・eas.json の注入と復元・env の push・既知バグの回避が全部入っている。
+**最初に [実行場所の必須ルール](../../rules/mobile-release.md) を読む。**
+**AI が実行してよいビルド・リリースは明示的な `--local` のみ。CI/CD 上でも同じ。**
+引数なし、`--cloud`、`eas submit`、クラウドジョブを実行する CI/CD の迂回起動は禁止。
+ローカルは **`--local` でビルドからストアへの直接提出までクラウドジョブを使わず完結させる**。
+EAS CLI 自体は利用可。認証・プロジェクト確認・署名情報取得の補助通信も許可する。
+`--local` を禁止するのではなく、クラウドビルドや `eas submit` が混入したら実装を修正する。
+クラウド実行は原則 CI/CD 内のみ。失敗時にクラウドへ自動で切り替えない。
 
 ```bash
-mobile-release-ios                 # expo.dev（EAS クラウド）でビルド → アップロード
-mobile-release-ios --local         # ローカルビルド（macOS + Xcode。ビルド枠を消費しない）
-mobile-release-android             # expo.dev でビルド → Play へアップロード
-mobile-release-android --local     # ローカルビルド（要 devenv shell -P android）
-
-mobile-release-ios --dry-run       # 何を実行するかだけ表示（ビルドも提出もしない）
-mobile-metadata                    # store.config.js を App Store Connect へ同期するだけ
-sync-eas-env production            # EXPO_PUBLIC_* を EAS へ同期するだけ
+mobile-release-ios --local         # eas build --local → Apple altool で直接アップロード
+mobile-release-android --local     # eas build --local → Play API で直接アップロード（draft）
+mobile-release-ios --local --dry-run # 何を実行するかだけ表示（ビルドも提出もしない）
+mobile-metadata --local             # store.config.js を App Store Connect へ同期するだけ
 ```
 
 > ⚠️ **これらは「アップロードまで」で、リリースは完了しない。**
@@ -73,22 +74,20 @@ mobile-release-ios
 
 ---
 
-## 0. クラウド（expo.dev）とローカルのどちらを使うか
+## 0. 実行場所を先に決める
 
-| | クラウド（既定） | ローカル（`--local`） |
-|---|---|---|
-| コマンド | `mobile-release-ios` | `mobile-release-ios --local` |
-| 実体 | `eas build`（expo.dev のビルダー） | `eas build --local`（同じ設定で手元の Xcode / Gradle を回す） |
-| EAS のビルド枠 | **消費する** | **消費しない** |
-| 所要 | ~20-30 分（キュー待ち含む） | ~20-40 分（マシン依存） |
-| 必要な環境 | 無し（Linux でも可） | iOS = macOS + Xcode / Android = JDK 17 + Android SDK |
-| 成果物 | クラウドから .ipa / .aab をダウンロード | `--output` に直接生成 |
+| 実行場所 | 使用する経路 |
+|---|---|
+| ローカル | `mobile-release-* --local`。EAS CLI で手元の Xcode / Gradle を回し、Apple altool / Play API へ直接提出 |
+| CI/CD のジョブ定義 | クラウド実行を利用可。エージェント自身が実行する場合は runner 上でも明示的な `--local` のみ |
 
-**成果物は同等**（同じ設定・同じ credentials を使う）。枠を節約したいときや、キューが
-詰まっているときにローカルへ切り替える。判断がつかないときは既定（クラウド）でよい。
+ローカルで `CI=true` を設定しても CI/CD 扱いにはしない。単なるリリース依頼は
+クラウドジョブを起動する例外承認ではない。エージェントは CI/CD の起動でこの制限を迂回しない。
 
-> ローカルビルドの公式な制約: プラットフォームを 1 つに絞る必要がある（`all` 不可）、
-> キャッシュ無し、EAS の **secret 型** 環境変数は使えない、Windows 非対応。
+ローカルでも EAS CLI の `EXPO_TOKEN` は必要（クラウドジョブ用ではなく認証用）。
+iOS の直接提出は macOS + Xcode が必要。Android は `devenv shell -P android` を使う。
+Android の直接提出は `eas.json` の `submit.<profile>.android.track`（未指定なら internal）へ draft で置く。
+既存 draft は上書きせず停止する。配布・本番昇格は §6 のコマンドで行う。
 
 ---
 
@@ -125,20 +124,23 @@ cp scripts/mobile/config.example.env scripts/mobile/config.env   # gitignore 済
 
 ---
 
-## 2. script が行うこと（＝手でやる場合の正しい順序）
+## 2. script が行うこと
 
 1. **Doppler の secrets を自己注入**（`doppler run` で自分自身を再実行）
 2. **資格情報を実行中だけ復元** — `.p8` / サービスアカウント JSON を
    `frontend/apps/mobile/credentials/`（gitignore 済み・`chmod 700`）へ。**trap で必ず消す**
 3. **eas.json へ ASC 資格情報を注入**（iOS のみ。§4）
-4. **`EXPO_PUBLIC_*` を EAS の Environment Variables へ push**（§3）
-5. **ビルド**（クラウド or ローカル）
-6. **提出** — iOS は `eas submit`（`--submit-via altool` で Apple 公式 CLI）、Android は `eas submit`
+4. **クラウド実行時だけ `EXPO_PUBLIC_*` を EAS の Environment Variables へ push**（§3）。ローカルは Doppler の env を直接使う
+5. **ビルド** — local は `eas build --local`、cloud は `eas build`
+6. **提出** — local は iOS: altool / Android: Play API、cloud は EAS Submit（iOS は `--submit-via altool` も可）
 7. **メタデータ同期** — `store.config.js` があれば `eas metadata:push`
 
 ---
 
-## 3. `EXPO_PUBLIC_*` の EAS への push は必須
+## 3. CI/CD の EAS 経路では `EXPO_PUBLIC_*` を push する
+
+**ローカルでは EAS へ同期しない。** Doppler からビルドプロセスへ直接渡す。
+以下は CI/CD で EAS を利用する場合の説明。
 
 Doppler は Vercel / Supabase へはネイティブ連携があるが **EAS には無い**。
 一方 `eas.json` の各ビルドプロファイルは `"environment": "production"` で **EAS 側の**
@@ -397,7 +399,8 @@ store-create-play-offers           # 無料トライアル（作成 → activate
 1. `ci-check`（lint / format / type-check）
 2. `unit-test`（`store-metadata` / `release-plan` / `required-flows` の検査を含む）
 3. `store-status` で**今の状態**を確認する（審査中の版に手を入れないため）
-4. `mobile-release-ios --dry-run` で注入内容と push 対象キーを目視
+4. `mobile-release-ios --local --dry-run`（Android は `mobile-release-android --local --dry-run`）で
+   ローカルビルドと直接提出の経路を確認する。クラウド用の説明をエージェントの実行許可と解釈しない
 
 **All Green でないままリリースしない**（`.claude/rules/tdd.md`）。
 
@@ -405,8 +408,8 @@ store-create-play-offers           # 無料トライアル（作成 → activate
 
 ## 8. 完了報告に必ず含めること
 
-- ビルドモード（クラウド / ローカル）と **profile**
-- EAS へ push した **EXPO_PUBLIC_* のキー名**と、空値で落としたキー（値は出さない）
+- 実行場所（ローカル / CI/CD）、ビルド・署名・提出の経路と **profile**
+- CI/CD の EAS 経路では、push した **EXPO_PUBLIC_* のキー名**と空値で落としたキー（値は出さない）
 - 成果物のサイズ、提出先（TestFlight のグループ名 / Play の track）
 - **eas.json が git のクリーンな状態に戻っていること**
 - **リリースがどこまで進んだか** — 審査提出済みか、Play は何 % で配布中か

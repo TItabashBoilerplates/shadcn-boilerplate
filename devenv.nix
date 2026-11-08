@@ -1639,12 +1639,12 @@ in
     # 前提と必要なシークレットは scripts/mobile/release-*.sh の冒頭 / .claude/skills/mobile-release/。
     "mobile-release-ios" = {
       exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/release-ios.sh" "$@"'';
-      description = "iOS を build → TestFlight（既定 expo.dev / --local でローカルビルド）";
+      description = "iOS を build → TestFlight（手元は --local + Apple 直接提出 / CI/CD は EAS）";
     };
 
     "mobile-release-android" = {
       exec = ''exec bash "$DEVENV_ROOT/scripts/mobile/release-android.sh" "$@"'';
-      description = "Android を build → Play 内部テスト（既定 expo.dev / --local でローカルビルド）";
+      description = "Android を build → Play draft（手元は --local + Play API / CI/CD は EAS）";
     };
 
     "mobile-update" = {

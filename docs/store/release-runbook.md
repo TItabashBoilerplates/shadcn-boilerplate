@@ -1,5 +1,14 @@
 # リリース手順書（エージェントが最後まで回すための正本）
 
+**実行場所の必須ルール**: ローカルは `mobile-release-ios --local` /
+`mobile-release-android --local` でビルドからストアへの直接提出まで完結させる。
+EAS CLI 自体は利用可。**AI エージェントは実行場所を問わず明示的な `--local` のみを使う。**
+引数なし、`--cloud`、`eas submit`、クラウドジョブを起動する CI/CD の迂回利用は禁止。
+クラウド実行を利用できるのは CI/CD のジョブ定義側であり、エージェントの実行許可ではない。
+失敗時にクラウドへ自動で切り替えない。
+[ルールの正本](../../.claude/rules/mobile-release.md) を先に読む。
+認証・署名情報取得の補助通信と、クラウドジョブでの実行を混同しない。
+
 **このファイルの目的**: 「ビルドした」で止まらず、**ユーザーの端末に届くところまで**を
 コマンドだけで完了させる。人が App Store Connect / Play Console を開く必要があるのは
 [§4 の一度きりの作業](#4-人でしかできないこと公開-api-が無い)だけにする。
@@ -44,8 +53,8 @@ store-status --json     # エージェント / CI 用
 
 ```
                     ┌─ ①ビルド & アップロード ─┐
-                    │  mobile-release-ios      │  ← ここまでは以前からあった
-                    │  mobile-release-android  │
+                    │ mobile-release-ios --local     │
+                    │ mobile-release-android --local │
                     └────────────┬─────────────┘
                                  │  ★ ここで人が画面を開く必要があった
                     ┌────────────┴─────────────┐
@@ -61,7 +70,7 @@ store-status --json     # エージェント / CI 用
 
 | # | やること | iOS | Android |
 |---|---|---|---|
-| 1 | ビルド & アップロード | `mobile-release-ios` | `mobile-release-android` |
+| 1 | ビルド & アップロード（ローカル） | `mobile-release-ios --local` | `mobile-release-android --local` |
 | 2 | 掲載情報（初回・変更時） | `mobile-metadata` + `store-push-ios-screenshots` | `store-push-play-listing` |
 | 3 | テスターへ配る | `store-testflight --wait` | `store-release-play --track internal --rollout 1` |
 | 4 | 本番へ出す | `store-submit-ios` | `store-release-play --from internal --track production --rollout 0.1` |

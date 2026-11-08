@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Android を「ビルド → Google Play」まで通す。
 #
-#   mobile-release-android                  # expo.dev（EAS クラウド）でビルド → 提出
-#   mobile-release-android --local          # ローカルビルド（EAS のビルド枠を消費しない）
+#   mobile-release-android                  # 手元はローカルビルド → Play API へ直接提出。CI/CD は EAS
+#   mobile-release-android --local          # EAS CLI でローカルビルド → Play API（クラウドジョブなし）
+#   mobile-release-android --cloud          # CI/CD 内のみ: EAS クラウドビルド → 提出
 #   mobile-release-android --aab <path>     # 既存 AAB を提出するだけ
 #   mobile-release-android --dry-run        # 何を実行するかだけ表示
 #
@@ -10,14 +11,14 @@
 #   1. Doppler の secrets を注入（自分自身を `doppler run` で再実行）
 #   2. Play のサービスアカウント鍵を実行中だけ復元（終了時に必ず削除）
 #      → eas.json の submit.<profile>.android.serviceAccountKeyPath がこのパスを指す
-#   3. EXPO_PUBLIC_* を EAS の Environment Variables へ push
+#   3. cloud のみ EXPO_PUBLIC_* を EAS へ push。local は Doppler の env を直接使う
 #   4. Android ビルド（クラウド or ローカル）→ .aab を取得
-#   5. eas submit で Play へ提出
+#   5. local は Google Play API、cloud は EAS Submit で提出
 #
 # 署名鍵は **EAS がリモートに保持する keystore** を使う（`--local` でも EXPO_TOKEN で取得する）。
 # iOS のような credentials.json はデフォルトでは使わない。
 #
-# 提出は eas.json の `releaseStatus: draft` で止まる。**配布の開始は Play Console で手動**
+# local の提出は draft で止まる（cloud は eas.json の releaseStatus に従う）。配布は store-release-play。
 # （いきなりテスターへ配られないようにするため）。
 #
 # 事前に一度だけ必要な手作業:
@@ -33,7 +34,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=scripts/mobile/lib.sh
 . "$SCRIPT_DIR/lib.sh"
 
-BUILD_MODE="cloud"
+BUILD_MODE="$(mobile_default_build_mode)"
 AAB_INPUT=""
 PUSH_ENV=1
 DRY_RUN=0
@@ -134,6 +135,7 @@ build_local() {
 main() {
   mobile_load_config
   parse_args "$@"
+  if [ "$BUILD_MODE" = local ]; then PUSH_ENV=0; else mobile_require_cloud_runner; fi
   mobile_doppler_reexec "$@"
 
   KEY_PATH="$CRED_DIR/play-sa.json"
@@ -174,10 +176,16 @@ main() {
   [ -f "$AAB_PATH" ] || mdie "成果物が生成されていません: $AAB_PATH"
   mok "成果物: $AAB_PATH ($(du -h "$AAB_PATH" | cut -f1))"
 
-  mlog "Play へ提出（eas submit）..."
-  ( cd "$APP_DIR" && eas_cli submit --platform android --profile "$EAS_PROFILE" \
-      --path "$AAB_PATH" --non-interactive ) \
-    || mdie "eas submit に失敗（Play Console のアプリ作成とサービスアカウント権限を確認）"
+  if [ "$BUILD_MODE" = local ]; then
+    mlog "Google Play API へ直接アップロード（EAS Submit は使いません）..."
+    MOBILE_APP_DIR="$MOBILE_APP_DIR" node "$SCRIPT_DIR/store-run.mjs" play-upload-bundle.mjs "$AAB_PATH" "$EAS_PROFILE" \
+      || mdie "Play API への直接提出に失敗"
+  else
+    mlog "Play へ提出（eas submit）..."
+    ( cd "$APP_DIR" && eas_cli submit --platform android --profile "$EAS_PROFILE" \
+        --path "$AAB_PATH" --non-interactive ) \
+      || mdie "eas submit に失敗（Play Console のアプリ作成とサービスアカウント権限を確認）"
+  fi
 
   printf '\n'
   mok "提出しました。Play Console → テスト → 内部テスト で確認し、"
