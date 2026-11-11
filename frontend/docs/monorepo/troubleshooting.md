@@ -96,16 +96,10 @@ bun run build
 {
   "tasks": {
     "build": {
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        ".env*"
-      ]
+      "inputs": ["$TURBO_DEFAULT$", ".env*"]
     }
   },
-  "globalDependencies": [
-    "**/.env*",
-    "turbo.json"
-  ]
+  "globalDependencies": ["**/.env*", "turbo.json"]
 }
 ```
 
@@ -123,10 +117,7 @@ bun run build
 
 ```json
 {
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ]
+  "workspaces": ["apps/*", "packages/*"]
 }
 ```
 
@@ -272,9 +263,9 @@ import { Button } from '@workspace/ui/button'
 ```typescript
 const config: Config = {
   content: [
-    "./src/**/*.{js,ts,jsx,tsx,mdx}",
-    "./app/**/*.{js,ts,jsx,tsx,mdx}",
-    "../../packages/ui/components/**/*.{js,ts,jsx,tsx}" // ← 追加
+    './src/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+    '../../packages/ui/components/**/*.{js,ts,jsx,tsx}', // ← 追加
   ],
   // ...
 }
@@ -333,10 +324,7 @@ bun add -D @types/node @types/react @types/react-dom
     "composite": true,
     "incremental": true
   },
-  "references": [
-    { "path": "../../packages/ui" },
-    { "path": "../../packages/types" }
-  ]
+  "references": [{ "path": "../../packages/ui" }, { "path": "../../packages/types" }]
 }
 ```
 
@@ -353,14 +341,10 @@ bun add -D @types/node @types/react @types/react-dom
 `apps/web/next.config.ts`を確認:
 
 ```typescript
-import type { NextConfig } from "next"
+import type { NextConfig } from 'next'
 
 const config: NextConfig = {
-  transpilePackages: [
-    "@workspace/ui",
-    "@workspace/types",
-    "@workspace/utils"
-  ]
+  transpilePackages: ['@workspace/ui', '@workspace/types', '@workspace/utils'],
 }
 
 export default config
@@ -410,11 +394,7 @@ bun run build
 {
   "tasks": {
     "build": {
-      "outputs": [
-        ".next/**",
-        "!.next/cache/**",
-        "dist/**"
-      ]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     }
   }
 }
@@ -544,6 +524,7 @@ bun run dev
 ### Q1: `workspace:*`と`workspace:0.1.0`の違いは？
 
 **A:**
+
 - `workspace:*`: 常に最新バージョンを使用（推奨）
 - `workspace:0.1.0`: 特定バージョンを固定
 

@@ -20,13 +20,13 @@
     "@workspace/auth": "workspace:*",
     "@workspace/client-supabase": "workspace:*",
     "@workspace/types": "workspace:*",
-    "zustand": "^5.0.15"
+    "zustand": "^5.1.0"
   },
   "devDependencies": {
-    "@types/react": "~19.2.18",
+    "@types/react": "~19.3.0",
     "@workspace/tsc": "workspace:*"
   },
   "peerDependencies": {
-    "react": "^19.0.0"
+    "react": "^19.3.1"
   }
 }

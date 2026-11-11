@@ -169,15 +169,15 @@ frontend/
 
 ### 依存関係の詳細
 
-| パッケージ | 依存先 | 目的 |
-|-----------|--------|------|
-| `@workspace/web` | `@workspace/ui` | UIコンポーネントを使用 |
-| `@workspace/web` | `@workspace/types` | 型定義を使用 |
-| `@workspace/web` | `@workspace/utils` | ユーティリティ関数を使用 |
-| `@workspace/web` | `@workspace/api-client` | APIクライアントを使用 |
-| `@workspace/api-client` | `@workspace/types` | API型を使用 |
-| `@workspace/ui` | `@workspace/typescript-config` | TypeScript設定を継承 |
-| `@workspace/ui` | `@workspace/tokens` | TailwindCSS設定を継承 |
+| パッケージ              | 依存先                         | 目的                     |
+| ----------------------- | ------------------------------ | ------------------------ |
+| `@workspace/web`        | `@workspace/ui`                | UIコンポーネントを使用   |
+| `@workspace/web`        | `@workspace/types`             | 型定義を使用             |
+| `@workspace/web`        | `@workspace/utils`             | ユーティリティ関数を使用 |
+| `@workspace/web`        | `@workspace/api-client`        | APIクライアントを使用    |
+| `@workspace/api-client` | `@workspace/types`             | API型を使用              |
+| `@workspace/ui`         | `@workspace/typescript-config` | TypeScript設定を継承     |
+| `@workspace/ui`         | `@workspace/tokens`            | TailwindCSS設定を継承    |
 
 ---
 
@@ -195,6 +195,7 @@ frontend/
 **役割:** メインのNext.jsアプリケーション
 
 **責務:**
+
 - ページルーティング（App Router）
 - FSD layersに基づいた機能実装
 - ビジネスロジック
@@ -203,6 +204,7 @@ frontend/
 **公開API:** なし（実行可能アプリケーション）
 
 **アプリ専用UIの配置:**
+
 ```
 apps/web/src/shared/ui/   # このアプリでしか使わないUIコンポーネント
 ```
@@ -214,6 +216,7 @@ apps/web/src/shared/ui/   # このアプリでしか使わないUIコンポー�
 **役割:** 複数アプリで共有される再利用可能なUIコンポーネントライブラリ
 
 **責務:**
+
 - shadcn/uiコンポーネントの管理（Button, Card, Dialogなど）
 - MagicUIコンポーネントの管理
 - グローバルスタイル
@@ -222,6 +225,7 @@ apps/web/src/shared/ui/   # このアプリでしか使わないUIコンポー�
 **⚠️ 重要:** アプリ専用のコンポーネント（DataTable、Hero、PricingCardなど）は、`apps/{app}/src/shared/ui/` に配置してください。
 
 **公開API:**
+
 ```typescript
 // components/index.ts
 export { Button } from './ui/button'
@@ -231,6 +235,7 @@ export { Dialog, DialogContent, DialogTrigger } from './ui/dialog'
 ```
 
 **使用例:**
+
 ```typescript
 import { Button } from '@workspace/ui/components/button'
 import { Card, CardContent } from '@workspace/ui/components/card'
@@ -243,12 +248,14 @@ import { Card, CardContent } from '@workspace/ui/components/card'
 **役割:** 全体で使用する型定義の一元管理
 
 **責務:**
+
 - Supabase自動生成型
 - Backend API型
 - 共通型定義
 - 型の再エクスポート
 
 **公開API:**
+
 ```typescript
 // src/index.ts
 export type { Database } from './database'
@@ -267,6 +274,7 @@ export interface ApiResponse<T> {
 ```
 
 **使用例:**
+
 ```typescript
 import type { Database } from '@workspace/types'
 import type { User, ApiResponse } from '@workspace/types'
@@ -279,12 +287,14 @@ import type { User, ApiResponse } from '@workspace/types'
 **役割:** 再利用可能なユーティリティ関数
 
 **責務:**
+
 - 日時処理
 - バリデーション
 - フォーマッター
 - 共通ヘルパー関数
 
 **公開API:**
+
 ```typescript
 // src/index.ts
 export * from './date'
@@ -293,6 +303,7 @@ export * from './formatters'
 ```
 
 **使用例:**
+
 ```typescript
 import { formatDate, isValidEmail } from '@workspace/utils'
 ```
@@ -304,11 +315,13 @@ import { formatDate, isValidEmail } from '@workspace/utils'
 **役割:** API通信の抽象化
 
 **責務:**
+
 - Supabaseクライアントの設定
 - Backend APIクライアントの設定
 - 共通エラーハンドリング
 
 **公開API:**
+
 ```typescript
 // src/index.ts
 export { createSupabaseClient } from './supabase'
@@ -316,6 +329,7 @@ export { backendApi } from './backend'
 ```
 
 **使用例:**
+
 ```typescript
 import { createSupabaseClient } from '@workspace/api-client'
 ```
@@ -326,30 +340,30 @@ import { createSupabaseClient } from '@workspace/api-client'
 
 ### UIコンポーネント
 
-| Before | After |
-|--------|-------|
+| Before               | After                             |
+| -------------------- | --------------------------------- |
 | `@/shared/ui/button` | `@workspace/ui/components/button` |
-| `@/shared/ui/card` | `@workspace/ui/components/card` |
+| `@/shared/ui/card`   | `@workspace/ui/components/card`   |
 | `@/shared/ui/dialog` | `@workspace/ui/components/dialog` |
 
 ### 型定義
 
-| Before | After |
-|--------|-------|
-| `@/types/supabase` | `@workspace/types` |
-| `@/types/api` | `@workspace/types/api` |
+| Before             | After                  |
+| ------------------ | ---------------------- |
+| `@/types/supabase` | `@workspace/types`     |
+| `@/types/api`      | `@workspace/types/api` |
 
 ### ユーティリティ
 
-| Before | After |
-|--------|-------|
-| `@/lib/utils` | `@/lib/utils` または `@workspace/utils` |
-| `@/lib/validators` | `@workspace/utils` |
+| Before             | After                                   |
+| ------------------ | --------------------------------------- |
+| `@/lib/utils`      | `@/lib/utils` または `@workspace/utils` |
+| `@/lib/validators` | `@workspace/utils`                      |
 
 ### APIクライアント
 
-| Before | After |
-|--------|-------|
+| Before           | After                   |
+| ---------------- | ----------------------- |
 | `@/lib/supabase` | `@workspace/api-client` |
 
 ---
@@ -512,10 +526,12 @@ example.com
 ### Turborepoキャッシュ
 
 **ローカルキャッシュ:**
+
 - `.turbo/cache/` にビルド結果を保存
 - 2回目以降のビルドが劇的に高速化
 
 **リモートキャッシュ（Vercel）:**
+
 ```bash
 bun turbo login
 bun turbo link
@@ -525,9 +541,9 @@ bun turbo link
 
 ### ビルド時間の比較
 
-| 状態 | 時間 | 改善率 |
-|------|------|--------|
-| 初回ビルド | 30秒 | - |
+| 状態           | 時間  | 改善率      |
+| -------------- | ----- | ----------- |
+| 初回ビルド     | 30秒  | -           |
 | キャッシュあり | 0.2秒 | **99%削減** |
 
 ---
@@ -543,11 +559,13 @@ bun turbo link
 パッケージ間の循環依存を避ける：
 
 ❌ **悪い例:**
+
 ```
 @workspace/ui → @workspace/utils → @workspace/ui
 ```
 
 ✅ **良い例:**
+
 ```
 @workspace/ui → @workspace/utils
 ```

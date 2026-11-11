@@ -10,6 +10,7 @@
 **説明**: 2つの要素間を移動するアニメーションビーム。統合機能の紹介に最適。
 
 **使用例**:
+
 ```tsx
 import { AnimatedBeam } from '@/shared/ui/magicui'
 import { useRef } from 'react'
@@ -41,6 +42,7 @@ export function IntegrationDemo() {
 ```
 
 **Props**:
+
 - `containerRef` (required): コンテナ要素への参照
 - `fromRef` (required): 開始要素への参照
 - `toRef` (required): 終了要素への参照
@@ -61,6 +63,7 @@ export function IntegrationDemo() {
 **説明**: 周囲を移動するシマーエフェクトを持つボタン。
 
 **使用例**:
+
 ```tsx
 import { ShimmerButton } from '@/shared/ui/magicui'
 
@@ -79,6 +82,7 @@ export function CTASection() {
 ```
 
 **Props**:
+
 - `shimmerColor`: シマーの色（デフォルト: "#ffffff"）
 - `shimmerSize`: シマーのサイズ（デフォルト: "0.05em"）
 - `borderRadius`: ボーダー半径（デフォルト: "100px"）
@@ -95,6 +99,7 @@ export function CTASection() {
 **説明**: 流れ星エフェクト。背景装飾に最適。
 
 **使用例**:
+
 ```tsx
 import { Meteors } from '@/shared/ui/magicui'
 
@@ -111,6 +116,7 @@ export function HeroSection() {
 ```
 
 **Props**:
+
 - `number`: 流れ星の数（デフォルト: 20）
 - `minDelay`: 最小遅延（秒）（デフォルト: 0.2）
 - `maxDelay`: 最大遅延（秒）（デフォルト: 1.2）
@@ -161,6 +167,7 @@ MagicUIコンポーネントは、TailwindCSS 4のアニメーションクラス
 1. **パフォーマンス**: 大量のMeteorsやAnimatedBeamを使用する場合は、`number`プロパティを調整してパフォーマンスを最適化してください。
 
 2. **アクセシビリティ**: AnimatedBeamやMeteorsは装飾的な要素のため、スクリーンリーダーからは隠すことを推奨します：
+
    ```tsx
    <div aria-hidden="true">
      <AnimatedBeam ... />
@@ -168,6 +175,7 @@ MagicUIコンポーネントは、TailwindCSS 4のアニメーションクラス
    ```
 
 3. **レスポンシブデザイン**: モバイルデバイスではアニメーション数を減らすことを検討してください：
+
    ```tsx
    <Meteors number={isMobile ? 10 : 30} />
    ```

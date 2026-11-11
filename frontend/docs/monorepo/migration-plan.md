@@ -5,6 +5,7 @@
 このドキュメントは、現在のNext.jsフロントエンドをTurborepo + Bun Workspacesを使用したモノレポ構成に移行するための段階的なプランです。
 
 **目標:**
+
 - ✅ shadcn/ui公式モノレポ対応
 - ✅ UIコンポーネントの共有化
 - ✅ 型定義の一元管理
@@ -18,6 +19,7 @@
 ## Phase 1: Turborepo基盤構築（30分）
 
 ### 🎯 目標
+
 - Turborepoをインストールし、基本設定を行う
 - ワークスペース構造を定義
 
@@ -41,16 +43,8 @@ bun add -D turbo @turbo/gen
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        ".env*",
-        "!**/.env*.local"
-      ],
-      "outputs": [
-        ".next/**",
-        "!.next/cache/**",
-        "dist/**"
-      ]
+      "inputs": ["$TURBO_DEFAULT$", ".env*", "!**/.env*.local"],
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
     "dev": {
       "cache": false,
@@ -72,10 +66,7 @@ bun add -D turbo @turbo/gen
       "cache": false
     }
   },
-  "globalEnv": [
-    "NEXT_PUBLIC_SUPABASE_URL",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY"
-  ]
+  "globalEnv": ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"]
 }
 ```
 
@@ -88,11 +79,7 @@ bun add -D turbo @turbo/gen
   "name": "@repo/frontend-monorepo",
   "version": "0.1.0",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*",
-    "tooling/*"
-  ],
+  "workspaces": ["apps/*", "packages/*", "tooling/*"],
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
@@ -131,6 +118,7 @@ bunx turbo --version
 ## Phase 2: ディレクトリ再編成（1時間）
 
 ### 🎯 目標
+
 - `apps/`、`packages/`、`tooling/`ディレクトリを作成
 - 既存のフロントエンドコードを`apps/web`に移動
 
@@ -222,6 +210,7 @@ bun run dev
 ## Phase 3: shadcn/ui モノレポ対応（1時間）
 
 ### 🎯 目標
+
 - shadcn/ui公式モノレポサポートを有効化
 - UIコンポーネントを`packages/ui`に移行
 
@@ -314,6 +303,7 @@ bunx shadcn@canary init --monorepo
 ```
 
 **プロンプトへの回答:**
+
 - Would you like to use TypeScript? → Yes
 - Which style would you like to use? → New York
 - Which color would you like to use as base color? → Slate
@@ -340,6 +330,7 @@ bunx shadcn@canary add button
 ## Phase 4: 型定義の共有化（30分）
 
 ### 🎯 目標
+
 - Supabase型定義を`packages/types`に移行
 - Backend API型定義を追加
 
@@ -438,17 +429,18 @@ export interface User {
 ## Phase 5: インポートパス更新（1時間）
 
 ### 🎯 目標
+
 - 既存のインポートパスをワークスペースパスに更新
 
 ### 📝 作業手順
 
 #### 5.1 インポートパスの対応表
 
-| Before | After |
-|--------|-------|
+| Before               | After                             |
+| -------------------- | --------------------------------- |
 | `@/shared/ui/button` | `@workspace/ui/components/button` |
-| `@/types/supabase` | `@workspace/types` |
-| `@/lib/utils` | `@workspace/utils` |
+| `@/types/supabase`   | `@workspace/types`                |
+| `@/lib/utils`        | `@workspace/utils`                |
 
 #### 5.2 一括置換（VS Code）
 
@@ -458,12 +450,14 @@ export interface User {
 4. 以下のパターンで検索・置換：
 
 **UIコンポーネント:**
+
 ```
 検索: from ['"]@/shared/ui/(.+)['"]
 置換: from '@workspace/ui/components/$1'
 ```
 
 **型定義:**
+
 ```
 検索: from ['"]@/types/(.+)['"]
 置換: from '@workspace/types'
@@ -490,6 +484,7 @@ bun run build
 ## Phase 6: 検証とテスト（30分）
 
 ### 🎯 目標
+
 - 全体のビルドとテストを実行
 - ドキュメントを確認
 
@@ -566,18 +561,21 @@ bun install
 移行完了後、以下の拡張が可能になります：
 
 1. **モバイルアプリの追加**
+
    ```bash
    cd frontend/apps
    bunx create-expo-app mobile
    ```
 
 2. **ドキュメントサイトの追加**
+
    ```bash
    cd frontend/apps
    bunx create-next-app@latest docs
    ```
 
 3. **Storybookの追加**
+
    ```bash
    cd frontend/packages/ui
    bunx storybook@latest init

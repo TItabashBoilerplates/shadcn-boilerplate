@@ -18,11 +18,11 @@
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
-    "@supabase/supabase-js": "^2.117.3",
+    "@supabase/supabase-js": "^2.119.0",
     "@workspace/types": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^24.19.2",
+    "@types/node": "^26.6.6",
     "@workspace/tsc": "workspace:*"
   },
   "peerDependencies": {},

@@ -36,6 +36,7 @@ frontend/
 ```
 
 **Important**: FSD architecture notes for Next.js:
+
 - Next.js App Router is at project root (`app/`)
 - FSD layers are in `src/` directory
 - FSD Views layer (`views/`) renamed from `pages/` to avoid conflict with Next.js
@@ -192,6 +193,7 @@ bunx shadcn@latest add form
    - This is the default approach for Next.js applications
 
 **Build Output Indicators:**
+
 - `●  (SSG)`: Static Site Generation - Optimal for public pages
 - `ƒ  (Dynamic)`: Server-Side Rendering - For authenticated pages
 - `○  (Static)`: Static content
@@ -204,10 +206,10 @@ This project uses Supabase for backend services with strict adherence to both Ne
 
 #### Client Types
 
-| Client Type | Usage | Import | When to Use |
-|------------|-------|--------|-------------|
-| **Server Client** | Server Components, Server Actions, Route Handlers | `@/shared/lib/supabase/server` | Authentication checks, protected data fetching |
-| **Browser Client** | Client Components | `@/shared/lib/supabase/client` | Real-time subscriptions, client interactions |
+| Client Type        | Usage                                             | Import                         | When to Use                                    |
+| ------------------ | ------------------------------------------------- | ------------------------------ | ---------------------------------------------- |
+| **Server Client**  | Server Components, Server Actions, Route Handlers | `@/shared/lib/supabase/server` | Authentication checks, protected data fetching |
+| **Browser Client** | Client Components                                 | `@/shared/lib/supabase/client` | Real-time subscriptions, client interactions   |
 
 #### Authentication Best Practices
 
@@ -216,12 +218,14 @@ This project uses Supabase for backend services with strict adherence to both Ne
 Always use `supabase.auth.getUser()` to protect pages. **NEVER** trust `supabase.auth.getSession()` in server code.
 
 **Reason:**
+
 - `getSession()`: Cookie-based (can be spoofed) ❌
 - `getUser()`: Validated against Supabase Auth server (secure) ✅
 
 #### Implementation Patterns
 
 **Public Pages (No Authentication):**
+
 ```tsx
 // Server Component
 import { createClient } from '@/shared/lib/supabase/server'
@@ -234,6 +238,7 @@ export default async function BlogPage() {
 ```
 
 **Authenticated Pages (Standard Pattern):**
+
 ```tsx
 // Server Component - Page wrapper
 import { createClient } from '@/shared/lib/supabase/server'
@@ -244,7 +249,10 @@ export default async function DashboardPage() {
   await cookies() // Disable cache for user-specific data
 
   const supabase = createClient()
-  const { data: { user }, error } = await supabase.auth.getUser()
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
 
   if (error || !user) redirect('/login')
 
@@ -255,6 +263,7 @@ export default async function DashboardPage() {
 ```
 
 **Client Components with Supabase + Zustand:**
+
 ```tsx
 // Client Component
 'use client'
@@ -276,6 +285,7 @@ export function UserSettings({ initialData }) {
 ```
 
 **Real-time Subscriptions (Client Component Only):**
+
 ```tsx
 'use client'
 
@@ -297,13 +307,13 @@ export function RealtimeUpdates({ userId }) {
 
 #### Usage Matrix
 
-| Feature | Component Type | Supabase Client | State Management |
-|---------|---------------|-----------------|------------------|
-| Auth check | Server Component | Server Client + `getUser()` | N/A |
-| Initial data fetch | Server Component | Server Client | Props |
-| Real-time subscriptions | Client Component | Browser Client | useState/Zustand |
-| User interactions | Client Component | Browser Client | Zustand |
-| Form submissions | Server Action | Server Client | N/A |
+| Feature                 | Component Type   | Supabase Client             | State Management |
+| ----------------------- | ---------------- | --------------------------- | ---------------- |
+| Auth check              | Server Component | Server Client + `getUser()` | N/A              |
+| Initial data fetch      | Server Component | Server Client               | Props            |
+| Real-time subscriptions | Client Component | Browser Client              | useState/Zustand |
+| User interactions       | Client Component | Browser Client              | Zustand          |
+| Form submissions        | Server Action    | Server Client               | N/A              |
 
 #### Security Requirements
 
@@ -319,6 +329,7 @@ export function RealtimeUpdates({ userId }) {
 Follow these rules strictly when using Supabase with Next.js:
 
 **Rule 1: Server Component = Static Data Only**
+
 - Only render data that is confirmed on the server
 - NO conditional rendering based on auth state in Server Components
 - Use `redirect()` for unauthenticated users instead of conditional UI
@@ -339,6 +350,7 @@ export default async function Page() {
 ```
 
 **Rule 2: Client Component = Use `mounted` Flag**
+
 - Always use `mounted` state for browser-dependent logic
 - Render `null` or loading state until mounted
 - This prevents server/client HTML mismatch
@@ -359,6 +371,7 @@ export function Component() {
 ```
 
 **Rule 3: Real-time Data = Client Component Only**
+
 - NEVER use Supabase Realtime in Server Components
 - Pass initial data from Server Component to Client Component
 - Subscribe to real-time updates in Client Component only
@@ -389,11 +402,13 @@ export function PostsList({ initialData }) {
 ```
 
 **Rule 4: Time/Random Values = Client Component Only**
+
 - Date formatting (timeAgo, relative time, etc.)
 - Random values
 - All must be in Client Component with `mounted` guard
 
 **Rule 5: Props Flow = Server → Client**
+
 - Server Component fetches initial data
 - Pass data to Client Component via props
 - Client Component manages dynamic updates
@@ -403,6 +418,7 @@ For complete hydration prevention patterns, see `docs/rendering-strategy.md` - "
 #### Common Patterns
 
 **Pattern 1: Server Component + Client Component Hybrid**
+
 ```tsx
 // ✅ Recommended
 // Server Component handles auth + initial data
@@ -410,12 +426,14 @@ For complete hydration prevention patterns, see `docs/rendering-strategy.md` - "
 ```
 
 **Pattern 2: Real-time Features**
+
 ```tsx
 // ✅ Always in Client Component
 // Supabase Realtime only works in Browser Client
 ```
 
 **Pattern 3: Zustand Integration**
+
 ```tsx
 // ✅ Client Component only
 // Server Component passes initial data via props
@@ -430,11 +448,11 @@ For complete examples and detailed patterns, see `docs/rendering-strategy.md` - 
 `next/image` / `expo-image` に元画像の URL を渡す実装は却下される（無変換配信は元サイズが
 そのまま egress になる）。
 
-| バケット | 使うもの |
-|---|---|
-| public | `<SupabaseImage bucket="..." path="..." width={...} height={...} alt="" />`（`@/shared/ui`） |
-| private（既定） | サーバー側で `createSignedStorageImageUrl()` → `<SupabaseImage signedUrl={...} ... />` |
-| URL だけ欲しい | `@workspace/client-supabase/storage-image` の `buildStorageImageUrl` / `toStorageImageUrl` |
+| バケット        | 使うもの                                                                                     |
+| --------------- | -------------------------------------------------------------------------------------------- |
+| public          | `<SupabaseImage bucket="..." path="..." width={...} height={...} alt="" />`（`@/shared/ui`） |
+| private（既定） | サーバー側で `createSignedStorageImageUrl()` → `<SupabaseImage signedUrl={...} ... />`       |
+| URL だけ欲しい  | `@workspace/client-supabase/storage-image` の `buildStorageImageUrl` / `toStorageImageUrl`   |
 
 - **変換を通すだけでは足りない。`width` / `height` は実際の表示サイズから決める**（元サイズの丸投げ禁止）。
 - **`fill` を使うなら `sizes` は必須**（無いとブラウザは 100vw と解釈し、小さな枠でも最大幅が落ちてくる）。

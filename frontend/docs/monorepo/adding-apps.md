@@ -96,6 +96,7 @@ cd admin
 ```
 
 **ポイント:**
+
 - `name` を `@workspace/admin` に変更（`microfrontends.json` の application 名 or `packageName` と一致させる）
 - `@vercel/microfrontends` を追加（child app として必須）
 - **認証は Better Auth**（`better-auth`）。Supabase の認証専用パッケージ（`@workspace/auth`）は admin では使わない
@@ -383,17 +384,20 @@ export function BottomTab({ items }) {
 ### シナリオ5: PricingCard（web と admin で使用）
 
 **初期:**
+
 ```
 apps/web/src/shared/ui/PricingCard.tsx  # web専用
 ```
 
 **admin でも使うことが確定したら:**
+
 ```bash
 # packages/ に移行
 mv apps/web/src/shared/ui/PricingCard.tsx packages/ui/components/pricing-card.tsx
 ```
 
 **移行後:**
+
 ```typescript
 // apps/web & apps/admin
 import { PricingCard } from '@workspace/ui/components/pricing-card'
@@ -410,6 +414,7 @@ web と admin は**それぞれ独立した Vercel project** としてデプロ�
 #### ユーザー向けアプリ（web = default application）
 
 **Vercel Project Settings:**
+
 - **Root Directory:** `frontend/apps/web`
 - **Build Command:** `cd ../.. && turbo build --filter=@workspace/web`
 - **Output Directory:** `apps/web/.next`
@@ -419,6 +424,7 @@ web と admin は**それぞれ独立した Vercel project** としてデプロ�
 #### 管理画面（admin = child application）
 
 **Vercel Project Settings:**
+
 - **Root Directory:** `frontend/apps/admin`
 - **Build Command:** `cd ../.. && turbo build --filter=@workspace/admin`
 - **Output Directory:** `apps/admin/.next`
@@ -493,6 +499,7 @@ dev-all
 ```
 
 **確認項目:**
+
 - [ ] すべてのアプリが起動する
 - [ ] 共有パッケージが正しくインポートできる
 - [ ] 型エラーがない

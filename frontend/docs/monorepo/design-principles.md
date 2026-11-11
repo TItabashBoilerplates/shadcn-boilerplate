@@ -11,11 +11,13 @@
 モノレポは**複数アプリ間で実際に共有されるコード**を効率的に管理するためのものです。
 
 **✅ 正しい理解:**
+
 - 複数アプリで**実際に使われる**コンポーネント・ロジックを共有
 - ビルドキャッシュによる高速化
 - 型定義・ユーティリティの一元管理
 
 **❌ 間違った理解:**
+
 - すべてのコードをパッケージ化する
 - アプリ専用のコードも `packages/` に置く
 - 過度な抽象化・細分化
@@ -63,6 +65,7 @@ export function Button({ children, ...props }) {
 ```
 
 **使用箇所:**
+
 ```typescript
 // apps/admin - 管理画面で使用
 import { Button } from '@workspace/ui/components/button'
@@ -85,7 +88,9 @@ import { Button } from '@workspace/ui/components/button'
 export type Database = {
   public: {
     tables: {
-      users: { /* ... */ }
+      users: {
+        /* ... */
+      }
     }
   }
 }
@@ -147,9 +152,10 @@ export function DataTable({ data }) {
 ```
 
 **使用箇所:**
+
 ```typescript
 // apps/admin/src/features/user-management/ui/UserList.tsx
-import { DataTable } from '@/shared/ui/DataTable'  // ← FSD内部でのみ使用
+import { DataTable } from '@/shared/ui/DataTable' // ← FSD内部でのみ使用
 ```
 
 ---
@@ -193,6 +199,7 @@ packages/
 ```
 
 **なぜ間違いか:**
+
 - `ui-admin` は管理画面でしか使わない → FSDの `shared/` で管理すべき
 - `ui-web` はユーザー向けアプリでしか使わない → FSDの `shared/` で管理すべき
 - 過度な抽象化で複雑性が増す
@@ -214,13 +221,14 @@ apps/mobile/src/shared/ui/   # mobile専用UI
 
 ```typescript
 // ❌ 間違い: apps/admin でしか使わないのに packages/ に置く
-packages/ui/components/admin/DataTable.tsx
+packages / ui / components / admin / DataTable.tsx
 
 // ✅ 正解: apps/admin/src/shared/ui/ に置く
-apps/admin/src/shared/ui/DataTable.tsx
+apps / admin / src / shared / ui / DataTable.tsx
 ```
 
 **なぜ間違いか:**
+
 - 「将来使うかも」という推測で共有化しない
 - YAGNIの原則（You Aren't Gonna Need It）
 - 実際に複数アプリで使うことが確定してから共有化
@@ -288,11 +296,11 @@ mv apps/admin/src/shared/ui/DataTable.tsx packages/ui/components/data-table.tsx
 
 ## 📊 判断基準まとめ
 
-| 質問 | Yes → | No → |
-|------|-------|------|
-| 複数アプリで**実際に**使われている？ | `packages/` | 次の質問へ |
-| 将来的に共有する**明確な計画**がある？ | `packages/` | 次の質問へ |
-| そのアプリ内で複数箇所で使う？ | `apps/{app}/src/shared/` | `apps/{app}/src/features/` or `entities/` |
+| 質問                                   | Yes →                    | No →                                      |
+| -------------------------------------- | ------------------------ | ----------------------------------------- |
+| 複数アプリで**実際に**使われている？   | `packages/`              | 次の質問へ                                |
+| 将来的に共有する**明確な計画**がある？ | `packages/`              | 次の質問へ                                |
+| そのアプリ内で複数箇所で使う？         | `apps/{app}/src/shared/` | `apps/{app}/src/features/` or `entities/` |
 
 ---
 
@@ -325,17 +333,20 @@ mv apps/admin/src/shared/ui/DataTable.tsx packages/ui/components/data-table.tsx
 ### 例4: PricingCard が admin でも必要になった場合
 
 **初期状態:**
+
 ```
 apps/web/src/shared/ui/PricingCard.tsx  # web専用
 ```
 
 **admin でも使うことが確定:**
+
 ```bash
 # packages/ に移行
 mv apps/web/src/shared/ui/PricingCard.tsx packages/ui/components/pricing-card.tsx
 ```
 
 **移行後:**
+
 ```typescript
 // apps/web
 import { PricingCard } from '@workspace/ui/components/pricing-card'
