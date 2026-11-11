@@ -30,16 +30,8 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        ".env*",
-        "!**/.env*.local"
-      ],
-      "outputs": [
-        ".next/**",
-        "!.next/cache/**",
-        "dist/**"
-      ]
+      "inputs": ["$TURBO_DEFAULT$", ".env*", "!**/.env*.local"],
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
     "dev": {
       "cache": false,
@@ -47,17 +39,11 @@
     },
     "lint": {
       "dependsOn": ["^build"],
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        "eslint.config.*"
-      ]
+      "inputs": ["$TURBO_DEFAULT$", "eslint.config.*"]
     },
     "type-check": {
       "dependsOn": ["^build"],
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        "tsconfig.json"
-      ],
+      "inputs": ["$TURBO_DEFAULT$", "tsconfig.json"],
       "outputs": []
     },
     "format": {
@@ -66,58 +52,51 @@
     },
     "test": {
       "dependsOn": ["^build"],
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        "**/*.test.ts",
-        "**/*.spec.ts"
-      ],
-      "outputs": [
-        "coverage/**"
-      ]
+      "inputs": ["$TURBO_DEFAULT$", "**/*.test.ts", "**/*.spec.ts"],
+      "outputs": ["coverage/**"]
     },
     "clean": {
       "cache": false
     }
   },
-  "globalDependencies": [
-    "**/.env*",
-    "turbo.json",
-    "package.json"
-  ],
-  "globalEnv": [
-    "NODE_ENV",
-    "NEXT_PUBLIC_SUPABASE_URL",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY"
-  ]
+  "globalDependencies": ["**/.env*", "turbo.json", "package.json"],
+  "globalEnv": ["NODE_ENV", "NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"]
 }
 ```
 
 ### 各フィールドの解説
 
 #### `$schema`
+
 ```json
 "$schema": "https://turbo.build/schema.json"
 ```
+
 - VS CodeでのIntelliSenseを有効化
 - 設定の検証を提供
 
 #### `ui`
+
 ```json
 "ui": "tui"
 ```
+
 - `"tui"`: ターミナルUIでタスク実行状況を表示
 - `"stream"`: ログをストリーム出力（CI推奨）
 
 #### `tasks.build`
 
 **`dependsOn`:**
+
 ```json
 "dependsOn": ["^build"]
 ```
+
 - `^build`: 依存パッケージの`build`タスクを先に実行
 - `^`: トポロジカルソート（依存順）を意味する
 
 **`inputs`:**
+
 ```json
 "inputs": [
   "$TURBO_DEFAULT$",
@@ -125,11 +104,13 @@
   "!**/.env*.local"
 ]
 ```
+
 - `$TURBO_DEFAULT$`: デフォルトのファイル（ソースコード、設定ファイル）
 - `.env*`: 環境変数ファイルも含める
 - `!**/.env*.local`: ローカル環境変数は除外
 
 **`outputs`:**
+
 ```json
 "outputs": [
   ".next/**",
@@ -137,6 +118,7 @@
   "dist/**"
 ]
 ```
+
 - ビルド結果の出力先
 - キャッシュ対象となる
 - `.next/cache/**`は除外（Next.jsの内部キャッシュ）
@@ -149,6 +131,7 @@
   "persistent": true
 }
 ```
+
 - `cache: false`: 開発サーバーはキャッシュしない
 - `persistent: true`: プロセスが終了するまで実行し続ける
 
@@ -161,6 +144,7 @@
   "package.json"
 ]
 ```
+
 - これらのファイルが変更されたら、すべてのキャッシュを無効化
 
 #### `globalEnv`
@@ -172,6 +156,7 @@
   "NEXT_PUBLIC_SUPABASE_ANON_KEY"
 ]
 ```
+
 - これらの環境変数が変更されたら、キャッシュを無効化
 
 ---
@@ -187,11 +172,7 @@
   "name": "@repo/frontend-monorepo",
   "version": "0.1.0",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*",
-    "tooling/*"
-  ],
+  "workspaces": ["apps/*", "packages/*", "tooling/*"],
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
@@ -225,24 +206,26 @@
   "tooling/*"
 ]
 ```
+
 - Bunワークスペースの定義
 - これらのディレクトリ内の`package.json`を自動認識
 
 #### `scripts`
 
-| スクリプト | 説明 |
-|-----------|------|
-| `dev` | すべてのアプリの開発サーバーを起動 |
-| `build` | すべてのアプリをビルド |
-| `lint` | すべてのパッケージでLint実行 |
-| `ui:add` | shadcn/uiコンポーネントを追加 |
-| `generate:types` | Supabase型を自動生成 |
+| スクリプト       | 説明                               |
+| ---------------- | ---------------------------------- |
+| `dev`            | すべてのアプリの開発サーバーを起動 |
+| `build`          | すべてのアプリをビルド             |
+| `lint`           | すべてのパッケージでLint実行       |
+| `ui:add`         | shadcn/uiコンポーネントを追加      |
+| `generate:types` | Supabase型を自動生成               |
 
 #### `packageManager`
 
 ```json
 "packageManager": "bun@1.2.0"
 ```
+
 - Bunのバージョンを固定
 - チーム全体で同じバージョンを使用
 
@@ -293,6 +276,7 @@
 ```json
 "@workspace/ui": "workspace:*"
 ```
+
 - `workspace:*`: ローカルパッケージを参照
 - `*`: 常に最新バージョンを使用
 
@@ -346,6 +330,7 @@
   "./styles": "./styles/globals.css"
 }
 ```
+
 - パッケージのサブパスをエクスポート
 - `import { Button } from '@workspace/ui/components/button'`が可能に
 
@@ -356,6 +341,7 @@
   "react": "^19.0.0"
 }
 ```
+
 - 利用側のReactを使用（重複インストール回避）
 
 ---
@@ -389,11 +375,7 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "exclude": [
-    "node_modules",
-    "dist",
-    ".turbo"
-  ]
+  "exclude": ["node_modules", "dist", ".turbo"]
 }
 ```
 
@@ -422,15 +404,8 @@
       }
     ]
   },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
 }
 ```
 
@@ -442,6 +417,7 @@
   "@workspace/ui": ["../../packages/ui/components"]
 }
 ```
+
 - インポートパスのエイリアス
 - `@/`はアプリ内、`@workspace/*`は共有パッケージ
 
@@ -490,15 +466,8 @@
       }
     ]
   },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules"
-  ]
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
 }
 ```
 
@@ -541,6 +510,7 @@
 ```json
 "components": "@workspace/ui/components"
 ```
+
 - `bunx shadcn@canary add button`で追加されるコンポーネントの保存先
 - `packages/ui/components/ui/button.tsx`に追加される
 
@@ -549,6 +519,7 @@
 ```json
 "utils": "@/lib/utils"
 ```
+
 - `cn()`などのユーティリティ関数の場所
 
 ---
@@ -562,9 +533,9 @@ TailwindCSS 4 は **CSS-first 設定**なので `tailwind.config.ts` は存在�
 
 デザイントークンの正本。`bun run tokens:build` で 2 つの CSS を生成する。
 
-| 生成物 | 用途 | ダークモードの切り替え |
-|--------|------|----------------------|
-| `web.css` | Web / Desktop（`@workspace/ui` が import） | `.dark` クラス |
+| 生成物       | 用途                                         | ダークモードの切り替え                |
+| ------------ | -------------------------------------------- | ------------------------------------- |
+| `web.css`    | Web / Desktop（`@workspace/ui` が import）   | `.dark` クラス                        |
 | `native.css` | Mobile（`apps/mobile/global.css` が import） | `@media (prefers-color-scheme: dark)` |
 
 どちらも同じ `@theme inline` マッピングを持つので、`bg-primary` などの
@@ -621,19 +592,15 @@ TailwindCSS 4 は **CSS-first 設定**なので `tailwind.config.ts` は存在�
 **場所:** `frontend/apps/web/eslint.config.mjs`
 
 ```javascript
-import baseConfig from "@workspace/eslint-config/base.js"
-import nextConfig from "@workspace/eslint-config/next.js"
+import baseConfig from '@workspace/eslint-config/base.js'
+import nextConfig from '@workspace/eslint-config/next.js'
 
 export default [
   ...baseConfig,
   ...nextConfig,
   {
-    ignores: [
-      ".next/**",
-      "dist/**",
-      "node_modules/**"
-    ]
-  }
+    ignores: ['.next/**', 'dist/**', 'node_modules/**'],
+  },
 ]
 ```
 
@@ -644,29 +611,29 @@ export default [
 **場所:** `frontend/tooling/eslint/base.js`
 
 ```javascript
-import js from "@eslint/js"
-import typescript from "@typescript-eslint/eslint-plugin"
-import typescriptParser from "@typescript-eslint/parser"
+import js from '@eslint/js'
+import typescript from '@typescript-eslint/eslint-plugin'
+import typescriptParser from '@typescript-eslint/parser'
 
 export default [
   js.configs.recommended,
   {
-    files: ["**/*.ts", "**/*.tsx"],
+    files: ['**/*.ts', '**/*.tsx'],
     languageOptions: {
       parser: typescriptParser,
       parserOptions: {
-        ecmaVersion: "latest",
-        sourceType: "module"
-      }
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+      },
     },
     plugins: {
-      "@typescript-eslint": typescript
+      '@typescript-eslint': typescript,
     },
     rules: {
-      "@typescript-eslint/no-unused-vars": "warn",
-      "@typescript-eslint/no-explicit-any": "warn"
-    }
-  }
+      '@typescript-eslint/no-unused-vars': 'warn',
+      '@typescript-eslint/no-explicit-any': 'warn',
+    },
+  },
 ]
 ```
 
@@ -677,18 +644,18 @@ export default [
 **場所:** `frontend/tooling/eslint/next.js`
 
 ```javascript
-import nextPlugin from "@next/eslint-plugin-next"
+import nextPlugin from '@next/eslint-plugin-next'
 
 export default [
   {
     plugins: {
-      "@next/next": nextPlugin
+      '@next/next': nextPlugin,
     },
     rules: {
       ...nextPlugin.configs.recommended.rules,
-      ...nextPlugin.configs["core-web-vitals"].rules
-    }
-  }
+      ...nextPlugin.configs['core-web-vitals'].rules,
+    },
+  },
 ]
 ```
 
@@ -743,6 +710,7 @@ try {
 ```
 
 **実行:**
+
 ```bash
 bun run scripts/generate-types.ts
 ```
@@ -753,14 +721,14 @@ bun run scripts/generate-types.ts
 
 ### 設定ファイルの役割分担
 
-| ファイル | 役割 | 場所 |
-|---------|------|------|
-| `turbo.json` | タスク実行、キャッシュ | ルート |
-| `package.json` | パッケージ定義、スクリプト | 各パッケージ |
-| `tsconfig.json` | TypeScript設定 | 各パッケージ |
-| `components.json` | shadcn/ui設定 | apps/web |
-| `src/app/styles/globals.css` | TailwindCSS エントリ (v4 CSS-first) | apps/web |
-| `eslint.config.mjs` | ESLint設定 | 各パッケージ |
+| ファイル                     | 役割                                | 場所         |
+| ---------------------------- | ----------------------------------- | ------------ |
+| `turbo.json`                 | タスク実行、キャッシュ              | ルート       |
+| `package.json`               | パッケージ定義、スクリプト          | 各パッケージ |
+| `tsconfig.json`              | TypeScript設定                      | 各パッケージ |
+| `components.json`            | shadcn/ui設定                       | apps/web     |
+| `src/app/styles/globals.css` | TailwindCSS エントリ (v4 CSS-first) | apps/web     |
+| `eslint.config.mjs`          | ESLint設定                          | 各パッケージ |
 
 ### 設定の継承関係
 

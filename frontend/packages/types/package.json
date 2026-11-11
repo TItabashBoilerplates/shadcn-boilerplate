@@ -16,7 +16,7 @@
     "lint": "oxlint --no-error-on-unmatched-pattern --fix ."
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.117.3"
+    "@supabase/supabase-js": "^2.119.0"
   },
   "devDependencies": {
     "@workspace/tsc": "workspace:*"

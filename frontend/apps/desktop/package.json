@@ -16,23 +16,23 @@
     "lint": "oxlint --deny-warnings --no-error-on-unmatched-pattern -c oxlint.config.mjs . --fix"
   },
   "dependencies": {
-    "@tauri-apps/api": "^2.12.3",
+    "@tauri-apps/api": "^2.12.4",
     "@tauri-apps/plugin-process": "^2.4.0",
-    "@tauri-apps/plugin-updater": "^2.13.3",
+    "@tauri-apps/plugin-updater": "^2.14.1",
     "@workspace/tokens": "workspace:*",
     "@workspace/ui": "workspace:*",
-    "lucide-react": "^1.56.0",
-    "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "lucide-react": "^1.72.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.3.3",
-    "@tauri-apps/cli": "^2.12.2",
-    "@types/react": "~19.2.18",
-    "@types/react-dom": "~19.2.7",
-    "@vitejs/plugin-react": "^6.1.2",
+    "@tailwindcss/postcss": "^4.3.5",
+    "@tauri-apps/cli": "^2.12.4",
+    "@types/react": "~19.3.0",
+    "@types/react-dom": "~19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
     "@workspace/tsc": "workspace:*",
-    "tailwindcss": "^4.3.3",
-    "vite": "8.3.4"
+    "tailwindcss": "^4.3.5",
+    "vite": "8.3.8"
   }
 }

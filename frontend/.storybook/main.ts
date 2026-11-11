@@ -313,6 +313,17 @@ const config: StorybookConfig = {
         find: /^@\/shared\/lib\/i18n$/,
         replacement: resolve(__dirname, './mocks/web-i18n-navigation.tsx'),
       },
+      // react-native-svg（15.16.x）の web 版は `@react-native/assets-registry/registry` を
+      // import するが、RN 0.87 以降その package は同梱されず Storybook の web ビルドが落ちる
+      // （上流の未修正）。RN 本体の同じレジストリへ向けて暫定対応する。
+      // react-native-svg が修正された版へ上げたら、この alias は削除する。
+      {
+        find: /^@react-native\/assets-registry\/registry$/,
+        replacement: resolve(
+          __dirname,
+          '../node_modules/react-native/src/private/assets/AssetRegistry.js'
+        ),
+      },
     ]
 
     return config

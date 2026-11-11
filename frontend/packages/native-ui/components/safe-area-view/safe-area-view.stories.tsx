@@ -12,7 +12,7 @@ const FALLBACK_METRICS = {
   insets: { top: 47, left: 0, right: 0, bottom: 34 },
 }
 
-const meta = {
+const meta: Meta<typeof SafeAreaView> = {
   component: SafeAreaView,
   parameters: { layout: 'fullscreen' },
   decorators: [

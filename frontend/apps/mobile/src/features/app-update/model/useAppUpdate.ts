@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AppState, type AppStateStatus, InteractionManager } from 'react-native'
+import { AppState, type AppStateStatus } from 'react-native'
 import { fetchReleasePolicy } from '../api/fetchReleasePolicy'
 import { releasePolicyQuery } from '../api/releasePolicyQuery'
 import { readDismissedVersion, writeDismissedVersion } from '../lib/dismissal'
@@ -88,9 +88,11 @@ export function useAppUpdate(): UseAppUpdateResult {
     // 2. effect の同期実行中に setState を誘発しないため。React は effect の本体を
     //    「外部システムとの同期」に使い、状態更新は**コールバックの中**で行うことを
     //    求めている（`react-hooks/set-state-in-effect`）。
-    const interaction = InteractionManager.runAfterInteractions(() => {
+    // RN 0.87 で InteractionManager は削除された（後継は requestIdleCallback）。
+    // 初回描画の後に 1 回走らせるだけなので setTimeout で同じ意味を保つ。
+    const initialCheck = setTimeout(() => {
       void check()
-    })
+    }, 0)
 
     const subscription = AppState.addEventListener('change', (status: AppStateStatus) => {
       if (status !== 'active') return
@@ -99,7 +101,7 @@ export function useAppUpdate(): UseAppUpdateResult {
     })
 
     return () => {
-      interaction.cancel()
+      clearTimeout(initialCheck)
       subscription.remove()
     }
   }, [check])

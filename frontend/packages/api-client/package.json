@@ -17,11 +17,11 @@
   },
   "devDependencies": {
     "@hey-api/openapi-ts": "0.99.0",
-    "@types/bun": "latest",
-    "@types/node": "^24.19.2",
+    "@types/bun": "^1.4.4",
+    "@types/node": "^26.6.6",
     "@workspace/tsc": "workspace:*"
   },
   "peerDependencies": {
-    "@tanstack/react-query": "^5"
+    "@tanstack/react-query": "^5.107.1"
   }
 }

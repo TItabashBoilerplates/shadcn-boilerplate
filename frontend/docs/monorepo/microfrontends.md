@@ -10,13 +10,13 @@
 
 ## 🎯 採用方針（決定事項）
 
-| 項目 | 決定 |
-| --- | --- |
-| **合成方式** | **Vercel Microfrontends（マネージド）** — `@vercel/microfrontends` + `microfrontends.json` + `withMicrofrontends` |
-| **ドメイン** | **単一ドメイン**でパスベース合成（`/` = web、`/admin` = admin） |
-| **認証・認可の分離** | **アプリごとに認証スタック自体を分ける**。メイン（web）= Supabase Auth、管理者（admin）= **Better Auth**。別システム = 別 cookie なので単一オリジンでも自然に分離。認可も各スタックで独立（Supabase Auth 単独で分けることは基本しない） |
-| **Next.js `basePath`** | **使わない**（Vercel Microfrontends は Next.js `basePath` 非対応）。パス割り当ては `microfrontends.json` の `routing.paths` で行う（※ Better Auth の `basePath` は認証 API プレフィックスで別物・こちらは使う） |
-| **各アプリのデプロイ** | それぞれ**独立した Vercel project** として個別ビルド・デプロイ・ロールバック |
+| 項目                   | 決定                                                                                                                                                                                                                                    |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **合成方式**           | **Vercel Microfrontends（マネージド）** — `@vercel/microfrontends` + `microfrontends.json` + `withMicrofrontends`                                                                                                                       |
+| **ドメイン**           | **単一ドメイン**でパスベース合成（`/` = web、`/admin` = admin）                                                                                                                                                                         |
+| **認証・認可の分離**   | **アプリごとに認証スタック自体を分ける**。メイン（web）= Supabase Auth、管理者（admin）= **Better Auth**。別システム = 別 cookie なので単一オリジンでも自然に分離。認可も各スタックで独立（Supabase Auth 単独で分けることは基本しない） |
+| **Next.js `basePath`** | **使わない**（Vercel Microfrontends は Next.js `basePath` 非対応）。パス割り当ては `microfrontends.json` の `routing.paths` で行う（※ Better Auth の `basePath` は認証 API プレフィックスで別物・こちらは使う）                         |
+| **各アプリのデプロイ** | それぞれ**独立した Vercel project** として個別ビルド・デプロイ・ロールバック                                                                                                                                                            |
 
 > **なぜこの構成か**: 単一ドメイン配下で `/admin` を合成しつつ、Vercel のネットワークレベルルーティング（追加ホップなし）・Instant Rollback 連動・prefetch 最適化といった **Vercel Services の恩恵を最大限**受けられる。認証は「アプリごとに別スタック」（web=Supabase Auth / admin=Better Auth）にすることで、別 cookie・別システムとして確実にアプリ間を切り離す。
 
@@ -128,6 +128,7 @@ export default withMicrofrontends(withNextIntl(nextConfig))
 `@vercel/microfrontends` は **1 つの MFE だけローカルで動かし、他は production fallback にルートする** local proxy を提供する。本リポジトリは Turborepo を使っているため統合が効く（turbo 2.3.6 / 2.4.2 以降）。
 
 - `dev` スクリプトのポートを proxy と同期させる:
+
   ```jsonc
   // frontend/apps/web/package.json（および admin）
   "scripts": {
@@ -141,11 +142,11 @@ export default withMicrofrontends(withNextIntl(nextConfig))
 
 各 MFE は自分の Vercel project として独立ビルド・デプロイ・ロールバックする。Root Directory を各アプリに向け、Turborepo フィルタでビルドする。
 
-| 設定 | web（default） | admin（child） |
-| --- | --- | --- |
-| Root Directory | `frontend/apps/web` | `frontend/apps/admin` |
-| Build Command | `cd ../.. && turbo build --filter=@workspace/web` | `cd ../.. && turbo build --filter=@workspace/admin` |
-| Output Directory | `apps/web/.next` | `apps/admin/.next` |
+| 設定             | web（default）                                    | admin（child）                                      |
+| ---------------- | ------------------------------------------------- | --------------------------------------------------- |
+| Root Directory   | `frontend/apps/web`                               | `frontend/apps/admin`                               |
+| Build Command    | `cd ../.. && turbo build --filter=@workspace/web` | `cd ../.. && turbo build --filter=@workspace/admin` |
+| Output Directory | `apps/web/.next`                                  | `apps/admin/.next`                                  |
 
 - **`microfrontends.json` は web project にのみデプロイされる**（default app が保持）。これが production に反映されて初めてマイクロフロントエンド合成が有効になる。
 - **独立デプロイの注意**: web と admin は lockstep で出ない。`microfrontends.json` のパス割り当てを変える前に、受け手アプリが対応済みであること（または flag ルーティングで保護）を確認する。まず Preview 環境で検証してから production へ。
@@ -162,10 +163,10 @@ export default withMicrofrontends(withNextIntl(nextConfig))
 
 **このリポジトリでは、Supabase Auth 単独で認証を「分ける」ことは基本しない。** 複数の認証・認可を組み込む場合は、**アプリごとに認証スタック自体を分離**する。
 
-| アプリ | 認証スタック | 既定 cookie 名 |
-| --- | --- | --- |
+| アプリ                          | 認証スタック                               | 既定 cookie 名                |
+| ------------------------------- | ------------------------------------------ | ----------------------------- |
 | **web**（メイン / default app） | **Supabase Auth**（`@supabase/ssr`、既存） | `sb-<project_ref>-auth-token` |
-| **admin**（管理者 / child app） | **Better Auth**（追加） | `better-auth.session_token` |
+| **admin**（管理者 / child app） | **Better Auth**（追加）                    | `better-auth.session_token`   |
 
 **自然分離**: web は Supabase の `sb-<ref>-auth-token`、admin は Better Auth の `better-auth.session_token` と **cookie 名も認証システムも別**なので、単一オリジン（同一ドメイン）でも**セッションが衝突しない**。Supabase の `cookieOptions.name` を弄って無理やり分ける必要はない。認可（権限判定）も各スタックで完全に独立する。
 

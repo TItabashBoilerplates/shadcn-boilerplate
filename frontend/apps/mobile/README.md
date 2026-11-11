@@ -4,14 +4,14 @@ Expo 57 React Native application with gluestack-ui and NativeWind styling.
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| **Framework** | Expo 57, React Native 0.86 |
-| **Routing** | Expo Router (file-based) |
-| **UI Library** | gluestack-ui |
-| **Styling** | NativeWind 5 (TailwindCSS for React Native) |
-| **State** | TanStack Query, Zustand |
-| **Icons** | @expo/vector-icons / expo-symbols |
+| Layer          | Technology                                  |
+| -------------- | ------------------------------------------- |
+| **Framework**  | Expo 57, React Native 0.86                  |
+| **Routing**    | Expo Router (file-based)                    |
+| **UI Library** | gluestack-ui                                |
+| **Styling**    | NativeWind 5 (TailwindCSS for React Native) |
+| **State**      | TanStack Query, Zustand                     |
+| **Icons**      | @expo/vector-icons / expo-symbols           |
 
 ## Project Structure
 
@@ -40,7 +40,7 @@ apps/mobile/
 `enterKeyHint` / `submitBehavior`）、OTP のオートフィル、タップ標的 44×44 も必須要件。
 
 → 不変条件は [`.claude/rules/mobile-uiux.md`](../../../.claude/rules/mobile-uiux.md)、
-  実装手順・API・症状別の原因表は [`.claude/skills/mobile-uiux/`](../../../.claude/skills/mobile-uiux/SKILL.md)
+実装手順・API・症状別の原因表は [`.claude/skills/mobile-uiux/`](../../../.claude/skills/mobile-uiux/SKILL.md)
 
 > ⚠️ 現状 `src/views/auth/ui/AuthScreen.tsx` は RN 標準の `KeyboardAvoidingView` を使っている。
 > 認証画面に手を入れるときに `react-native-keyboard-controller` へ移行すること。
@@ -122,9 +122,7 @@ import { View, Text } from 'react-native'
 export function MyComponent() {
   return (
     <View className="flex-1 items-center justify-center bg-background">
-      <Text className="text-foreground text-xl font-bold">
-        Hello World
-      </Text>
+      <Text className="text-foreground text-xl font-bold">Hello World</Text>
     </View>
   )
 }
@@ -136,7 +134,7 @@ Use CSS variables for theming (defined in `global.css`):
 
 ```tsx
 // Colors automatically adapt to light/dark mode
-<View className="bg-background border-border">
+;<View className="bg-background border-border">
   <Text className="text-foreground">Primary text</Text>
   <Text className="text-muted-foreground">Secondary text</Text>
 </View>

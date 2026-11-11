@@ -15,6 +15,7 @@
 モノレポの正しい設計原則とよくある間違いを解説しています。
 
 **内容:**
+
 - パッケージ配置の判断基準
 - FSDとの関係
 - よくあるアンチパターン
@@ -29,6 +30,7 @@
 複数アプリへの拡張手順を解説しています。
 
 **内容:**
+
 - 管理画面の追加方法（Vercel Microfrontends の child app として）
 - モバイルアプリの追加方法
 - 共有コンポーネントの判断基準
@@ -43,6 +45,7 @@
 Web を **Vercel Microfrontends（マネージド製品）** で運用するための正本ガイドです。
 
 **内容:**
+
 - Vercel Microfrontends セットアップ（`microfrontends.json` / `@vercel/microfrontends` / `withMicrofrontends`）
 - 単一ドメインでのパスベース合成（`/` = web、`/admin` = admin）
 - **管理者アプリとメインアプリの認証・認可の分離**（アプリごとに認証スタックを分ける: web=Supabase Auth / admin=Better Auth）
@@ -54,6 +57,7 @@ Web を **Vercel Microfrontends（マネージド製品）** で運用するた�
 ---
 
 ### 3. [移行プラン](./migration-plan.md) 📋
+
 **所要時間:** 約4-5時間
 
 段階的な移行手順を6つのPhaseに分けて解説しています。
@@ -87,6 +91,7 @@ Web を **Vercel Microfrontends（マネージド製品）** で運用するた�
 モノレポの全体構造とパッケージ依存関係を解説しています。
 
 **内容:**
+
 - Before/Afterのディレクトリツリー
 - パッケージ依存関係グラフ
 - 各パッケージの役割と責務
@@ -102,6 +107,7 @@ Web を **Vercel Microfrontends（マネージド製品）** で運用するた�
 各種設定ファイルの詳細を解説しています。
 
 **対象ファイル:**
+
 - `turbo.json` - Turborepo設定
 - `package.json` - パッケージ定義
 - `tsconfig.json` - TypeScript設定
@@ -118,6 +124,7 @@ Web を **Vercel Microfrontends（マネージド製品）** で運用するた�
 よくある問題と解決方法をまとめています。
 
 **カテゴリ:**
+
 - Turborepoの問題
 - Bunワークスペースの問題
 - shadcn/uiの問題
@@ -135,6 +142,7 @@ Web を **Vercel Microfrontends（マネージド製品）** で運用するた�
 ### 移行前の準備
 
 1. **バックアップの作成**
+
    ```bash
    cd /Users/tknr/Development/shadcn-boilerplate
    git checkout -b backup/before-monorepo
@@ -287,18 +295,21 @@ Supabase型が`packages/types/src/database.ts`に生成されます。
 モノレポ移行が完了したら、以下の拡張を検討してください：
 
 1. **モバイルアプリの追加**
+
    ```bash
    cd apps
    bunx create-expo-app mobile
    ```
 
 2. **Storybookの導入**
+
    ```bash
    cd packages/ui
    bunx storybook@latest init
    ```
 
 3. **E2Eテストの追加**
+
    ```bash
    cd apps/web
    bunx playwright init

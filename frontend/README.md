@@ -96,11 +96,11 @@ FSD organizes code into **layers** and **slices**, promoting maintainability and
 
 This project uses a **platform-specific UI approach**:
 
-| Platform | UI Library | Package |
-|----------|------------|---------|
-| **Web** | shadcn/ui + MagicUI | `@workspace/ui` |
+| Platform   | UI Library                | Package                |
+| ---------- | ------------------------- | ---------------------- |
+| **Web**    | shadcn/ui + MagicUI       | `@workspace/ui`        |
 | **Mobile** | gluestack-ui + NativeWind | `@workspace/native-ui` |
-| **Shared** | Design Tokens | `@workspace/tokens` |
+| **Shared** | Design Tokens             | `@workspace/tokens`    |
 
 ### Web: shadcn/ui Components
 
@@ -151,6 +151,7 @@ import { colors, radius } from '@workspace/tokens'
 ```
 
 Generate CSS files:
+
 ```bash
 bun run tokens:build
 ```
@@ -253,18 +254,19 @@ This project uses **next-intl** for internationalization.
 ### Adding Translations
 
 Edit message files:
+
 - `src/shared/config/i18n/messages/en.json`
 - `src/shared/config/i18n/messages/ja.json`
 
 ### Usage in Components
 
 ```tsx
-import { useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl'
 
 export function MyComponent() {
-  const t = useTranslations('HomePage');
+  const t = useTranslations('HomePage')
 
-  return <h1>{t('title')}</h1>;
+  return <h1>{t('title')}</h1>
 }
 ```
 
@@ -275,25 +277,25 @@ Authentication is managed through the **@workspace/auth** package.
 ### Usage
 
 ```tsx
-import { AuthProvider, useAuth } from '@workspace/auth';
+import { AuthProvider, useAuth } from '@workspace/auth'
 
 // Wrap your app with AuthProvider
-<AuthProvider>
+;<AuthProvider>
   <App />
 </AuthProvider>
 
 // Use authentication in components
 function MyComponent() {
-  const { user, signIn, signOut } = useAuth();
+  const { user, signIn, signOut } = useAuth()
 
-  if (!user) return <button onClick={signIn}>Sign In</button>;
+  if (!user) return <button onClick={signIn}>Sign In</button>
 
   return (
     <div>
       <p>Welcome, {user.email}</p>
       <button onClick={signOut}>Sign Out</button>
     </div>
-  );
+  )
 }
 ```
 
@@ -310,32 +312,32 @@ function MyComponent() {
 ### Example
 
 ```tsx
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react'
 
 interface DateDisplayProps {
-  utcDate: string; // ISO string from server
+  utcDate: string // ISO string from server
 }
 
 export function DateDisplay({ utcDate }: DateDisplayProps) {
-  const [formatted, setFormatted] = useState('');
+  const [formatted, setFormatted] = useState('')
 
   useEffect(() => {
-    const date = new Date(utcDate);
+    const date = new Date(utcDate)
     const formatted = new Intl.DateTimeFormat('ja-JP', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-    }).format(date);
-    setFormatted(formatted);
-  }, [utcDate]);
+    }).format(date)
+    setFormatted(formatted)
+  }, [utcDate])
 
-  if (!formatted) return <time>Loading...</time>;
+  if (!formatted) return <time>Loading...</time>
 
-  return <time dateTime={utcDate}>{formatted}</time>;
+  return <time dateTime={utcDate}>{formatted}</time>
 }
 ```
 
@@ -474,13 +476,15 @@ web（Next.js）と backend-py（FastAPI コンテナ）は **1 つの Vercel pr
       "framework": "nextjs",
       "installCommand": "cd ../.. && bun install",
       "buildCommand": "cd ../.. && turbo build --filter=@workspace/web",
-      "bindings": [{ "type": "service", "service": "api", "format": "url", "env": "BACKEND_PY_URL" }]
+      "bindings": [
+        { "type": "service", "service": "api", "format": "url", "env": "BACKEND_PY_URL" }
+      ]
     },
     "api": { "runtime": "container", "root": "backend-py", "entrypoint": "Dockerfile.vercel" }
   },
   "rewrites": [
     { "source": "/api/(.*)", "destination": { "service": "api" } },
-    { "source": "/(.*)",     "destination": { "service": "web" } }
+    { "source": "/(.*)", "destination": { "service": "web" } }
   ]
 }
 ```
@@ -519,18 +523,22 @@ web（Next.js）と backend-py（FastAPI コンテナ）は **1 つの Vercel pr
 #### Troubleshooting Deployment
 
 **Build Fails with "Module not found"**:
+
 - Ensure all workspace dependencies are listed in `package.json`
 - `devenv shell` を再アクティベートして `setup:install-frontend` task で lockfile を同期
 
 **Environment Variables Not Available**:
+
 - Ensure variables are prefixed with `NEXT_PUBLIC_` for client-side access
 - Check Vercel project settings for correct variable names
 
 **Build Timeout**:
+
 - Check Turborepo cache is working correctly
 - Consider upgrading to a higher-tier plan for faster builds
 
 **Deployment Ignored**:
+
 - Check `git.deploymentEnabled` settings in `vercel.json`
 - Verify branch name doesn't match ignore patterns
 
@@ -541,6 +549,7 @@ For more information, see [Vercel Monorepo Documentation](https://vercel.com/doc
 ### Hydration Errors
 
 If you see hydration errors related to dates or times:
+
 1. Move date formatting to client components (`'use client'`)
 2. Use `useEffect` to format dates on the client side
 3. See "Date and Time Handling" section above
@@ -548,6 +557,7 @@ If you see hydration errors related to dates or times:
 ### Type Errors
 
 If Supabase types are out of sync:
+
 ```bash
 devenv tasks run model:frontend     # Frontend types のみ再生成
 devenv tasks run model:build        # 全 model 再生成
@@ -556,6 +566,7 @@ devenv tasks run model:build        # 全 model 再生成
 ### Build Errors
 
 Clear cache and rebuild:
+
 ```bash
 nr clean                            # turbo clean + node_modules 削除 (devenv shell 内)
 # `devenv shell` を抜けて再アクティベートで setup:install-frontend が再実行される

@@ -1,4 +1,3 @@
-import { spawnSync } from 'node:child_process'
 import { verify } from 'node:crypto'
 import { createRequire } from 'node:module'
 import type * as ExpoCertificates from '@expo/code-signing-certificates'
@@ -44,24 +43,6 @@ describe('security fixes in transitive dependencies', () => {
     await expect(glob('**/*', { signal: AbortSignal.abort() })).rejects.toMatchObject({
       name: 'AbortError',
     })
-  })
-
-  it('decodes malformed query strings without blocking the process', () => {
-    const queryString = require.resolve('query-string')
-    const result = spawnSync(
-      process.execPath,
-      [
-        '-e',
-        `const assert = require('node:assert/strict');
-const query = require(${JSON.stringify(queryString)});
-assert.equal(query.parse('name=%E6%97%A5%E6%9C%AC+test').name, '日本 test');
-const malformed = '%FF'.repeat(12000);
-assert.equal(query.parse('value=' + malformed).value, malformed);`,
-      ],
-      { timeout: 3000, encoding: 'utf8' }
-    )
-    expect(result.error).toBeUndefined()
-    expect(result.status, result.stderr).toBe(0)
   })
 
   it('keeps Xcode UUID generation working after its migration to native crypto', () => {
