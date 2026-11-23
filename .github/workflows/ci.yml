@@ -41,7 +41,7 @@ jobs:
       TURBO_CACHE_DIR: ${{ github.workspace }}/frontend/.turbo/cache
     steps:
       - uses: actions/checkout@v7
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@v32
         with:
           # cache-nix-action 公式推奨。これがないと nix store の自動 GC で
           # devenv-shell の依存（中間ビルド成果物・derivation）が落ちて、
@@ -151,7 +151,7 @@ jobs:
       UV_CACHE_DIR: /tmp/uv-cache
     steps:
       - uses: actions/checkout@v7
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@v32
         with:
           extra_nix_config: |
             keep-outputs = true
@@ -230,7 +230,7 @@ jobs:
     #   `supabase db start` を使う。フルスタックを起こすと数分無駄になる。
     steps:
       - uses: actions/checkout@v7
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@v32
         with:
           extra_nix_config: |
             keep-outputs = true
@@ -298,7 +298,7 @@ jobs:
     needs: [ci-check]
     steps:
       - uses: actions/checkout@v7
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@v32
         with:
           extra_nix_config: |
             keep-outputs = true
@@ -360,7 +360,7 @@ jobs:
     needs: [ci-check]
     steps:
       - uses: actions/checkout@v7
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@v32
         with:
           extra_nix_config: |
             keep-outputs = true
