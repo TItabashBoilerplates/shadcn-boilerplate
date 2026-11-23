@@ -260,6 +260,24 @@ git repository を紐付けられるのは **`POST /v11/projects`（作成時）
 
 ---
 
+## 10.5 Deployment Retention は必ず短期に固定する（コスト対策 / MANDATORY）
+
+Vercel の既定は**無期限**（API 上 36500 日）。デプロイが溜まり続けて保存コストが積み上がる。
+**project を作る経路はすべて、作成時に 1d へ固定する**（全 4 種別: preview / production / canceled / errored）。
+
+| 経路 | 実装 |
+|---|---|
+| Terraform | `terraform/modules/vercel` の `vercel_project_deployment_retention`（変数 `retention`。`unlimited` は validation で拒否） |
+| `vercel.sh` / `vercel-deploy` | `vercel_lib.sh` の `vercel_ensure_retention`（`PATCH /v9/projects/{id}/deployment-expiration`。再実行で dashboard の変更も戻す） |
+
+- 上書きは `VERCEL_RETENTION_{PREVIEW,PRODUCTION,CANCELED,ERRORED}`（`1d/1w/1m/2m/3m/6m/1y`）。**無期限は選べない**。
+- 現行 production alias が指すデプロイ等は公式の例外で保護される
+  （[Deployment Retention](https://vercel.com/docs/deployment-retention#exceptions-to-the-retention-policy)）。
+  削除されたデプロイは 30 日の復旧期間がある。
+- 手で project を作った / 既存 project は `vercel-deploy` を 1 回流せば固定される。
+
+---
+
 ## 11. Docker コンテナ（api）が起動しないとき
 
 | 症状 | 原因 |

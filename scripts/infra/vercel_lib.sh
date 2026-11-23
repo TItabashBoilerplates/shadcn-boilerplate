@@ -29,6 +29,30 @@ vapi() {
   fi
 }
 
+# vercel_ensure_retention PROJECT
+#   Deployment Retention を短期（既定 1d）へ冪等に固定する。Vercel の既定は無期限で、
+#   デプロイが溜まり続けてコストになるため、project の作成・再実行のたびに保証する。
+#   値は VERCEL_RETENTION_{PREVIEW,PRODUCTION,CANCELED,ERRORED}（1d/1w/1m/2m/3m/6m/1y）で上書き可。
+#   API: PATCH /v9/projects/{id}/deployment-expiration（terraform-provider-vercel と同じ）
+vercel_ensure_retention() {
+  local name="$1" v
+  for v in "${VERCEL_RETENTION_PREVIEW:-1d}" "${VERCEL_RETENTION_PRODUCTION:-1d}" \
+           "${VERCEL_RETENTION_CANCELED:-1d}" "${VERCEL_RETENTION_ERRORED:-1d}"; do
+    case "$v" in
+      1d|1w|1m|2m|3m|6m|1y) ;;
+      *) die "Deployment Retention の値が不正: '$v'（1d/1w/1m/2m/3m/6m/1y。無期限はコスト増のため不可）" ;;
+    esac
+  done
+  local body
+  body="$(jq -n \
+    --arg p "${VERCEL_RETENTION_PREVIEW:-1d}" --arg r "${VERCEL_RETENTION_PRODUCTION:-1d}" \
+    --arg c "${VERCEL_RETENTION_CANCELED:-1d}" --arg e "${VERCEL_RETENTION_ERRORED:-1d}" \
+    '{expiration:$p, expirationProduction:$r, expirationCanceled:$c, expirationErrored:$e}')"
+  vapi PATCH "/v9/projects/${name}/deployment-expiration" "$body" >/dev/null \
+    || die "project '$name' の Deployment Retention を設定できません（無期限のままだとコストが積み上がります）"
+  ok "Deployment Retention を固定（preview=${VERCEL_RETENTION_PREVIEW:-1d} production=${VERCEL_RETENTION_PRODUCTION:-1d} canceled=${VERCEL_RETENTION_CANCELED:-1d} errored=${VERCEL_RETENTION_ERRORED:-1d}）"
+}
+
 # vercel_env_set PROJECT KEY VALUE ENVNAME
 #   ENVNAME: dev|staging|production
 #   production → target=["production"]、それ以外 → target=["preview"] + gitBranch（ブランチ別出し分け）

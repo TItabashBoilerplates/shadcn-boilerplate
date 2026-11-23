@@ -87,3 +87,22 @@ resource "vercel_project_environment_variable" "port" {
   target     = ["production", "preview"]
   sensitive  = false
 }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Deployment Retention（コスト対策。必ず管理する）
+#
+# Vercel の既定は **無期限**（API 上は 36500 日）。デプロイが無限に溜まり続けると
+# 保存分のコストが積み上がるため、project 作成と同時に短い保持期間へ固定する。
+# 現行の production alias が指すデプロイ等は公式の例外で保護される
+# （https://vercel.com/docs/deployment-retention#exceptions-to-the-retention-policy）。
+# 値は '1d' / '1w' / '1m' / '2m' / '3m' / '6m' / '1y'（provider docs）。
+# 同じ値は scripts/infra/vercel_lib.sh の `vercel_ensure_retention` も冪等に保証する。
+# ─────────────────────────────────────────────────────────────────────────────
+resource "vercel_project_deployment_retention" "app" {
+  project_id            = vercel_project.app.id
+  team_id               = vercel_project.app.team_id
+  expiration_preview    = var.retention.preview
+  expiration_production = var.retention.production
+  expiration_canceled   = var.retention.canceled
+  expiration_errored    = var.retention.errored
+}

@@ -344,6 +344,7 @@ EOF
     vapi PATCH "/v9/projects/${PROJECT_NAME}" "$(project_settings_json)" >/dev/null \
       || die "rootDirectory の更新に失敗"
     ok "rootDirectory=$(root_directory_label) を再保証"
+    vercel_ensure_retention "$PROJECT_NAME"
     return 0
   fi
 
@@ -355,6 +356,7 @@ EOF
   vapi POST "/v11/projects" "$body" >/dev/null \
     || die "project 作成に失敗。Vercel GitHub App が '$GIT_REPO' に install 済みか、project 名が重複していないかを確認してください。"
   ok "作成: $PROJECT_NAME"
+  vercel_ensure_retention "$PROJECT_NAME"
 }
 
 # 本番 URL は **推測せず実測する**（canonical / sitemap / OG に焼き込まれるため、

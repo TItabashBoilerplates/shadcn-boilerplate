@@ -56,6 +56,8 @@ ensure_project() {
   vapi PATCH "/v9/projects/${name}" '{"rootDirectory":null,"framework":null}' >/dev/null \
     || die "project '$name' の rootDirectory / framework を空に戻せません"
 
+  vercel_ensure_retention "$name"
+
   local pid; pid="$(vapi GET "/v9/projects/${name}" 2>/dev/null | jq -r '.id')"
   record_output "VERCEL_PROJECT_ID" "$pid"
   record_output "VERCEL_PROJECT" "$name"

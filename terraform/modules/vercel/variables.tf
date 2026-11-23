@@ -42,3 +42,21 @@ variable "container_port" {
     error_message = "非 root コンテナは 1024 未満を bind できない。Dockerfile の ENV PORT を確認すること。"
   }
 }
+
+variable "retention" {
+  description = "Deployment Retention。既定は無期限でコストが積み上がるため全種別 1d。'1d'/'1w'/'1m'/'2m'/'3m'/'6m'/'1y' のみ（'unlimited' は不可）。"
+  type = object({
+    preview    = optional(string, "1d")
+    production = optional(string, "1d")
+    canceled   = optional(string, "1d")
+    errored    = optional(string, "1d")
+  })
+  default = {}
+
+  validation {
+    condition = alltrue([
+      for v in values(var.retention) : contains(["1d", "1w", "1m", "2m", "3m", "6m", "1y"], v)
+    ])
+    error_message = "retention は 1d/1w/1m/2m/3m/6m/1y のいずれか。無期限（unlimited）はコスト増の原因なので禁止。"
+  }
+}
